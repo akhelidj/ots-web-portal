@@ -2,7 +2,14 @@
   "name": "@ots/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "start:api": "nx serve api",
+    "start:portal": "nx serve portal",
+    "build:api": "nx build api",
+    "build:portal": "nx build portal",
+    "lint": "nx run-many -t lint",
+    "graph": "nx graph"
+  },
   "private": true,
   "devDependencies": {
     "@angular-devkit/core": "~21.1.0",
@@ -50,6 +57,7 @@
     "@angular/platform-browser-dynamic": "21.1.4",
     "@angular/router": "21.1.4",
     "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
     "axios": "^1.6.0",

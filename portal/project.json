@@ -36,7 +36,13 @@
               "maximumError": "8kb"
             }
           ],
-          "outputHashing": "all"
+          "outputHashing": "all",
+          "fileReplacements": [
+            {
+              "replace": "portal/src/environments/environment.ts",
+              "with": "portal/src/environments/environment.prod.ts"
+            }
+          ]
         },
         "development": {
           "optimization": false,
