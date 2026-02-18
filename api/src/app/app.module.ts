@@ -8,6 +8,8 @@ import { HealthController } from './health/health.controller';
 
 import { PrismaModule } from './prisma/prisma.module';
 
+import { AuthModule } from './auth/auth.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -15,6 +17,7 @@ import { PrismaModule } from './prisma/prisma.module';
       envFilePath: 'api/.env', // explicit path since monorepo root is CWD
     }),
     PrismaModule,
+    AuthModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

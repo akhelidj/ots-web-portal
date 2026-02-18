@@ -49,6 +49,7 @@ npm run lint
 npm run db:migrate   # Apply migrations
 npm run db:provision # Create default tenant
 npm run db:studio    # Open Prisma Studio
+npm run verify:auth  # Verify authentication flows
 
 # Visualise dependency graph
 npm run graph
