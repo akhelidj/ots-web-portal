@@ -6,12 +6,15 @@ import { AppService } from './app.service';
 import { DefaultDenyGuard } from './common/guards/default-deny.guard';
 import { HealthController } from './health/health.controller';
 
+import { PrismaModule } from './prisma/prisma.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: 'apps/api/.env', // explicit path since monorepo root is CWD
+      envFilePath: 'api/.env', // explicit path since monorepo root is CWD
     }),
+    PrismaModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

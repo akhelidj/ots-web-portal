@@ -8,7 +8,11 @@
     "build:api": "nx build api",
     "build:portal": "nx build portal",
     "lint": "nx run-many -t lint",
-    "graph": "nx graph"
+    "graph": "nx graph",
+    "db:migrate": "npx dotenv -e api/.env -- npx prisma migrate dev --schema api/prisma/schema.prisma",
+    "db:studio": "npx dotenv -e api/.env -- npx prisma studio --schema api/prisma/schema.prisma",
+    "db:generate": "npx prisma generate --schema api/prisma/schema.prisma",
+    "db:provision": "npx -y tsx api/scripts/provision-tenant.ts"
   },
   "private": true,
   "devDependencies": {
@@ -37,10 +41,13 @@
     "@types/node": "20.19.9",
     "@typescript-eslint/utils": "^8.40.0",
     "angular-eslint": "^21.0.1",
+    "dotenv": "^17.3.1",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "nx": "22.5.1",
     "prettier": "~3.6.2",
+    "prisma": "5.22.0",
     "tslib": "^2.3.0",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.40.0",
@@ -60,6 +67,7 @@
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@prisma/client": "5.22.0",
     "axios": "^1.6.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "~7.8.0"

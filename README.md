@@ -45,6 +45,11 @@ npm run build:portal
 # Lint all projects
 npm run lint
 
+# Database Management
+npm run db:migrate   # Apply migrations
+npm run db:provision # Create default tenant
+npm run db:studio    # Open Prisma Studio
+
 # Visualise dependency graph
 npm run graph
 ```

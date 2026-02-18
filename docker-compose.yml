@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ots_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-ots_db}
+    ports:
+      - '5432:5432'
+    volumes:
+      - ots_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  ots_postgres_data:

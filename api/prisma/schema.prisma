@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+
+enum UserRole {
+  ADMIN
+  RECEIVER
+  INSPECTOR
+  SUPERVISOR
+  CUSTOMER
+}
+
+enum InspectionReportStatus {
+  DRAFT
+  RECEIVED
+  READY_FOR_CLEANING
+  READY_FOR_INSPECTION
+  IN_INSPECTION
+  PENDING_APPROVAL
+  APPROVED
+  ON_HOLD
+  CLOSED
+}
+
+enum ChildReportStatus {
+  DRAFT
+  IN_INSPECTION
+  PENDING_APPROVAL
+  APPROVED
+  CLOSED
+}
+
+enum SerialDisposition {
+  PASS
+  REWORK
+  SCRAP
+  HOLD
+}
+
+// Models
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  customers Customer[]
+  inspectionReports InspectionReport[]
+  auditLogs AuditLog[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String
+  name      String?
+  role      UserRole
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, email])
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inspectionReports InspectionReport[]
+}
+
+model TemplateVersion {
+  id              String   @id @default(uuid())
+  templateKey     String
+  templateVersion String
+  mappingJson     Json
+  fileRef         String?
+  status          String // e.g., ACTIVE, ARCHIVED
+  hash            String?
+  createdAt       DateTime @default(now())
+
+  inspectionReports InspectionReport[]
+
+  @@unique([templateKey, templateVersion])
+}
+
+model InspectionReport {
+  id             String   @id @default(uuid())
+  poNumber       String
+  reportNumber   String? // Nullable until generated
+  revisionNumber Int? // Nullable until first approval
+  status         InspectionReportStatus @default(DRAFT)
+  
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  
+  customerId     String?
+  customer       Customer? @relation(fields: [customerId], references: [id])
+
+  templateVersionId String
+  templateVersion   TemplateVersion @relation(fields: [templateVersionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  serialNumbers    SerialNumber[]
+  childReports     ChildReport[]
+  transitionLogs   InspectionReportTransitionLog[]
+  revisions        InspectionReportRevision[]
+  auditLogs        AuditLog[]
+}
+
+model SerialNumber {
+  id              String            @id @default(uuid())
+  serial          String
+  inspectionData  Json?
+  disposition     SerialDisposition?
+  
+  inspectionReportId String
+  inspectionReport   InspectionReport @relation(fields: [inspectionReportId], references: [id])
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  childReportSerialNumbers ChildReportSerialNumber[]
+
+  @@unique([inspectionReportId, serial])
+}
+
+model ChildReport {
+  id             String            @id @default(uuid())
+  reportNumber   String?
+  status         ChildReportStatus @default(DRAFT)
+  
+  inspectionReportId String
+  inspectionReport   InspectionReport @relation(fields: [inspectionReportId], references: [id])
+
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  serialNumbers  ChildReportSerialNumber[]
+  attachments    Attachment[]
+  transitionLogs ChildReportTransitionLog[]
+  revisions      ChildReportRevision[]
+}
+
+model ChildReportSerialNumber {
+  id             String       @id @default(uuid())
+  
+  childReportId  String
+  childReport    ChildReport  @relation(fields: [childReportId], references: [id])
+  
+  serialNumberId String
+  serialNumber   SerialNumber @relation(fields: [serialNumberId], references: [id])
+
+  @@unique([childReportId, serialNumberId])
+}
+
+model Attachment {
+  id            String      @id @default(uuid())
+  filename      String
+  url           String
+  
+  childReportId String
+  childReport   ChildReport @relation(fields: [childReportId], references: [id])
+  
+  createdAt     DateTime    @default(now())
+}
+
+model InspectionReportTransitionLog {
+  id                   String   @id @default(uuid())
+  fromStatus           InspectionReportStatus
+  toStatus             InspectionReportStatus
+  previousActiveStatus InspectionReportStatus? // For ON_HOLD
+  timestamp            DateTime @default(now())
+  
+  inspectionReportId   String
+  inspectionReport     InspectionReport @relation(fields: [inspectionReportId], references: [id])
+  
+  userId               String?
+}
+
+model ChildReportTransitionLog {
+  id         String            @id @default(uuid())
+  fromStatus ChildReportStatus
+  toStatus   ChildReportStatus
+  timestamp  DateTime          @default(now())
+  
+  childReportId String
+  childReport   ChildReport @relation(fields: [childReportId], references: [id])
+  
+  userId        String?
+}
+
+model AuditLog {
+  id                 String   @id @default(uuid())
+  action             String
+  entity             String
+  entityId           String
+  reason             String?
+  timestamp          DateTime @default(now())
+  
+  tenantId           String
+  tenant             Tenant   @relation(fields: [tenantId], references: [id])
+  
+  inspectionReportId String?
+  inspectionReport   InspectionReport? @relation(fields: [inspectionReportId], references: [id])
+  
+  userId             String?
+}
+
+model InspectionReportRevision {
+  id                 String   @id @default(uuid())
+  revisionNumber     Int
+  snapshotJson       Json
+  reason             String
+  createdAt          DateTime @default(now())
+  
+  inspectionReportId String
+  inspectionReport   InspectionReport @relation(fields: [inspectionReportId], references: [id])
+
+  @@unique([inspectionReportId, revisionNumber])
+}
+
+model ChildReportRevision {
+  id             String   @id @default(uuid())
+  revisionNumber Int
+  snapshotJson   Json
+  reason         String
+  createdAt      DateTime @default(now())
+  
+  childReportId  String
+  childReport    ChildReport @relation(fields: [childReportId], references: [id])
+
+  @@unique([childReportId, revisionNumber])
+}
