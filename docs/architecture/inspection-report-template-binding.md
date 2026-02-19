@@ -1,7 +1,7 @@
-# Job Template Binding Architecture
+# Inspection Report Template Binding Architecture
 
 ## Overview
-Every Inspection Report (Job) in OTS is permanently bound to a specific version of a Template. This binding happens at the moment of creation and is immutable. This ensures that a Job always references the exact template definition (structure, validation rules, field mappings) that was used when the job was started.
+Every Inspection Report in OTS is permanently bound to a specific version of a Template. This binding happens at the moment of creation and is immutable. This ensures that an inspection report always references the exact template definition (structure, validation rules, field mappings) that was used when the report was started.
 
 ## Key Principles
 
@@ -16,8 +16,8 @@ We explicitly store the template details as scalar fields on the `InspectionRepo
 -   **Determinism**: The `templateHash` guarantees we know exactly what file was used.
 
 ### 3. Active-Only Selection
-Jobs can ONLY be created from a Template that is in `ACTIVE` status.
--   If a template is `DEPRECATED`, it cannot be used for new jobs.
+Inspection reports can ONLY be created from a Template that is in `ACTIVE` status.
+-   If a template is `DEPRECATED`, it cannot be used for new reports.
 -   If no active version exists, creation fails.
 
 ## Data Model (Prisma)
