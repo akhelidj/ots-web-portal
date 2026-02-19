@@ -39,3 +39,13 @@ The architecture uses a `TemplateFileStoreService` abstraction to allow seamless
 **Important**: Template upload does *not* define field mapping.
 Field mapping is implemented in code per `(templateKey, templateVersion)`.
 Changing the mapping requires a code deployment. This ensures deterministic and auditable export behavior.
+
+## InspectionReport Binding Model
+Inspection Reports are permanently bound to a specific Template Version at creation.
+-   **Binding Fields**: `templateKey`, `templateVersion`, `templateHash`.
+-   **Logic**: 
+    1.  User requests `CREATE` with `templateKey`.
+    2.  System finds active version.
+    3.  System copies version/hash to `InspectionReport`.
+-   **Immutability**: These fields never change for the life of the report.
+

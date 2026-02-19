@@ -8,9 +8,24 @@ interface TransitionRequestDto {
   reason?: string;
 }
 
+interface CreateInspectionReportDto {
+  templateKey: string;
+  poNumber: string;
+  customerId?: string;
+}
+
 @Controller('inspection-reports')
 export class InspectionReportWorkflowController {
   constructor(private workflowService: InspectionReportWorkflowService) {}
+
+  @Post()
+  async create(
+    @Body() body: CreateInspectionReportDto,
+    @Req() req: any,
+  ) {
+    const user = req.user;
+    return this.workflowService.create(user, body);
+  }
 
   @Post(':id/transition')
   async transition(

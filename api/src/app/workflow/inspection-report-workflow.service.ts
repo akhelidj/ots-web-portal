@@ -6,7 +6,8 @@ import {
   UserRole, 
   InspectionReport, 
   Prisma,
-  ChildReportStatus
+  ChildReportStatus,
+  TemplateStatus
 } from '@prisma/client';
 import { 
   INSPECTION_REPORT_TRANSITIONS, 
@@ -15,6 +16,59 @@ import {
 
 @Injectable()
 export class InspectionReportWorkflowService {
+  async create(
+    user: { id: string; tenantId: string; role: UserRole },
+    dto: { templateKey: string; poNumber: string; customerId?: string }
+  ): Promise<InspectionReport> {
+    const { templateKey, poNumber, customerId } = dto;
+    const { tenantId, id: userId } = user;
+
+    const template = await this.prisma.template.findFirst({
+        where: {
+            tenantId,
+            templateKey,
+            status: TemplateStatus.ACTIVE,
+        },
+    });
+
+    if (!template) {
+        throw new BadRequestException(`No ACTIVE template found for key: ${templateKey}`);
+    }
+
+    try {
+        return await this.prisma.$transaction(async (tx) => {
+            const report = await tx.inspectionReport.create({
+                data: {
+                    tenantId,
+                    poNumber,
+                    customerId,
+                    templateKey: template.templateKey,
+                    templateVersion: template.templateVersion,
+                    templateHash: template.hash,
+                    status: InspectionReportStatus.DRAFT,
+                },
+            });
+
+            await tx.auditLog.create({
+                data: {
+                    action: 'CREATE',
+                    entity: 'InspectionReport',
+                    entityId: report.id,
+                    tenantId,
+                    userId,
+                    reason: `Created with template ${templateKey} v${template.templateVersion}`,
+                    inspectionReportId: report.id,
+                }
+            });
+
+            return report;
+        });
+    } catch (error: any) {
+        console.error('Error creating InspectionReport:', error);
+        throw new BadRequestException(`Failed to create report: ${error.message}`);
+    }
+  }
+
   constructor(private prisma: PrismaService) {}
 
   async getAvailableTransitions(user: { tenantId: string; role: UserRole }, reportId: string): Promise<InspectionReportStatus[]> {
@@ -70,7 +124,7 @@ export class InspectionReportWorkflowService {
       include: {
         childReports: true,
         serialNumbers: true,
-        templateVersion: true,
+        legacyTemplateVersion: true,
       },
     });
 

@@ -151,8 +151,12 @@ model InspectionReport {
   customerId     String?
   customer       Customer? @relation(fields: [customerId], references: [id])
 
-  templateVersionId String
-  templateVersion   TemplateVersion @relation(fields: [templateVersionId], references: [id])
+  templateKey     String
+  templateVersion Int
+  templateHash    String
+
+  templateVersionId String?
+  legacyTemplateVersion   TemplateVersion? @relation(fields: [templateVersionId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
