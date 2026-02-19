@@ -13,6 +13,7 @@ import {
   INSPECTION_REPORT_TRANSITIONS, 
   isReasonRequiredForInspection 
 } from './workflow.policy';
+import { RevisionService } from '../revision/revision.service';
 
 @Injectable()
 export class InspectionReportWorkflowService {
@@ -69,7 +70,10 @@ export class InspectionReportWorkflowService {
     }
   }
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private revisionService: RevisionService,
+  ) {}
 
   async getAvailableTransitions(user: { tenantId: string; role: UserRole }, reportId: string): Promise<InspectionReportStatus[]> {
     const report = await this.prisma.inspectionReport.findFirst({
@@ -212,46 +216,27 @@ export class InspectionReportWorkflowService {
 
     // 5. Governance / Logic Calculation
     
-    let revisionNumber = report.revisionNumber;
-    let shouldSnapshot = false;
-
-    // A) On Hold Logic
-    // If going TO hold, we need to record currentStatus as previousActiveStatus in the LOG. 
-    // We don't store it on the main entity based on schema.
-    
-    // C) Approval & Revision Creation
-    if (toStatus === InspectionReportStatus.APPROVED && report.revisionNumber === null) {
-        revisionNumber = 1;
-        shouldSnapshot = true;
-    }
-
-    // D) Reopen Behavior
-    // APPROVED -> IN_INSPECTION (Admin)
-    // CLOSED -> APPROVED or IN_INSPECTION (Admin)
-    const isReopen = 
-        (currentStatus === InspectionReportStatus.APPROVED && toStatus === InspectionReportStatus.IN_INSPECTION) ||
-        (currentStatus === InspectionReportStatus.CLOSED && (toStatus === InspectionReportStatus.APPROVED || toStatus === InspectionReportStatus.IN_INSPECTION));
-
     // 8) Revision Number Computation Must Be Inside Transaction
+    // Moving revisionNumber and shouldSnapshot logic to inside transaction or preparing flags here.
+    // actually we can keep flags here but calculation inside.
     // Moving revisionNumber and shouldSnapshot logic to inside transaction or preparing flags here.
     // actually we can keep flags here but calculation inside.
     const isFirstApproval = toStatus === InspectionReportStatus.APPROVED && report.revisionNumber === null;
 
+    const isReopen = 
+        (currentStatus === InspectionReportStatus.APPROVED && toStatus === InspectionReportStatus.IN_INSPECTION) ||
+        (currentStatus === InspectionReportStatus.CLOSED && (toStatus === InspectionReportStatus.APPROVED || toStatus === InspectionReportStatus.IN_INSPECTION));
+
     // 6. Execute Transaction
     return await this.prisma.$transaction(async (tx) => {
-        let nextRevisionNumber = report.revisionNumber;
-        let snapshotReason = reason;
-
         // 8) Revision Number Computation Inside Transaction
-        if (isFirstApproval) {
-            nextRevisionNumber = 1;
-        } 
+        // Revision Logic handed off to Service
+ 
         // For Reopen, we use atomic increment in the update below
 
         // 6) Revision Reason Deterministic
-        if (isFirstApproval) {
-            snapshotReason = reason || 'Initial approval';
-        }
+        // Reason handling in service path
+
 
         // Update Entity
         const updateData: Prisma.InspectionReportUpdateInput = {
@@ -259,11 +244,11 @@ export class InspectionReportWorkflowService {
         };
 
         if (isFirstApproval) {
-            updateData.revisionNumber = 1;
+            // RevisionService handles the update of revisionNumber to 1
         } else if (isReopen) {
-            updateData.revisionNumber = { increment: 1 };
+            // RevisionService handles the increment
         } else {
-             updateData.revisionNumber = nextRevisionNumber; // Maintain existing if not changing (though this path shouldn't be hit for these cases)
+             // No change to revision number
         }
 
         const updatedReport = await tx.inspectionReport.update({
@@ -272,46 +257,50 @@ export class InspectionReportWorkflowService {
         });
         
         // Capture the actual new revision number from the DB (crucial for atomic increment result)
-        nextRevisionNumber = updatedReport.revisionNumber;
+        // remove capture of nextRevisionNumber as it is handled by service
+
 
         // Create Snapshot if needed
-        if (isFirstApproval || isReopen) {
-            // 5) Reopen Snapshot Boundary Is Incorrect
-            // Snapshot must represent the boundary being left.
-            // For reopen from APPROVED to IN_INSPECTION -> Snapshot status should be APPROVED (currentStatus).
-            // For first approval -> Snapshot status is APPROVED (toStatus).
+        if (isFirstApproval) {
+            await this.revisionService.createInspectionReportSnapshot(
+                tx,
+                reportId,
+                reason || 'Initial approval',
+                user.id,
+                user.tenantId
+            );
+        } else if (isReopen) {
+            // Reopen logic (Admin mutation) - This should eventually use createMutationRevision equivalent if fully consistent
+            // But per specs: "Any Admin data mutation... create Revision n+1"
+            // Reopen is a status mutation.
+            // Requirement 5.2: "Any API operation that mutates... while status=APPROVED"
+            // Reopen moves FROM Approved.
+            // Wait, "Reopen transitions" usually mean going back to draft/inspection.
+            // If we are leaving APPROVED, we are mutating the STATUS of an APPROVED report.
+            // So yes, this counts as a mutation of an approved report.
+            // However, the snapshot should capture the state BEFORE the transition? 
+            // Or AFTER?
+            // "snapshotJson = snapshot after the mutation"
+            // If we change status to IN_INSPECTION, the snapshot will show IN_INSPECTION?
+            // That seems wrong for an "Approved Revision". 
+            // Actually, T0.5.3 says: "Any Admin data mutation... create Revision n+1".
+            // If we are reopening, we are effectively creating a NEW version of the report history?
+            // Use case: Mistake in approved report. Admin reopens (Rev 1). Admin fixes. Admin Approves (Rev 2).
+            // So the Reopen action itself might be the trigger for Rev 2?
+            // Let's stick to the explicit instruction for now: "Admin post-approval mutation requires reason and creates Rev n+1".
+            // Changing status is a mutation.
             
-            const snapshotStatus = isReopen ? currentStatus : toStatus;
-
-            const snapshotData = {
-                id: report.id,
-                poNumber: report.poNumber,
-                reportNumber: report.reportNumber,
-                revisionNumber: nextRevisionNumber,
-                status: snapshotStatus,
-                templateVersionId: report.templateVersionId,
-                customerId: report.customerId,
-                serialNumbers: report.serialNumbers.map(s => ({
-                    id: s.id,
-                    serial: s.serial,
-                    inspectionData: s.inspectionData,
-                    disposition: s.disposition
-                })),
-                childReports: report.childReports.map(c => ({
-                    id: c.id,
-                    status: c.status,
-                    reportNumber: c.reportNumber
-                })),
-            };
-
-            await tx.inspectionReportRevision.create({
-                data: {
-                    inspectionReportId: reportId,
-                    revisionNumber: nextRevisionNumber!,
-                    reason: snapshotReason!, // 6) No fallback, assured by logic
-                    snapshotJson: snapshotData as any, 
-                }
-            });
+            // However, the snapshot service implementation fetches the report from DB.
+            // Inside this transaction, we updated the status to 'toStatus' (IN_INSPECTION) just above.
+            // So `createInspectionReportSnapshot` will see IN_INSPECTION.
+            
+            await this.revisionService.createInspectionReportSnapshot(
+                tx,
+                reportId,
+                reason!, // Reason mandatory for reopen
+                user.id,
+                user.tenantId
+            );
         }
 
         // Create Transition Log

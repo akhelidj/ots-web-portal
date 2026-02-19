@@ -8,9 +8,10 @@ import { HealthController } from './health/health.controller';
 
 import { PrismaModule } from './prisma/prisma.module';
 
+import { TemplateModule } from './template/template.module';
+import { RevisionModule } from './revision/revision.module';
 import { AuthModule } from './auth/auth.module';
 import { WorkflowModule } from './workflow/workflow.module';
-import { TemplateModule } from './template/template.module';
 
 @Module({
   imports: [
@@ -20,9 +21,11 @@ import { TemplateModule } from './template/template.module';
     }),
     PrismaModule,
     AuthModule,
-    AuthModule,
     WorkflowModule,
     TemplateModule,
+    RevisionModule,
+    AuthModule,
+    WorkflowModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

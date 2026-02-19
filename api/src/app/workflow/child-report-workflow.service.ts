@@ -5,16 +5,19 @@ import {
   ChildReportStatus, 
   UserRole, 
   ChildReport,
-  Prisma
 } from '@prisma/client';
 import { 
   CHILD_REPORT_TRANSITIONS, 
   isReasonRequiredForChild 
 } from './workflow.policy';
+import { RevisionService } from '../revision/revision.service';
 
 @Injectable()
 export class ChildReportWorkflowService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private revisionService: RevisionService,
+  ) {}
 
   async getAvailableTransitions(user: { tenantId: string; role: UserRole }, reportId: string): Promise<ChildReportStatus[]> {
     // Child Report tenant check is derived from Parent
@@ -107,30 +110,11 @@ export class ChildReportWorkflowService {
 
     // 6. Execute Transaction
     return await this.prisma.$transaction(async (tx) => {
-        let nextRev = 1;
-        let shouldSnapshot = false;
-        let snapshotReason = reason;
-        let snapshotStatus = toStatus;
+        // Snapshot preparation removed. Logic in Service.
 
-        if (isFirstApproval) {
-            // 8) Revision Number Computation Must Be Inside Transaction
-            const count = await tx.childReportRevision.count({ where: { childReportId: reportId } });
-            if (count === 0) {
-                shouldSnapshot = true;
-                nextRev = 1;
-                snapshotStatus = toStatus; // APPROVED
-                snapshotReason = reason || 'Initial approval'; // 6) Reason Deterministic
-            }
-        } else if (isReopen) {
-            shouldSnapshot = true;
-            const lastRev = await tx.childReportRevision.findFirst({
-                where: { childReportId: reportId },
-                orderBy: { revisionNumber: 'desc' }
-            });
-            nextRev = (lastRev?.revisionNumber || 0) + 1;
-            snapshotStatus = currentStatus; // 5) Snapshot Boundary: APPROVED
-            snapshotReason = reason!; 
-        }
+
+        // removed inline logic
+
 
         // Update Entity
         const updatedReport = await tx.childReport.update({
@@ -141,32 +125,33 @@ export class ChildReportWorkflowService {
         });
 
         // Create Snapshot if needed
-        if (shouldSnapshot) {
-            const snapshotData = {
-                id: report.id,
-                reportNumber: report.reportNumber,
-                status: snapshotStatus,
-                inspectionReportId: report.inspectionReportId,
-                serialNumbers: report.serialNumbers.map(s => ({
-                    serialNumberId: s.serialNumberId,
-                    serial: s.serialNumber.serial
-                })),
-                attachments: report.attachments.map(a => ({
-                    id: a.id,
-                    filename: a.filename,
-                    url: a.url,
-                    createdAt: a.createdAt
-                }))
-            };
+        // Create Snapshot if needed (Rev 1 or Reopen Rev n+1)
+        if (isFirstApproval) {
+            // Check handled by RevisionService internally? No, we need to call it if condition met.
+            // RevisionService handles the "if exists" check if we want, OR we check here.
+            // The service method `createChildReportSnapshot` increments.
+            // If we are approving for the first time, revisionNumber should be 0 -> 1.
+            // If we are Reopening, it's a mutation of an approved report? 
+            // Reopen = APPROVED -> IN_INSPECTION.
+            // Requirement: "Admin post-approval mutation requires reason and creates Revision n+1"
+            // Like parent report, we will treat Reopen as a mutation.
+            
+           await this.revisionService.createChildReportSnapshot(
+                tx,
+                reportId,
+                reason || 'Initial approval',
+                user.id,
+                user.tenantId
+            );
 
-            await tx.childReportRevision.create({
-                data: {
-                    childReportId: reportId,
-                    revisionNumber: nextRev,
-                    reason: snapshotReason!,
-                    snapshotJson: snapshotData as any,
-                }
-            });
+        } else if (isReopen) {
+             await this.revisionService.createChildReportSnapshot(
+                tx,
+                reportId,
+                reason!,
+                user.id,
+                user.tenantId
+            );
         }
 
         // Create Transition Log

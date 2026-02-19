@@ -142,7 +142,7 @@ model InspectionReport {
   id             String   @id @default(uuid())
   poNumber       String
   reportNumber   String? // Nullable until generated
-  revisionNumber Int? // Nullable until first approval
+  revisionNumber Int @default(0)
   status         InspectionReportStatus @default(DRAFT)
   
   tenantId       String
@@ -188,6 +188,7 @@ model SerialNumber {
 model ChildReport {
   id             String            @id @default(uuid())
   reportNumber   String?
+  revisionNumber Int               @default(0)
   status         ChildReportStatus @default(DRAFT)
   
   inspectionReportId String
@@ -269,26 +270,32 @@ model AuditLog {
 
 model InspectionReportRevision {
   id                 String   @id @default(uuid())
+  tenantId           String
+  inspectionReportId String
   revisionNumber     Int
   snapshotJson       Json
-  reason             String
-  createdAt          DateTime @default(now())
-  
-  inspectionReportId String
+  revisionReason     String
+  revisedAt          DateTime @default(now())
+  revisedById        String
+
   inspectionReport   InspectionReport @relation(fields: [inspectionReportId], references: [id])
 
   @@unique([inspectionReportId, revisionNumber])
+  @@index([tenantId, inspectionReportId])
 }
 
 model ChildReportRevision {
   id             String   @id @default(uuid())
+  tenantId       String
+  childReportId  String
   revisionNumber Int
   snapshotJson   Json
-  reason         String
-  createdAt      DateTime @default(now())
-  
-  childReportId  String
+  revisionReason String
+  revisedAt      DateTime @default(now())
+  revisedById    String
+
   childReport    ChildReport @relation(fields: [childReportId], references: [id])
 
   @@unique([childReportId, revisionNumber])
+  @@index([tenantId, childReportId])
 }
