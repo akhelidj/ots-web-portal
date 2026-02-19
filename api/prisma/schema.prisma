@@ -117,6 +117,27 @@ model TemplateVersion {
   @@unique([templateKey, templateVersion])
 }
 
+model Template {
+  id              String   @id @default(uuid())
+  tenantId        String
+  templateKey     String
+  templateVersion Int
+  status          TemplateStatus
+  fileBlob        Bytes
+  hash            String
+  changeNote      String
+  createdAt       DateTime @default(now())
+  createdById     String
+
+  @@unique([tenantId, templateKey, templateVersion])
+  @@index([tenantId, templateKey])
+}
+
+enum TemplateStatus {
+  ACTIVE
+  DEPRECATED
+}
+
 model InspectionReport {
   id             String   @id @default(uuid())
   poNumber       String

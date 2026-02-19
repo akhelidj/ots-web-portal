@@ -10,6 +10,7 @@ import { PrismaModule } from './prisma/prisma.module';
 
 import { AuthModule } from './auth/auth.module';
 import { WorkflowModule } from './workflow/workflow.module';
+import { TemplateModule } from './template/template.module';
 
 @Module({
   imports: [
@@ -19,7 +20,9 @@ import { WorkflowModule } from './workflow/workflow.module';
     }),
     PrismaModule,
     AuthModule,
+    AuthModule,
     WorkflowModule,
+    TemplateModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
