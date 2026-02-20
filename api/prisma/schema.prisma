@@ -80,6 +80,8 @@ model User {
   email     String
   name      String?
   passwordHash String
+  mustChangePassword Boolean @default(true)
+  isActive  Boolean  @default(true)
   role      UserRole
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])

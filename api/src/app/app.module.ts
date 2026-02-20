@@ -13,6 +13,7 @@ import { RevisionModule } from './revision/revision.module';
 import { AuthModule } from './auth/auth.module';
 import { WorkflowModule } from './workflow/workflow.module';
 import { ExportModule } from './export/export.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ExportModule } from './export/export.module';
     }),
     PrismaModule,
     AuthModule,
+    UsersModule,
     WorkflowModule,
     TemplateModule,
     RevisionModule,

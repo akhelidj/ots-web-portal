@@ -13,6 +13,18 @@ export interface LocalSerialNumber {
   payload: any;
 }
 
+export interface LocalUser {
+  id: string;
+  tenantId: string;
+  email: string;
+  name: string | null;
+  role: string;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  updatedAt: string;
+  syncState?: 'CLEAN' | 'PENDING_CREATE' | 'PENDING_UPDATE';
+}
+
 export type OutboxStatus = 'PENDING' | 'SYNCED' | 'FAILED' | 'CONFLICT';
 
 export interface OutboxItem {

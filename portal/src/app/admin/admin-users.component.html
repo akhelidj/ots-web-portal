@@ -1,0 +1,80 @@
+<h1>Users</h1>
+
+<form (ngSubmit)="onSubmitCreate()" aria-labelledby="create-user-legend">
+  <fieldset>
+    <legend id="create-user-legend">Create New User</legend>
+    
+    <div>
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" [(ngModel)]="formEmail" required />
+    </div>
+
+    <div>
+      <label for="name">Name (Optional)</label>
+      <input type="text" id="name" name="name" [(ngModel)]="formName" />
+    </div>
+
+    <div>
+      <label for="role">Role</label>
+      <select id="role" name="role" [(ngModel)]="formRole">
+        <option value="ADMIN">Admin</option>
+        <option value="RECEIVER">Receiver</option>
+        <option value="INSPECTOR">Inspector</option>
+        <option value="SUPERVISOR">Supervisor</option>
+      </select>
+    </div>
+
+    <button type="submit">Create User</button>
+  </fieldset>
+
+  @if (formError) {
+    <div role="alert" class="error-region">
+      {{ formError }}
+    </div>
+  }
+</form>
+
+<!-- Password notification area (populated via global hook if desired) -->
+@if (tempPasswordDisplay) {
+  <div role="status" class="success-region">
+    <p><strong>Temporary Password:</strong> {{ tempPasswordDisplay }}</p>
+    <p>Please copy this password immediately. It will not be shown again.</p>
+  </div>
+}
+
+<table aria-label="Internal Users List">
+  <thead>
+    <tr>
+      <th scope="col">Email</th>
+      <th scope="col">Name</th>
+      <th scope="col">Role</th>
+      <th scope="col">Active</th>
+      <th scope="col">Sync Status</th>
+      <th scope="col">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (user of users$ | async; track user.id) {
+      <tr>
+        <td>{{ user.email }}</td>
+        <td>{{ user.name || '-' }}</td>
+        <td>{{ user.role }}</td>
+        <td>{{ user.isActive ? 'Yes' : 'No' }}</td>
+        <td>
+          @if (user.syncState === 'PENDING_CREATE') {
+            <span>Pending Create Sync</span>
+          } @else if (user.syncState === 'PENDING_UPDATE') {
+             <span>Pending Update Sync</span>
+          } @else {
+             <span>Synced</span>
+          }
+        </td>
+        <td>
+          <button (click)="onToggleActive(user)">
+            {{ user.isActive ? 'Deactivate' : 'Activate' }}
+          </button>
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>
