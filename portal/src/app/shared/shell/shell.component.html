@@ -1,0 +1,32 @@
+<a href="#main-content" class="skip-link">Skip to content</a>
+
+<header>
+  <h1>OTS Portal</h1>
+</header>
+
+<nav aria-label="Main">
+  <ul>
+    <li>
+      <a routerLink="/admin" routerLinkActive="active" ariaCurrentWhenActive="page">Admin</a>
+    </li>
+    <li>
+      <a routerLink="/receiver" routerLinkActive="active" ariaCurrentWhenActive="page">Receiver</a>
+    </li>
+    <li>
+      <a routerLink="/inspector" routerLinkActive="active" ariaCurrentWhenActive="page">Inspector</a>
+    </li>
+    <li>
+      <a routerLink="/supervisor" routerLinkActive="active" ariaCurrentWhenActive="page">Supervisor</a>
+    </li>
+  </ul>
+</nav>
+
+<main>
+  <div id="main-content" tabindex="-1">
+    <router-outlet></router-outlet>
+  </div>
+</main>
+
+<footer>
+  <p>Company placeholder</p>
+</footer>
