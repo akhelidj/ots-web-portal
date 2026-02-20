@@ -5,6 +5,8 @@ import { OutboxItem, LocalUser } from './types';
 import { UserLocalRepo } from './user-local.repo';
 import { OutboxLocalRepo } from './outbox-local.repo';
 import { AdminUsersService } from '../../admin/admin-users.service';
+import { AdminCustomersService } from '../../admin/admin-customers.service';
+import { CustomerLocalRepo } from './customer-local.repo';
 
 @Injectable({
   providedIn: 'root',
@@ -14,6 +16,8 @@ export class SyncDispatcherService {
   private userRepo = inject(UserLocalRepo);
   private outboxRepo = inject(OutboxLocalRepo);
   private adminUsers = inject(AdminUsersService);
+  private customerRepo = inject(CustomerLocalRepo);
+  private adminCustomers = inject(AdminCustomersService);
 
   public async dispatch(item: OutboxItem): Promise<boolean> {
     const operationKey = `${item.entityType}:${item.operation}`;
@@ -60,6 +64,45 @@ export class SyncDispatcherService {
           // Overwrite local UI store with truth and clear syncState
           await this.userRepo.upsert({ ...updateRes, syncState: 'CLEAN' });
           await this.adminUsers.reloadStreamFromLocal();
+          return true;
+        }
+
+        case 'CUSTOMER_CREATE': {
+          const createRes = await this.adminCustomers.createOnServer(item.payload);
+
+          const tempCustomer = await this.customerRepo.getById(item.entityId);
+          if (tempCustomer) {
+            await this.customerRepo.remapId(item.entityId, createRes);
+          }
+
+          const pendingItems = await this.outboxRepo.getPendingItems();
+          for (const pending of pendingItems) {
+            if (pending.entityType === 'CUSTOMER' && pending.entityId === item.entityId) {
+              pending.entityId = createRes.id;
+              await this.outboxRepo.upsert(pending);
+            }
+          }
+
+          await this.adminCustomers.pullAllAndCache();
+          return true;
+        }
+
+        case 'CUSTOMER_UPDATE': {
+          const updateRes = await this.adminCustomers.patchOnServer(item.entityId, item.payload);
+          await this.customerRepo.upsert({ ...updateRes, syncState: 'SYNCED' });
+          await this.adminCustomers.pullAllAndCache();
+          return true;
+        }
+
+        case 'CUSTOMER_SET_ACTIVE': {
+          const activeRes = await this.adminCustomers.setActiveOnServer(
+            item.entityId, 
+            item.payload.isActive, 
+            item.payload.version, 
+            item.payload.reason
+          );
+          await this.customerRepo.upsert({ ...activeRes, syncState: 'SYNCED' });
+          await this.adminCustomers.pullAllAndCache();
           return true;
         }
 

@@ -95,13 +95,29 @@ model User {
 
 model Customer {
   id        String   @id @default(uuid())
-  name      String
   tenantId  String
+  name      String
+  code      String?
+  email     String?
+  phone     String?
+  addressLine1 String?
+  addressLine2 String?
+  city      String?
+  country   String?
+  isActive  Boolean  @default(true)
+  version   Int      @default(1)
+  deactivatedAt DateTime?
+  deactivatedBy String?
+  deactivationReason String?
+
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   inspectionReports InspectionReport[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
 }
 
 model TemplateVersion {

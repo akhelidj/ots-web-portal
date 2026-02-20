@@ -5,11 +5,12 @@ import { AdminUsersService } from './admin-users.service';
 import { UserLocalRepo } from '../core/offline/user-local.repo';
 import { OutboxService } from '../core/offline/outbox.service';
 import { LocalUser } from '../core/offline/types';
+import { AdminCustomersComponent } from './admin-customers.component';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AdminCustomersComponent],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {

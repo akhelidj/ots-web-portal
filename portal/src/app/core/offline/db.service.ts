@@ -5,7 +5,7 @@ import { Injectable } from '@angular/core';
 })
 export class DbService {
   private readonly DB_NAME = 'ots_offline_db';
-  private readonly DB_VERSION = 2;
+  private readonly DB_VERSION = 3;
   private dbInstance: IDBDatabase | null = null;
   private initPromise: Promise<IDBDatabase> | null = null;
 
@@ -62,6 +62,13 @@ export class DbService {
           store.createIndex('role', 'role', { unique: false });
           store.createIndex('updatedAt', 'updatedAt', { unique: false });
           store.createIndex('isActive', 'isActive', { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains('customers')) {
+          const store = db.createObjectStore('customers', { keyPath: 'id' });
+          store.createIndex('name', 'name', { unique: false });
+          store.createIndex('isActive', 'isActive', { unique: false });
+          store.createIndex('syncState', 'syncState', { unique: false });
         }
       };
     });

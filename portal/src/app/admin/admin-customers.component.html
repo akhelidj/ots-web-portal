@@ -1,0 +1,133 @@
+<h2>Customers</h2>
+
+<div style="margin-bottom: 20px;">
+  <button (click)="refreshFromServer()">Refresh from server</button>
+</div>
+
+<form (ngSubmit)="onSubmitCreate()" aria-labelledby="create-customer-legend">
+  <fieldset>
+    <legend id="create-customer-legend">Create New Customer</legend>
+    
+    <div>
+      <label for="c-name">Name</label>
+      <input type="text" id="c-name" name="name" [(ngModel)]="formName" required />
+    </div>
+
+    <div>
+      <label for="c-code">Code (Optional)</label>
+      <input type="text" id="c-code" name="code" [(ngModel)]="formCode" />
+    </div>
+
+    <div>
+      <label for="c-email">Email (Optional)</label>
+      <input type="email" id="c-email" name="email" [(ngModel)]="formEmail" />
+    </div>
+
+    <div>
+      <label for="c-phone">Phone (Optional)</label>
+      <input type="text" id="c-phone" name="phone" [(ngModel)]="formPhone" />
+    </div>
+
+    <button type="submit">Create Customer</button>
+  </fieldset>
+
+  @if (formError) {
+    <div role="alert" class="error-region">{{ formError }}</div>
+  }
+</form>
+
+@if (editingCustomer) {
+  <form (ngSubmit)="confirmEdit()" aria-labelledby="edit-customer-legend" style="margin-top:20px; border:1px solid #ccc; padding:10px;">
+    <fieldset>
+      <legend id="edit-customer-legend">Edit Customer</legend>
+      
+      <div>
+        <label for="e-name">Name</label>
+        <input type="text" id="e-name" name="ename" [(ngModel)]="editName" required />
+      </div>
+
+      <div>
+        <label for="e-code">Code</label>
+        <input type="text" id="e-code" name="ecode" [(ngModel)]="editCode" />
+      </div>
+      
+      <div>
+        <label for="e-email">Email</label>
+        <input type="email" id="e-email" name="eemail" [(ngModel)]="editEmail" />
+      </div>
+      
+      <div>
+        <label for="e-phone">Phone</label>
+        <input type="text" id="e-phone" name="ephone" [(ngModel)]="editPhone" />
+      </div>
+
+      <button type="submit">Save Changes</button>
+      <button type="button" (click)="cancelEdit()">Cancel</button>
+
+      @if (editError) {
+        <div role="alert" class="error-region">{{ editError }}</div>
+      }
+    </fieldset>
+  </form>
+}
+
+@if (selectedCustomer) {
+  <form (ngSubmit)="confirmDeactivate()" aria-labelledby="deactivate-legend" style="margin-top:20px; border:1px solid #ccc; padding:10px;">
+    <fieldset>
+      <legend id="deactivate-legend">Deactivate Customer {{ selectedCustomer.name }}</legend>
+      
+      <div>
+        <label for="d-reason">Reason for deactivation</label>
+        <input type="text" id="d-reason" name="reason" [(ngModel)]="deactivationReason" required />
+      </div>
+
+      <button type="submit">Confirm</button>
+      <button type="button" (click)="cancelDeactivate()">Cancel</button>
+
+      @if (deactivationError) {
+        <div role="alert" class="error-region">{{ deactivationError }}</div>
+      }
+    </fieldset>
+  </form>
+}
+
+<table aria-label="Customers List" style="margin-top:20px; width:100%;">
+  <thead>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">Code</th>
+      <th scope="col">Email</th>
+      <th scope="col">Active</th>
+      <th scope="col">Sync Status</th>
+      <th scope="col">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (cust of customers$ | async; track cust.id) {
+      <tr>
+        <td>{{ cust.name }}</td>
+        <td>{{ cust.code || '-' }}</td>
+        <td>{{ cust.email || '-' }}</td>
+        <td>{{ cust.isActive ? 'Yes' : 'No' }}</td>
+        <td>
+          @if (cust.syncState === 'PENDING') {
+            <span class="chip pending">Pending Sync</span>
+          } @else if (cust.syncState === 'CONFLICT') {
+             <span class="chip conflict" title="Refresh from server to resolve">Conflict</span>
+             <br><small>Refresh to resolve</small>
+          } @else if (cust.syncState === 'ERROR') {
+             <span class="chip error">Error</span>
+          } @else {
+             <span class="chip synced">Synced</span>
+          }
+        </td>
+        <td>
+          <button (click)="promptEdit(cust)" [disabled]="cust.syncState === 'CONFLICT'">Edit</button>
+          <button (click)="onToggleActive(cust)" [disabled]="cust.syncState === 'CONFLICT'">
+            {{ cust.isActive ? 'Deactivate' : 'Activate' }}
+          </button>
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>

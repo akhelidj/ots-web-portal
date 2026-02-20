@@ -25,6 +25,22 @@ export interface LocalUser {
   syncState?: 'CLEAN' | 'PENDING_CREATE' | 'PENDING_UPDATE';
 }
 
+export interface LocalCustomer {
+  id: string;
+  name: string;
+  code?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  country?: string | null;
+  isActive: boolean;
+  version: number;
+  syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
+  updatedAt?: string;
+}
+
 export type OutboxStatus = 'PENDING' | 'SYNCED' | 'FAILED' | 'CONFLICT';
 
 export interface OutboxItem {
