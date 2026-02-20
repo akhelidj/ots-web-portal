@@ -12,6 +12,7 @@ import { TemplateModule } from './template/template.module';
 import { RevisionModule } from './revision/revision.module';
 import { AuthModule } from './auth/auth.module';
 import { WorkflowModule } from './workflow/workflow.module';
+import { ExportModule } from './export/export.module';
 
 @Module({
   imports: [
@@ -24,8 +25,7 @@ import { WorkflowModule } from './workflow/workflow.module';
     WorkflowModule,
     TemplateModule,
     RevisionModule,
-    AuthModule,
-    WorkflowModule,
+    ExportModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
