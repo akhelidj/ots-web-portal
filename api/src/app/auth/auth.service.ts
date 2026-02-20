@@ -14,12 +14,9 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async validateUser(tenantName: string, email: string, pass: string): Promise<any> {
-    const tenant = await this.prisma.tenant.findFirst({ where: { name: tenantName } });
-    if (!tenant) return null;
-
-    const user = await this.prisma.user.findUnique({
-      where: { tenantId_email: { tenantId: tenant.id, email } },
+  async validateUser(email: string, pass: string): Promise<any> {
+    const user = await this.prisma.user.findFirst({
+      where: { email },
     });
 
     if (user && await bcrypt.compare(pass, user.passwordHash)) {

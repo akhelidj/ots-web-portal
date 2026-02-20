@@ -4,21 +4,26 @@ import { Injectable } from '@angular/core';
   providedIn: 'root',
 })
 export class DbService {
-  private readonly DB_NAME = 'ots_offline_db';
+  private readonly DB_PREFIX = 'ots_';
   private readonly DB_VERSION = 3;
   private dbInstance: IDBDatabase | null = null;
   private initPromise: Promise<IDBDatabase> | null = null;
+  private currentTenantId: string | null = null;
 
-  public async getDb(): Promise<IDBDatabase> {
+  public async openForTenant(tenantId: string): Promise<void> {
+    if (this.currentTenantId === tenantId && this.dbInstance) {
+      return; 
+    }
+
     if (this.dbInstance) {
-      return this.dbInstance;
+      this.close();
     }
-    if (this.initPromise) {
-      return this.initPromise;
-    }
+
+    this.currentTenantId = tenantId;
+    const dbName = `${this.DB_PREFIX}${tenantId}`;
 
     this.initPromise = new Promise((resolve, reject) => {
-      const request = window.indexedDB.open(this.DB_NAME, this.DB_VERSION);
+      const request = window.indexedDB.open(dbName, this.DB_VERSION);
 
       request.onerror = () => {
         console.error('Failed to open IndexedDB:', request.error);
@@ -73,6 +78,25 @@ export class DbService {
       };
     });
 
-    return this.initPromise;
+    await this.initPromise;
+  }
+
+  public close(): void {
+    if (this.dbInstance) {
+      this.dbInstance.close();
+      this.dbInstance = null;
+    }
+    this.currentTenantId = null;
+    this.initPromise = null;
+  }
+
+  public async getDb(): Promise<IDBDatabase> {
+    if (!this.dbInstance && !this.initPromise) {
+      throw new Error('Database is not opened for any tenant. Call openForTenant first.');
+    }
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    return this.dbInstance!;
   }
 }

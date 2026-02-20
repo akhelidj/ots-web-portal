@@ -11,7 +11,7 @@ export class AuthController {
   @Public()
   @Post('login')
   async login(@Body() body: any) {
-    const user = await this.authService.validateUser(body.tenantName, body.email, body.password);
+    const user = await this.authService.validateUser(body.email, body.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -33,7 +33,7 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @Post('change-password')
   async changePassword(@Req() req, @Body() body: ChangePasswordDto) {
-    const userId = req.user.sub || req.user.id;
+    const userId = req.user.userId || req.user.sub || req.user.id;
     return this.authService.changePassword(userId, body.currentPassword, body.newPassword);
   }
 

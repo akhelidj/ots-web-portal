@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { SessionService } from '../core/auth/session.service';
-import { ConnectivityService } from '../core/offline/connectivity.service';
+import { ConnectivityService } from '../core/offline/connectivity.service';import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -39,11 +39,9 @@ export class LoginComponent {
     this.isLoading = true;
 
     try {
-      const response = await this.http.post<any>('/api/auth/login', {
+      const response = await this.http.post<any>(`${environment.apiUrl}/auth/login`, {
         email: this.email,
         password: this.password,
-        // Optional tenantName bypass for baseline
-        tenantName: 'T01', 
       }).toPromise();
 
       this.session.setSession(response.accessToken, response.refreshToken, response.user);

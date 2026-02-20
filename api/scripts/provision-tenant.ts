@@ -9,30 +9,45 @@ async function provisionTenant(name: string, adminEmail: string, adminName: stri
   console.log(`Provisioning tenant "${name}" with admin "${adminEmail}"...`);
 
   // Check if exist
-  const existing = await prisma.tenant.findFirst({ where: { name } });
-  if (existing) {
-    console.log(`Tenant "${name}" already exists. Skipping.`);
-    return;
+  let tenant = await prisma.tenant.findFirst({ where: { name } });
+  if (tenant) {
+    console.log(`Tenant "${name}" already exists (ID: ${tenant.id}).`);
+  } else {
+    tenant = await prisma.tenant.create({
+      data: { name },
+    });
+    console.log(`Tenant created with ID: ${tenant.id}`);
   }
 
   const hash = await bcrypt.hash(passwordString, 10);
 
-  const tenant = await prisma.tenant.create({
-    data: { name },
-  });
-  console.log(`Tenant created with ID: ${tenant.id}`);
-
-  const user = await prisma.user.create({
-      data: {
-          email: adminEmail,
-          name: adminName,
-          passwordHash: hash,
-          role: UserRole.ADMIN,
-          tenantId: tenant.id
+  let user = await prisma.user.findUnique({
+    where: {
+      tenantId_email: {
+        tenantId: tenant.id,
+        email: adminEmail
       }
+    }
   });
 
-  console.log(`User created. ID: ${user.id}`);
+  if (user) {
+    console.log(`User "${adminEmail}" already exists. Updating password to ensure access.`);
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: hash }
+    });
+  } else {
+    user = await prisma.user.create({
+      data: {
+        email: adminEmail,
+        name: adminName,
+        passwordHash: hash,
+        role: UserRole.ADMIN,
+        tenantId: tenant.id
+      }
+    });
+    console.log(`User created. ID: ${user.id}`);
+  }
 }
 
 async function main() {

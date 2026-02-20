@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminUsersService } from './admin-users.service';
@@ -13,7 +13,7 @@ import { AdminCustomersComponent } from './admin-customers.component';
   imports: [CommonModule, FormsModule, AdminCustomersComponent],
   templateUrl: './admin-users.component.html',
 })
-export class AdminUsersComponent {
+export class AdminUsersComponent implements OnInit {
   private usersService = inject(AdminUsersService);
   private repo = inject(UserLocalRepo);
   private outbox = inject(OutboxService);
@@ -34,6 +34,13 @@ export class AdminUsersComponent {
         this.tempPasswordDisplay = pwd;
       }
     });
+  }
+
+  ngOnInit() {
+    this.usersService.refreshLocalCache();
+    if (navigator.onLine) {
+      this.usersService.pullAllAndCache().catch(e => console.warn('Background refresh failed', e));
+    }
   }
 
   public async onSubmitCreate(): Promise<void> {

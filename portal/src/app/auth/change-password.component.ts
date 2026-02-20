@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { SessionService, UserProfile } from '../core/auth/session.service';
 import { ConnectivityService } from '../core/offline/connectivity.service';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-change-password',
@@ -53,16 +54,10 @@ export class ChangePasswordComponent {
     this.isLoading = true;
 
     try {
-       // We must pass the current JWT for the AuthGuard on the API to pass
-       // We'll trust the Angular HTTP Interceptor to attach the Bearer token (assuming one exists or we will create one).
-       // If no interceptor exists yet, we'll need to pass it explicitly in headers.
-       const token = this.session.getToken();
-       const headers = { Authorization: `Bearer ${token}` };
-
-       const response = await this.http.post<any>('/api/auth/change-password', {
+       const response = await this.http.post<any>(`${environment.apiUrl}/auth/change-password`, {
          currentPassword: this.currentPassword,
          newPassword: this.newPassword
-       }, { headers }).toPromise();
+       }).toPromise();
 
        // Store fresh tokens and profile where mustChangePassword is now false
        const userProfile: UserProfile = {

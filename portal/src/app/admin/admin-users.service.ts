@@ -1,9 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { UserLocalRepo } from '../core/offline/user-local.repo';
 import { ConnectivityService } from '../core/offline/connectivity.service';
 import { LocalUser } from '../core/offline/types';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
@@ -27,26 +28,24 @@ export class AdminUsersService {
     this.refreshLocalCache();
   }
 
-  /**
-   * Reads from the local DB to drive the UI.
-   * If online, it fetches from the API to warm the cache, then pushes again.
-   */
+  // Legacy direct access for components that need quick refresh
   public async refreshLocalCache(): Promise<void> {
-    // 1. Immediately read local store for fast offline-first UI render
     const localData = await this.repo.list();
     this.usersSubject.next(localData);
+  }
 
-    // 2. Warmed cache check: if online, fetch latest from server
-    if (this.connectivity.isOnline()) {
-       this.http.get<LocalUser[]>('/api/users').subscribe({
-         next: async (serverUsers) => {
-           await this.repo.bulkUpsert(serverUsers);
-           // 3. Re-read from local store so UI is strictly driven by the local persistence layer
-           const refreshedData = await this.repo.list();
-           this.usersSubject.next(refreshedData);
-         },
-         error: (err) => console.error('Failed to sync users for cache', err),
-       });
+  // Centralized pull from server logic
+  public async pullAllAndCache(): Promise<void> {
+    if (!this.connectivity.isOnline()) return;
+    
+    try {
+      const serverUsers = await firstValueFrom(this.http.get<LocalUser[]>(`${environment.apiUrl}/users`));
+      await this.repo.bulkUpsert(serverUsers);
+      const refreshedData = await this.repo.list();
+      this.usersSubject.next(refreshedData);
+    } catch (err) {
+      console.error('Failed to pull users for cache', err);
+      throw err;
     }
   }
 

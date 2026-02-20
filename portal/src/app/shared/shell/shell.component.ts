@@ -5,6 +5,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ConnectivityService } from '../../core/offline/connectivity.service';
 import { OutboxService } from '../../core/offline/outbox.service';
 import { SessionService } from '../../core/auth/session.service';
+import { SyncOrchestratorService } from '../../core/offline/sync-orchestrator.service';
 import { environment } from '../../../environments/environment';
 import { AuthRequiredPlaceholderComponent } from '../placeholders/auth-required-placeholder.component';
 
@@ -19,11 +20,15 @@ export class ShellComponent {
   private outbox = inject(OutboxService);
   private session = inject(SessionService);
   private router = inject(Router);
+  private orchestrator = inject(SyncOrchestratorService);
 
   public isOnline$ = this.connectivity.isOnline$;
   public pendingCount$ = this.outbox.pendingCount$;
   public hasConflict$ = this.outbox.hasConflict$;
   public isAuthenticated$ = this.session.isAuthenticated$;
+  
+  public syncStatus$ = this.orchestrator.syncStatus$;
+  public lastSyncedAt$ = this.orchestrator.lastSyncedAt$;
 
   public isDevMode = !environment.production;
 

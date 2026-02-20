@@ -2,6 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, combineLatest, map } from 'rxjs';
 import { ConnectivityService } from '../offline/connectivity.service';
 
+import { DbService } from '../offline/db.service';
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -19,6 +21,7 @@ export class SessionService {
   private readonly PROFILE_KEY = 'session_profile';
   
   private connectivity = inject(ConnectivityService);
+  private dbService = inject(DbService);
 
   private authStatusSubject = new BehaviorSubject<boolean>(this.hasValidToken());
   public isAuthenticated$: Observable<boolean> = this.authStatusSubject.asObservable();
@@ -46,7 +49,12 @@ export class SessionService {
     map(([isOnline, isAuthenticated]) => !isOnline && isAuthenticated)
   );
 
-  constructor() {}
+  constructor() {
+    const profile = this.getStoredProfile();
+    if (this.hasValidToken() && profile) {
+      this.dbService.openForTenant(profile.tenantId).catch(e => console.error('Failed to open Db on init', e));
+    }
+  }
 
   public isTokenExpired(token: string): boolean {
     if (!token) return true;
@@ -86,6 +94,8 @@ export class SessionService {
     localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
     localStorage.setItem(this.PROFILE_KEY, JSON.stringify(profile));
     
+    this.dbService.openForTenant(profile.tenantId).catch(e => console.error('Failed to open Db on login', e));
+
     this.profileSubject.next(profile);
     this.authStatusSubject.next(true);
   }
@@ -103,6 +113,8 @@ export class SessionService {
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.PROFILE_KEY);
     
+    this.dbService.close();
+
     this.profileSubject.next(null);
     this.authStatusSubject.next(false);
   }

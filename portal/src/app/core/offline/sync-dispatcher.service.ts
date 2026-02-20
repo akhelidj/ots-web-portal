@@ -7,6 +7,7 @@ import { OutboxLocalRepo } from './outbox-local.repo';
 import { AdminUsersService } from '../../admin/admin-users.service';
 import { AdminCustomersService } from '../../admin/admin-customers.service';
 import { CustomerLocalRepo } from './customer-local.repo';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
@@ -26,7 +27,7 @@ export class SyncDispatcherService {
       switch (operationKey) {
         case 'USER:CREATE': {
           const createRes = await firstValueFrom(
-            this.http.post<LocalUser & { tempPassword?: string }>('/api/users', item.payload)
+            this.http.post<LocalUser & { tempPassword?: string }>(`${environment.apiUrl}/users`, item.payload)
           );
 
           // Atomic temporal ID remap
@@ -56,7 +57,7 @@ export class SyncDispatcherService {
 
         case 'USER:SET_ACTIVE': {
           const updateRes = await firstValueFrom(
-            this.http.patch<LocalUser>(`/api/users/${item.entityId}/active`, {
+            this.http.patch<LocalUser>(`${environment.apiUrl}/users/${item.entityId}/active`, {
               isActive: item.payload.isActive,
             })
           );

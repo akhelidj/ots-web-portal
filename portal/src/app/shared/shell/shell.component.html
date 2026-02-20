@@ -3,7 +3,10 @@
 <header>
   <h1>OTS Portal</h1>
   <div class="offline-indicator">
-    <span>Status: {{ (isOnline$ | async) ? 'Online' : 'Offline' }}</span>
+    <span>Status: {{ syncStatus$ | async }}</span>
+    @if (lastSyncedAt$ | async; as lastSynced) {
+       <span> | Last synced at {{ lastSynced }}</span>
+    }
     <span> | Pending Sync: {{ pendingCount$ | async }}</span>
     @if (hasConflict$ | async) {
       <span> | Sync needs attention</span>
