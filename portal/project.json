@@ -14,11 +14,13 @@
         "browser": "portal/src/main.ts",
         "tsConfig": "portal/tsconfig.app.json",
         "inlineStyleLanguage": "scss",
+        "serviceWorker": "portal/ngsw-config.json",
         "assets": [
           {
             "glob": "**/*",
             "input": "portal/public"
-          }
+          },
+          "portal/src/manifest.webmanifest"
         ],
         "styles": ["portal/src/styles.scss"]
       },

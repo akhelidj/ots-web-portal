@@ -2,6 +2,17 @@
 
 <header>
   <h1>OTS Portal</h1>
+  <div class="offline-indicator">
+    <span>Status: {{ (isOnline$ | async) ? 'Online' : 'Offline' }}</span>
+    <span> | Pending Sync: {{ pendingCount$ | async }}</span>
+    @if (hasConflict$ | async) {
+      <span> | Sync needs attention</span>
+    }
+    
+    @if (isDevMode) {
+      <button (click)="simulateOfflineMutation()">Simulate Mutation</button>
+    }
+  </div>
 </header>
 
 <nav aria-label="Main">
