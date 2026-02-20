@@ -1,0 +1,178 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { InspectionReportLocalRepo } from '../core/offline/inspection-report-local.repo';
+import { SerialNumberLocalRepo } from '../core/offline/serial-number-local.repo';
+import { LocalInspectionReport, LocalSerialNumber } from '../core/offline/types';
+import { OutboxService } from '../core/offline/outbox.service';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class InspectionReportsService {
+  private http = inject(HttpClient);
+  private irRepo = inject(InspectionReportLocalRepo);
+  private snRepo = inject(SerialNumberLocalRepo);
+  private outbox = inject(OutboxService);
+
+  private reportsSubj = new BehaviorSubject<LocalInspectionReport[]>([]);
+  public readonly reports$ = this.reportsSubj.asObservable();
+
+  constructor() {
+    this.irRepo.changes$.subscribe(() => {
+      this.refreshLocalCache();
+    });
+  }
+
+  public async refreshLocalCache(): Promise<void> {
+    const list = await this.irRepo.list();
+    this.reportsSubj.next(list);
+  }
+
+  public async getSnForReport(reportId: string): Promise<LocalSerialNumber[]> {
+    return this.snRepo.listByReportId(reportId);
+  }
+
+  public async pullAllAndCache(): Promise<void> {
+    try {
+      const reports = await firstValueFrom(
+        this.http.get<LocalInspectionReport[]>(`${environment.apiUrl}/inspection-reports`)
+      );
+
+      const localReports = await this.irRepo.list();
+      const localMap = new Map(localReports.map(r => [r.id, r]));
+
+      const toUpsert: LocalInspectionReport[] = [];
+      for (const r of reports) {
+        const local = localMap.get(r.id);
+        if (!local || local.syncState === 'SYNCED') {
+          r.syncState = 'SYNCED';
+          toUpsert.push(r);
+        }
+      }
+      
+      if (toUpsert.length > 0) {
+        await this.irRepo.bulkUpsert(toUpsert);
+      }
+
+      for (const rep of reports) {
+        try {
+          const serials = await firstValueFrom(
+            this.http.get<any[]>(`${environment.apiUrl}/inspection-reports/${rep.id}/serial-numbers`)
+          );
+          
+          const localSnList = await this.snRepo.listByReportId(rep.id);
+          const localSnMap = new Map(localSnList.map(s => [s.id, s]));
+          
+          const toUpsertSn: LocalSerialNumber[] = [];
+          for (const s of serials) {
+            const local = localSnMap.get(s.id);
+            if (!local || local.syncState === 'SYNCED') {
+               const ls = { ...s, value: s.serial, syncState: 'SYNCED' };
+               delete ls.serial;
+               toUpsertSn.push(ls as LocalSerialNumber);
+            }
+          }
+          
+          if (toUpsertSn.length > 0) {
+            await this.snRepo.bulkUpsert(toUpsertSn);
+          }
+        } catch (snErr) {
+          console.error(`Failed to pull SNs for report ${rep.id}`, snErr);
+        }
+      }
+
+      await this.refreshLocalCache();
+    } catch (e) {
+      console.error('Failed to pull all inspection reports and serials from server', e);
+      throw e;
+    }
+  }
+
+  public async createOffline(payload: { customerId: string; poNumber: string; templateKey: string }): Promise<void> {
+    const tempId = 'local-ir-' + crypto.randomUUID();
+    const newReport: LocalInspectionReport = {
+      id: tempId,
+      customerId: payload.customerId || null,
+      poNumber: payload.poNumber,
+      status: 'DRAFT',
+      templateKey: payload.templateKey,
+      templateVersion: 1, // Just dummy for offline
+      templateHash: '',
+      version: 1,
+      syncState: 'PENDING',
+    };
+
+    await this.irRepo.upsert(newReport);
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'INSPECTION_REPORT',
+      entityId: tempId,
+      operation: 'CREATE',
+      payload: { ...payload },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+  }
+
+  public async transitionOffline(id: string, toStatus: string, reason?: string): Promise<void> {
+    const rep = await this.irRepo.getById(id);
+    if (!rep) throw new Error('Report not found');
+
+    const updatedRep: LocalInspectionReport = {
+      ...rep,
+      status: toStatus,
+      version: rep.version + 1,
+      syncState: 'PENDING',
+    };
+
+    await this.irRepo.upsert(updatedRep);
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'INSPECTION_REPORT',
+      entityId: id,
+      operation: 'TRANSITION',
+      payload: { toStatus, reason, version: rep.version },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+  }
+
+  public async addSerialNumberOffline(reportId: string, serials: string[]): Promise<void> {
+    for (const serial of serials) {
+      if (!serial.trim()) continue;
+      const tempId = 'local-sn-' + crypto.randomUUID();
+      const sn: LocalSerialNumber = {
+        id: tempId,
+        inspectionReportId: reportId,
+        value: serial.trim(),
+        version: 1,
+        syncState: 'PENDING',
+      };
+
+      await this.snRepo.upsert(sn);
+
+      await this.outbox.enqueue({
+        id: crypto.randomUUID(),
+        idempotencyKey: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        entityType: 'SERIAL_NUMBER',
+        entityId: tempId,
+        operation: 'ADD',
+        payload: { inspectionReportId: reportId, value: serial.trim() },
+        status: 'PENDING',
+        attemptCount: 0,
+        lastError: null,
+      });
+    }
+  }
+}

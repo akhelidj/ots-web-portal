@@ -5,7 +5,7 @@ import { Injectable } from '@angular/core';
 })
 export class DbService {
   private readonly DB_PREFIX = 'ots_';
-  private readonly DB_VERSION = 3;
+  private readonly DB_VERSION = 4;
   private dbInstance: IDBDatabase | null = null;
   private initPromise: Promise<IDBDatabase> | null = null;
   private currentTenantId: string | null = null;
@@ -38,18 +38,26 @@ export class DbService {
       request.onupgradeneeded = () => {
         const db = request.result;
 
+        let irStore: IDBObjectStore;
         if (!db.objectStoreNames.contains('inspection_reports')) {
-          const store = db.createObjectStore('inspection_reports', { keyPath: 'id' });
-          store.createIndex('updatedAt', 'updatedAt', { unique: false });
-          store.createIndex('status', 'status', { unique: false });
-          store.createIndex('customerId', 'customerId', { unique: false });
+          irStore = db.createObjectStore('inspection_reports', { keyPath: 'id' });
+        } else {
+          irStore = request.transaction!.objectStore('inspection_reports');
         }
+        if (!irStore.indexNames.contains('updatedAt')) irStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+        if (!irStore.indexNames.contains('status')) irStore.createIndex('status', 'status', { unique: false });
+        if (!irStore.indexNames.contains('customerId')) irStore.createIndex('customerId', 'customerId', { unique: false });
+        if (!irStore.indexNames.contains('syncState')) irStore.createIndex('syncState', 'syncState', { unique: false });
 
+        let snStore: IDBObjectStore;
         if (!db.objectStoreNames.contains('serial_numbers')) {
-          const store = db.createObjectStore('serial_numbers', { keyPath: 'id' });
-          store.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
-          store.createIndex('serialNumberValue', 'serialNumberValue', { unique: false });
+          snStore = db.createObjectStore('serial_numbers', { keyPath: 'id' });
+        } else {
+          snStore = request.transaction!.objectStore('serial_numbers');
         }
+        if (!snStore.indexNames.contains('inspectionReportId')) snStore.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
+        if (!snStore.indexNames.contains('value')) snStore.createIndex('value', 'value', { unique: false });
+        if (!snStore.indexNames.contains('syncState')) snStore.createIndex('syncState', 'syncState', { unique: false });
 
         if (!db.objectStoreNames.contains('outbox')) {
           const store = db.createObjectStore('outbox', { keyPath: 'id' });

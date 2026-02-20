@@ -1,16 +1,23 @@
 export interface LocalInspectionReport {
   id: string;
-  status: string;
   customerId: string | null;
-  updatedAt: string;
-  payload: any;
+  poNumber: string;
+  status: string;
+  templateKey: string;
+  templateVersion: number;
+  templateHash: string;
+  version: number;
+  syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
+  updatedAt?: string;
 }
 
 export interface LocalSerialNumber {
   id: string;
   inspectionReportId: string;
-  serialNumberValue: string | null;
-  payload: any;
+  value: string;
+  version: number;
+  syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
+  updatedAt?: string;
 }
 
 export interface LocalUser {

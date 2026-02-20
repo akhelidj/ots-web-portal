@@ -160,6 +160,7 @@ model InspectionReport {
   id             String   @id @default(uuid())
   poNumber       String
   reportNumber   String? // Nullable until generated
+  version        Int @default(1)
   revisionNumber Int @default(0)
   status         InspectionReportStatus @default(DRAFT)
   
@@ -191,6 +192,7 @@ model SerialNumber {
   serial          String
   inspectionData  Json?
   disposition     SerialDisposition?
+  version         Int               @default(1)
   
   inspectionReportId String
   inspectionReport   InspectionReport @relation(fields: [inspectionReportId], references: [id])

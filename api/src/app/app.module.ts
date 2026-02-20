@@ -15,6 +15,8 @@ import { WorkflowModule } from './workflow/workflow.module';
 import { ExportModule } from './export/export.module';
 import { UsersModule } from './users/users.module';
 import { CustomersModule } from './customers/customers.module';
+import { InspectionReportsModule } from './inspection-reports/inspection-reports.module';
+import { SerialNumbersModule } from './serial-numbers/serial-numbers.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { CustomersModule } from './customers/customers.module';
     TemplateModule,
     RevisionModule,
     ExportModule,
+    InspectionReportsModule,
+    SerialNumbersModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

@@ -1,5 +1,5 @@
 
-import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { 
   InspectionReportStatus, 
@@ -116,6 +116,7 @@ export class InspectionReportWorkflowService {
     user: { id: string; tenantId: string; role: UserRole },
     reportId: string,
     toStatus: InspectionReportStatus,
+    version: number,
     reason?: string,
   ): Promise<InspectionReport> {
     // 1. Validate Tenant & Existence
@@ -134,6 +135,10 @@ export class InspectionReportWorkflowService {
 
     if (!report) {
       throw new NotFoundException('Inspection Report not found');
+    }
+
+    if (report.version !== version) {
+      throw new ConflictException(`Version mismatch. Expected ${report.version}, got ${version}`);
     }
 
     // 2. Validate Role & Matrix
@@ -238,9 +243,10 @@ export class InspectionReportWorkflowService {
         // Reason handling in service path
 
 
-        // Update Entity
-        const updateData: Prisma.InspectionReportUpdateInput = {
+        // Update Entity Atomically
+        const updateData: Prisma.InspectionReportUpdateManyMutationInput = {
             status: toStatus,
+            version: report.version + 1,
         };
 
         if (isFirstApproval) {
@@ -251,9 +257,23 @@ export class InspectionReportWorkflowService {
              // No change to revision number
         }
 
-        const updatedReport = await tx.inspectionReport.update({
-            where: { id: reportId },
+        const updateResult = await tx.inspectionReport.updateMany({
+            where: { 
+                id: reportId,
+                tenantId: user.tenantId,
+                version: report.version
+            },
             data: updateData,
+        });
+        
+        if (updateResult.count === 0) {
+            throw new ConflictException(`Version mismatch or entity not found. Expected version: ${report.version}`);
+        }
+        
+        // Fetch the updated report to return it
+        const updatedReport = await tx.inspectionReport.findUniqueOrThrow({
+            where: { id: reportId },
+            include: { childReports: true, serialNumbers: true }
         });
         
         // Capture the actual new revision number from the DB (crucial for atomic increment result)

@@ -47,6 +47,17 @@ export class OutboxLocalRepo {
     });
   }
 
+  public async getConflictItems(): Promise<OutboxItem[]> {
+    const db = await this.dbService.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readonly');
+      const index = tx.objectStore(this.STORE_NAME).index('status');
+      const request = index.getAll('CONFLICT');
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   public async hasConflictItems(): Promise<boolean> {
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {

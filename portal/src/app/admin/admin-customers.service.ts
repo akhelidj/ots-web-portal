@@ -14,7 +14,20 @@ export class AdminCustomersService {
 
   async pullAllAndCache(): Promise<void> {
     const customers = await firstValueFrom(this.http.get<LocalCustomer[]>(`${environment.apiUrl}/customers`));
-    await this.localRepo.bulkUpsert(customers);
+    const localList = await this.localRepo.list();
+    const localMap = new Map(localList.map(c => [c.id, c]));
+    
+    const toUpsert: LocalCustomer[] = [];
+    for (const c of customers) {
+      const local = localMap.get(c.id);
+      if (!local || local.syncState === 'SYNCED') {
+         toUpsert.push({ ...c, syncState: 'SYNCED' });
+      }
+    }
+    
+    if (toUpsert.length > 0) {
+      await this.localRepo.bulkUpsert(toUpsert);
+    }
   }
 
   async createOnServer(dto: any): Promise<LocalCustomer> {

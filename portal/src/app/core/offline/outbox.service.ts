@@ -49,9 +49,7 @@ export class OutboxService {
   }
 
   public async processQueue(): Promise<void> {
-    if (this.isProcessing) {
-      return;
-    }
+    if (this.isProcessing) return;
 
     if (!this.session.isAuthenticated) {
       console.warn('Sync aborted: User is not authenticated or token is expired.');
@@ -60,37 +58,42 @@ export class OutboxService {
 
     try {
       this.isProcessing = true;
-
-      const hasConflict = await this.repo.hasConflictItems();
-      if (hasConflict) {
-        console.warn('Queue processing halted: A CONFLICT item requires manual resolution.');
-        return;
-      }
-
+      const conflicts = await this.repo.getConflictItems();
       const pendingItems = await this.repo.getPendingItems();
 
+      const skipEntities = new Set<string>();
+      for (const c of conflicts) {
+        skipEntities.add(c.entityId);
+      }
+
       for (const item of pendingItems) {
+        const dependsOnConflicted = skipEntities.has(item.entityId) || 
+                                   (item.payload && item.payload.inspectionReportId && skipEntities.has(item.payload.inspectionReportId));
+        
+        if (dependsOnConflicted) {
+           item.status = 'CONFLICT';
+           item.lastError = 'Dependency is in CONFLICT';
+           await this.repo.upsert(item);
+           await this.rehydrateCount();
+           continue;
+        }
+
         item.attemptCount += 1;
         try {
           const success = await this.dispatcher.dispatch(item);
-          
           if (success) {
             item.status = 'SYNCED';
             item.lastError = null;
           } else {
-            // Standard failure (like server 500 or offline network hit)
-            // Leave it as PENDING so it counts towards pending, or mark FAILED based on rules.
-            // The constraint states count(PENDING) = pendingCount.
-            // By keeping it PENDING, we know it still needs sync. We just add an error.
             item.status = 'PENDING';
             item.lastError = 'Dispatcher returned false without throwing conflict.';
           }
         } catch (e: unknown) {
           const err = e as { name?: string; status?: number; message?: string };
-          // If the dispatcher throws a specific conflict error (e.g. 409 API response), mark it CONFLICT.
           if (err?.name === 'ConflictError' || err?.status === 409) {
             item.status = 'CONFLICT';
             item.lastError = err?.message || 'Conflict detected during sync.';
+            skipEntities.add(item.entityId);
           } else {
             item.status = 'PENDING';
             item.lastError = err?.message || 'Unknown error during dispatch.';
@@ -99,11 +102,6 @@ export class OutboxService {
 
         await this.repo.upsert(item);
         await this.rehydrateCount();
-
-        // Halt sequential processing if we hit a conflict
-        if (item.status === 'CONFLICT') {
-          break;
-        }
       }
     } finally {
       this.isProcessing = false;

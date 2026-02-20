@@ -1,0 +1,41 @@
+<div class="p-6 max-w-3xl mx-auto">
+  <div class="flex items-center gap-4 mb-6">
+    <a routerLink=".." class="text-gray-500 hover:text-gray-800">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900">Create Inspection Report</h1>
+  </div>
+
+  <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+    <div *ngIf="formError" class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+      {{ formError }}
+    </div>
+
+    <form (ngSubmit)="onSubmit()">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+        <select name="customer" [(ngModel)]="formCustomer" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
+          <option value="">No Customer Selected</option>
+          <option *ngFor="let c of customers$ | async" [value]="c.id">{{c.name}}</option>
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">PO Number *</label>
+        <input name="poNumber" type="text" [(ngModel)]="formPoNumber" required class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
+      </div>
+
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Template Binding Display</label>
+        <input name="templateKey" type="text" [(ngModel)]="formTemplateKey" readonly class="w-full border border-gray-300 p-2 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed">
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <a routerLink=".." class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md font-medium transition-colors">Cancel</a>
+        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors">Create &amp; Enqueue</button>
+      </div>
+    </form>
+  </div>
+</div>

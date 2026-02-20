@@ -5,6 +5,7 @@ import { InspectionReportStatus } from '@prisma/client';
 
 interface TransitionRequestDto {
   toStatus: InspectionReportStatus;
+  version: number;
   reason?: string;
 }
 
@@ -35,7 +36,7 @@ export class InspectionReportWorkflowController {
   ) {
     // req.user is populated by AuthGuard (JWT)
     const user = req.user;
-    return this.workflowService.transition(user, id, body.toStatus, body.reason);
+    return this.workflowService.transition(user, id, body.toStatus, body.version, body.reason);
   }
 
   @Get(':id/transitions/available')
