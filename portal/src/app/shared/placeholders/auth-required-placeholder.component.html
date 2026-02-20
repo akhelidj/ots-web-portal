@@ -1,0 +1,10 @@
+<div class="auth-required-container">
+  <h2>Sign-in required</h2>
+  <p>
+    @if ((isOnline$ | async) === false) {
+      Offline: sign-in required to continue to this area.
+    } @else {
+      Sign-in required to continue to this area.
+    }
+  </p>
+</div>

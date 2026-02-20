@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { OutboxLocalRepo } from './outbox-local.repo';
 import { SyncDispatcherService } from './sync-dispatcher.service';
+import { SessionService } from '../auth/session.service';
 import { OutboxItem } from './types';
 
 @Injectable({
@@ -10,6 +11,7 @@ import { OutboxItem } from './types';
 export class OutboxService {
   private repo = inject(OutboxLocalRepo);
   private dispatcher = inject(SyncDispatcherService);
+  private session = inject(SessionService);
 
   private pendingCountSubj = new BehaviorSubject<number>(0);
   public readonly pendingCount$: Observable<number> = this.pendingCountSubj.asObservable();
@@ -51,6 +53,11 @@ export class OutboxService {
       return;
     }
 
+    if (!this.session.isAuthenticated) {
+      console.warn('Sync aborted: User is not authenticated or token is expired.');
+      return;
+    }
+
     try {
       this.isProcessing = true;
 
@@ -78,14 +85,15 @@ export class OutboxService {
             item.status = 'PENDING';
             item.lastError = 'Dispatcher returned false without throwing conflict.';
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
+          const err = e as { name?: string; status?: number; message?: string };
           // If the dispatcher throws a specific conflict error (e.g. 409 API response), mark it CONFLICT.
-          if (e?.name === 'ConflictError' || e?.status === 409) {
+          if (err?.name === 'ConflictError' || err?.status === 409) {
             item.status = 'CONFLICT';
-            item.lastError = e?.message || 'Conflict detected during sync.';
+            item.lastError = err?.message || 'Conflict detected during sync.';
           } else {
             item.status = 'PENDING';
-            item.lastError = e?.message || 'Unknown error during dispatch.';
+            item.lastError = err?.message || 'Unknown error during dispatch.';
           }
         }
 

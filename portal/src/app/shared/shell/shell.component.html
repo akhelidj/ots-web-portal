@@ -8,6 +8,9 @@
     @if (hasConflict$ | async) {
       <span> | Sync needs attention</span>
     }
+    @if ((isOnline$ | async) === false && (isAuthenticated$ | async) === false) {
+      <span> | Sign-in required</span>
+    }
     
     @if (isDevMode) {
       <button (click)="simulateOfflineMutation()">Simulate Mutation</button>
@@ -34,7 +37,11 @@
 
 <main>
   <div id="main-content" tabindex="-1">
-    <router-outlet></router-outlet>
+    @if (isAuthenticated$ | async) {
+      <router-outlet></router-outlet>
+    } @else {
+      <app-auth-required-placeholder></app-auth-required-placeholder>
+    }
   </div>
 </main>
 
