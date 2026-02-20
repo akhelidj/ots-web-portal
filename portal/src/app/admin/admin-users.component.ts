@@ -36,6 +36,10 @@ export class AdminUsersComponent implements OnInit {
     });
   }
 
+  public dismissTempPassword(): void {
+    this.tempPasswordDisplay = null;
+  }
+
   ngOnInit() {
     this.usersService.refreshLocalCache();
     if (navigator.onLine) {

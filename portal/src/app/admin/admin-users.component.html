@@ -36,10 +36,12 @@
 
 <!-- Password notification area (populated via global hook if desired) -->
 @if (tempPasswordDisplay) {
-  <div role="status" class="success-region">
-    <p><strong>Temporary Password:</strong> {{ tempPasswordDisplay }}</p>
-    <p>Please copy this password immediately. It will not be shown again.</p>
-  </div>
+  <dialog open style="padding: 1rem; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; z-index: 100;">
+    <h3>User created successfully.</h3>
+    <p><strong>Temporary password:</strong> {{ tempPasswordDisplay }}</p>
+    <p style="color: red; font-size: 0.9em;">This password will not be shown again.</p>
+    <button type="button" (click)="dismissTempPassword()">Close</button>
+  </dialog>
 }
 
 <table aria-label="Internal Users List">

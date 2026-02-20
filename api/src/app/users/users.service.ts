@@ -62,7 +62,7 @@ export class UsersService {
 
     return {
       ...user,
-      tempPassword,
+      temporaryPassword: tempPassword,
     };
   }
 

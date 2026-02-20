@@ -32,7 +32,7 @@ export class SyncDispatcherService {
       switch (operationKey) {
         case 'USER:CREATE': {
           const createRes = await firstValueFrom(
-            this.http.post<LocalUser & { tempPassword?: string }>(`${environment.apiUrl}/users`, item.payload)
+            this.http.post<LocalUser & { temporaryPassword?: string }>(`${environment.apiUrl}/users`, item.payload)
           );
 
           // Atomic temporal ID remap
@@ -51,8 +51,8 @@ export class SyncDispatcherService {
             }
           }
 
-          if (createRes.tempPassword) {
-            this.adminUsers.notifyTempPassword(createRes.tempPassword);
+          if (createRes.temporaryPassword) {
+            this.adminUsers.notifyTempPassword(createRes.temporaryPassword);
           }
 
           // Refresh stream just in case
