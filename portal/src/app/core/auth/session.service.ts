@@ -2,18 +2,41 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, combineLatest, map } from 'rxjs';
 import { ConnectivityService } from '../offline/connectivity.service';
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  role: string;
+  tenantId: string;
+  mustChangePassword?: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class SessionService {
   private readonly TOKEN_KEY = 'auth_token';
+  private readonly REFRESH_TOKEN_KEY = 'refresh_token';
+  private readonly PROFILE_KEY = 'session_profile';
+  
   private connectivity = inject(ConnectivityService);
 
   private authStatusSubject = new BehaviorSubject<boolean>(this.hasValidToken());
   public isAuthenticated$: Observable<boolean> = this.authStatusSubject.asObservable();
 
+  private profileSubject = new BehaviorSubject<UserProfile | null>(this.getStoredProfile());
+  public profile$: Observable<UserProfile | null> = this.profileSubject.asObservable();
+  
+  public mustChangePassword$: Observable<boolean> = this.profile$.pipe(
+    map(profile => !!profile?.mustChangePassword)
+  );
+
   public get isAuthenticated(): boolean {
     return this.hasValidToken();
+  }
+  
+  public get mustChangePassword(): boolean {
+    const profile = this.getStoredProfile();
+    return !!profile?.mustChangePassword;
   }
 
   public canWorkOffline$: Observable<boolean> = combineLatest([
@@ -23,9 +46,7 @@ export class SessionService {
     map(([isOnline, isAuthenticated]) => !isOnline && isAuthenticated)
   );
 
-  constructor() {
-    // Optional: listen to storage events to sync across tabs, but evaluating on init is fine for v1
-  }
+  constructor() {}
 
   public isTokenExpired(token: string): boolean {
     if (!token) return true;
@@ -35,9 +56,8 @@ export class SessionService {
       if (parts.length !== 3) return true;
 
       const payload = JSON.parse(atob(parts[1]));
-      if (!payload.exp) return false; // If no exp claim, assume valid
+      if (!payload.exp) return false;
 
-      // exp is typically in seconds
       return payload.exp * 1000 < Date.now();
     } catch (e) {
       console.error('Failed to parse JWT token', e);
@@ -51,12 +71,39 @@ export class SessionService {
     return !this.isTokenExpired(token);
   }
 
-  /**
-   * Log the user out by clearing the token and broadcasting state.
-   * Note: This strictly leaves IndexedDB offline data untouched as per v1 requirements.
-   */
+  private getStoredProfile(): UserProfile | null {
+    const stored = localStorage.getItem(this.PROFILE_KEY);
+    if (!stored) return null;
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  public setSession(accessToken: string, refreshToken: string, profile: UserProfile): void {
+    localStorage.setItem(this.TOKEN_KEY, accessToken);
+    localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.setItem(this.PROFILE_KEY, JSON.stringify(profile));
+    
+    this.profileSubject.next(profile);
+    this.authStatusSubject.next(true);
+  }
+
+  public getToken(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY);
+  }
+  
+  public getRefreshToken(): string | null {
+    return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
+
   public logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+    localStorage.removeItem(this.PROFILE_KEY);
+    
+    this.profileSubject.next(null);
     this.authStatusSubject.next(false);
   }
 }

@@ -1,0 +1,33 @@
+<h2>Sign In</h2>
+
+@if (!(connectivity.isOnline$ | async)) {
+  <div role="alert" class="error-region" style="margin-bottom: 20px;">
+    <strong>Offline Mode:</strong> A network connection is required to sign in.
+  </div>
+}
+
+<form (ngSubmit)="onSubmit()" aria-labelledby="login-legend">
+  <fieldset [disabled]="isLoading || !(connectivity.isOnline$ | async)">
+    <legend id="login-legend">Access your account</legend>
+    
+    <div>
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" [(ngModel)]="email" required autocomplete="email" />
+    </div>
+
+    <div>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" [(ngModel)]="password" required autocomplete="current-password" />
+    </div>
+
+    <button type="submit">
+      {{ isLoading ? 'Signing in...' : 'Sign In' }}
+    </button>
+  </fieldset>
+
+  @if (formError) {
+    <div role="alert" class="error-region" style="margin-top: 20px;">
+      {{ formError }}
+    </div>
+  }
+</form>

@@ -15,6 +15,9 @@
     @if (isDevMode) {
       <button (click)="simulateOfflineMutation()">Simulate Mutation</button>
     }
+    @if (isAuthenticated$ | async) {
+      <button (click)="onSignOut()" style="margin-left: 10px;">Sign Out</button>
+    }
   </div>
 </header>
 

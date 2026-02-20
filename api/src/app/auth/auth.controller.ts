@@ -1,4 +1,5 @@
 import { Controller, Post, Body, Req, UnauthorizedException, Get, UseGuards } from '@nestjs/common';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Public } from '../common/decorators/public.decorator';
@@ -27,6 +28,13 @@ export class AuthController {
   @Post('logout')
   async logout(@Body() body: { refreshToken: string }) {
     return this.authService.logout(body.refreshToken);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('change-password')
+  async changePassword(@Req() req, @Body() body: ChangePasswordDto) {
+    const userId = req.user.sub || req.user.id;
+    return this.authService.changePassword(userId, body.currentPassword, body.newPassword);
   }
 
   @Get('me')

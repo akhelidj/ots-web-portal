@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -100,6 +100,61 @@ export class AuthService {
       });
     }
     return { ok: true };
+  }
+
+  async changePassword(userId: string, currentPass: string, newPass: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (!(await bcrypt.compare(currentPass, user.passwordHash))) {
+      throw new BadRequestException('Incorrect current password');
+    }
+
+    const newHash = await this.hashPassword(newPass);
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: newHash,
+        mustChangePassword: false,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        tenantId: true,
+        mustChangePassword: true,
+      }
+    });
+
+    // Revoke all existing refresh tokens for this user
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    // Issue new tokens transparently
+    const payload = { 
+      sub: updatedUser.id, 
+      email: updatedUser.email, 
+      tenantId: updatedUser.tenantId, 
+      role: updatedUser.role 
+    };
+    
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = crypto.randomBytes(32).toString('hex');
+    await this.storeRefreshToken(updatedUser.id, refreshToken);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: updatedUser
+    };
   }
 
   private async storeRefreshToken(userId: string, token: string) {

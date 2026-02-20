@@ -6,16 +6,31 @@ import { InspectorPlaceholderComponent } from './shared/placeholders/inspector-p
 import { SupervisorPlaceholderComponent } from './shared/placeholders/supervisor-placeholder.component';
 
 import { authGuard } from './core/auth/auth.guard';
+import { mustChangePasswordGuard } from './core/auth/must-change-password.guard';
+import { LoginComponent } from './auth/login.component';
+import { ChangePasswordComponent } from './auth/change-password.component';
+import { LandingComponent } from './landing.component';
 
 export const appRoutes: Route[] = [
+  {
+    path: 'login',
+    component: LoginComponent,
+    canActivate: [mustChangePasswordGuard],
+  },
+  {
+    path: 'change-password',
+    component: ChangePasswordComponent,
+    canActivate: [authGuard, mustChangePasswordGuard],
+  },
   {
     path: '',
     component: ShellComponent,
     children: [
-      { path: 'admin', component: AdminUsersComponent, canActivate: [authGuard] },
-      { path: 'receiver', component: ReceiverPlaceholderComponent, canActivate: [authGuard] },
-      { path: 'inspector', component: InspectorPlaceholderComponent, canActivate: [authGuard] },
-      { path: 'supervisor', component: SupervisorPlaceholderComponent, canActivate: [authGuard] },
+      { path: '', component: LandingComponent, pathMatch: 'full' },
+      { path: 'admin', component: AdminUsersComponent, canActivate: [authGuard, mustChangePasswordGuard] },
+      { path: 'receiver', component: ReceiverPlaceholderComponent, canActivate: [authGuard, mustChangePasswordGuard] },
+      { path: 'inspector', component: InspectorPlaceholderComponent, canActivate: [authGuard, mustChangePasswordGuard] },
+      { path: 'supervisor', component: SupervisorPlaceholderComponent, canActivate: [authGuard, mustChangePasswordGuard] },
     ],
   },
 ];

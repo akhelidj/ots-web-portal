@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ConnectivityService } from '../../core/offline/connectivity.service';
@@ -17,6 +18,7 @@ export class ShellComponent {
   private connectivity = inject(ConnectivityService);
   private outbox = inject(OutboxService);
   private session = inject(SessionService);
+  private router = inject(Router);
 
   public isOnline$ = this.connectivity.isOnline$;
   public pendingCount$ = this.outbox.pendingCount$;
@@ -24,6 +26,11 @@ export class ShellComponent {
   public isAuthenticated$ = this.session.isAuthenticated$;
 
   public isDevMode = !environment.production;
+
+  public onSignOut() {
+    this.session.logout();
+    this.router.navigate(['/login']);
+  }
 
   public async simulateOfflineMutation() {
     if (!this.isDevMode) return;
