@@ -19,11 +19,12 @@ export class SerialNumbersService {
     });
 
     return serials.map(s => {
-      // Exclude inspectionData, add inspectionJson
-      const { inspectionData, ...rest } = s;
       return {
-        ...rest,
-        inspectionJson: inspectionData
+        id: s.id,
+        serialNumber: s.serial,
+        version: s.version,
+        inspectionData: s.inspectionData,
+        updatedAt: s.updatedAt
       };
     });
   }
@@ -120,18 +121,19 @@ export class SerialNumbersService {
     });
   }
 
-  async updateSerialNumber(tenantId: string, id: string, userId: string, payload: { serialNumber?: string, inspectionJson?: any }, version: number) {
-    const serialToUpdate = await this.prisma.serialNumber.findUnique({
-      where: { id },
+  async updateSerialNumber(tenantId: string, id: string, userId: string, payload: { serialNumber?: string, inspectionData?: any }, version: number) {
+    if (version === undefined || version === null) {
+      throw new BadRequestException('version is required');
+    }
+
+    // 1. Tenant-scoped lock check on parent InspectionReport
+    const serialToUpdate = await this.prisma.serialNumber.findFirst({
+      where: { id, tenantId },
       include: { inspectionReport: true }
     });
 
-    if (!serialToUpdate || serialToUpdate.tenantId !== tenantId) {
+    if (!serialToUpdate) {
       throw new NotFoundException(`SerialNumber not found`);
-    }
-
-    if (serialToUpdate.version !== version) {
-      throw new ConflictException(`Version mismatch`);
     }
 
     const reportStatus = serialToUpdate.inspectionReport.status;
@@ -170,41 +172,36 @@ export class SerialNumbersService {
       }
     }
 
-    if (payload.inspectionJson !== undefined) {
-      dataToUpdate.inspectionData = payload.inspectionJson;
+    if (payload.inspectionData !== undefined) {
+      // Merge inspection data instead of overriding completely, if we want.
+      // E.g. { ...serialToUpdate.inspectionData as object, ...payload.inspectionData }
+      // But usually PATCH payload is the complete merged state from client for offline first.
+      // So replacing it is correct for our outbox implementation.
+      dataToUpdate.inspectionData = payload.inspectionData;
       const detail = reason ? ' and updated inspection data' : 'Updated inspection data';
       reason = reason + detail;
       if (!reason) reason = 'Updated inspection data';
     }
 
     // If nothing changed, just return it
-    if (Object.keys(dataToUpdate).length === 1) {
-      const { inspectionData, ...rest } = serialToUpdate;
+    if (Object.keys(dataToUpdate).length === 1) { // only version present
       return {
-          id: rest.id,
-          serialNumber: rest.serial,
-          version: rest.version,
-          inspectionJson: inspectionData,
-          updatedAt: rest.updatedAt
+          id: serialToUpdate.id,
+          serialNumber: serialToUpdate.serial,
+          version: serialToUpdate.version,
+          inspectionData: serialToUpdate.inspectionData,
+          updatedAt: serialToUpdate.updatedAt
       };
     }
 
     return await this.prisma.$transaction(async (tx) => {
-      // Use update instead of updateMany since id is unique. We manually queried the version above,
-      // but to be absolutely safe from race conditions, we can use updateMany or we can just use
-      // the id. Actually, Prisma's update doesn't allow { version } in where unless it's unique.
-      // But we can use update with { id } and verify the version inside the transaction or use updateMany.
-      // The user requested: "Use update with { id, tenantId, version } for atomic optimistic concurrency."
-      // Since Prisma 5 allows non-unique fields in update where, we can use update. 
-      // If Prisma version does not support it, it will fail conceptually, but wait, Prisma update where can take id, and other fields together.
-      
       let updated;
       try {
         updated = await tx.serialNumber.update({
           where: { 
               id,
               tenantId,
-              version: serialToUpdate.version
+              version // Optimistic locking
           },
           data: dataToUpdate,
         });
@@ -227,13 +224,12 @@ export class SerialNumbersService {
         },
       });
 
-      const { inspectionData, ...rest } = updated;
       return {
-          id: rest.id,
-          serialNumber: rest.serial,
-          version: rest.version,
-          inspectionJson: inspectionData,
-          updatedAt: rest.updatedAt
+          id: updated.id,
+          serialNumber: updated.serial,
+          version: updated.version,
+          inspectionData: updated.inspectionData,
+          updatedAt: updated.updatedAt
       };
     });
   }

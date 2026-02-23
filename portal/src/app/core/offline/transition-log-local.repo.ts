@@ -1,23 +1,38 @@
 import { Injectable, inject } from '@angular/core';
-import { IndexedDbService } from './indexed-db.service';
+import { DbService } from './db.service';
 import { LocalTransitionLog } from './types';
 import { BehaviorSubject } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class TransitionLogLocalRepo {
-  private db = inject(IndexedDbService);
+  private db = inject(DbService);
   private STORE_NAME = 'transitionLogs';
 
   private changesSubj = new BehaviorSubject<void>(undefined);
   public readonly changes$ = this.changesSubj.asObservable();
 
   public async getById(id: string): Promise<LocalTransitionLog | undefined> {
-    const logs = await this.list();
-    return logs.find(l => l.id === id);
+    const db = await this.db.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readonly');
+      const store = tx.objectStore(this.STORE_NAME);
+      const req = store.get(id);
+
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
   }
 
   public async list(): Promise<LocalTransitionLog[]> {
-    return this.db.getAll<LocalTransitionLog>(this.STORE_NAME);
+    const db = await this.db.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readonly');
+      const store = tx.objectStore(this.STORE_NAME);
+      const req = store.getAll();
+
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
   }
 
   public async listByReportId(reportId: string): Promise<LocalTransitionLog[]> {
@@ -26,19 +41,51 @@ export class TransitionLogLocalRepo {
   }
 
   public async upsert(log: LocalTransitionLog): Promise<void> {
-    await this.db.put(this.STORE_NAME, log);
-    this.changesSubj.next();
+    const db = await this.db.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readwrite');
+      const store = tx.objectStore(this.STORE_NAME);
+      const req = store.put(log);
+
+      req.onsuccess = () => {
+        this.changesSubj.next();
+        resolve();
+      };
+      req.onerror = () => reject(req.error);
+    });
   }
 
   public async bulkUpsert(logs: LocalTransitionLog[]): Promise<void> {
-    for (const log of logs) {
-      await this.db.put(this.STORE_NAME, log);
-    }
-    this.changesSubj.next();
+    const db = await this.db.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readwrite');
+      const store = tx.objectStore(this.STORE_NAME);
+
+      tx.oncomplete = () => {
+        this.changesSubj.next();
+        resolve();
+      };
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+
+      for (const log of logs) {
+        store.put(log);
+      }
+    });
   }
 
   public async delete(id: string): Promise<void> {
-    await this.db.delete(this.STORE_NAME, id);
-    this.changesSubj.next();
+    const db = await this.db.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readwrite');
+      const store = tx.objectStore(this.STORE_NAME);
+      const req = store.delete(id);
+
+      req.onsuccess = () => {
+        this.changesSubj.next();
+        resolve();
+      };
+      req.onerror = () => reject(req.error);
+    });
   }
 }

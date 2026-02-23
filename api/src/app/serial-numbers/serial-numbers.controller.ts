@@ -30,8 +30,12 @@ export class SerialNumbersController {
   async updateSerialNumber(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() body: { serialNumber?: string, version: number, inspectionJson?: any },
+    @Body() body: { serialNumber?: string, version: number, inspectionData?: any },
   ) {
+    if (body.version === undefined || body.version === null) {
+       const { BadRequestException } = require('@nestjs/common');
+       throw new BadRequestException('version is required');
+    }
     const { version, ...data } = body;
     return this.serialNumbersService.updateSerialNumber(req.user.tenantId, id, req.user.id, data, version);
   }

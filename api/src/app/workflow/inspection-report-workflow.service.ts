@@ -15,6 +15,8 @@ import {
 } from './workflow.policy';
 import { RevisionService } from '../revision/revision.service';
 
+const DRILL_PIPE_REQUIRED_KEYS = ['outerDiameter', 'wallThickness', 'threadCondition'];
+
 @Injectable()
 export class InspectionReportWorkflowService {
   async create(
@@ -233,10 +235,46 @@ export class InspectionReportWorkflowService {
     
     // 4.1 IN_INSPECTION -> PENDING_APPROVAL
     if (toStatus === InspectionReportStatus.PENDING_APPROVAL) {
-      if (report.serialNumbers.length === 0) {
-        throw new BadRequestException('Cannot request approval: No serial numbers added');
+      const serials = await this.prisma.serialNumber.findMany({
+          where: { tenantId: user.tenantId, inspectionReportId: reportId },
+      });
+
+      if (serials.length === 0) {
+        throw new BadRequestException({
+           code: 'VALIDATION_FAILED',
+           message: 'Cannot request approval: No serial numbers added',
+           missingDispositionSerials: [],
+           missingRequiredFields: {}
+        });
       }
-      // Add more validations here as needed (e.g. Disposition check if we had rules for it)
+
+      const missingDispositionSerials: string[] = [];
+      const missingRequiredFields: Record<string, string[]> = {};
+
+      for (const sn of serials) {
+          const data: any = sn.inspectionData || {};
+          
+          if (!data.disposition) {
+              missingDispositionSerials.push(sn.serial);
+          }
+
+          if (report.templateKey === 'DRILL_PIPE_REPORT') {
+              const missingKeys = DRILL_PIPE_REQUIRED_KEYS.filter(rk => !data[rk]);
+              if (missingKeys.length > 0) {
+                  missingRequiredFields[sn.serial] = missingKeys;
+              }
+          }
+      }
+
+      const hasValidationFailures = missingDispositionSerials.length > 0 || Object.keys(missingRequiredFields).length > 0;
+      if (hasValidationFailures) {
+          throw new BadRequestException({
+             code: 'VALIDATION_FAILED',
+             message: 'Validation failed for one or more serial numbers.',
+             missingDispositionSerials,
+             missingRequiredFields
+          });
+      }
     }
 
     // 4.2 Parent CLOSED validation

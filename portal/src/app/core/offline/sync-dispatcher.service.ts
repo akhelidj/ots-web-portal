@@ -219,7 +219,7 @@ export class SyncDispatcherService {
 
         case 'SN_UPDATE_INSPECTION': {
           const backendPayload = {
-             inspectionJson: item.payload['inspectionJson'],
+             inspectionData: item.payload['inspectionData'],
              version: item.payload['version'] as number
           };
           
@@ -263,6 +263,8 @@ export class SyncDispatcherService {
             if (item.entityType === 'INSPECTION_REPORT') {
               const rep = await this.irRepo.getById(item.entityId);
               if (rep) {
+                // Do NOT delete from outbox. We leave it locally but mark it as ERROR
+                // The outbox service will observe the Error being thrown
                 await this.irRepo.upsert({ ...rep, syncState: 'ERROR', pendingTransitionToStatus: null });
               }
             } else if (item.entityType === 'SERIAL_NUMBER') {
@@ -274,6 +276,7 @@ export class SyncDispatcherService {
             }
             const appErr = new Error(error.error?.message || `Application logic error: ${error.status}`) as Error & { status?: number };
             appErr.status = error.status;
+            // Throw it so Outbox marking logic catches it and saves error details mapping natively
             throw appErr;
           }
        }

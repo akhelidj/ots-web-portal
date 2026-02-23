@@ -140,6 +140,7 @@ export class InspectionReportDetailComponent implements OnInit {
   public openInspectionForm(sn: LocalSerialNumber): void {
     this.inspectingSn = sn;
     this.inspectionFormData = sn.inspectionJson ? JSON.parse(JSON.stringify(sn.inspectionJson)) : {};
+    
     this.formError = '';
   }
 
