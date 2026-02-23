@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { SessionService } from '../core/auth/session.service';
+import { SessionService, UserProfile } from '../core/auth/session.service';
 import { ConnectivityService } from '../core/offline/connectivity.service';import { environment } from '../../environments/environment';
 
 @Component({
@@ -39,10 +39,10 @@ export class LoginComponent {
     this.isLoading = true;
 
     try {
-      const response = await this.http.post<any>(`${environment.apiUrl}/auth/login`, {
+      const response = await this.http.post<{ user: UserProfile, accessToken: string, refreshToken: string }>(`${environment.apiUrl}/auth/login`, {
         email: this.email,
         password: this.password,
-      }).toPromise();
+      }).toPromise() as { user: UserProfile, accessToken: string, refreshToken: string };
 
       this.session.setSession(response.accessToken, response.refreshToken, response.user);
 
@@ -51,7 +51,8 @@ export class LoginComponent {
       } else {
         this.router.navigate(['/admin']);
       }
-    } catch (e: any) {
+    } catch (error) {
+      const e = error as { error?: { message?: string } };
       this.formError = e.error?.message || 'Login failed. Please check your credentials.';
     } finally {
       this.isLoading = false;

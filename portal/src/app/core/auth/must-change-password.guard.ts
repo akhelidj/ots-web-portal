@@ -10,7 +10,6 @@ export const mustChangePasswordGuard: CanActivateFn = (route, state) => {
   return session.mustChangePassword$.pipe(
     map((mustChange) => {
       const isNavigatingToChangePassword = state.url.includes('/change-password');
-      const isNavigatingToLogin = state.url.includes('/login');
 
       if (mustChange) {
         // If they must change password, they can ONLY go to /change-password

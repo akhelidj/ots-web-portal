@@ -5,6 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { InspectionReportsService } from './inspection-reports.service';
 import { CustomerLocalRepo } from '../core/offline/customer-local.repo';
+import { LocalCustomer } from '../core/offline/types';
 
 @Component({
   selector: 'app-create-inspection-report',
@@ -17,7 +18,7 @@ export class CreateInspectionReportComponent {
   private customerRepo = inject(CustomerLocalRepo);
   private router = inject(Router);
 
-  private customersSubj = new BehaviorSubject<any[]>([]);
+  private customersSubj = new BehaviorSubject<LocalCustomer[]>([]);
   public customers$ = this.customersSubj.asObservable();
 
   constructor() {
@@ -30,10 +31,10 @@ export class CreateInspectionReportComponent {
     this.customersSubj.next(list);
   }
 
-  public formCustomer: string = '';
-  public formPoNumber: string = '';
-  public formTemplateKey: string = 'DRILL_PIPE_REPORT'; // Hardcoded requirement for now
-  public formError: string = '';
+  public formCustomer = '';
+  public formPoNumber = '';
+  public formTemplateKey = 'DRILL_PIPE_REPORT'; // Hardcoded requirement for now
+  public formError = '';
 
   public async onSubmit() {
     this.formError = '';
@@ -50,7 +51,8 @@ export class CreateInspectionReportComponent {
         templateKey: this.formTemplateKey
       });
       this.router.navigate(['/inspector/reports']);
-    } catch (e: any) {
+    } catch (error) {
+      const e = error as Error;
       this.formError = e.message || 'Failed to create report.';
     }
   }

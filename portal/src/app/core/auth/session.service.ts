@@ -84,7 +84,7 @@ export class SessionService {
     if (!stored) return null;
     try {
       return JSON.parse(stored);
-    } catch (e) {
+    } catch {
       return null;
     }
   }

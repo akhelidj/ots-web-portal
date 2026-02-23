@@ -12,7 +12,7 @@ import { OutboxService } from '../core/offline/outbox.service';
 })
 export class InspectionReportsService {
   private http = inject(HttpClient);
-  private irRepo = inject(InspectionReportLocalRepo);
+  public irRepo = inject(InspectionReportLocalRepo);
   private snRepo = inject(SerialNumberLocalRepo);
   private outbox = inject(OutboxService);
 
@@ -59,7 +59,7 @@ export class InspectionReportsService {
       for (const rep of reports) {
         try {
           const serials = await firstValueFrom(
-            this.http.get<any[]>(`${environment.apiUrl}/inspection-reports/${rep.id}/serial-numbers`)
+            this.http.get<{ id: string; serial: string; [key: string]: unknown }[]>(`${environment.apiUrl}/inspection-reports/${rep.id}/serial-numbers`)
           );
           
           const localSnList = await this.snRepo.listByReportId(rep.id);
@@ -69,9 +69,9 @@ export class InspectionReportsService {
           for (const s of serials) {
             const local = localSnMap.get(s.id);
             if (!local || local.syncState === 'SYNCED') {
-               const ls = { ...s, value: s.serial, syncState: 'SYNCED' };
-               delete ls.serial;
-               toUpsertSn.push(ls as LocalSerialNumber);
+               const { serial, ...restS } = s;
+               const ls = { ...restS, value: serial, syncState: 'SYNCED' };
+               toUpsertSn.push(ls as unknown as LocalSerialNumber);
             }
           }
           

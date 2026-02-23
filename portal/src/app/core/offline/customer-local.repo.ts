@@ -86,13 +86,13 @@ export class CustomerLocalRepo {
     
     // Optimistic offline timestamp placeholder
     if (!isActive) {
-      (customer as any).deactivatedAt = new Date().toISOString();
+      customer.deactivatedAt = new Date().toISOString();
       if (reason) {
-        (customer as any).deactivationReason = reason;
+        customer.deactivationReason = reason;
       }
     } else {
-      (customer as any).deactivatedAt = null;
-      (customer as any).deactivationReason = null;
+      customer.deactivatedAt = null;
+      customer.deactivationReason = null;
     }
 
     return new Promise((resolve, reject) => {

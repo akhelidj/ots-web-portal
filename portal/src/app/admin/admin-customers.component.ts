@@ -122,7 +122,8 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
       if (navigator.onLine) {
         await this.outbox.processQueue();
       }
-    } catch (e: any) {
+    } catch (error) {
+      const e = error as Error;
       this.formError = 'Failed to create customer locally: ' + e.message;
     }
   }
@@ -188,7 +189,8 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
       if (navigator.onLine) {
         await this.outbox.processQueue();
       }
-    } catch (e: any) {
+    } catch (error) {
+      const e = error as Error;
       this.editError = 'Failed to update customer: ' + e.message;
     }
   }
@@ -256,8 +258,8 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
       if (navigator.onLine) {
         await this.outbox.processQueue();
       }
-    } catch (e: any) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
     }
   }
 }

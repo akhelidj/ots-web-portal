@@ -30,11 +30,11 @@ export class AdminCustomersService {
     }
   }
 
-  async createOnServer(dto: any): Promise<LocalCustomer> {
+  async createOnServer(dto: Partial<LocalCustomer>): Promise<LocalCustomer> {
     return firstValueFrom(this.http.post<LocalCustomer>(`${environment.apiUrl}/customers`, dto));
   }
 
-  async patchOnServer(id: string, dto: any): Promise<LocalCustomer> {
+  async patchOnServer(id: string, dto: Partial<LocalCustomer>): Promise<LocalCustomer> {
     return firstValueFrom(this.http.patch<LocalCustomer>(`${environment.apiUrl}/customers/${id}`, dto));
   }
 

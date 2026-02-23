@@ -46,6 +46,8 @@ export interface LocalCustomer {
   version: number;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
   updatedAt?: string;
+  deactivatedAt?: string | null;
+  deactivationReason?: string | null;
 }
 
 export type OutboxStatus = 'PENDING' | 'SYNCED' | 'FAILED' | 'CONFLICT';
@@ -57,7 +59,7 @@ export interface OutboxItem {
   entityType: string;
   entityId: string;
   operation: string;
-  payload: any;
+  payload: Record<string, unknown>;
   status: OutboxStatus;
   attemptCount: number;
   lastError: string | null;
@@ -65,5 +67,5 @@ export interface OutboxItem {
 
 export interface MetaRecord {
   key: string;
-  value: any;
+  value: unknown;
 }

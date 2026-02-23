@@ -68,7 +68,7 @@ export class OutboxService {
 
       for (const item of pendingItems) {
         const dependsOnConflicted = skipEntities.has(item.entityId) || 
-                                   (item.payload && item.payload.inspectionReportId && skipEntities.has(item.payload.inspectionReportId));
+                                   (item.payload && item.payload['inspectionReportId'] && skipEntities.has(item.payload['inspectionReportId'] as string));
         
         if (dependsOnConflicted) {
            item.status = 'CONFLICT';

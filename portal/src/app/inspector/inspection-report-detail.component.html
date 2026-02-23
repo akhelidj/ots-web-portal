@@ -1,4 +1,5 @@
-<div class="p-6 max-w-5xl mx-auto" *ngIf="report$ | async as report">
+@if (report$ | async; as report) {
+<div class="p-6 max-w-5xl mx-auto">
   <div class="flex items-center gap-4 mb-6">
     <a routerLink=".." class="text-gray-500 hover:text-gray-800">
       <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -41,12 +42,16 @@
     <!-- Transition Section -->
     <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       <h2 class="text-xl font-bold mb-4 border-b pb-2">Status Transition</h2>
-      <div *ngIf="formError" class="mb-4 bg-red-100 text-red-700 p-2 rounded text-sm">{{ formError }}</div>
+      @if (formError) {
+        <div class="mb-4 bg-red-100 text-red-700 p-2 rounded text-sm">{{ formError }}</div>
+      }
       
       <div class="flex gap-4 mb-4">
         <select [(ngModel)]="formToStatus" class="flex-1 border border-gray-300 p-2 rounded-md">
           <option value="">Select Status</option>
-          <option *ngFor="let status of allowedTransitions" [value]="status">{{status}}</option>
+          @for (status of allowedTransitions; track status) {
+            <option [value]="status">{{status}}</option>
+          }
         </select>
         <button (click)="onTransition()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors">
           Transition
@@ -72,21 +77,25 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <ng-container *ngIf="serials$ | async as serials">
-              <tr *ngFor="let sn of serials" class="hover:bg-gray-50">
-                <td class="p-3 font-medium text-gray-900">{{ sn.value }}</td>
-                <td class="p-3">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" [ngClass]="{
-                    'bg-red-100 text-red-800': sn.syncState === 'CONFLICT',
-                    'bg-yellow-100 text-yellow-800': sn.syncState === 'PENDING',
-                    'bg-green-100 text-green-800': sn.syncState === 'SYNCED'
-                  }">{{ sn.syncState }}</span>
-                </td>
-              </tr>
-              <tr *ngIf="serials.length === 0">
-                <td colspan="2" class="p-6 text-center text-gray-500">No serial numbers added yet.</td>
-              </tr>
-            </ng-container>
+            @if (serials$ | async; as serials) {
+              @for (sn of serials; track sn.id) {
+                <tr class="hover:bg-gray-50">
+                  <td class="p-3 font-medium text-gray-900">{{ sn.value }}</td>
+                  <td class="p-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" [ngClass]="{
+                      'bg-red-100 text-red-800': sn.syncState === 'CONFLICT',
+                      'bg-yellow-100 text-yellow-800': sn.syncState === 'PENDING',
+                      'bg-green-100 text-green-800': sn.syncState === 'SYNCED'
+                    }">{{ sn.syncState }}</span>
+                  </td>
+                </tr>
+              }
+              @if (serials.length === 0) {
+                <tr>
+                  <td colspan="2" class="p-6 text-center text-gray-500">No serial numbers added yet.</td>
+                </tr>
+              }
+            }
           </tbody>
         </table>
       </div>
@@ -105,3 +114,4 @@
     </div>
   </div>
 </div>
+}

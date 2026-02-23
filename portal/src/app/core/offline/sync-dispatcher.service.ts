@@ -63,7 +63,7 @@ export class SyncDispatcherService {
         case 'USER:SET_ACTIVE': {
           const updateRes = await firstValueFrom(
             this.http.patch<LocalUser>(`${environment.apiUrl}/users/${item.entityId}/active`, {
-              isActive: item.payload.isActive,
+              isActive: item.payload['isActive'] as boolean,
             })
           );
 
@@ -103,9 +103,9 @@ export class SyncDispatcherService {
         case 'CUSTOMER_SET_ACTIVE': {
           const activeRes = await this.adminCustomers.setActiveOnServer(
             item.entityId, 
-            item.payload.isActive, 
-            item.payload.version, 
-            item.payload.reason
+            item.payload['isActive'] as boolean, 
+            item.payload['version'] as number, 
+            item.payload['reason'] as string | undefined
           );
           await this.customerRepo.upsert({ ...activeRes, syncState: 'SYNCED' });
           await this.adminCustomers.pullAllAndCache();
@@ -131,8 +131,8 @@ export class SyncDispatcherService {
               pending.entityId = createRes.id;
               changed = true;
             }
-            if (pending.entityType === 'SERIAL_NUMBER' && pending.payload.inspectionReportId === item.entityId) {
-              pending.payload.inspectionReportId = createRes.id;
+            if (pending.entityType === 'SERIAL_NUMBER' && pending.payload['inspectionReportId'] === item.entityId) {
+              pending.payload['inspectionReportId'] = createRes.id;
               changed = true;
             }
             if (changed) {
@@ -159,20 +159,22 @@ export class SyncDispatcherService {
         }
 
         case 'SN_ADD': {
-          const reportId = item.payload.inspectionReportId;
-          const { value, ...restPayload } = item.payload;
-          const createRes: any = await firstValueFrom(
-            this.http.post<any>(`${environment.apiUrl}/inspection-reports/${reportId}/serial-numbers`, {
+          const reportId = item.payload['inspectionReportId'] as string;
+          const value = item.payload['value'] as string;
+          const restPayload = { ...item.payload };
+          delete restPayload['value'];
+          const createRes = await firstValueFrom(
+            this.http.post<{ id: string; serial: string; [key: string]: unknown }>(`${environment.apiUrl}/inspection-reports/${reportId}/serial-numbers`, {
               ...restPayload,
               serial: value
             })
           );
-          createRes.value = createRes.serial;
-          delete createRes.serial;
+          const mappedRes = { ...createRes, value: createRes.serial } as Partial<{ serial: unknown }> & { id: string; value: string; [key: string]: unknown };
+          delete mappedRes.serial;
 
           const tempSn = await this.snRepo.getById(item.entityId);
           if (tempSn) {
-            await this.snRepo.remapId(item.entityId, { ...createRes, syncState: 'SYNCED', inspectionReportId: reportId });
+            await this.snRepo.remapId(item.entityId, { ...mappedRes, syncState: 'SYNCED', inspectionReportId: reportId } as LocalSerialNumber);
           }
 
           const pendingItems = await this.outboxRepo.getPendingItems();
@@ -186,17 +188,19 @@ export class SyncDispatcherService {
         }
 
         case 'SN_UPDATE': {
-          const { value, ...backendPayload } = item.payload;
+          const value = item.payload['value'] as string | undefined;
+          const backendPayload = { ...item.payload };
+          delete backendPayload['value'];
           if (value !== undefined) {
-            backendPayload.serial = value;
+            backendPayload['serial'] = value;
           }
-          const updateRes: any = await firstValueFrom(
-            this.http.patch<any>(`${environment.apiUrl}/serial-numbers/${item.entityId}`, backendPayload)
+          const updateRes = await firstValueFrom(
+            this.http.patch<{ serial: string; [key: string]: unknown }>(`${environment.apiUrl}/serial-numbers/${item.entityId}`, backendPayload)
           );
-          updateRes.value = updateRes.serial;
-          delete updateRes.serial;
+          const mappedUpdate = { ...updateRes, value: updateRes.serial } as Partial<{ serial: unknown }> & { value: string; [key: string]: unknown };
+          delete mappedUpdate.serial;
           
-          await this.snRepo.upsert({ ...updateRes, syncState: 'SYNCED' });
+          await this.snRepo.upsert({ ...mappedUpdate, syncState: 'SYNCED' } as unknown as LocalSerialNumber);
           return true;
         }
 
@@ -221,8 +225,8 @@ export class SyncDispatcherService {
             if (cust) await this.customerRepo.upsert({ ...cust, syncState: 'CONFLICT' });
           }
 
-          const conflictErr = new Error(error.error?.message || 'Conflict processing entity');
-          (conflictErr as any).status = 409;
+          const conflictErr = new Error(error.error?.message || 'Conflict processing entity') as Error & { status?: number };
+          conflictErr.status = 409;
           throw conflictErr;
        }
        throw error;

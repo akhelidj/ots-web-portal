@@ -43,8 +43,8 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   private async refreshData() {
-    const list = await (this.irService as any).irRepo.list(); 
-    const r = list.find((x: any) => x.id === this.reportId) || null;
+    const list = await this.irService.irRepo.list(); 
+    const r = list.find((x: LocalInspectionReport) => x.id === this.reportId) || null;
     this.reportSubj.next(r);
 
     const snList = await this.irService.getSnForReport(this.reportId);
@@ -60,7 +60,8 @@ export class InspectionReportDetailComponent implements OnInit {
       await this.irService.addSerialNumberOffline(this.reportId, lines);
       this.formBulkSerials = '';
       this.refreshData();
-    } catch (e: any) {
+    } catch (error) {
+      const e = error as Error;
       this.formError = e.message || 'Failed to add serials.';
     }
   }
@@ -74,7 +75,8 @@ export class InspectionReportDetailComponent implements OnInit {
       this.formToStatus = '';
       this.formReason = '';
       this.refreshData();
-    } catch (e: any) {
+    } catch (error) {
+      const e = error as Error;
       this.formError = e.message || 'Failed to transition report.';
     }
   }

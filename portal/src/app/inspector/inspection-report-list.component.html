@@ -6,8 +6,8 @@
 
   <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6 flex gap-6">
     <div class="flex-1">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Status Filter</label>
-      <select [(ngModel)]="statusFilter" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
+      <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1">Status Filter</label>
+      <select id="statusFilter" [(ngModel)]="statusFilter" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
         <option value="">All Statuses</option>
         <option value="DRAFT">DRAFT</option>
         <option value="RECEIVED">RECEIVED</option>
@@ -21,10 +21,12 @@
       </select>
     </div>
     <div class="flex-1">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Customer Filter</label>
-      <select [(ngModel)]="customerFilter" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
+      <label for="customerFilter" class="block text-sm font-medium text-gray-700 mb-1">Customer Filter</label>
+      <select id="customerFilter" [(ngModel)]="customerFilter" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
         <option value="">All Customers</option>
-        <option *ngFor="let c of customers$ | async" [value]="c.id">{{c.name}}</option>
+        @for (c of customers$ | async; track c.id) {
+          <option [value]="c.id">{{c.name}}</option>
+        }
       </select>
     </div>
   </div>
@@ -41,26 +43,30 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-200">
-        <ng-container *ngIf="reports$ | async as reports">
-          <tr *ngFor="let r of getFilteredReports(reports)" class="hover:bg-gray-50 transition-colors">
-            <td class="p-4 text-gray-800">{{ r.poNumber }}</td>
-            <td class="p-4 text-gray-600 truncate max-w-xs">{{ r.customerId }}</td>
-            <td class="p-4 text-gray-800">{{ r.status }}</td>
-            <td class="p-4">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" [ngClass]="{
-                'bg-red-100 text-red-800': r.syncState === 'CONFLICT',
-                'bg-yellow-100 text-yellow-800': r.syncState === 'PENDING',
-                'bg-green-100 text-green-800': r.syncState === 'SYNCED'
-              }">{{ r.syncState }}</span>
-            </td>
-            <td class="p-4 text-right">
-              <a [routerLink]="[r.id]" class="text-blue-600 hover:text-blue-900 font-medium">View Detail</a>
-            </td>
-          </tr>
-          <tr *ngIf="getFilteredReports(reports).length === 0">
-            <td colspan="5" class="p-8 text-center text-gray-500">No inspection reports found.</td>
-          </tr>
-        </ng-container>
+        @if (reports$ | async; as reports) {
+          @for (r of getFilteredReports(reports); track r.id) {
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="p-4 text-gray-800">{{ r.poNumber }}</td>
+              <td class="p-4 text-gray-600 truncate max-w-xs">{{ r.customerId }}</td>
+              <td class="p-4 text-gray-800">{{ r.status }}</td>
+              <td class="p-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" [ngClass]="{
+                  'bg-red-100 text-red-800': r.syncState === 'CONFLICT',
+                  'bg-yellow-100 text-yellow-800': r.syncState === 'PENDING',
+                  'bg-green-100 text-green-800': r.syncState === 'SYNCED'
+                }">{{ r.syncState }}</span>
+              </td>
+              <td class="p-4 text-right">
+                <a [routerLink]="[r.id]" class="text-blue-600 hover:text-blue-900 font-medium">View Detail</a>
+              </td>
+            </tr>
+          }
+          @if (getFilteredReports(reports).length === 0) {
+            <tr>
+              <td colspan="5" class="p-8 text-center text-gray-500">No inspection reports found.</td>
+            </tr>
+          }
+        }
       </tbody>
     </table>
   </div>

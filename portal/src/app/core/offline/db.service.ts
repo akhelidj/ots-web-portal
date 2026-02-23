@@ -42,7 +42,8 @@ export class DbService {
         if (!db.objectStoreNames.contains('inspection_reports')) {
           irStore = db.createObjectStore('inspection_reports', { keyPath: 'id' });
         } else {
-          irStore = request.transaction!.objectStore('inspection_reports');
+          if (!request.transaction) throw new Error('Transaction is missing');
+          irStore = request.transaction.objectStore('inspection_reports');
         }
         if (!irStore.indexNames.contains('updatedAt')) irStore.createIndex('updatedAt', 'updatedAt', { unique: false });
         if (!irStore.indexNames.contains('status')) irStore.createIndex('status', 'status', { unique: false });
@@ -53,7 +54,8 @@ export class DbService {
         if (!db.objectStoreNames.contains('serial_numbers')) {
           snStore = db.createObjectStore('serial_numbers', { keyPath: 'id' });
         } else {
-          snStore = request.transaction!.objectStore('serial_numbers');
+          if (!request.transaction) throw new Error('Transaction is missing');
+          snStore = request.transaction.objectStore('serial_numbers');
         }
         if (!snStore.indexNames.contains('inspectionReportId')) snStore.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
         if (!snStore.indexNames.contains('value')) snStore.createIndex('value', 'value', { unique: false });
@@ -105,6 +107,9 @@ export class DbService {
     if (this.initPromise) {
       return this.initPromise;
     }
-    return this.dbInstance!;
+    if (!this.dbInstance) {
+      throw new Error('Database instance is unexpectedly missing');
+    }
+    return this.dbInstance;
   }
 }

@@ -54,10 +54,10 @@ export class ChangePasswordComponent {
     this.isLoading = true;
 
     try {
-       const response = await this.http.post<any>(`${environment.apiUrl}/auth/change-password`, {
+       const response = await this.http.post<{ user: UserProfile, accessToken: string, refreshToken: string }>(`${environment.apiUrl}/auth/change-password`, {
          currentPassword: this.currentPassword,
          newPassword: this.newPassword
-       }).toPromise();
+       }).toPromise() as { user: UserProfile, accessToken: string, refreshToken: string };
 
        // Store fresh tokens and profile where mustChangePassword is now false
        const userProfile: UserProfile = {
@@ -77,7 +77,8 @@ export class ChangePasswordComponent {
            this.router.navigate(['/']); 
        }, 1000);
 
-    } catch (e: any) {
+    } catch (error) {
+       const e = error as { error?: { message?: string } };
        this.formError = e.error?.message || 'Failed to change password. Ensure your current password is correct.';
     } finally {
        this.isLoading = false;
