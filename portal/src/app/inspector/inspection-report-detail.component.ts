@@ -3,8 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import { InspectionReportsService } from './inspection-reports.service';
 import { ChildReportsService } from './child-reports.service';
+import { environment } from '../../environments/environment';
 import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog, LocalChildReport } from '../core/offline/types';
 import { DRILL_PIPE_FIELDS } from './config/drill-pipe-fields';
 
@@ -18,6 +20,7 @@ export class InspectionReportDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private irService = inject(InspectionReportsService);
   private crService = inject(ChildReportsService);
+  private http = inject(HttpClient);
 
   public reportId = '';
   public reportSubj = new BehaviorSubject<LocalInspectionReport | null>(null);
@@ -44,6 +47,7 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public creatingChildReportForSn: LocalSerialNumber | null = null;
   public childReportNotes = '';
+  public isExporting = false;
 
   async ngOnInit() {
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
@@ -217,6 +221,75 @@ export class InspectionReportDetailComponent implements OnInit {
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to create child report.';
+    }
+  }
+
+  public async exportReport(): Promise<void> {
+    if (!navigator.onLine) {
+      this.formError = 'Export requires internet connection.';
+      return;
+    }
+
+    this.isExporting = true;
+    this.formError = '';
+
+    try {
+      const observer = this.http.get(`${environment.apiUrl}/inspection-reports/${this.reportId}/export`, {
+        responseType: 'blob',
+        observe: 'response'
+      });
+      
+      const response = await new Promise<any>((resolve, reject) => {
+         observer.subscribe({
+            next: (res: any) => resolve(res),
+            error: (err: any) => reject(err)
+         });
+      });
+
+      const blob = response.body;
+      const contentDisposition = response.headers.get('Content-Disposition');
+      
+      let filename = '';
+      if (contentDisposition) {
+        const parts = contentDisposition.split(';');
+        const filenameStar = parts.find((p: string) => p.trim().startsWith('filename*='));
+        const filenameNormal = parts.find((p: string) => p.trim().startsWith('filename='));
+
+        if (filenameStar) {
+          filename = decodeURIComponent(filenameStar.split("''")[1]);
+        } else if (filenameNormal) {
+          filename = filenameNormal.split('=')[1].replace(/["']/g, '');
+        }
+      }
+      
+      if (!filename) {
+         const ext = blob.type === 'application/zip' ? '.zip' : '.xlsx';
+         filename = `inspection-report-${this.reportId}${ext}`;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      if (error.status === 0) {
+        this.formError = 'Export requires internet connection.';
+      } else if (error.status === 400) {
+        // Safe mapping or generic if no internal server message.
+        this.formError = 'Report mapping validation failed or template mismatch.';
+      } else if (error.status === 403) {
+        this.formError = 'Not allowed.';
+      } else if (error.status === 404) {
+        this.formError = 'Report not found.';
+      } else {
+        this.formError = 'Failed to export report.';
+      }
+    } finally {
+      this.isExporting = false;
     }
   }
 }
