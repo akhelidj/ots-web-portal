@@ -26,6 +26,8 @@ export class InspectionReportDetailComponent implements OnInit {
   public formToStatus = '';
   public formReason = '';
   public formError = '';
+  public editingSnId: string | null = null;
+  public editingSnValue = '';
 
   public allowedTransitions = [
     'RECEIVED', 'READY_FOR_CLEANING', 'READY_FOR_INSPECTION', 'IN_INSPECTION', 'PENDING_APPROVAL', 'APPROVED', 'ON_HOLD', 'CLOSED'
@@ -78,6 +80,32 @@ export class InspectionReportDetailComponent implements OnInit {
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to transition report.';
+    }
+  }
+
+  public onEditSn(sn: LocalSerialNumber): void {
+    this.editingSnId = sn.id;
+    this.editingSnValue = sn.value;
+  }
+
+  public cancelEditSn(): void {
+    this.editingSnId = null;
+    this.editingSnValue = '';
+  }
+
+  public async saveEditSn(sn: LocalSerialNumber): Promise<void> {
+    if (!this.editingSnValue.trim() || this.editingSnValue === sn.value) {
+      this.cancelEditSn();
+      return;
+    }
+
+    try {
+      await this.irService.renameSerialNumberOffline(sn.id, this.editingSnValue);
+      this.cancelEditSn();
+      this.refreshData();
+    } catch (error) {
+      const e = error as Error;
+      this.formError = e.message || 'Failed to rename serial number.';
     }
   }
 }

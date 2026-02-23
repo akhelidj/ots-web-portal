@@ -148,31 +148,63 @@ export class InspectionReportsService {
   }
 
   public async addSerialNumberOffline(reportId: string, serials: string[]): Promise<void> {
-    for (const serial of serials) {
-      if (!serial.trim()) continue;
+    const validSerials = serials.map(s => s.trim()).filter(s => s.length > 0);
+    if (validSerials.length === 0) return;
+
+    const itemsPayload: { clientRef: string, serialNumber: string }[] = [];
+
+    for (const serial of validSerials) {
       const tempId = 'local-sn-' + crypto.randomUUID();
       const sn: LocalSerialNumber = {
         id: tempId,
         inspectionReportId: reportId,
-        value: serial.trim(),
+        value: serial,
         version: 1,
         syncState: 'PENDING',
       };
 
       await this.snRepo.upsert(sn);
-
-      await this.outbox.enqueue({
-        id: crypto.randomUUID(),
-        idempotencyKey: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        entityType: 'SERIAL_NUMBER',
-        entityId: tempId,
-        operation: 'ADD',
-        payload: { inspectionReportId: reportId, value: serial.trim() },
-        status: 'PENDING',
-        attemptCount: 0,
-        lastError: null,
-      });
+      itemsPayload.push({ clientRef: tempId, serialNumber: serial });
     }
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'SERIAL_NUMBER',
+      entityId: reportId, // Entity ID is the report for bulk
+      operation: 'BULK_CREATE',
+      payload: { inspectionReportId: reportId, items: itemsPayload },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+  }
+
+  public async renameSerialNumberOffline(id: string, newSerial: string): Promise<void> {
+    const sn = await this.snRepo.getById(id);
+    if (!sn) throw new Error('Serial number not found locally');
+
+    const updatedSn: LocalSerialNumber = {
+      ...sn,
+      value: newSerial.trim(),
+      version: sn.version + 1,
+      syncState: 'PENDING',
+    };
+
+    await this.snRepo.upsert(updatedSn);
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'SERIAL_NUMBER',
+      entityId: id,
+      operation: 'UPDATE',
+      payload: { value: newSerial.trim(), version: sn.version },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
   }
 }

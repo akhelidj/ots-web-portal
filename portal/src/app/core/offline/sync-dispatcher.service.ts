@@ -158,47 +158,57 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'SN_ADD': {
+        case 'SN_BULK_CREATE': {
           const reportId = item.payload['inspectionReportId'] as string;
-          const value = item.payload['value'] as string;
-          const restPayload = { ...item.payload };
-          delete restPayload['value'];
+          const itemsPayload = item.payload['items'] as any[];
+          
+          if (!itemsPayload || itemsPayload.length === 0) return true;
+
           const createRes = await firstValueFrom(
-            this.http.post<{ id: string; serial: string; [key: string]: unknown }>(`${environment.apiUrl}/inspection-reports/${reportId}/serial-numbers`, {
-              ...restPayload,
-              serial: value
-            })
+            this.http.post<{ items: { clientRef: string, id: string, serialNumber: string, version: number }[] }>(
+              `${environment.apiUrl}/inspection-reports/${reportId}/serial-numbers`, 
+              { items: itemsPayload }
+            )
           );
-          const mappedRes = { ...createRes, value: createRes.serial } as Partial<{ serial: unknown }> & { id: string; value: string; [key: string]: unknown };
-          delete mappedRes.serial;
 
-          const tempSn = await this.snRepo.getById(item.entityId);
-          if (tempSn) {
-            await this.snRepo.remapId(item.entityId, { ...mappedRes, syncState: 'SYNCED', inspectionReportId: reportId } as LocalSerialNumber);
-          }
+          // Remap each returned item by clientRef
+          const returnedItems = createRes.items || [];
+          for (const mapped of returnedItems) {
+            const tempId = mapped.clientRef;
+            const tempSn = await this.snRepo.getById(tempId);
+            if (tempSn) {
+              await this.snRepo.remapId(tempId, { 
+                ...mapped, 
+                value: mapped.serialNumber,
+                inspectionReportId: reportId,
+                syncState: 'SYNCED' 
+              } as LocalSerialNumber);
+            }
 
-          const pendingItems = await this.outboxRepo.getPendingItems();
-          for (const pending of pendingItems) {
-            if (pending.entityType === 'SERIAL_NUMBER' && pending.entityId === item.entityId) {
-              pending.entityId = createRes.id;
-              await this.outboxRepo.upsert(pending);
+            // Remap any dependent outbox items waiting on this SN
+            const pendingItems = await this.outboxRepo.getPendingItems();
+            for (const pending of pendingItems) {
+              if (pending.entityType === 'SERIAL_NUMBER' && pending.entityId === tempId) {
+                pending.entityId = mapped.id;
+                await this.outboxRepo.upsert(pending);
+              }
             }
           }
           return true;
         }
 
         case 'SN_UPDATE': {
-          const value = item.payload['value'] as string | undefined;
-          const backendPayload = { ...item.payload };
-          delete backendPayload['value'];
-          if (value !== undefined) {
-            backendPayload['serial'] = value;
-          }
+          const backendPayload = {
+             serialNumber: item.payload['value'] as string,
+             version: item.payload['version'] as number
+          };
+          
           const updateRes = await firstValueFrom(
-            this.http.patch<{ serial: string; [key: string]: unknown }>(`${environment.apiUrl}/serial-numbers/${item.entityId}`, backendPayload)
+            this.http.patch<{ serialNumber: string; [key: string]: unknown }>(`${environment.apiUrl}/serial-numbers/${item.entityId}`, backendPayload)
           );
-          const mappedUpdate = { ...updateRes, value: updateRes.serial } as Partial<{ serial: unknown }> & { value: string; [key: string]: unknown };
-          delete mappedUpdate.serial;
+          
+          const mappedUpdate = { ...updateRes, value: updateRes.serialNumber } as Partial<{ serialNumber: unknown }> & { value: string; [key: string]: unknown };
+          delete mappedUpdate.serialNumber;
           
           await this.snRepo.upsert({ ...mappedUpdate, syncState: 'SYNCED' } as unknown as LocalSerialNumber);
           return true;

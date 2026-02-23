@@ -80,7 +80,30 @@
             @if (serials$ | async; as serials) {
               @for (sn of serials; track sn.id) {
                 <tr class="hover:bg-gray-50">
-                  <td class="p-3 font-medium text-gray-900">{{ sn.value }}</td>
+                  <td class="p-3 font-medium text-gray-900">
+                    @if (editingSnId === sn.id) {
+                      <div class="flex items-center gap-2">
+                        <input type="text" [(ngModel)]="editingSnValue" class="border border-gray-300 p-1 rounded-sm text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500 border-indigo-200" (keyup.enter)="saveEditSn(sn)">
+                        <button (click)="saveEditSn(sn)" class="text-green-600 hover:text-green-800" title="Save">
+                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                        <button (click)="cancelEditSn()" class="text-gray-400 hover:text-gray-600" title="Cancel">
+                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    } @else {
+                      <div class="flex items-center gap-3">
+                        <span>{{ sn.value }}</span>
+                        @if (report.status !== 'APPROVED' && report.status !== 'CLOSED') {
+                           <button (click)="onEditSn(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors hide-on-readonly" title="Edit Serial Number">Edit</button>
+                        }
+                      </div>
+                    }
+                  </td>
                   <td class="p-3">
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" [ngClass]="{
                       'bg-red-100 text-red-800': sn.syncState === 'CONFLICT',
