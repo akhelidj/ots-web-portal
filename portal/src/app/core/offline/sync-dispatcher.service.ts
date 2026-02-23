@@ -152,9 +152,12 @@ export class SyncDispatcherService {
 
         case 'IR_TRANSITION': {
           const transitionRes = await firstValueFrom(
-            this.http.post<LocalInspectionReport>(`${environment.apiUrl}/inspection-reports/${item.entityId}/transition`, item.payload)
+            this.http.post<LocalInspectionReport>(`${environment.apiUrl}/inspection-reports/${item.entityId}/transitions`, item.payload)
           );
-          await this.irRepo.upsert({ ...transitionRes, syncState: 'SYNCED' });
+          const rep = await this.irRepo.getById(item.entityId);
+          if (rep) {
+            await this.irRepo.upsert({ ...rep, ...transitionRes, syncState: 'SYNCED', pendingTransitionToStatus: null });
+          }
           return true;
         }
 
@@ -223,21 +226,33 @@ export class SyncDispatcherService {
           return false;
       }
     } catch (error) {
-       if (error instanceof HttpErrorResponse && error.status === 409) {
-          if (item.entityType === 'INSPECTION_REPORT') {
-            const rep = await this.irRepo.getById(item.entityId);
-            if (rep) await this.irRepo.upsert({ ...rep, syncState: 'CONFLICT' });
-          } else if (item.entityType === 'SERIAL_NUMBER') {
-            const sn = await this.snRepo.getById(item.entityId);
-            if (sn) await this.snRepo.upsert({ ...sn, syncState: 'CONFLICT' });
-          } else if (item.entityType === 'CUSTOMER') {
-            const cust = await this.customerRepo.getById(item.entityId);
-            if (cust) await this.customerRepo.upsert({ ...cust, syncState: 'CONFLICT' });
-          }
+       if (error instanceof HttpErrorResponse) {
+          if (error.status === 409) {
+            if (item.entityType === 'INSPECTION_REPORT') {
+              const rep = await this.irRepo.getById(item.entityId);
+              if (rep) await this.irRepo.upsert({ ...rep, syncState: 'CONFLICT' });
+            } else if (item.entityType === 'SERIAL_NUMBER') {
+              const sn = await this.snRepo.getById(item.entityId);
+              if (sn) await this.snRepo.upsert({ ...sn, syncState: 'CONFLICT' });
+            } else if (item.entityType === 'CUSTOMER') {
+              const cust = await this.customerRepo.getById(item.entityId);
+              if (cust) await this.customerRepo.upsert({ ...cust, syncState: 'CONFLICT' });
+            }
 
-          const conflictErr = new Error(error.error?.message || 'Conflict processing entity') as Error & { status?: number };
-          conflictErr.status = 409;
-          throw conflictErr;
+            const conflictErr = new Error(error.error?.message || 'Conflict processing entity') as Error & { status?: number };
+            conflictErr.status = 409;
+            throw conflictErr;
+          } else if (error.status === 400 || error.status === 403) {
+            if (item.entityType === 'INSPECTION_REPORT') {
+              const rep = await this.irRepo.getById(item.entityId);
+              if (rep) {
+                await this.irRepo.upsert({ ...rep, syncState: 'ERROR', pendingTransitionToStatus: null });
+              }
+            }
+            const appErr = new Error(error.error?.message || `Application logic error: ${error.status}`) as Error & { status?: number };
+            appErr.status = error.status;
+            throw appErr;
+          }
        }
        throw error;
     }

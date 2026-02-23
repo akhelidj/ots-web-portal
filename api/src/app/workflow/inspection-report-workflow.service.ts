@@ -75,7 +75,10 @@ export class InspectionReportWorkflowService {
     private revisionService: RevisionService,
   ) {}
 
-  async getAvailableTransitions(user: { tenantId: string; role: UserRole }, reportId: string): Promise<InspectionReportStatus[]> {
+  async getAvailableTransitions(
+    user: { tenantId: string; role: UserRole }, 
+    reportId: string
+  ): Promise<{ fromStatus: InspectionReportStatus; transitions: { toStatus: InspectionReportStatus; requiresReason: boolean }[] }> {
     const report = await this.prisma.inspectionReport.findFirst({
       where: { 
           id: reportId,
@@ -89,10 +92,10 @@ export class InspectionReportWorkflowService {
     }
 
     if (user.role === UserRole.CUSTOMER) {
-      return [];
+      return { fromStatus: report.status, transitions: [] };
     }
 
-    const allowedTargetStatuses = INSPECTION_REPORT_TRANSITIONS[user.role]?.[report.status] || [];
+    let allowedTargetStatuses = INSPECTION_REPORT_TRANSITIONS[user.role]?.[report.status] || [];
     
     // 4) ON_HOLD Resume Visibility
     if (report.status === InspectionReportStatus.ON_HOLD && (user.role === UserRole.SUPERVISOR || user.role === UserRole.ADMIN)) {
@@ -105,11 +108,36 @@ export class InspectionReportWorkflowService {
         });
 
         if (lastHoldLog?.previousActiveStatus) {
-            return [...allowedTargetStatuses, lastHoldLog.previousActiveStatus];
+            allowedTargetStatuses = [...allowedTargetStatuses, lastHoldLog.previousActiveStatus];
         }
     }
     
-    return allowedTargetStatuses;
+    const transitions = allowedTargetStatuses.map(toStatus => ({
+        toStatus,
+        requiresReason: isReasonRequiredForInspection(report.status, toStatus)
+    }));
+
+    return {
+        fromStatus: report.status,
+        transitions
+    };
+  }
+
+  async getTransitions(user: { tenantId: string }, reportId: string) {
+    // Escalate tenant validation
+    const report = await this.prisma.inspectionReport.findFirst({
+        where: { id: reportId, tenantId: user.tenantId }
+    });
+    
+    if (!report) {
+         throw new NotFoundException('Inspection Report not found');
+    }
+
+    // Fetch the safely scoped logs
+    return this.prisma.inspectionReportTransitionLog.findMany({
+        where: { inspectionReportId: reportId },
+        orderBy: { timestamp: 'desc' }
+    });
   }
 
   async transition(

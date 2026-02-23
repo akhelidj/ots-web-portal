@@ -41,23 +41,42 @@
 
     <!-- Transition Section -->
     <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h2 class="text-xl font-bold mb-4 border-b pb-2">Status Transition</h2>
+      <h2 class="text-xl font-bold border-b pb-2 mb-4">Status Transition</h2>
       @if (formError) {
         <div class="mb-4 bg-red-100 text-red-700 p-2 rounded text-sm">{{ formError }}</div>
       }
       
-      <div class="flex gap-4 mb-4">
-        <select [(ngModel)]="formToStatus" class="flex-1 border border-gray-300 p-2 rounded-md">
-          <option value="">Select Status</option>
-          @for (status of allowedTransitions; track status) {
-            <option [value]="status">{{status}}</option>
+      @if (report.pendingTransitionToStatus) {
+        <div class="p-3 bg-yellow-50 text-yellow-800 text-sm rounded border border-yellow-200">
+           Transition to <span class="font-bold border px-1 rounded bg-yellow-100">{{ report.pendingTransitionToStatus }}</span> pending.
+        </div>
+      } @else {
+          <div class="flex flex-wrap gap-2 mb-4">
+             @for (transition of allowedTransitions; track transition.toStatus) {
+                <button (click)="openReasonSelect(transition)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-sm rounded transition-colors">
+                  {{ transition.toStatus }}
+                </button>
+             }
+             @if (allowedTransitions.length === 0) {
+                <p class="text-sm text-gray-500">No transitions available.</p>
+             }
+          </div>
+
+          @if (selectedTransition) {
+             <div class="mt-4 p-3 border rounded bg-gray-50 flex flex-col gap-2">
+                <p class="text-sm font-medium text-gray-900">Confirm transition to {{ selectedTransition.toStatus }}</p>
+                @if (selectedTransition.requiresReason) {
+                   <input type="text" [(ngModel)]="formReason" placeholder="Reason (Required)" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
+                } @else {
+                   <input type="text" [(ngModel)]="formReason" placeholder="Reason (Optional)" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
+                }
+                <div class="flex gap-2">
+                   <button (click)="onTransition()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 text-sm rounded transition-colors disabled:opacity-50" [disabled]="selectedTransition.requiresReason && !formReason.trim()">Confirm</button>
+                   <button (click)="selectedTransition = null; formReason = ''" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-1.5 text-sm rounded transition-colors">Cancel</button>
+                </div>
+             </div>
           }
-        </select>
-        <button (click)="onTransition()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors">
-          Transition
-        </button>
-      </div>
-      <input type="text" [(ngModel)]="formReason" placeholder="Reason (Optional)" class="w-full border border-gray-300 p-2 rounded-md">
+      }
     </div>
 
   </div>
@@ -137,4 +156,39 @@
     </div>
   </div>
 </div>
+
+  <div class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div class="p-4 border-b bg-gray-50">
+      <h2 class="font-bold text-lg text-gray-900">Transition History</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead class="bg-white">
+          <tr>
+            <th class="p-3 border-b text-gray-600 font-medium">Date</th>
+            <th class="p-3 border-b text-gray-600 font-medium">From</th>
+            <th class="p-3 border-b text-gray-600 font-medium">To</th>
+            <th class="p-3 border-b text-gray-600 font-medium">Reason</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          @if (transitionLogs$ | async; as logs) {
+            @for (log of logs; track log.id) {
+              <tr class="hover:bg-gray-50">
+                <td class="p-3 text-gray-500">{{ log.timestamp | date:'shortTime' }} {{ log.timestamp | date:'MMM d' }}</td>
+                <td class="p-3"><span class="bg-gray-100 px-2 py-0.5 rounded text-xs">{{ log.fromStatus }}</span></td>
+                <td class="p-3"><span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded text-xs">{{ log.toStatus }}</span></td>
+                <td class="p-3 text-gray-600 italic">{{ log.reason || '-' }}</td>
+              </tr>
+            }
+            @if (logs.length === 0) {
+              <tr>
+                <td colspan="4" class="p-6 text-center text-gray-500">No transition history.</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
 }

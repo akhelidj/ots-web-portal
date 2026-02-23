@@ -4,8 +4,9 @@ import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { InspectionReportLocalRepo } from '../core/offline/inspection-report-local.repo';
 import { SerialNumberLocalRepo } from '../core/offline/serial-number-local.repo';
-import { LocalInspectionReport, LocalSerialNumber } from '../core/offline/types';
+import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog } from '../core/offline/types';
 import { OutboxService } from '../core/offline/outbox.service';
+import { TransitionLogLocalRepo } from '../core/offline/transition-log-local.repo';
 
 @Injectable({
   providedIn: 'root'
@@ -14,6 +15,7 @@ export class InspectionReportsService {
   private http = inject(HttpClient);
   public irRepo = inject(InspectionReportLocalRepo);
   private snRepo = inject(SerialNumberLocalRepo);
+  private tlRepo = inject(TransitionLogLocalRepo);
   private outbox = inject(OutboxService);
 
   private reportsSubj = new BehaviorSubject<LocalInspectionReport[]>([]);
@@ -32,6 +34,52 @@ export class InspectionReportsService {
 
   public async getSnForReport(reportId: string): Promise<LocalSerialNumber[]> {
     return this.snRepo.listByReportId(reportId);
+  }
+
+  public async getTransitionLogsLocally(reportId: string): Promise<LocalTransitionLog[]> {
+    return this.tlRepo.listByReportId(reportId);
+  }
+
+  public async refreshAvailableTransitions(reportId: string): Promise<void> {
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{ fromStatus: string; transitions: { toStatus: string; requiresReason: boolean }[] }>(
+          `${environment.apiUrl}/inspection-reports/${reportId}/available-transitions`
+        )
+      );
+
+      const rep = await this.irRepo.getById(reportId);
+      if (rep) {
+         await this.irRepo.upsert({ ...rep, availableTransitions: JSON.stringify(res) });
+      }
+      await this.refreshLocalCache();
+    } catch (e) {
+      console.error(`Failed to refresh available transitions for report ${reportId}`, e);
+    }
+  }
+
+  public async refreshTransitionLogs(reportId: string): Promise<void> {
+    try {
+      const logs = await firstValueFrom(
+        this.http.get<LocalTransitionLog[]>(`${environment.apiUrl}/inspection-reports/${reportId}/transitions`)
+      );
+      
+      const localLogs = await this.tlRepo.listByReportId(reportId);
+      const localMap = new Map(localLogs.map(l => [l.id, l]));
+
+      const toUpsert: LocalTransitionLog[] = [];
+      for (const lg of logs) {
+         if (!localMap.has(lg.id)) {
+            toUpsert.push(lg);
+         }
+      }
+
+      if (toUpsert.length > 0) {
+        await this.tlRepo.bulkUpsert(toUpsert);
+      }
+    } catch (e) {
+       console.error(`Failed to refresh transition logs for report ${reportId}`, e);
+    }
   }
 
   public async pullAllAndCache(): Promise<void> {
@@ -126,8 +174,7 @@ export class InspectionReportsService {
 
     const updatedRep: LocalInspectionReport = {
       ...rep,
-      status: toStatus,
-      version: rep.version + 1,
+      pendingTransitionToStatus: toStatus,
       syncState: 'PENDING',
     };
 

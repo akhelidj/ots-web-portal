@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { InspectionReportsService } from './inspection-reports.service';
-import { LocalInspectionReport, LocalSerialNumber } from '../core/offline/types';
+import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog } from '../core/offline/types';
 
 @Component({
   selector: 'app-inspection-report-detail',
@@ -21,19 +21,19 @@ export class InspectionReportDetailComponent implements OnInit {
   public report$ = this.reportSubj.asObservable();
   public serialsSubj = new BehaviorSubject<LocalSerialNumber[]>([]);
   public serials$ = this.serialsSubj.asObservable();
+  public transitionLogsSubj = new BehaviorSubject<LocalTransitionLog[]>([]);
+  public transitionLogs$ = this.transitionLogsSubj.asObservable();
   
   public formBulkSerials = '';
-  public formToStatus = '';
   public formReason = '';
   public formError = '';
   public editingSnId: string | null = null;
   public editingSnValue = '';
 
-  public allowedTransitions = [
-    'RECEIVED', 'READY_FOR_CLEANING', 'READY_FOR_INSPECTION', 'IN_INSPECTION', 'PENDING_APPROVAL', 'APPROVED', 'ON_HOLD', 'CLOSED'
-  ]; 
+  public allowedTransitions: { toStatus: string; requiresReason: boolean }[] = []; 
+  public selectedTransition: { toStatus: string; requiresReason: boolean } | null = null;
 
-  ngOnInit() {
+  async ngOnInit() {
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
       this.refreshData();
@@ -41,6 +41,9 @@ export class InspectionReportDetailComponent implements OnInit {
       this.irService.reports$.subscribe(() => {
         this.refreshData();
       });
+
+      await this.irService.refreshAvailableTransitions(this.reportId);
+      await this.irService.refreshTransitionLogs(this.reportId);
     }
   }
 
@@ -49,8 +52,22 @@ export class InspectionReportDetailComponent implements OnInit {
     const r = list.find((x: LocalInspectionReport) => x.id === this.reportId) || null;
     this.reportSubj.next(r);
 
+    if (r?.availableTransitions) {
+       try {
+         const parsed = JSON.parse(r.availableTransitions);
+         this.allowedTransitions = parsed.transitions || [];
+       } catch (e) {
+         this.allowedTransitions = [];
+       }
+    } else {
+       this.allowedTransitions = [];
+    }
+
     const snList = await this.irService.getSnForReport(this.reportId);
     this.serialsSubj.next(snList);
+
+    const logs = await this.irService.getTransitionLogsLocally(this.reportId);
+    this.transitionLogsSubj.next(logs);
   }
 
   public async onAddSerials() {
@@ -68,13 +85,19 @@ export class InspectionReportDetailComponent implements OnInit {
     }
   }
 
+  public openReasonSelect(transition: { toStatus: string; requiresReason: boolean }): void {
+    this.selectedTransition = transition;
+    this.formReason = '';
+    this.formError = '';
+  }
+
   public async onTransition() {
     this.formError = '';
-    if (!this.formToStatus) return;
+    if (!this.selectedTransition) return;
 
     try {
-      await this.irService.transitionOffline(this.reportId, this.formToStatus, this.formReason);
-      this.formToStatus = '';
+      await this.irService.transitionOffline(this.reportId, this.selectedTransition.toStatus, this.formReason);
+      this.selectedTransition = null;
       this.formReason = '';
       this.refreshData();
     } catch (error) {

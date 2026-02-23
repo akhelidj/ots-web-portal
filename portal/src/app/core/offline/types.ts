@@ -9,6 +9,8 @@ export interface LocalInspectionReport {
   version: number;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
   updatedAt?: string;
+  pendingTransitionToStatus?: string | null;
+  availableTransitions?: string | null;
 }
 
 export interface LocalSerialNumber {
@@ -68,4 +70,15 @@ export interface OutboxItem {
 export interface MetaRecord {
   key: string;
   value: unknown;
+}
+
+export interface LocalTransitionLog {
+  id: string;
+  inspectionReportId: string;
+  fromStatus: string;
+  toStatus: string;
+  userId: string;
+  timestamp: string;
+  reason?: string | null;
+  previousActiveStatus?: string | null;
 }
