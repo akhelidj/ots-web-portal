@@ -83,3 +83,16 @@ export interface LocalTransitionLog {
   reason?: string | null;
   previousActiveStatus?: string | null;
 }
+
+export interface LocalChildReport {
+  id: string;
+  tenantId: string;
+  inspectionReportId: string;
+  serialNumberId: string;
+  type: 'REWORK' | 'SCRAP' | 'HOLD';
+  status: 'OPEN' | 'COMPLETED';
+  notes?: string | null;
+  version: number;
+  syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
+  updatedAt?: string;
+}

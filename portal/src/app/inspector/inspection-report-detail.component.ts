@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { InspectionReportsService } from './inspection-reports.service';
-import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog } from '../core/offline/types';
+import { ChildReportsService } from './child-reports.service';
+import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog, LocalChildReport } from '../core/offline/types';
 import { DRILL_PIPE_FIELDS } from './config/drill-pipe-fields';
 
 @Component({
@@ -16,6 +17,7 @@ import { DRILL_PIPE_FIELDS } from './config/drill-pipe-fields';
 export class InspectionReportDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private irService = inject(InspectionReportsService);
+  private crService = inject(ChildReportsService);
 
   public reportId = '';
   public reportSubj = new BehaviorSubject<LocalInspectionReport | null>(null);
@@ -24,6 +26,8 @@ export class InspectionReportDetailComponent implements OnInit {
   public serials$ = this.serialsSubj.asObservable();
   public transitionLogsSubj = new BehaviorSubject<LocalTransitionLog[]>([]);
   public transitionLogs$ = this.transitionLogsSubj.asObservable();
+  public childReportsSubj = new BehaviorSubject<LocalChildReport[]>([]);
+  public childReports$ = this.childReportsSubj.asObservable();
   
   public formBulkSerials = '';
   public formReason = '';
@@ -38,6 +42,9 @@ export class InspectionReportDetailComponent implements OnInit {
   public inspectingSn: LocalSerialNumber | null = null;
   public inspectionFormData: Record<string, any> = {};
 
+  public creatingChildReportForSn: LocalSerialNumber | null = null;
+  public childReportNotes = '';
+
   async ngOnInit() {
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
@@ -47,8 +54,13 @@ export class InspectionReportDetailComponent implements OnInit {
         this.refreshData();
       });
 
+      this.crService.changes$.subscribe(() => {
+        this.refreshData();
+      });
+
       await this.irService.refreshAvailableTransitions(this.reportId);
       await this.irService.refreshTransitionLogs(this.reportId);
+      await this.crService.pullForInspectionFromServer(this.reportId);
     }
   }
 
@@ -73,6 +85,9 @@ export class InspectionReportDetailComponent implements OnInit {
 
     const logs = await this.irService.getTransitionLogsLocally(this.reportId);
     this.transitionLogsSubj.next(logs);
+
+    const childReports = await this.crService.getChildReportsForInspection(this.reportId);
+    this.childReportsSubj.next(childReports);
   }
 
   public async onAddSerials() {
@@ -167,6 +182,41 @@ export class InspectionReportDetailComponent implements OnInit {
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to save inspection data.';
+    }
+  }
+
+  public openChildReportForm(sn: LocalSerialNumber): void {
+    this.creatingChildReportForSn = sn;
+    this.childReportNotes = '';
+    this.formError = '';
+  }
+
+  public cancelChildReportForm(): void {
+    this.creatingChildReportForSn = null;
+    this.childReportNotes = '';
+    this.formError = '';
+  }
+
+  public async submitChildReport(): Promise<void> {
+    if (!this.creatingChildReportForSn) return;
+    const type = this.creatingChildReportForSn.inspectionJson?.disposition;
+    if (!type || type === 'PASS') {
+      this.formError = 'Cannot create Child Report: Invalid disposition source.';
+      return;
+    }
+
+    try {
+      await this.crService.createOffline({
+        inspectionReportId: this.reportId,
+        serialNumberId: this.creatingChildReportForSn.id,
+        type: type as 'REWORK' | 'SCRAP' | 'HOLD',
+        notes: this.childReportNotes.trim() || undefined
+      });
+      this.cancelChildReportForm();
+      this.refreshData();
+    } catch (error) {
+      const e = error as Error;
+      this.formError = e.message || 'Failed to create child report.';
     }
   }
 }

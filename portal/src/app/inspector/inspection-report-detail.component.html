@@ -127,14 +127,39 @@
                                'bg-orange-100 text-orange-800': sn.inspectionJson.disposition === 'HOLD'
                              }">{{ sn.inspectionJson.disposition }}</span>
                            }
+                           
+                           @if (sn.inspectionJson?.disposition && sn.inspectionJson.disposition !== 'PASS') {
+                              <button (click)="openChildReportForm(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors" title="Create Child Report">Create CR</button>
+                           }
+
                            <button (click)="onEditSn(sn)" class="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 bg-gray-50 rounded transition-colors hide-on-readonly" title="Edit Serial Number">Rename</button>
                         } @else {
                            <button (click)="openInspectionForm(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors" title="View Inspection">View</button>
                         }
                       </div>
+
+                      <!-- Sub list of Child Reports for this SN -->
+                      @if (childReports$ | async; as crList) {
+                         <div class="mt-2 pl-4 border-l-2 border-gray-200">
+                           @for (cr of crList; track cr.id) {
+                              @if (cr.serialNumberId === sn.id) {
+                                <div class="flex items-center gap-2 text-xs py-1">
+                                  <span class="font-medium text-gray-700">Child Report:</span>
+                                  <span class="bg-gray-100 px-1.5 py-0.5 rounded font-mono">{{ cr.type }}</span>
+                                  <span [ngClass]="{'text-green-600': cr.status === 'COMPLETED', 'text-yellow-600': cr.status === 'OPEN'}" class="font-medium">{{ cr.status }}</span>
+                                  <span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" [ngClass]="{
+                                    'bg-red-100 text-red-800': cr.syncState === 'CONFLICT',
+                                    'bg-yellow-100 text-yellow-800': cr.syncState === 'PENDING',
+                                    'bg-green-100 text-green-800': cr.syncState === 'SYNCED'
+                                  }">{{ cr.syncState }}</span>
+                                </div>
+                              }
+                           }
+                         </div>
+                      }
                     }
                   </td>
-                  <td class="p-3">
+                  <td class="p-3 align-top">
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" [ngClass]="{
                       'bg-red-100 text-red-800': sn.syncState === 'CONFLICT',
                       'bg-yellow-100 text-yellow-800': sn.syncState === 'PENDING',
@@ -154,7 +179,33 @@
       </div>
     </div>
 
-    @if (inspectingSn) {
+    @if (creatingChildReportForSn) {
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-fit">
+         <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 class="text-xl font-bold">New Child Report</h2>
+            <button (click)="cancelChildReportForm()" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+         </div>
+         <p class="text-sm font-medium mb-2">Target SN: {{ creatingChildReportForSn.value }}</p>
+         <form (ngSubmit)="submitChildReport()">
+            <div class="mb-4">
+               <label class="block text-sm font-medium text-gray-700 mb-1">Type (Derived from Disposition)</label>
+               <input type="text" [value]="creatingChildReportForSn.inspectionJson?.disposition" disabled class="w-full border border-gray-300 p-2 rounded-md bg-gray-100 text-gray-600 text-sm font-bold">
+            </div>
+            <div class="mb-4">
+               <label for="cr_notes" class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+               <textarea id="cr_notes" [(ngModel)]="childReportNotes" name="cr_notes" rows="4" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"></textarea>
+            </div>
+            <div class="flex gap-2 mt-6">
+               <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                  Create Report
+               </button>
+               <button type="button" (click)="cancelChildReportForm()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md font-medium transition-colors">
+                  Cancel
+               </button>
+            </div>
+         </form>
+      </div>
+    } @else if (inspectingSn) {
       <!-- Inspection Form Panel -->
       <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-fit">
         <div class="flex justify-between items-center mb-4 border-b pb-2">

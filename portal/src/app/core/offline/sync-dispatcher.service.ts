@@ -9,7 +9,8 @@ import { AdminCustomersService } from '../../admin/admin-customers.service';
 import { CustomerLocalRepo } from './customer-local.repo';
 import { InspectionReportLocalRepo } from './inspection-report-local.repo';
 import { SerialNumberLocalRepo } from './serial-number-local.repo';
-import { LocalInspectionReport, LocalSerialNumber } from './types';
+import { ChildReportLocalRepo } from './child-report-local.repo';
+import { LocalInspectionReport, LocalSerialNumber, LocalChildReport } from './types';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -24,6 +25,7 @@ export class SyncDispatcherService {
   private adminCustomers = inject(AdminCustomersService);
   private irRepo = inject(InspectionReportLocalRepo);
   private snRepo = inject(SerialNumberLocalRepo);
+  private crRepo = inject(ChildReportLocalRepo);
 
   public async dispatch(item: OutboxItem): Promise<boolean> {
     const operationKey = `${item.entityType}:${item.operation}`;
@@ -234,6 +236,36 @@ export class SyncDispatcherService {
           return true;
         }
 
+        case 'CR_CREATE': {
+          const createRes = await firstValueFrom(
+            this.http.post<LocalChildReport>(`${environment.apiUrl}/child-reports`, item.payload)
+          );
+          
+          const tempCr = await this.crRepo.getById(item.entityId);
+          if (tempCr) {
+            await this.crRepo.delete(item.entityId);
+            await this.crRepo.upsert({ ...createRes, syncState: 'SYNCED' });
+          }
+          
+          // Re-map pending downstream outbox events relying on the old temporary ID
+          const pendingItems = await this.outboxRepo.getPendingItems();
+          for (const pending of pendingItems) {
+            if (pending.entityType === 'CHILD_REPORT' && pending.entityId === item.entityId) {
+              pending.entityId = createRes.id;
+              await this.outboxRepo.upsert(pending);
+            }
+          }
+          return true;
+        }
+
+        case 'CR_UPDATE': {
+          const updateRes = await firstValueFrom(
+            this.http.patch<LocalChildReport>(`${environment.apiUrl}/child-reports/${item.entityId}`, item.payload)
+          );
+          await this.crRepo.upsert({ ...updateRes, syncState: 'SYNCED' });
+          return true;
+        }
+
         case 'System:ping':
           console.log(`[SyncDispatcher] Simulated success for ping idempotencyKey: ${item.idempotencyKey}`);
           return true;
@@ -254,6 +286,9 @@ export class SyncDispatcherService {
             } else if (item.entityType === 'CUSTOMER') {
               const cust = await this.customerRepo.getById(item.entityId);
               if (cust) await this.customerRepo.upsert({ ...cust, syncState: 'CONFLICT' });
+            } else if (item.entityType === 'CHILD_REPORT') {
+              const cr = await this.crRepo.getById(item.entityId);
+              if (cr) await this.crRepo.upsert({ ...cr, syncState: 'CONFLICT' });
             }
 
             const conflictErr = new Error(error.error?.message || 'Conflict processing entity') as Error & { status?: number };
@@ -272,6 +307,11 @@ export class SyncDispatcherService {
               if (sn) {
                 // Clear pending local state on terminal failure
                 await this.snRepo.upsert({ ...sn, syncState: 'ERROR' });
+              }
+            } else if (item.entityType === 'CHILD_REPORT') {
+              const cr = await this.crRepo.getById(item.entityId);
+              if (cr) {
+                await this.crRepo.upsert({ ...cr, syncState: 'ERROR' });
               }
             }
             const appErr = new Error(error.error?.message || `Application logic error: ${error.status}`) as Error & { status?: number };

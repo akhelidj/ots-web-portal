@@ -17,6 +17,7 @@ import { UsersModule } from './users/users.module';
 import { CustomersModule } from './customers/customers.module';
 import { InspectionReportsModule } from './inspection-reports/inspection-reports.module';
 import { SerialNumbersModule } from './serial-numbers/serial-numbers.module';
+import { ChildReportsModule } from './child-reports/child-reports.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { SerialNumbersModule } from './serial-numbers/serial-numbers.module';
     ExportModule,
     InspectionReportsModule,
     SerialNumbersModule,
+    ChildReportsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

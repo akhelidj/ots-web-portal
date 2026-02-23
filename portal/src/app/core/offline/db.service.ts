@@ -5,7 +5,7 @@ import { Injectable } from '@angular/core';
 })
 export class DbService {
   private readonly DB_PREFIX = 'ots_';
-  private readonly DB_VERSION = 4;
+  private readonly DB_VERSION = 5;
   private dbInstance: IDBDatabase | null = null;
   private initPromise: Promise<IDBDatabase> | null = null;
   private currentTenantId: string | null = null;
@@ -60,6 +60,17 @@ export class DbService {
         if (!snStore.indexNames.contains('inspectionReportId')) snStore.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
         if (!snStore.indexNames.contains('value')) snStore.createIndex('value', 'value', { unique: false });
         if (!snStore.indexNames.contains('syncState')) snStore.createIndex('syncState', 'syncState', { unique: false });
+
+        let crStore: IDBObjectStore;
+        if (!db.objectStoreNames.contains('child_reports')) {
+          crStore = db.createObjectStore('child_reports', { keyPath: 'id' });
+        } else {
+          if (!request.transaction) throw new Error('Transaction is missing');
+          crStore = request.transaction.objectStore('child_reports');
+        }
+        if (!crStore.indexNames.contains('inspectionReportId')) crStore.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
+        if (!crStore.indexNames.contains('serialNumberId')) crStore.createIndex('serialNumberId', 'serialNumberId', { unique: false });
+        if (!crStore.indexNames.contains('syncState')) crStore.createIndex('syncState', 'syncState', { unique: false });
 
         if (!db.objectStoreNames.contains('outbox')) {
           const store = db.createObjectStore('outbox', { keyPath: 'id' });

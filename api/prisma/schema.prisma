@@ -44,6 +44,12 @@ enum SerialDisposition {
   HOLD
 }
 
+enum ChildReportType {
+  REWORK
+  SCRAP
+  HOLD
+}
+
 // Models
 
 model Tenant {
@@ -57,6 +63,7 @@ model Tenant {
   inspectionReports InspectionReport[]
   auditLogs         AuditLog[]
   SerialNumber      SerialNumber[]
+  ChildReport       ChildReport[]
 }
 
 model RefreshToken {
@@ -204,6 +211,7 @@ model SerialNumber {
   updatedAt DateTime @updatedAt
 
   childReportSerialNumbers ChildReportSerialNumber[]
+  childReports             ChildReport[]
 
   @@unique([tenantId, inspectionReportId, serial])
   @@index([tenantId, inspectionReportId])
@@ -211,15 +219,25 @@ model SerialNumber {
 
 model ChildReport {
   id             String            @id @default(uuid())
+  tenantId       String
+  tenant         Tenant            @relation(fields: [tenantId], references: [id])
   reportNumber   String?
   revisionNumber Int               @default(0)
   status         ChildReportStatus @default(DRAFT)
+  type           ChildReportType   @default(REWORK)
+  notes          String?
+  version        Int               @default(1)
 
   inspectionReportId String
   inspectionReport   InspectionReport @relation(fields: [inspectionReportId], references: [id])
 
+  serialNumberId String
+  serialNumber   SerialNumber @relation(fields: [serialNumberId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
 
   serialNumbers  ChildReportSerialNumber[]
   attachments    Attachment[]
