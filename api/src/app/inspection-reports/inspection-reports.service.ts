@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 
 @Injectable()
 export class InspectionReportsService {
@@ -20,6 +21,66 @@ export class InspectionReportsService {
       throw new NotFoundException(`InspectionReport ${id} not found`);
     }
     return report;
+  }
+
+  async createReport(tenantId: string, userId: string, data: CreateInspectionReportDto) {
+    // 1. Validate customer belongs to tenant
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+        id: data.customerId,
+        tenantId,
+      },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found in this tenant');
+    }
+
+    // 2. Resolve template binding (DRILL_PIPE_REPORT v1 scope)
+    const templateKey = 'DRILL_PIPE_REPORT';
+    const template = await this.prisma.template.findFirst({
+      where: {
+        tenantId,
+        templateKey,
+        status: 'ACTIVE',
+      },
+      orderBy: {
+        templateVersion: 'desc',
+      }
+    });
+
+    if (!template) {
+      throw new BadRequestException(`No active template found for ${templateKey}`);
+    }
+
+    // 3. Create report + Audit Log transaction
+    return await this.prisma.$transaction(async (tx) => {
+      const report = await tx.inspectionReport.create({
+        data: {
+          tenantId,
+          customerId: data.customerId,
+          poNumber: data.poNumber,
+          status: 'DRAFT',
+          templateKey: template.templateKey,
+          templateVersion: template.templateVersion,
+          templateHash: template.hash,
+          version: 1,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'CREATE',
+          entity: 'InspectionReport',
+          entityId: report.id,
+          tenantId,
+          userId,
+          inspectionReportId: report.id,
+        },
+      });
+
+      return report;
+    });
   }
 
   async updateReport(
