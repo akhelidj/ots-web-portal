@@ -217,6 +217,23 @@ export class SyncDispatcherService {
           return true;
         }
 
+        case 'SN_UPDATE_INSPECTION': {
+          const backendPayload = {
+             inspectionJson: item.payload['inspectionJson'],
+             version: item.payload['version'] as number
+          };
+          
+          const updateRes = await firstValueFrom(
+            this.http.patch<{ serialNumber: string; [key: string]: unknown }>(`${environment.apiUrl}/serial-numbers/${item.entityId}`, backendPayload)
+          );
+          
+          const mappedUpdate = { ...updateRes, value: updateRes.serialNumber } as Partial<{ serialNumber: unknown }> & { value: string; [key: string]: unknown };
+          delete mappedUpdate.serialNumber;
+          
+          await this.snRepo.upsert({ ...mappedUpdate, syncState: 'SYNCED' } as unknown as LocalSerialNumber);
+          return true;
+        }
+
         case 'System:ping':
           console.log(`[SyncDispatcher] Simulated success for ping idempotencyKey: ${item.idempotencyKey}`);
           return true;
@@ -247,6 +264,12 @@ export class SyncDispatcherService {
               const rep = await this.irRepo.getById(item.entityId);
               if (rep) {
                 await this.irRepo.upsert({ ...rep, syncState: 'ERROR', pendingTransitionToStatus: null });
+              }
+            } else if (item.entityType === 'SERIAL_NUMBER') {
+              const sn = await this.snRepo.getById(item.entityId);
+              if (sn) {
+                // Clear pending local state on terminal failure
+                await this.snRepo.upsert({ ...sn, syncState: 'ERROR' });
               }
             }
             const appErr = new Error(error.error?.message || `Application logic error: ${error.status}`) as Error & { status?: number };

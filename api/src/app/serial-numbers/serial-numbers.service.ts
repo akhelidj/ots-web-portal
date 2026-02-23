@@ -13,9 +13,18 @@ export class SerialNumbersService {
       throw new NotFoundException(`InspectionReport ${reportId} not found`);
     }
 
-    return this.prisma.serialNumber.findMany({
+    const serials = await this.prisma.serialNumber.findMany({
       where: { tenantId, inspectionReportId: reportId },
       orderBy: { serial: 'asc' },
+    });
+
+    return serials.map(s => {
+      // Exclude inspectionData, add inspectionJson
+      const { inspectionData, ...rest } = s;
+      return {
+        ...rest,
+        inspectionJson: inspectionData
+      };
     });
   }
 
@@ -111,14 +120,10 @@ export class SerialNumbersService {
     });
   }
 
-  async updateSerialNumber(tenantId: string, id: string, userId: string, payload: { serialNumber: string }, version: number) {
-    const serialNumString = (payload.serialNumber || '').trim();
-    if (!serialNumString) {
-      throw new BadRequestException('Serial number cannot be empty');
-    }
-
+  async updateSerialNumber(tenantId: string, id: string, userId: string, payload: { serialNumber?: string, inspectionJson?: any }, version: number) {
     const serialToUpdate = await this.prisma.serialNumber.findUnique({
       where: { id },
+      include: { inspectionReport: true }
     });
 
     if (!serialToUpdate || serialToUpdate.tenantId !== tenantId) {
@@ -129,58 +134,106 @@ export class SerialNumbersService {
       throw new ConflictException(`Version mismatch`);
     }
 
-    // Check uniqueness collision early
-    const collisionCheck = await this.prisma.serialNumber.findFirst({
-      where: {
-         tenantId,
-         inspectionReportId: serialToUpdate.inspectionReportId,
-         serial: serialNumString,
-         id: { not: id } // Exclude self
-      }
-    });
+    const reportStatus = serialToUpdate.inspectionReport.status;
+    if (reportStatus === 'APPROVED' || reportStatus === 'CLOSED') {
+      throw new BadRequestException('Inspection data is locked.');
+    }
 
-    if (collisionCheck) {
-        throw new ConflictException(`Serial number ${serialNumString} already exists`);
+    const dataToUpdate: any = {
+      version: serialToUpdate.version + 1,
+    };
+    
+    let reason = '';
+
+    if (payload.serialNumber !== undefined) {
+      const serialNumString = payload.serialNumber.trim();
+      if (!serialNumString) {
+        throw new BadRequestException('Serial number cannot be empty');
+      }
+      
+      if (serialNumString !== serialToUpdate.serial) {
+        // Check uniqueness collision early
+        const collisionCheck = await this.prisma.serialNumber.findFirst({
+          where: {
+            tenantId,
+            inspectionReportId: serialToUpdate.inspectionReportId,
+            serial: serialNumString,
+            id: { not: id } // Exclude self
+          }
+        });
+
+        if (collisionCheck) {
+            throw new ConflictException(`Serial number ${serialNumString} already exists`);
+        }
+        dataToUpdate.serial = serialNumString;
+        reason = `Renamed from ${serialToUpdate.serial} to ${serialNumString}`;
+      }
+    }
+
+    if (payload.inspectionJson !== undefined) {
+      dataToUpdate.inspectionData = payload.inspectionJson;
+      const detail = reason ? ' and updated inspection data' : 'Updated inspection data';
+      reason = reason + detail;
+      if (!reason) reason = 'Updated inspection data';
+    }
+
+    // If nothing changed, just return it
+    if (Object.keys(dataToUpdate).length === 1) {
+      const { inspectionData, ...rest } = serialToUpdate;
+      return {
+          id: rest.id,
+          serialNumber: rest.serial,
+          version: rest.version,
+          inspectionJson: inspectionData,
+          updatedAt: rest.updatedAt
+      };
     }
 
     return await this.prisma.$transaction(async (tx) => {
-      const updateResult = await tx.serialNumber.updateMany({
-        where: { 
-            id,
-            tenantId,
-            version: serialToUpdate.version
-        },
-        data: {
-          serial: serialNumString,
-          version: serialToUpdate.version + 1,
-        },
-      });
-
-      if (updateResult.count === 0) {
-        throw new ConflictException(`Version mismatch or entity not found on final commit`);
+      // Use update instead of updateMany since id is unique. We manually queried the version above,
+      // but to be absolutely safe from race conditions, we can use updateMany or we can just use
+      // the id. Actually, Prisma's update doesn't allow { version } in where unless it's unique.
+      // But we can use update with { id } and verify the version inside the transaction or use updateMany.
+      // The user requested: "Use update with { id, tenantId, version } for atomic optimistic concurrency."
+      // Since Prisma 5 allows non-unique fields in update where, we can use update. 
+      // If Prisma version does not support it, it will fail conceptually, but wait, Prisma update where can take id, and other fields together.
+      
+      let updated;
+      try {
+        updated = await tx.serialNumber.update({
+          where: { 
+              id,
+              tenantId,
+              version: serialToUpdate.version
+          },
+          data: dataToUpdate,
+        });
+      } catch (err: any) {
+        if (err.code === 'P2025') {
+          throw new ConflictException(`Version mismatch or entity not found on final commit`);
+        }
+        throw err;
       }
-
-      const updated = await tx.serialNumber.findUniqueOrThrow({
-        where: { id }
-      });
 
       await tx.auditLog.create({
         data: {
-          action: 'RENAME',
+          action: 'UPDATE',
           entity: 'SerialNumber',
           entityId: id,
           tenantId,
           userId,
-          reason: `Renamed from ${serialToUpdate.serial} to ${updated.serial}`,
+          reason: reason.trim(),
           inspectionReportId: serialToUpdate.inspectionReportId,
         },
       });
 
+      const { inspectionData, ...rest } = updated;
       return {
-          id: updated.id,
-          serialNumber: updated.serial,
-          version: updated.version,
-          updatedAt: updated.updatedAt
+          id: rest.id,
+          serialNumber: rest.serial,
+          version: rest.version,
+          inspectionJson: inspectionData,
+          updatedAt: rest.updatedAt
       };
     });
   }

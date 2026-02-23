@@ -25,12 +25,12 @@ export class SerialNumbersController {
     return this.serialNumbersService.createSerialNumber(req.user.tenantId, reportId, req.user.id, body);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.RECEIVER)
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.INSPECTOR)
   @Patch('serial-numbers/:id')
   async updateSerialNumber(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() body: { serialNumber: string, version: number },
+    @Body() body: { serialNumber?: string, version: number, inspectionJson?: any },
   ) {
     const { version, ...data } = body;
     return this.serialNumbersService.updateSerialNumber(req.user.tenantId, id, req.user.id, data, version);

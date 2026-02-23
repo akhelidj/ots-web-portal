@@ -254,4 +254,31 @@ export class InspectionReportsService {
       lastError: null,
     });
   }
+
+  public async saveSerialNumberInspectionOffline(id: string, inspectionJson: any): Promise<void> {
+    const sn = await this.snRepo.getById(id);
+    if (!sn) throw new Error('Serial number not found locally');
+
+    const updatedSn: LocalSerialNumber = {
+      ...sn,
+      inspectionJson,
+      version: sn.version + 1,
+      syncState: 'PENDING',
+    };
+
+    await this.snRepo.upsert(updatedSn);
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'SERIAL_NUMBER',
+      entityId: id,
+      operation: 'UPDATE_INSPECTION',
+      payload: { inspectionJson, version: sn.version },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+  }
 }

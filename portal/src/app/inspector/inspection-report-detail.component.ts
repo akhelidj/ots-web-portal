@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { InspectionReportsService } from './inspection-reports.service';
 import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog } from '../core/offline/types';
+import { DRILL_PIPE_FIELDS } from './config/drill-pipe-fields';
 
 @Component({
   selector: 'app-inspection-report-detail',
@@ -32,6 +33,10 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public allowedTransitions: { toStatus: string; requiresReason: boolean }[] = []; 
   public selectedTransition: { toStatus: string; requiresReason: boolean } | null = null;
+
+  public drillPipeFields = DRILL_PIPE_FIELDS;
+  public inspectingSn: LocalSerialNumber | null = null;
+  public inspectionFormData: Record<string, any> = {};
 
   async ngOnInit() {
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
@@ -129,6 +134,38 @@ export class InspectionReportDetailComponent implements OnInit {
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to rename serial number.';
+    }
+  }
+
+  public openInspectionForm(sn: LocalSerialNumber): void {
+    this.inspectingSn = sn;
+    this.inspectionFormData = sn.inspectionJson ? JSON.parse(JSON.stringify(sn.inspectionJson)) : {};
+    this.formError = '';
+  }
+
+  public closeInspectionForm(): void {
+    this.inspectingSn = null;
+    this.inspectionFormData = {};
+  }
+
+  public async saveInspectionForm(): Promise<void> {
+    if (!this.inspectingSn) return;
+
+    // Validate required fields
+    for (const field of this.drillPipeFields) {
+      if (field.required && !this.inspectionFormData[field.key]) {
+        this.formError = `Field ${field.label} is required.`;
+        return;
+      }
+    }
+
+    try {
+      await this.irService.saveSerialNumberInspectionOffline(this.inspectingSn.id, this.inspectionFormData);
+      this.closeInspectionForm();
+      this.refreshData();
+    } catch (error) {
+      const e = error as Error;
+      this.formError = e.message || 'Failed to save inspection data.';
     }
   }
 }

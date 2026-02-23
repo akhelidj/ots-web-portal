@@ -18,6 +18,7 @@ export interface LocalSerialNumber {
   inspectionReportId: string;
   value: string;
   version: number;
+  inspectionJson?: any;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
   updatedAt?: string;
 }
