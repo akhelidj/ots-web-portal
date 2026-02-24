@@ -15,6 +15,10 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
+    if (!email || !pass) {
+      return null;
+    }
+
     const user = await this.prisma.user.findFirst({
       where: { email },
     });

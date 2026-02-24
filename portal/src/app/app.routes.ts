@@ -35,23 +35,24 @@ export const appRoutes: Route[] = [
   {
     path: '',
     component: ShellComponent,
+    canActivate: [authGuard, mustChangePasswordGuard],
     children: [
       { path: '', component: LandingComponent, pathMatch: 'full' },
       { 
         path: AppRoutes.ADMIN, 
         component: AdminUsersComponent, 
-        canActivate: [authGuard, mustChangePasswordGuard, roleGuard],
+        canActivate: [roleGuard],
         data: { roles: ['ADMIN'] }
       },
       { 
         path: AppRoutes.RECEIVER, 
         component: ReceiverWorkspaceComponent, 
-        canActivate: [authGuard, mustChangePasswordGuard, roleGuard],
+        canActivate: [roleGuard],
         data: { roles: ['RECEIVER'] }
       },
       { 
         path: AppRoutes.INSPECTOR, 
-        canActivate: [authGuard, mustChangePasswordGuard, roleGuard],
+        canActivate: [roleGuard],
         data: { roles: ['INSPECTOR'] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
@@ -63,12 +64,12 @@ export const appRoutes: Route[] = [
       { 
         path: AppRoutes.SUPERVISOR, 
         component: SupervisorWorkspaceComponent, 
-        canActivate: [authGuard, mustChangePasswordGuard, roleGuard],
+        canActivate: [roleGuard],
         data: { roles: ['SUPERVISOR'] }
       },
       { 
         path: AppRoutes.CUSTOMER, 
-        canActivate: [authGuard, mustChangePasswordGuard, roleGuard],
+        canActivate: [roleGuard],
         data: { roles: ['CUSTOMER'] },
         children: [
           { path: '', component: CustomerWorkspaceComponent, pathMatch: 'full' },
