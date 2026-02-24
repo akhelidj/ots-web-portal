@@ -12,6 +12,7 @@ import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog, LocalChil
 import { DRILL_PIPE_FIELDS } from './config/drill-pipe-fields';
 import { ReportValidationService, ValidationResult } from '../core/validation/report-validation.service';
 import { OutboxLocalRepo } from '../core/offline/outbox-local.repo';
+import { getInspectionReportUiState, InspectionReportUiState, UserRole, ReportStatus } from '../core/ui-policy/inspection-report-ui-policy';
 
 @Component({
   selector: 'app-inspection-report-detail',
@@ -44,8 +45,10 @@ export class InspectionReportDetailComponent implements OnInit {
   public editingSnId: string | null = null;
   public editingSnValue = '';
 
-  public allowedTransitions: { toStatus: string; requiresReason: boolean }[] = []; 
-  public selectedTransition: { toStatus: string; requiresReason: boolean } | null = null;
+  public uiState: InspectionReportUiState | null = null;
+  public userRole = '';
+  public allowedTransitions: { toStatus: string; requiresReason: boolean; enabled: boolean; label?: string; disabledReason?: string; }[] = []; 
+  public selectedTransition: { toStatus: string; requiresReason: boolean; label?: string } | null = null;
 
   public validationResult: ValidationResult | null = null;
 
@@ -65,8 +68,12 @@ export class InspectionReportDetailComponent implements OnInit {
 
   async ngOnInit() {
     this.session.profile$.subscribe(p => {
+      this.userRole = p?.role || '';
       this.isCustomer = p?.role === 'CUSTOMER';
       this.isReceiver = p?.role === 'RECEIVER';
+      if (this.reportId) {
+         this.refreshData();
+      }
     });
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
@@ -90,17 +97,6 @@ export class InspectionReportDetailComponent implements OnInit {
     const list = await this.irService.irRepo.list(); 
     const r = list.find((x: LocalInspectionReport) => x.id === this.reportId) || null;
     this.reportSubj.next(r);
-
-    if (r?.availableTransitions) {
-       try {
-         const parsed = JSON.parse(r.availableTransitions);
-         this.allowedTransitions = parsed.transitions || [];
-       } catch {
-         this.allowedTransitions = [];
-       }
-    } else {
-       this.allowedTransitions = [];
-    }
 
     const snList = await this.irService.getSnForReport(this.reportId);
     this.serialsSubj.next(snList);
@@ -130,8 +126,34 @@ export class InspectionReportDetailComponent implements OnInit {
          vResult.isReady = false;
       }
       this.validationResult = vResult;
+
+      let previousStatus: string | null = null;
+      let onHoldReason: string | null = null;
+      if (r.status === 'ON_HOLD' && logs.length > 0) {
+         const sortedLogs = [...logs].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+         const toHold = sortedLogs.find(l => l.toStatus === 'ON_HOLD');
+         if (toHold) {
+            previousStatus = toHold.fromStatus;
+            onHoldReason = toHold.reason || null;
+         }
+      }
+
+      this.uiState = getInspectionReportUiState({
+         role: this.userRole as UserRole,
+         reportStatus: r.status as ReportStatus,
+         isOffline: !this.isOnline,
+         hasValidationIssues: !vResult.isReady,
+         syncState: r.syncState as 'SYNCED' | 'PENDING' | 'CONFLICT',
+         previousStatus: previousStatus,
+         onHoldReason: onHoldReason,
+         version: r.version
+      });
+
+      this.allowedTransitions = this.uiState.transitionChoices;
     } else {
       this.validationResult = null;
+      this.uiState = null;
+      this.allowedTransitions = [];
     }
   }
 

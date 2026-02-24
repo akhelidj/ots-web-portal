@@ -7,14 +7,27 @@
       </svg>
     </a>
     <h1 class="text-3xl font-bold text-gray-900">Report Details: {{ report.poNumber }}</h1>
-    @if (!isCustomer) {
+    @if (userRole !== 'CUSTOMER') {
       <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" [ngClass]="{
-        'bg-red-100 text-red-800': report.syncState === 'CONFLICT',
+        'bg-red-100 text-red-800': report.syncState === 'CONFLICT' || report.syncState === 'ERROR',
         'bg-yellow-100 text-yellow-800': report.syncState === 'PENDING',
         'bg-green-100 text-green-800': report.syncState === 'SYNCED'
       }">{{ report.syncState }}</span>
     }
   </div>
+
+  @if (uiState?.banners) {
+    @for (banner of uiState!.banners; track banner.message) {
+      <div class="mb-4 p-3 rounded text-sm" [ngClass]="{
+        'bg-blue-100 text-blue-800 border border-blue-200': banner.type === 'info',
+        'bg-yellow-100 text-yellow-800 border border-yellow-200': banner.type === 'warning',
+        'bg-red-100 text-red-800 border border-red-200': banner.type === 'error',
+        'bg-green-100 text-green-800 border border-green-200': banner.type === 'success'
+      }">
+        {{ banner.message }}
+      </div>
+    }
+  }
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
     
@@ -30,7 +43,7 @@
           <span class="block text-sm text-gray-500">Template</span>
           <span class="font-medium text-gray-900">{{ report.templateKey }} v{{ report.templateVersion }}</span>
         </div>
-        @if (!isCustomer) {
+        @if (userRole !== 'CUSTOMER') {
           <div>
             <span class="block text-sm text-gray-500">Customer</span>
             <span class="font-medium text-gray-900">{{ report.customerId || 'None' }}</span>
@@ -64,9 +77,11 @@
       <div class="flex justify-between items-start border-b pb-2 mb-4">
         <h2 class="text-xl font-bold">Status Transition</h2>
         
-        @if (report.status === 'APPROVED') {
+        @if (uiState?.actions?.['ADMIN_EXPORT']?.visible || uiState?.actions?.['CUSTOMER_EXPORT']?.visible) {
            <div class="flex flex-col items-end">
-             <button (click)="exportReport()" class="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm rounded transition-colors disabled:opacity-50" [disabled]="isExporting || !isOnline" [title]="!isOnline ? 'Export requires internet connection' : 'Download Snapshot'">
+             <button (click)="exportReport()" class="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm rounded transition-colors disabled:opacity-50" 
+                 [disabled]="isExporting || (!uiState?.actions?.['ADMIN_EXPORT']?.enabled && !uiState?.actions?.['CUSTOMER_EXPORT']?.enabled) || !isOnline" 
+                 [title]="!isOnline ? 'Export requires internet connection' : (uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || uiState?.actions?.['CUSTOMER_EXPORT']?.disabledReason || 'Download Snapshot')">
                @if (isExporting) {
                  <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -90,7 +105,7 @@
         <div class="mb-4 bg-red-100 text-red-700 p-2 rounded text-sm whitespace-pre-line">{{ formError }}</div>
       }
 
-      @if (!isCustomer && validationResult && !validationResult.isReady) {
+      @if (userRole !== 'CUSTOMER' && validationResult && !validationResult.isReady) {
         <div class="mb-4 bg-red-50 text-red-800 p-3 rounded border border-red-200 text-sm">
           <p class="font-bold mb-1">Not Ready for Approval ({{ validationResult.issues.length }} issues)</p>
           <ul class="list-disc pl-5 mt-1">
@@ -101,7 +116,7 @@
         </div>
       }
       
-      @if (!isCustomer) {
+      @if (userRole !== 'CUSTOMER') {
         @if (report.pendingTransitionToStatus) {
           <div class="p-3 bg-yellow-50 text-yellow-800 text-sm rounded border border-yellow-200">
              Transition to <span class="font-bold border px-1 rounded bg-yellow-100">{{ report.pendingTransitionToStatus }}</span> pending.
@@ -109,8 +124,10 @@
         } @else {
             <div class="flex flex-wrap gap-2 mb-4">
                @for (transition of allowedTransitions; track transition.toStatus) {
-                  <button (click)="openReasonSelect(transition)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-sm rounded transition-colors">
-                    {{ transition.toStatus }}
+                  <button (click)="openReasonSelect(transition)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-sm rounded transition-colors disabled:opacity-50"
+                          [disabled]="!transition.enabled"
+                          [title]="transition.disabledReason || ''">
+                    {{ transition.label || transition.toStatus }}
                   </button>
                }
                @if (allowedTransitions.length === 0) {
@@ -155,7 +172,7 @@
           <thead class="bg-white sticky top-0 shadow-sm">
             <tr>
               <th class="p-3 border-b text-sm text-gray-600">Serial Number</th>
-              @if (!isCustomer) {
+              @if (userRole !== 'CUSTOMER') {
                 <th class="p-3 border-b text-sm text-gray-600">Sync State</th>
               }
             </tr>
@@ -182,35 +199,34 @@
                     } @else {
                       <div class="flex items-center gap-3">
                         <span>{{ sn.value }}</span>
-                        @if (report.status !== 'APPROVED' && report.status !== 'CLOSED') {
-                           @if (!isReceiver) {
-                             <button (click)="openInspectionForm(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors hide-on-readonly" title="Inspect">Inspect</button>
-                           }
-                           @if (sn.inspectionJson?.disposition) {
-                             <span class="text-xs px-2 py-1 rounded" [ngClass]="{
-                               'bg-green-100 text-green-800': sn.inspectionJson.disposition === 'PASS',
-                               'bg-yellow-100 text-yellow-800': sn.inspectionJson.disposition === 'REWORK',
-                               'bg-red-100 text-red-800': sn.inspectionJson.disposition === 'SCRAP',
-                               'bg-orange-100 text-orange-800': sn.inspectionJson.disposition === 'HOLD'
-                             }">{{ sn.inspectionJson.disposition }}</span>
-                           }
-                           
-                           @if (!isCustomer) {
-                             @if (sn.inspectionJson?.disposition && sn.inspectionJson.disposition !== 'PASS') {
-                                <button (click)="openChildReportForm(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors" title="Create Child Report">Create CR</button>
-                             }
-
-                             @if (['DRAFT', 'RECEIVED', 'READY_FOR_CLEANING'].includes(report.status) || !isReceiver) {
-                               <button (click)="onEditSn(sn)" class="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 bg-gray-50 rounded transition-colors hide-on-readonly" title="Edit Serial Number">Rename</button>
-                               <button (click)="onDeleteSn(sn)" class="text-red-600 hover:text-red-800 text-xs px-2 py-1 bg-red-50 rounded transition-colors hide-on-readonly" title="Delete Serial Number">
-                                 <svg class="h-4 w-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                 </svg>
-                               </button>
-                             }
-                           }
+                        @if (uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.visible || uiState?.actions?.['SN_SET_DISPOSITION']?.visible) {
+                           <button (click)="openInspectionForm(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors hide-on-readonly" title="Inspect">Inspect</button>
                         } @else {
                            <button (click)="openInspectionForm(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors" title="View Inspection">View</button>
+                        }
+
+                        @if (sn.inspectionJson?.disposition) {
+                           <span class="text-xs px-2 py-1 rounded" [ngClass]="{
+                             'bg-green-100 text-green-800': sn.inspectionJson.disposition === 'PASS',
+                             'bg-yellow-100 text-yellow-800': sn.inspectionJson.disposition === 'REWORK',
+                             'bg-red-100 text-red-800': sn.inspectionJson.disposition === 'SCRAP',
+                             'bg-orange-100 text-orange-800': sn.inspectionJson.disposition === 'HOLD'
+                           }">{{ sn.inspectionJson.disposition }}</span>
+                        }
+                        
+                        @if (uiState?.actions?.['CR_CREATE_FROM_REWORK']?.visible && sn.inspectionJson?.disposition && sn.inspectionJson.disposition !== 'PASS') {
+                           <button (click)="openChildReportForm(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors" title="Create Child Report">Create CR</button>
+                        }
+
+                        @if (uiState?.actions?.['IR_EDIT_SERIAL']?.visible) {
+                           <button (click)="onEditSn(sn)" class="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 bg-gray-50 rounded transition-colors hide-on-readonly" title="Edit Serial Number">Rename</button>
+                        }
+                        @if (uiState?.actions?.['IR_REMOVE_SERIAL']?.visible) {
+                           <button (click)="onDeleteSn(sn)" class="text-red-600 hover:text-red-800 text-xs px-2 py-1 bg-red-50 rounded transition-colors hide-on-readonly" title="Delete Serial Number">
+                             <svg class="h-4 w-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                             </svg>
+                           </button>
                         }
                       </div>
 
@@ -223,9 +239,9 @@
                                   <span class="font-medium text-gray-700">Child Report:</span>
                                   <span class="bg-gray-100 px-1.5 py-0.5 rounded font-mono">{{ cr.type }}</span>
                                   <span [ngClass]="{'text-green-600': cr.status === 'COMPLETED', 'text-yellow-600': cr.status === 'OPEN'}" class="font-medium">{{ cr.status }}</span>
-                                  @if (!isCustomer) {
+                                  @if (userRole !== 'CUSTOMER') {
                                     <span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" [ngClass]="{
-                                      'bg-red-100 text-red-800': cr.syncState === 'CONFLICT',
+                                      'bg-red-100 text-red-800': cr.syncState === 'CONFLICT' || cr.syncState === 'ERROR',
                                       'bg-yellow-100 text-yellow-800': cr.syncState === 'PENDING',
                                       'bg-green-100 text-green-800': cr.syncState === 'SYNCED'
                                     }">{{ cr.syncState }}</span>
@@ -237,10 +253,10 @@
                       }
                     }
                   </td>
-                  @if (!isCustomer) {
+                  @if (userRole !== 'CUSTOMER') {
                     <td class="p-3 align-top">
                       <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" [ngClass]="{
-                        'bg-red-100 text-red-800': sn.syncState === 'CONFLICT',
+                        'bg-red-100 text-red-800': sn.syncState === 'CONFLICT' || sn.syncState === 'ERROR',
                         'bg-yellow-100 text-yellow-800': sn.syncState === 'PENDING',
                         'bg-green-100 text-green-800': sn.syncState === 'SYNCED'
                       }">{{ sn.syncState }}</span>
@@ -300,14 +316,14 @@
         </div>
         
         <form (ngSubmit)="saveInspectionForm()">
-           <fieldset [disabled]="report.status === 'APPROVED' || report.status === 'CLOSED' || isCustomer || isReceiver">
+           <fieldset>
 
               <!-- Disposition Required Field -->
               <div class="mb-4">
                   <label for="disposition" class="block text-sm font-medium text-gray-700 mb-1">
                       Disposition <span class="text-red-500">*</span>
                   </label>
-                  <select id="disposition" name="disposition" [(ngModel)]="inspectionFormData['disposition']" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-500" required>
+                  <select id="disposition" name="disposition" [(ngModel)]="inspectionFormData['disposition']" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-500" [disabled]="uiState?.fieldModes?.['disposition'] !== 'editable'" required>
                       <option value="PASS">PASS</option>
                       <option value="REWORK">REWORK</option>
                       <option value="SCRAP">SCRAP</option>
@@ -322,42 +338,42 @@
                        @if (field.required) { <span class="text-red-500">*</span> }
                     </label>
                     @if (field.type === 'select') {
-                       <select [id]="field.key" [name]="field.key" [(ngModel)]="inspectionFormData[field.key]" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                       <select [id]="field.key" [name]="field.key" [(ngModel)]="inspectionFormData[field.key]" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-500" [disabled]="uiState?.fieldModes?.['inspectionData'] !== 'editable'">
                           <option [ngValue]="undefined">Select an option...</option>
                           @for (opt of field.options; track opt) {
                              <option [value]="opt">{{ opt }}</option>
                           }
                        </select>
                     } @else if (field.type === 'number') {
-                       <input type="number" [id]="field.key" [name]="field.key" [(ngModel)]="inspectionFormData[field.key]" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm disabled:bg-gray-100 disabled:text-gray-500">
+                       <input type="number" [id]="field.key" [name]="field.key" [(ngModel)]="inspectionFormData[field.key]" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm disabled:bg-gray-100 disabled:text-gray-500" [disabled]="uiState?.fieldModes?.['inspectionData'] !== 'editable'">
                     } @else {
-                       <input type="text" [id]="field.key" [name]="field.key" [(ngModel)]="inspectionFormData[field.key]" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm disabled:bg-gray-100 disabled:text-gray-500">
+                       <input type="text" [id]="field.key" [name]="field.key" [(ngModel)]="inspectionFormData[field.key]" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm disabled:bg-gray-100 disabled:text-gray-500" [disabled]="uiState?.fieldModes?.['inspectionData'] !== 'editable'">
                     }
                  </div>
               }
               
               <div class="flex gap-2 mt-6">
-                 @if (!isCustomer && !isReceiver && report.status !== 'APPROVED' && report.status !== 'CLOSED') {
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                 @if (uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.visible || uiState?.actions?.['SN_SET_DISPOSITION']?.visible) {
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium transition-colors" [disabled]="!uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.enabled && !uiState?.actions?.['SN_SET_DISPOSITION']?.enabled">
                        Save Inspection
                     </button>
                  }
                  <button type="button" (click)="closeInspectionForm()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md font-medium transition-colors">
-                    {{ (report.status === 'APPROVED' || report.status === 'CLOSED') ? 'Close View' : 'Cancel' }}
+                    {{ (uiState?.fieldModes?.['inspectionData'] !== 'editable' && uiState?.fieldModes?.['disposition'] !== 'editable') ? 'Close View' : 'Cancel' }}
                  </button>
               </div>
            </fieldset>
         </form>
       </div>
-    } @else if (!isCustomer) {
+    } @else if (uiState?.actions?.['IR_ADD_SERIAL']?.visible) {
         <!-- Add SN -->
         <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-fit">
           <h2 class="text-xl font-bold mb-4 border-b pb-2">Add Serial Numbers</h2>
           <p class="text-sm text-gray-500 mb-4">Paste multiple serial numbers (one per line):</p>
           
-          <textarea [(ngModel)]="formBulkSerials" rows="6" class="w-full border border-gray-300 p-3 rounded-md mb-4 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="SN-001&#10;SN-002&#10;SN-003" [disabled]="report.status === 'APPROVED' || report.status === 'CLOSED'"></textarea>
+          <textarea [(ngModel)]="formBulkSerials" rows="6" class="w-full border border-gray-300 p-3 rounded-md mb-4 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="SN-001&#10;SN-002&#10;SN-003" [disabled]="!uiState?.actions?.['IR_ADD_SERIAL']?.enabled"></textarea>
           
-          <button (click)="onAddSerials()" [disabled]="!formBulkSerials.trim() || report.status === 'APPROVED' || report.status === 'CLOSED'" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button (click)="onAddSerials()" [disabled]="!formBulkSerials.trim() || !uiState?.actions?.['IR_ADD_SERIAL']?.enabled" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Enqueue Serial Numbers
           </button>
         </div>
@@ -365,7 +381,7 @@
   </div>
 </div>
 
-  @if (!isCustomer) {
+  @if (userRole !== 'CUSTOMER') {
     <div class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       <div class="p-4 border-b bg-gray-50">
         <h2 class="font-bold text-lg text-gray-900">Transition History</h2>
