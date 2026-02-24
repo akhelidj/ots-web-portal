@@ -1,0 +1,102 @@
+import { Injectable } from '@angular/core';
+import { LocalInspectionReport, LocalSerialNumber, LocalChildReport } from '../offline/types';
+import { DRILL_PIPE_FIELDS } from '../../inspector/config/drill-pipe-fields';
+
+export interface ValidationIssue {
+  code: string;
+  level: 'BLOCKER' | 'WARNING';
+  message: string;
+  scope: 'REPORT' | 'SERIAL' | 'CHILD_REPORT';
+  serialId?: string;
+  serialLabel?: string;
+}
+
+export interface ValidationResult {
+  isReady: boolean;
+  issues: ValidationIssue[];
+  serialCount: number;
+  dispositionCounts: Record<string, number>;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ReportValidationService {
+  validate(
+    report: LocalInspectionReport,
+    serials: LocalSerialNumber[],
+    childReports: LocalChildReport[]
+  ): ValidationResult {
+    const issues: ValidationIssue[] = [];
+    const dispositionCounts: Record<string, number> = { PASS: 0, REWORK: 0, SCRAP: 0, HOLD: 0 };
+
+    if (serials.length === 0) {
+      issues.push({
+        code: 'NO_SERIALS',
+        level: 'BLOCKER',
+        message: 'No serial numbers attached.',
+        scope: 'REPORT'
+      });
+    }
+
+    for (const sn of serials) {
+      const data = sn.inspectionJson || {};
+      const disposition = data.disposition;
+
+      if (!disposition) {
+        issues.push({
+          code: 'MISSING_DISPOSITION',
+          level: 'BLOCKER',
+          message: `Missing disposition on Serial ${sn.value}.`,
+          scope: 'SERIAL',
+          serialId: sn.id,
+          serialLabel: sn.value
+        });
+      } else {
+        if (dispositionCounts[disposition] !== undefined) {
+          dispositionCounts[disposition]++;
+        } else {
+           dispositionCounts[disposition] = 1;
+        }
+
+        if (disposition === 'REWORK') {
+          const hasChildReport = childReports.some(cr => cr.serialNumberId === sn.id);
+          if (!hasChildReport) {
+            issues.push({
+              code: 'MISSING_CHILD_REPORT',
+              level: 'BLOCKER',
+              message: `Unresolved or missing Child Report for Serial ${sn.value} (Disposition: REWORK).`,
+              scope: 'CHILD_REPORT',
+              serialId: sn.id,
+              serialLabel: sn.value
+            });
+          }
+        }
+      }
+
+      if (report.templateKey === 'DRILL_PIPE_REPORT') {
+        const missingFields = DRILL_PIPE_FIELDS.filter(f => f.required && !data[f.key]);
+        if (missingFields.length > 0) {
+          const fieldLabels = missingFields.map(f => f.label).join(', ');
+          issues.push({
+            code: 'MISSING_FIELDS',
+            level: 'BLOCKER',
+            message: `Missing required fields on Serial ${sn.value}: ${fieldLabels}.`,
+            scope: 'SERIAL',
+            serialId: sn.id,
+            serialLabel: sn.value
+          });
+        }
+      }
+    }
+
+    const isReady = issues.filter(i => i.level === 'BLOCKER').length === 0;
+
+    return {
+      isReady,
+      issues,
+      serialCount: serials.length,
+      dispositionCounts
+    };
+  }
+}

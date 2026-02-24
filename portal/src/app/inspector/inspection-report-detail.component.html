@@ -37,6 +37,18 @@
           <span class="font-medium text-gray-900">{{ report.version }}</span>
         </div>
       </div>
+      
+      @if (validationResult && !isCustomer) {
+        <div class="mt-4 pt-4 border-t">
+          <span class="block text-sm text-gray-500 mb-2">Disposition Breakdown</span>
+          <div class="flex gap-2 text-sm font-medium">
+             <span class="bg-green-100 text-green-800 px-2 py-1 rounded">PASS: {{ validationResult.dispositionCounts['PASS'] || 0 }}</span>
+             <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">REWORK: {{ validationResult.dispositionCounts['REWORK'] || 0 }}</span>
+             <span class="bg-red-100 text-red-800 px-2 py-1 rounded">SCRAP: {{ validationResult.dispositionCounts['SCRAP'] || 0 }}</span>
+             <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">HOLD: {{ validationResult.dispositionCounts['HOLD'] || 0 }}</span>
+          </div>
+        </div>
+      }
     </div>
 
     <!-- Transition Section -->
@@ -64,6 +76,17 @@
       @if (formError && !formError.includes('[object Object]')) {
         <div class="mb-4 bg-red-100 text-red-700 p-2 rounded text-sm whitespace-pre-line">{{ formError }}</div>
       }
+
+      @if (!isCustomer && validationResult && !validationResult.isReady) {
+        <div class="mb-4 bg-red-50 text-red-800 p-3 rounded border border-red-200 text-sm">
+          <p class="font-bold mb-1">Not Ready for Approval ({{ validationResult.issues.length }} issues)</p>
+          <ul class="list-disc pl-5 mt-1">
+            @for (issue of validationResult.issues; track issue.message) {
+              <li>{{ issue.message }}</li>
+            }
+          </ul>
+        </div>
+      }
       
       @if (!isCustomer) {
         @if (report.pendingTransitionToStatus) {
@@ -82,7 +105,7 @@
                }
             </div>
 
-            @if (selectedTransition) {
+             @if (selectedTransition) {
                <div class="mt-4 p-3 border rounded bg-gray-50 flex flex-col gap-2">
                   <p class="text-sm font-medium text-gray-900">Confirm transition to {{ selectedTransition.toStatus }}</p>
                   @if (selectedTransition.requiresReason) {
@@ -91,9 +114,15 @@
                      <input type="text" [(ngModel)]="formReason" placeholder="Reason (Optional)" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
                   }
                   <div class="flex gap-2">
-                     <button (click)="onTransition()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 text-sm rounded transition-colors disabled:opacity-50" [disabled]="selectedTransition.requiresReason && !formReason.trim()">Confirm</button>
+                     <button (click)="onTransition()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 text-sm rounded transition-colors disabled:opacity-50" 
+                        [disabled]="(selectedTransition.requiresReason && !formReason.trim()) || (selectedTransition.toStatus === 'APPROVED' && (!validationResult || !validationResult.isReady))">
+                        Confirm
+                     </button>
                      <button (click)="selectedTransition = null; formReason = ''" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-1.5 text-sm rounded transition-colors">Cancel</button>
                   </div>
+                  @if (selectedTransition.toStatus === 'APPROVED' && (!validationResult || !validationResult.isReady)) {
+                     <p class="text-xs text-red-600 mt-1">Cannot confirm approval until all issues are resolved.</p>
+                  }
                </div>
             }
         }
@@ -232,7 +261,13 @@
       <!-- Inspection Form Panel -->
       <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-fit">
         <div class="flex justify-between items-center mb-4 border-b pb-2">
-           <h2 class="text-xl font-bold">Inspect: {{ inspectingSn.value }}</h2>
+           <div class="flex gap-4 items-center">
+             <h2 class="text-xl font-bold">Inspect: {{ inspectingSn.value }}</h2>
+             <div class="flex gap-1">
+               <button (click)="goToPrevSn()" class="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-sm disabled:opacity-50" [disabled]="!hasPrevSn">&larr; Prev</button>
+               <button (click)="goToNextSn()" class="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-sm disabled:opacity-50" [disabled]="!hasNextSn">Next &rarr;</button>
+             </div>
+           </div>
            <button (click)="closeInspectionForm()" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
         </div>
         

@@ -6,15 +6,26 @@ import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 export class InspectionReportsService {
   constructor(private prisma: PrismaService) {}
 
-  async getReports(user: any, status?: string) {
+  async getReports(user: any, status?: string, q?: string, customerId?: string) {
     const where: any = { tenantId: user.tenantId };
     
     if (user.role === 'CUSTOMER') {
       where.customerId = user.customerId;
+    } else if (user.role === 'SUPERVISOR' || user.role === 'ADMIN') {
+      if (customerId) {
+        where.customerId = customerId;
+      }
     }
 
     if (status) {
       where.status = status;
+    }
+
+    if (q && q.trim().length >= 2) {
+      where.poNumber = {
+        contains: q.trim(),
+        mode: 'insensitive'
+      };
     }
 
     return this.prisma.inspectionReport.findMany({

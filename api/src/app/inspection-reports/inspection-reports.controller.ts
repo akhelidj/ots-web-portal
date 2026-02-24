@@ -12,8 +12,13 @@ export class InspectionReportsController {
 
   @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR, UserRole.INSPECTOR, UserRole.CUSTOMER)
   @Get()
-  async getReports(@Req() req: any, @Query('status') status?: string) {
-    return this.reportsService.getReports(req.user, status);
+  async getReports(
+    @Req() req: any, 
+    @Query('status') status?: string,
+    @Query('q') q?: string,
+    @Query('customerId') customerId?: string
+  ) {
+    return this.reportsService.getReports(req.user, status, q, customerId);
   }
 
   @Roles(UserRole.ADMIN, UserRole.RECEIVER)

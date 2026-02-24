@@ -10,6 +10,8 @@ import { environment } from '../../environments/environment';
 import { SessionService } from '../core/auth/session.service';
 import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog, LocalChildReport } from '../core/offline/types';
 import { DRILL_PIPE_FIELDS } from './config/drill-pipe-fields';
+import { ReportValidationService, ValidationResult } from '../core/validation/report-validation.service';
+import { OutboxLocalRepo } from '../core/offline/outbox-local.repo';
 
 @Component({
   selector: 'app-inspection-report-detail',
@@ -23,6 +25,8 @@ export class InspectionReportDetailComponent implements OnInit {
   private crService = inject(ChildReportsService);
   private http = inject(HttpClient);
   private session = inject(SessionService);
+  private validationService = inject(ReportValidationService);
+  private outboxRepo = inject(OutboxLocalRepo);
 
   public reportId = '';
   public reportSubj = new BehaviorSubject<LocalInspectionReport | null>(null);
@@ -42,6 +46,8 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public allowedTransitions: { toStatus: string; requiresReason: boolean }[] = []; 
   public selectedTransition: { toStatus: string; requiresReason: boolean } | null = null;
+
+  public validationResult: ValidationResult | null = null;
 
   public drillPipeFields = DRILL_PIPE_FIELDS;
   public inspectingSn: LocalSerialNumber | null = null;
@@ -96,6 +102,29 @@ export class InspectionReportDetailComponent implements OnInit {
 
     const childReports = await this.crService.getChildReportsForInspection(this.reportId);
     this.childReportsSubj.next(childReports);
+
+    if (r) {
+      const vResult = this.validationService.validate(r, snList, childReports);
+      
+      const pending = await this.outboxRepo.getPendingItems();
+      const conflicts = await this.outboxRepo.getConflictItems();
+      const transitionOutbox = [...pending, ...conflicts].filter(
+         i => i.entityType === 'INSPECTION_REPORT' && i.entityId === this.reportId && i.operation === 'TRANSITION' && i.lastError
+      );
+
+      for (const t of transitionOutbox) {
+         vResult.issues.push({
+            code: 'BACKEND_REJECTION',
+            level: 'BLOCKER',
+            message: `Server Rejected Transition: ${t.lastError}`,
+            scope: 'REPORT'
+         });
+         vResult.isReady = false;
+      }
+      this.validationResult = vResult;
+    } else {
+      this.validationResult = null;
+    }
   }
 
   public async onAddSerials() {
@@ -170,6 +199,42 @@ export class InspectionReportDetailComponent implements OnInit {
   public closeInspectionForm(): void {
     this.inspectingSn = null;
     this.inspectionFormData = {};
+  }
+
+  public goToNextSn(): void {
+    const snList = this.serialsSubj.value;
+    const currentSn = this.inspectingSn;
+    if (!currentSn || snList.length === 0) return;
+    const index = snList.findIndex(s => s.id === currentSn.id);
+    if (index >= 0 && index < snList.length - 1) {
+       this.openInspectionForm(snList[index + 1]);
+    }
+  }
+
+  public goToPrevSn(): void {
+    const snList = this.serialsSubj.value;
+    const currentSn = this.inspectingSn;
+    if (!currentSn || snList.length === 0) return;
+    const index = snList.findIndex(s => s.id === currentSn.id);
+    if (index > 0) {
+       this.openInspectionForm(snList[index - 1]);
+    }
+  }
+  
+  public get hasNextSn(): boolean {
+    const snList = this.serialsSubj.value;
+    const currentSn = this.inspectingSn;
+    if (!currentSn) return false;
+    const index = snList.findIndex(s => s.id === currentSn.id);
+    return index >= 0 && index < snList.length - 1;
+  }
+  
+  public get hasPrevSn(): boolean {
+    const snList = this.serialsSubj.value;
+    const currentSn = this.inspectingSn;
+    if (!currentSn) return false;
+    const index = snList.findIndex(s => s.id === currentSn.id);
+    return index > 0;
   }
 
   public async saveInspectionForm(): Promise<void> {

@@ -25,6 +25,18 @@ export class SerialNumberLocalRepo {
     });
   }
 
+  async list(): Promise<LocalSerialNumber[]> {
+    const db = await this.dbService.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readonly');
+      const store = tx.objectStore(this.STORE_NAME);
+      const req = store.getAll();
+
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   async listByReportId(reportId: string): Promise<LocalSerialNumber[]> {
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
