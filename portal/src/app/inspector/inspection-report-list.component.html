@@ -17,6 +17,27 @@
     </div>
   </div>
 
+  @if (isCustomer) {
+    <!-- Customer KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div (click)="statusFilter = ''" class="bg-white p-6 rounded-xl shadow-sm border border-primary/20 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-center items-center text-center relative overflow-hidden" [ngClass]="{'ring-2 ring-primary ring-offset-2': statusFilter === ''}">
+        <div class="absolute inset-0 bg-primary/5 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+        <span class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 z-10">Total Reports</span>
+        <span class="text-4xl font-black text-gray-900 z-10 tracking-tight">{{ kpiTotalReports }}</span>
+      </div>
+      <div (click)="statusFilter = 'OPEN'" class="bg-white p-6 rounded-xl shadow-sm border border-warning/30 hover:border-warning/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-center items-center text-center relative overflow-hidden" [ngClass]="{'ring-2 ring-warning ring-offset-2': statusFilter === 'OPEN'}">
+        <div class="absolute inset-0 bg-warning/5 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+        <span class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 z-10">Open Reports</span>
+        <span class="text-4xl font-black text-warning-dark z-10 tracking-tight">{{ kpiOpenReports }}</span>
+      </div>
+      <div (click)="statusFilter = 'CLOSED'" class="bg-white p-6 rounded-xl shadow-sm border border-success/30 hover:border-success/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-center items-center text-center relative overflow-hidden" [ngClass]="{'ring-2 ring-success ring-offset-2': statusFilter === 'CLOSED'}">
+        <div class="absolute inset-0 bg-success/5 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+        <span class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 z-10">Closed Reports</span>
+        <span class="text-4xl font-black text-success-dark z-10 tracking-tight">{{ kpiClosedReports }}</span>
+      </div>
+    </div>
+  }
+
   <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-8 flex gap-4 flex-wrap items-end transition-shadow hover:shadow-md">
     <div class="flex-1 min-w-[200px]">
        <label for="qFilter" class="block text-sm font-medium text-gray-700 mb-1.5">Search PO</label>
@@ -30,6 +51,7 @@
       <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1.5">Status Filter</label>
       <select id="statusFilter" [(ngModel)]="statusFilter" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 px-3 border bg-white transition-colors">
         <option value="">All Statuses</option>
+        <option value="OPEN">OPEN (Not Closed)</option>
         <option value="DRAFT">DRAFT</option>
         <option value="RECEIVED">RECEIVED</option>
         <option value="READY_FOR_CLEANING">READY_FOR_CLEANING</option>

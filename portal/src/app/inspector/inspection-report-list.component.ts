@@ -40,6 +40,10 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   public isCustomer = false;
   public isReceiver = false;
   public isAdmin = false;
+
+  public kpiTotalReports = 0;
+  public kpiOpenReports = 0;
+  public kpiClosedReports = 0;
   
   public reportStatsCache: Record<string, { serialCount: number, serialValues: string[] }> = {};
   public validationCache: Record<string, ValidationResult> = {};
@@ -69,6 +73,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
         this.childReportRepo.changes$.pipe(startWith(null))
       ]).subscribe(([reports]) => {
         this.computeStats(reports);
+        this.computeCustomerKpis(reports);
         if (!this.isCustomer) {
            this.computeValidations(reports);
         }
@@ -96,6 +101,12 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
        };
     }
     this.reportStatsCache = newStats;
+  }
+
+  private computeCustomerKpis(reports: LocalInspectionReport[]) {
+     this.kpiTotalReports = reports.length;
+     this.kpiClosedReports = reports.filter(r => r.status === 'CLOSED').length;
+     this.kpiOpenReports = this.kpiTotalReports - this.kpiClosedReports;
   }
 
   private async computeValidations(reports: LocalInspectionReport[]) {
@@ -128,7 +139,13 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
 
   getFilteredReports(reports: LocalInspectionReport[]) {
     const filtered = reports.filter(r => {
-      const matchStatus = this.statusFilter ? r.status === this.statusFilter : true;
+      let matchStatus = true;
+      if (this.statusFilter === 'OPEN') {
+         matchStatus = r.status !== 'CLOSED';
+      } else if (this.statusFilter) {
+         matchStatus = r.status === this.statusFilter;
+      }
+
       const matchCustomer = this.customerFilter ? r.customerId === this.customerFilter : true;
       const matchQ = this.qFilter && this.qFilter.trim().length >= 2 
           ? r.poNumber.toLowerCase().includes(this.qFilter.trim().toLowerCase()) 

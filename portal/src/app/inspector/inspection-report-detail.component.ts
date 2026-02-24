@@ -14,6 +14,8 @@ import { ReportValidationService, ValidationResult } from '../core/validation/re
 import { OutboxLocalRepo } from '../core/offline/outbox-local.repo';
 import { getInspectionReportUiState, InspectionReportUiState, UserRole, ReportStatus } from '../core/ui-policy/inspection-report-ui-policy';
 import { SyncOrchestratorService } from '../core/offline/sync-orchestrator.service';
+import { UserLocalRepo } from '../core/offline/user-local.repo';
+import { CustomerLocalRepo } from '../core/offline/customer-local.repo';
 
 @Component({
   selector: 'app-inspection-report-detail',
@@ -30,6 +32,8 @@ export class InspectionReportDetailComponent implements OnInit {
   private validationService = inject(ReportValidationService);
   private outboxRepo = inject(OutboxLocalRepo);
   private syncOrchestrator = inject(SyncOrchestratorService);
+  private userRepo = inject(UserLocalRepo);
+  private customerRepo = inject(CustomerLocalRepo);
 
   public reportId = '';
   public reportSubj = new BehaviorSubject<LocalInspectionReport | null>(null);
@@ -53,6 +57,23 @@ export class InspectionReportDetailComponent implements OnInit {
   public selectedTransition: { toStatus: string; requiresReason: boolean; label?: string } | null = null;
 
   public validationResult: ValidationResult | null = null;
+
+  // KPIs
+  public kpiTotal = 0;
+  public kpiPassed = 0;
+  public kpiRework = 0;
+  public kpiScrap = 0;
+  public kpiHold = 0;
+  public kpiPassRate = 0;
+
+  // Meta Info
+  public inspectedByName = 'N/A';
+  public approvedByName = 'N/A';
+  public customerAddress = 'N/A';
+
+  // Modal State
+  public activeModalStatus: 'PASS' | 'REWORK' | 'SCRAP' | 'HOLD' | null = null;
+  public modalEquipmentList: LocalSerialNumber[] = [];
 
   public drillPipeFields = DRILL_PIPE_FIELDS;
   public inspectingSn: LocalSerialNumber | null = null;
@@ -153,10 +174,68 @@ export class InspectionReportDetailComponent implements OnInit {
       });
 
       this.allowedTransitions = this.uiState.transitionChoices;
+
+      // Meta Card Calcs
+      this.customerAddress = 'N/A';
+      if (r.customerId) {
+         const cust = await this.customerRepo.getById(r.customerId);
+         if (cust) {
+             const parts = [cust.addressLine1, cust.addressLine2, cust.city, cust.country].filter(x => x && x.trim().length > 0);
+             this.customerAddress = parts.length > 0 ? parts.join(', ') : 'N/A';
+         }
+      }
+
+      this.inspectedByName = 'N/A';
+      this.approvedByName = 'N/A';
+      if (logs.length > 0) {
+         const sortedAsc = [...logs].sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+         // Inspected By: First user who transitioned to IN_INSPECTION or PENDING_APPROVAL
+         const inspectLog = sortedAsc.find(l => l.toStatus === 'IN_INSPECTION' || l.toStatus === 'PENDING_APPROVAL');
+         if (inspectLog && inspectLog.userId) {
+             const u = await this.userRepo.getById(inspectLog.userId);
+             this.inspectedByName = u?.name || u?.email || 'N/A';
+         }
+
+         // Approved By: Last user who transitioned to APPROVED
+         const approveLog = [...sortedAsc].reverse().find(l => l.toStatus === 'APPROVED' || l.toStatus === 'CLOSED');
+         if (approveLog && approveLog.userId) {
+             const u = await this.userRepo.getById(approveLog.userId);
+             this.approvedByName = u?.name || u?.email || 'N/A';
+         }
+      }
+
+      // KPI Calcs
+      let total = snList.length;
+      let pass = 0;
+      let rework = 0;
+      let scrap = 0;
+      let hold = 0;
+
+      for (const sn of snList) {
+         const disp = sn.inspectionJson?.disposition;
+         if (disp === 'PASS') pass++;
+         else if (disp === 'REWORK') rework++;
+         else if (disp === 'SCRAP') scrap++;
+         else if (disp === 'HOLD') hold++;
+      }
+
+      this.kpiTotal = total;
+      this.kpiPassed = pass;
+      this.kpiRework = rework;
+      this.kpiScrap = scrap;
+      this.kpiHold = hold;
+      this.kpiPassRate = total > 0 ? Math.round((pass / total) * 100) : 0;
+
     } else {
       this.validationResult = null;
       this.uiState = null;
       this.allowedTransitions = [];
+      this.kpiTotal = 0;
+      this.kpiPassed = 0;
+      this.kpiRework = 0;
+      this.kpiScrap = 0;
+      this.kpiHold = 0;
+      this.kpiPassRate = 0;
     }
   }
 
@@ -410,5 +489,15 @@ export class InspectionReportDetailComponent implements OnInit {
     } finally {
       this.isExporting = false;
     }
+  }
+
+  public openKpiModal(status: 'PASS' | 'REWORK' | 'SCRAP' | 'HOLD'): void {
+      this.activeModalStatus = status;
+      this.modalEquipmentList = this.serialsSubj.value.filter(sn => sn.inspectionJson?.disposition === status);
+  }
+
+  public closeKpiModal(): void {
+      this.activeModalStatus = null;
+      this.modalEquipmentList = [];
   }
 }
