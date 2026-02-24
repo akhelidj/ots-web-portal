@@ -10,6 +10,7 @@ import { LocalCustomer, LocalInspectionReport, LocalSerialNumber } from '../core
 import { ReportValidationService, ValidationResult } from '../core/validation/report-validation.service';
 import { SerialNumberLocalRepo } from '../core/offline/serial-number-local.repo';
 import { ChildReportLocalRepo } from '../core/offline/child-report-local.repo';
+import { SessionService } from '../core/auth/session.service';
 
 @Component({
   selector: 'app-inspection-report-list',
@@ -24,6 +25,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   private validationService = inject(ReportValidationService);
   private snRepo = inject(SerialNumberLocalRepo);
   private childReportRepo = inject(ChildReportLocalRepo);
+  private sessionService = inject(SessionService);
 
   public reports$ = this.irService.reports$;
   private customersSubj = new BehaviorSubject<LocalCustomer[]>([]);
@@ -32,7 +34,11 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   public statusFilter = '';
   public customerFilter = '';
   public qFilter = '';
+  public snFilter = '';
+  public sortBy: 'updatedAt' | 'poNumber' | 'status' = 'updatedAt';
 
+  public isCustomer = false;
+  public reportStatsCache: Record<string, { serialCount: number, serialValues: string[] }> = {};
   public validationCache: Record<string, ValidationResult> = {};
   private subs = new Subscription();
 
@@ -45,6 +51,10 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
     this.irService.refreshLocalCache();
     this.loadCustomers();
     
+    this.subs.add(this.sessionService.profile$.subscribe(p => {
+       this.isCustomer = p?.role === 'CUSTOMER';
+    }));
+
     this.subs.add(this.customerRepo.changes$.subscribe(() => this.loadCustomers()));
     
     this.subs.add(
@@ -53,7 +63,10 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
         this.snRepo.changes$.pipe(startWith(null)), 
         this.childReportRepo.changes$.pipe(startWith(null))
       ]).subscribe(([reports]) => {
-        this.computeValidations(reports);
+        this.computeStats(reports);
+        if (!this.isCustomer) {
+           this.computeValidations(reports);
+        }
       })
     );
   }
@@ -67,7 +80,21 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
     this.customersSubj.next(list);
   }
 
+  private async computeStats(reports: LocalInspectionReport[]) {
+    const newStats: Record<string, { serialCount: number, serialValues: string[] }> = {};
+    for (const r of reports) {
+       // Only fetch serials for reports in the current scope
+       const serials = await this.snRepo.listByReportId(r.id);
+       newStats[r.id] = {
+         serialCount: serials.length,
+         serialValues: serials.map(s => s.value.toLowerCase())
+       };
+    }
+    this.reportStatsCache = newStats;
+  }
+
   private async computeValidations(reports: LocalInspectionReport[]) {
+    // Left existing bulk fetch specifically for supervisor/inspector workflows
     const allSerials = await this.snRepo.list();
     const allChildReports = await this.childReportRepo.list();
     
@@ -95,13 +122,40 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   }
 
   getFilteredReports(reports: LocalInspectionReport[]) {
-    return reports.filter(r => {
+    const filtered = reports.filter(r => {
       const matchStatus = this.statusFilter ? r.status === this.statusFilter : true;
       const matchCustomer = this.customerFilter ? r.customerId === this.customerFilter : true;
       const matchQ = this.qFilter && this.qFilter.trim().length >= 2 
           ? r.poNumber.toLowerCase().includes(this.qFilter.trim().toLowerCase()) 
           : true;
-      return matchStatus && matchCustomer && matchQ;
+      
+      let matchSn = true;
+      if (this.snFilter && this.snFilter.trim().length >= 2) {
+          const stats = this.reportStatsCache[r.id];
+          const query = this.snFilter.trim().toLowerCase();
+          matchSn = stats ? stats.serialValues.some(val => val.includes(query)) : false;
+      }
+      return matchStatus && matchCustomer && matchQ && matchSn;
+    });
+
+    return filtered.sort((a, b) => {
+       const valA = a[this.sortBy as keyof LocalInspectionReport] as string | number | undefined;
+       const valB = b[this.sortBy as keyof LocalInspectionReport] as string | number | undefined;
+
+       if (this.sortBy === 'updatedAt') {
+          const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          if (timeA !== timeB) return timeB - timeA; // Descending
+       } else {
+          const strA = (valA || '').toString().toLowerCase();
+          const strB = (valB || '').toString().toLowerCase();
+          if (strA < strB) return -1;
+          if (strA > strB) return 1;
+       }
+
+       // Tie-breakers
+       if (a.poNumber !== b.poNumber) return a.poNumber.localeCompare(b.poNumber);
+       return a.id.localeCompare(b.id);
     });
   }
 }
