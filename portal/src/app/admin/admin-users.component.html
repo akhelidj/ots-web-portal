@@ -21,8 +21,21 @@
         <option value="RECEIVER">Receiver</option>
         <option value="INSPECTOR">Inspector</option>
         <option value="SUPERVISOR">Supervisor</option>
+        <option value="CUSTOMER">Customer</option>
       </select>
     </div>
+
+    @if (formRole === 'CUSTOMER') {
+      <div>
+        <label for="customerId">Associated Customer</label>
+        <select id="customerId" name="customerId" [(ngModel)]="formCustomerId" required>
+          <option value="" disabled>Select a customer...</option>
+          @for (c of customers; track c.id) {
+            <option [value]="c.id">{{ c.name }}</option>
+          }
+        </select>
+      </div>
+    }
 
     <button type="submit">Create User</button>
   </fieldset>

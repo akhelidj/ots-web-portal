@@ -18,6 +18,7 @@ export class UsersService {
         role: true,
         isActive: true,
         mustChangePassword: true,
+        customerId: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -25,13 +26,20 @@ export class UsersService {
     });
   }
 
-  async createUser(tenantId: string, data: { email: string; name?: string; role: UserRole; isActive?: boolean }) {
+  async createUser(tenantId: string, data: { email: string; name?: string; role: UserRole; isActive?: boolean; customerId?: string }) {
     const existing = await this.prisma.user.findUnique({
       where: { tenantId_email: { tenantId, email: data.email } },
     });
 
     if (existing) {
       throw new ConflictException('User with this email already exists in the tenant');
+    }
+
+    if (data.role === UserRole.CUSTOMER && !data.customerId) {
+      throw new ConflictException('Customer ID is required for Customer role');
+    }
+    if (data.role !== UserRole.CUSTOMER && data.customerId) {
+      throw new ConflictException('Customer ID is only allowed for Customer role');
     }
 
     // Generate random 16-character base64 password (it's secure and reasonably easy to copy-paste)
@@ -47,6 +55,7 @@ export class UsersService {
         isActive: data.isActive ?? true,
         mustChangePassword: true,
         passwordHash,
+        customerId: data.customerId,
       },
       select: {
         id: true,
@@ -55,6 +64,7 @@ export class UsersService {
         role: true,
         isActive: true,
         mustChangePassword: true,
+        customerId: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -85,6 +95,7 @@ export class UsersService {
         role: true,
         isActive: true,
         mustChangePassword: true,
+        customerId: true,
         createdAt: true,
         updatedAt: true,
       },

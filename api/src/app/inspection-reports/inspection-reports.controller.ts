@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards, Query } from '@nestjs/common';
 import { InspectionReportsService } from './inspection-reports.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 import { RolesGuard } from '../auth/roles.guard';
@@ -10,10 +10,10 @@ import { UserRole } from '@prisma/client';
 export class InspectionReportsController {
   constructor(private readonly reportsService: InspectionReportsService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR, UserRole.INSPECTOR)
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR, UserRole.INSPECTOR, UserRole.CUSTOMER)
   @Get()
-  async getReports(@Req() req: any) {
-    return this.reportsService.getReports(req.user.tenantId);
+  async getReports(@Req() req: any, @Query('status') status?: string) {
+    return this.reportsService.getReports(req.user, status);
   }
 
   @Roles(UserRole.ADMIN, UserRole.RECEIVER)
@@ -22,10 +22,10 @@ export class InspectionReportsController {
     return this.reportsService.createReport(req.user.tenantId, req.user.id, data);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR, UserRole.INSPECTOR)
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR, UserRole.INSPECTOR, UserRole.CUSTOMER)
   @Get(':id')
   async getReportById(@Req() req: any, @Param('id') id: string) {
-    return this.reportsService.getReportById(req.user.tenantId, id);
+    return this.reportsService.getReportById(req.user, id);
   }
 
   @Roles(UserRole.ADMIN, UserRole.RECEIVER)

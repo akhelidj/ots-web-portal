@@ -6,6 +6,7 @@ import { ConnectivityService } from '../../core/offline/connectivity.service';
 import { OutboxService } from '../../core/offline/outbox.service';
 import { SessionService } from '../../core/auth/session.service';
 import { SyncOrchestratorService } from '../../core/offline/sync-orchestrator.service';
+import { NavigationService } from '../../core/navigation/navigation.service';
 import { environment } from '../../../environments/environment';
 import { AuthRequiredPlaceholderComponent } from '../placeholders/auth-required-placeholder.component';
 
@@ -21,11 +22,13 @@ export class ShellComponent {
   private session = inject(SessionService);
   private router = inject(Router);
   private orchestrator = inject(SyncOrchestratorService);
+  public navigation = inject(NavigationService);
 
   public isOnline$ = this.connectivity.isOnline$;
   public pendingCount$ = this.outbox.pendingCount$;
   public hasConflict$ = this.outbox.hasConflict$;
   public isAuthenticated$ = this.session.isAuthenticated$;
+  public profile$ = this.session.profile$;
   
   public syncStatus$ = this.orchestrator.syncStatus$;
   public lastSyncedAt$ = this.orchestrator.lastSyncedAt$;

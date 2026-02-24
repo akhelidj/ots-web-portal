@@ -7,6 +7,7 @@ import { SerialNumberLocalRepo } from '../core/offline/serial-number-local.repo'
 import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog } from '../core/offline/types';
 import { OutboxService } from '../core/offline/outbox.service';
 import { TransitionLogLocalRepo } from '../core/offline/transition-log-local.repo';
+import { SessionService } from '../core/auth/session.service';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +18,7 @@ export class InspectionReportsService {
   private snRepo = inject(SerialNumberLocalRepo);
   private tlRepo = inject(TransitionLogLocalRepo);
   private outbox = inject(OutboxService);
+  private session = inject(SessionService);
 
   private reportsSubj = new BehaviorSubject<LocalInspectionReport[]>([]);
   public readonly reports$ = this.reportsSubj.asObservable();
@@ -84,8 +86,14 @@ export class InspectionReportsService {
 
   public async pullAllAndCache(): Promise<void> {
     try {
+      let url = `${environment.apiUrl}/inspection-reports`;
+      const profile = await firstValueFrom(this.session.profile$);
+      if (profile?.role === 'SUPERVISOR') {
+        url += '?status=PENDING_APPROVAL';
+      }
+
       const reports = await firstValueFrom(
-        this.http.get<LocalInspectionReport[]>(`${environment.apiUrl}/inspection-reports`)
+        this.http.get<LocalInspectionReport[]>(url)
       );
 
       const localReports = await this.irRepo.list();
@@ -255,7 +263,7 @@ export class InspectionReportsService {
     });
   }
 
-  public async saveSerialNumberInspectionOffline(id: string, inspectionJson: any): Promise<void> {
+  public async saveSerialNumberInspectionOffline(id: string, inspectionJson: Record<string, unknown>): Promise<void> {
     const sn = await this.snRepo.getById(id);
     if (!sn) throw new Error('Serial number not found locally');
 

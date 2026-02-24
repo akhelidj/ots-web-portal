@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { DbService } from './db.service';
 import { LocalChildReport } from './types';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class ChildReportLocalRepo {

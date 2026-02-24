@@ -1,3 +1,15 @@
+export enum ReportStatus {
+  DRAFT = 'DRAFT',
+  RECEIVED = 'RECEIVED',
+  READY_FOR_CLEANING = 'READY_FOR_CLEANING',
+  READY_FOR_INSPECTION = 'READY_FOR_INSPECTION',
+  IN_INSPECTION = 'IN_INSPECTION',
+  PENDING_APPROVAL = 'PENDING_APPROVAL',
+  APPROVED = 'APPROVED',
+  ON_HOLD = 'ON_HOLD',
+  CLOSED = 'CLOSED'
+}
+
 export interface LocalInspectionReport {
   id: string;
   customerId: string | null;
@@ -32,6 +44,7 @@ export interface LocalUser {
   isActive: boolean;
   mustChangePassword: boolean;
   updatedAt: string;
+  customerId?: string | null;
   syncState?: 'CLEAN' | 'PENDING_CREATE' | 'PENDING_UPDATE';
 }
 

@@ -207,8 +207,8 @@
          <p class="text-sm font-medium mb-2">Target SN: {{ creatingChildReportForSn.value }}</p>
          <form (ngSubmit)="submitChildReport()">
             <div class="mb-4">
-               <label class="block text-sm font-medium text-gray-700 mb-1">Type (Derived from Disposition)</label>
-               <input type="text" [value]="creatingChildReportForSn.inspectionJson?.disposition" disabled class="w-full border border-gray-300 p-2 rounded-md bg-gray-100 text-gray-600 text-sm font-bold">
+               <label for="cr_type" class="block text-sm font-medium text-gray-700 mb-1">Type (Derived from Disposition)</label>
+               <input id="cr_type" type="text" [value]="creatingChildReportForSn.inspectionJson?.['disposition']" disabled class="w-full border border-gray-300 p-2 rounded-md bg-gray-100 text-gray-600 text-sm font-bold">
             </div>
             <div class="mb-4">
                <label for="cr_notes" class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>

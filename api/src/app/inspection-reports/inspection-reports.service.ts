@@ -6,16 +6,32 @@ import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 export class InspectionReportsService {
   constructor(private prisma: PrismaService) {}
 
-  async getReports(tenantId: string) {
+  async getReports(user: any, status?: string) {
+    const where: any = { tenantId: user.tenantId };
+    
+    if (user.role === 'CUSTOMER') {
+      where.customerId = user.customerId;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
     return this.prisma.inspectionReport.findMany({
-      where: { tenantId },
+      where,
       orderBy: { updatedAt: 'desc' },
     });
   }
 
-  async getReportById(tenantId: string, id: string) {
+  async getReportById(user: any, id: string) {
+    const where: any = { tenantId: user.tenantId, id };
+    
+    if (user.role === 'CUSTOMER') {
+      where.customerId = user.customerId;
+    }
+
     const report = await this.prisma.inspectionReport.findFirst({
-      where: { tenantId, id },
+      where,
     });
     if (!report) {
       throw new NotFoundException(`InspectionReport ${id} not found`);

@@ -27,7 +27,11 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const payload = { sub: user.id, email: user.email, tenantId: user.tenantId, role: user.role };
+    if (user.role === 'CUSTOMER' && !user.customerId) {
+      throw new UnauthorizedException('Customer access denied: Invalid user entity binding.');
+    }
+
+    const payload = { sub: user.id, email: user.email, tenantId: user.tenantId, role: user.role, customerId: user.customerId };
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = crypto.randomBytes(32).toString('hex');
     
@@ -72,12 +76,17 @@ export class AuthService {
     // Create new token
     await this.storeRefreshToken(tokenRecord.userId, newRefreshToken);
     
+    if (tokenRecord.user.role === 'CUSTOMER' && !tokenRecord.user.customerId) {
+      throw new UnauthorizedException('Customer access denied: Invalid user entity binding.');
+    }
+
     // Issue new access token
     const payload = { 
       sub: tokenRecord.user.id, 
       email: tokenRecord.user.email, 
       tenantId: tokenRecord.user.tenantId, 
-      role: tokenRecord.user.role 
+      role: tokenRecord.user.role,
+      customerId: tokenRecord.user.customerId
     };
     
     return {
@@ -125,6 +134,7 @@ export class AuthService {
         email: true,
         role: true,
         tenantId: true,
+        customerId: true,
         mustChangePassword: true,
       }
     });
@@ -135,12 +145,17 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
 
+    if (updatedUser.role === 'CUSTOMER' && !updatedUser.customerId) {
+      throw new UnauthorizedException('Customer access denied: Invalid user entity binding.');
+    }
+
     // Issue new tokens transparently
     const payload = { 
       sub: updatedUser.id, 
       email: updatedUser.email, 
       tenantId: updatedUser.tenantId, 
-      role: updatedUser.role 
+      role: updatedUser.role,
+      customerId: updatedUser.customerId
     };
     
     const accessToken = this.jwtService.sign(payload);

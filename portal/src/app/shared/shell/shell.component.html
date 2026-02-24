@@ -25,20 +25,15 @@
 </header>
 
 <nav aria-label="Main">
-  <ul>
-    <li>
-      <a routerLink="/admin" routerLinkActive="active" ariaCurrentWhenActive="page">Admin</a>
-    </li>
-    <li>
-      <a routerLink="/receiver" routerLinkActive="active" ariaCurrentWhenActive="page">Receiver</a>
-    </li>
-    <li>
-      <a routerLink="/inspector" routerLinkActive="active" ariaCurrentWhenActive="page">Inspector</a>
-    </li>
-    <li>
-      <a routerLink="/supervisor" routerLinkActive="active" ariaCurrentWhenActive="page">Supervisor</a>
-    </li>
-  </ul>
+  @if (profile$ | async; as profile) {
+    <ul>
+      @for (item of navigation.buildNavigation(profile.role); track item.label) {
+        <li>
+          <a [routerLink]="item.route" routerLinkActive="active" ariaCurrentWhenActive="page">{{ item.label }}</a>
+        </li>
+      }
+    </ul>
+  }
 </nav>
 
 <main>

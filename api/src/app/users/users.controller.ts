@@ -9,6 +9,7 @@ export interface CreateUserDto {
   name?: string;
   role: UserRole;
   isActive?: boolean;
+  customerId?: string;
 }
 
 export interface UpdateUserActiveDto {

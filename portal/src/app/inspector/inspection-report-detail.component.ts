@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse, HttpErrorResponse } from '@angular/common/http';
 import { InspectionReportsService } from './inspection-reports.service';
 import { ChildReportsService } from './child-reports.service';
 import { environment } from '../../environments/environment';
@@ -43,7 +43,7 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public drillPipeFields = DRILL_PIPE_FIELDS;
   public inspectingSn: LocalSerialNumber | null = null;
-  public inspectionFormData: Record<string, any> = {};
+  public inspectionFormData: Record<string, unknown> = {};
 
   public creatingChildReportForSn: LocalSerialNumber | null = null;
   public childReportNotes = '';
@@ -77,7 +77,7 @@ export class InspectionReportDetailComponent implements OnInit {
        try {
          const parsed = JSON.parse(r.availableTransitions);
          this.allowedTransitions = parsed.transitions || [];
-       } catch (e) {
+       } catch {
          this.allowedTransitions = [];
        }
     } else {
@@ -239,14 +239,15 @@ export class InspectionReportDetailComponent implements OnInit {
         observe: 'response'
       });
       
-      const response = await new Promise<any>((resolve, reject) => {
+      const response = await new Promise<HttpResponse<Blob>>((resolve, reject) => {
          observer.subscribe({
-            next: (res: any) => resolve(res),
-            error: (err: any) => reject(err)
+            next: (res) => resolve(res as HttpResponse<Blob>),
+            error: (err) => reject(err as HttpErrorResponse)
          });
       });
 
       const blob = response.body;
+      if (!blob) throw new Error('No blob data received');
       const contentDisposition = response.headers.get('Content-Disposition');
       
       let filename = '';
@@ -275,11 +276,11 @@ export class InspectionReportDetailComponent implements OnInit {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as HttpErrorResponse;
       if (error.status === 0) {
         this.formError = 'Export requires internet connection.';
       } else if (error.status === 400) {
-        // Safe mapping or generic if no internal server message.
         this.formError = 'Report mapping validation failed or template mismatch.';
       } else if (error.status === 403) {
         this.formError = 'Not allowed.';

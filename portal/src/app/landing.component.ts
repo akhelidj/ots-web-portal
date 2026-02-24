@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SessionService } from './core/auth/session.service';
+import { RoleLandingService } from './core/auth/role-landing.service';
 
 @Component({
   selector: 'app-landing',
@@ -10,6 +11,7 @@ import { SessionService } from './core/auth/session.service';
 export class LandingComponent implements OnInit {
   private session = inject(SessionService);
   private router = inject(Router);
+  private roleLanding = inject(RoleLandingService);
 
   ngOnInit() {
     if (!this.session.isAuthenticated) {
@@ -22,7 +24,14 @@ export class LandingComponent implements OnInit {
       return;
     }
 
-    // Default authenticated route (Admin for demo purposes)
-    this.router.navigate(['/admin']);
+    // Fallback to RoleLandingService for the proper redirect
+    let currentRole: string | undefined;
+    this.session.profile$.subscribe(p => currentRole = p?.role).unsubscribe();
+
+    if (currentRole) {
+      this.router.navigate(this.roleLanding.getLandingRoute(currentRole));
+    } else {
+      this.router.navigate(['/login']);
+    }
   }
 }

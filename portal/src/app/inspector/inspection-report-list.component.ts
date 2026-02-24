@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
@@ -26,7 +26,12 @@ export class InspectionReportListComponent implements OnInit {
   public statusFilter = '';
   public customerFilter = '';
 
+  @Input() initialStatusFilter?: string;
+
   ngOnInit() {
+    if (this.initialStatusFilter) {
+      this.statusFilter = this.initialStatusFilter;
+    }
     this.irService.refreshLocalCache();
     this.loadCustomers();
     this.customerRepo.changes$.subscribe(() => this.loadCustomers());

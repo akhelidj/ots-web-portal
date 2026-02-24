@@ -1,39 +1,58 @@
 import { Route } from '@angular/router';
 import { ShellComponent } from './shared/shell/shell.component';
 import { AdminUsersComponent } from './admin/admin-users.component';
-import { ReceiverPlaceholderComponent } from './shared/placeholders/receiver-placeholder.component';
-import { SupervisorPlaceholderComponent } from './shared/placeholders/supervisor-placeholder.component';
+import { SupervisorWorkspaceComponent } from './supervisor/supervisor-workspace.component';
 import { InspectionReportListComponent } from './inspector/inspection-report-list.component';
 import { CreateInspectionReportComponent } from './inspector/create-inspection-report.component';
 import { InspectionReportDetailComponent } from './inspector/inspection-report-detail.component';
 
+import { CustomerWorkspaceComponent } from './customer/customer-workspace.component';
+import { roleGuard } from './core/auth/role.guard';
 import { authGuard } from './core/auth/auth.guard';
 import { mustChangePasswordGuard } from './core/auth/must-change-password.guard';
 import { LoginComponent } from './auth/login.component';
 import { ChangePasswordComponent } from './auth/change-password.component';
 import { LandingComponent } from './landing.component';
+import { AppRoutes } from './core/navigation/routes.constants';
+import { AccessDeniedComponent } from './shared/access-denied.component';
+import { ReceiverWorkspaceComponent } from './receiver/receiver-workspace.component';
 
 export const appRoutes: Route[] = [
   {
-    path: 'login',
+    path: AppRoutes.LOGIN,
     component: LoginComponent,
     canActivate: [mustChangePasswordGuard],
   },
   {
-    path: 'change-password',
+    path: AppRoutes.CHANGE_PASSWORD,
     component: ChangePasswordComponent,
     canActivate: [authGuard, mustChangePasswordGuard],
+  },
+  {
+    path: AppRoutes.ACCESS_DENIED,
+    component: AccessDeniedComponent,
   },
   {
     path: '',
     component: ShellComponent,
     children: [
       { path: '', component: LandingComponent, pathMatch: 'full' },
-      { path: 'admin', component: AdminUsersComponent, canActivate: [authGuard, mustChangePasswordGuard] },
-      { path: 'receiver', component: ReceiverPlaceholderComponent, canActivate: [authGuard, mustChangePasswordGuard] },
       { 
-        path: 'inspector', 
-        canActivate: [authGuard, mustChangePasswordGuard],
+        path: AppRoutes.ADMIN, 
+        component: AdminUsersComponent, 
+        canActivate: [authGuard, mustChangePasswordGuard, roleGuard],
+        data: { roles: ['ADMIN'] }
+      },
+      { 
+        path: AppRoutes.RECEIVER, 
+        component: ReceiverWorkspaceComponent, 
+        canActivate: [authGuard, mustChangePasswordGuard, roleGuard],
+        data: { roles: ['RECEIVER'] }
+      },
+      { 
+        path: AppRoutes.INSPECTOR, 
+        canActivate: [authGuard, mustChangePasswordGuard, roleGuard],
+        data: { roles: ['INSPECTOR'] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
           { path: 'reports', component: InspectionReportListComponent },
@@ -41,7 +60,21 @@ export const appRoutes: Route[] = [
           { path: 'reports/:id', component: InspectionReportDetailComponent },
         ]
       },
-      { path: 'supervisor', component: SupervisorPlaceholderComponent, canActivate: [authGuard, mustChangePasswordGuard] },
+      { 
+        path: AppRoutes.SUPERVISOR, 
+        component: SupervisorWorkspaceComponent, 
+        canActivate: [authGuard, mustChangePasswordGuard, roleGuard],
+        data: { roles: ['SUPERVISOR'] }
+      },
+      { 
+        path: AppRoutes.CUSTOMER, 
+        canActivate: [authGuard, mustChangePasswordGuard, roleGuard],
+        data: { roles: ['CUSTOMER'] },
+        children: [
+          { path: '', component: CustomerWorkspaceComponent, pathMatch: 'full' },
+          { path: ':id', component: InspectionReportDetailComponent }
+        ]
+      },
     ],
   },
 ];

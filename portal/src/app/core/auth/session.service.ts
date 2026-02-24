@@ -9,6 +9,7 @@ export interface UserProfile {
   email: string;
   role: string;
   tenantId: string;
+  customerId?: string;
   mustChangePassword?: boolean;
 }
 

@@ -1,21 +1,26 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, Request, BadRequestException } from '@nestjs/common';
 import { ChildReportsService } from './child-reports.service';
-import { JwtAuthGuard } from '../auth/strategies/jwt-auth.guard';
+import { ChildReportStatus, ChildReportType } from '@prisma/client';
 
-@UseGuards(JwtAuthGuard)
 @Controller('child-reports')
 export class ChildReportsController {
   constructor(private readonly childReportsService: ChildReportsService) {}
 
   @Post()
-  async createChildReport(@Request() req, @Body() body: any) {
-    if (!body.id) {
+  async createChildReport(@Request() req: any, @Body() body: Record<string, unknown>) {
+    if (!body['id']) {
        throw new BadRequestException('Client must provide an id (UUID) for idempotency.');
     }
     return this.childReportsService.createChildReport(
       req.user.tenantId, 
       req.user.userId,
-      body
+      {
+         id: body['id'] as string,
+         inspectionReportId: body['inspectionReportId'] as string,
+         serialNumberId: body['serialNumberId'] as string,
+         type: body['type'] as ChildReportType,
+         notes: body['notes'] as string
+      }
     );
   }
 
@@ -28,13 +33,16 @@ export class ChildReportsController {
   }
 
   @Patch(':id')
-  async updateChildReport(@Request() req, @Param('id') id: string, @Body() body: any) {
+  async updateChildReport(@Request() req: any, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     return this.childReportsService.updateChildReport(
       req.user.tenantId, 
       id, 
       req.user.userId,
-      body, 
-      body.version
+      {
+         status: body['status'] as ChildReportStatus,
+         notes: body['notes'] as string
+      }, 
+      body['version'] as number
     );
   }
 }

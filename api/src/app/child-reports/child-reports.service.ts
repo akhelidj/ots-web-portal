@@ -1,11 +1,12 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { ChildReportStatus, ChildReportType } from '@prisma/client';
 
 @Injectable()
 export class ChildReportsService {
   constructor(private prisma: PrismaService) {}
 
-  async createChildReport(tenantId: string, userId: string, payload: { id: string, inspectionReportId: string, serialNumberId: string, type: any, notes?: string }) {
+  async createChildReport(tenantId: string, userId: string, payload: { id: string, inspectionReportId: string, serialNumberId: string, type: ChildReportType, notes?: string }) {
     // Deterministic Idempotency
     const existing = await this.prisma.childReport.findUnique({
       where: { id: payload.id, tenantId }
@@ -37,7 +38,7 @@ export class ChildReportsService {
     }
 
     const serialNumber = report.serialNumbers[0];
-    const data: any = serialNumber.inspectionData || {};
+    const data = (serialNumber.inspectionData as Record<string, unknown>) || {};
     const disposition = data.disposition;
 
     if (!disposition || disposition === 'PASS') {
@@ -57,7 +58,7 @@ export class ChildReportsService {
         serialNumberId: payload.serialNumberId,
         type: payload.type,
         notes: payload.notes,
-        status: 'OPEN',
+        status: ChildReportStatus.DRAFT,
         version: 1
       }
     });
@@ -72,7 +73,7 @@ export class ChildReportsService {
     });
   }
 
-  async updateChildReport(tenantId: string, id: string, userId: string, payload: { status?: any, notes?: string }, version: number) {
+  async updateChildReport(tenantId: string, id: string, userId: string, payload: { status?: ChildReportStatus, notes?: string }, version: number) {
     if (version === undefined || version === null) {
       throw new BadRequestException('version is required');
     }
@@ -107,7 +108,8 @@ export class ChildReportsService {
         }
       });
       return updated;
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as any;
       if (error.code === 'P2025') {
         throw new ConflictException('Child Report was updated by another process or does not exist. Please refresh and try again.');
       }

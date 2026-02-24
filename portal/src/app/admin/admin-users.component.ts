@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { AdminUsersService } from './admin-users.service';
 import { UserLocalRepo } from '../core/offline/user-local.repo';
 import { OutboxService } from '../core/offline/outbox.service';
-import { LocalUser } from '../core/offline/types';
+import { LocalUser, LocalCustomer } from '../core/offline/types';
+import { CustomerLocalRepo } from '../core/offline/customer-local.repo';
 import { AdminCustomersComponent } from './admin-customers.component';
 
 @Component({
@@ -24,7 +25,11 @@ export class AdminUsersComponent implements OnInit {
   public formEmail = '';
   public formName = '';
   public formRole = 'RECEIVER';
+  public formCustomerId = '';
   public formError = '';
+
+  public customers: LocalCustomer[] = [];
+  private customerRepo = inject(CustomerLocalRepo);
 
   public tempPasswordDisplay: string | null = null;
 
@@ -42,9 +47,14 @@ export class AdminUsersComponent implements OnInit {
 
   ngOnInit() {
     this.usersService.refreshLocalCache();
+    this.loadCustomers();
     if (navigator.onLine) {
       this.usersService.pullAllAndCache().catch(e => console.warn('Background refresh failed', e));
     }
+  }
+
+  private async loadCustomers() {
+    this.customers = await this.customerRepo.list();
   }
 
   public async onSubmitCreate(): Promise<void> {
@@ -53,6 +63,11 @@ export class AdminUsersComponent implements OnInit {
 
     if (!this.formEmail) {
       this.formError = 'Email is required.';
+      return;
+    }
+
+    if (this.formRole === 'CUSTOMER' && !this.formCustomerId) {
+      this.formError = 'Customer selection is required for Customer role.';
       return;
     }
 
@@ -66,6 +81,7 @@ export class AdminUsersComponent implements OnInit {
       isActive: true,
       mustChangePassword: true,
       updatedAt: new Date().toISOString(),
+      customerId: this.formRole === 'CUSTOMER' ? this.formCustomerId : null,
       syncState: 'PENDING_CREATE',
     };
 
@@ -86,6 +102,7 @@ export class AdminUsersComponent implements OnInit {
           name: newUser.name,
           role: newUser.role,
           isActive: true,
+          customerId: newUser.customerId,
         },
         status: 'PENDING',
         attemptCount: 0,
@@ -99,6 +116,7 @@ export class AdminUsersComponent implements OnInit {
       this.formEmail = '';
       this.formName = '';
       this.formRole = 'RECEIVER';
+      this.formCustomerId = '';
     } catch (e) {
       console.error(e);
       this.formError = 'Failed to enqueue creating user.';

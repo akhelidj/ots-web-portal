@@ -165,7 +165,7 @@ export class SyncDispatcherService {
 
         case 'SN_BULK_CREATE': {
           const reportId = item.payload['inspectionReportId'] as string;
-          const itemsPayload = item.payload['items'] as any[];
+          const itemsPayload = item.payload['items'] as Record<string, unknown>[];
           
           if (!itemsPayload || itemsPayload.length === 0) return true;
 
