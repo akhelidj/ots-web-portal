@@ -236,6 +236,14 @@ export class SyncDispatcherService {
           return true;
         }
 
+        case 'SN_DELETE': {
+          await firstValueFrom(
+            this.http.delete(`${environment.apiUrl}/serial-numbers/${item.entityId}`)
+          );
+          // Already deleted locally, so just return true
+          return true;
+        }
+
         case 'CR_CREATE': {
           const createRes = await firstValueFrom(
             this.http.post<LocalChildReport>(`${environment.apiUrl}/child-reports`, item.payload)

@@ -289,4 +289,24 @@ export class InspectionReportsService {
       lastError: null,
     });
   }
+
+  public async deleteSerialNumberOffline(id: string): Promise<void> {
+    const sn = await this.snRepo.getById(id);
+    if (!sn) throw new Error('Serial number not found locally');
+
+    await this.snRepo.delete(id);
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'SERIAL_NUMBER',
+      entityId: id,
+      operation: 'SN_DELETE',
+      payload: { inspectionReportId: sn.inspectionReportId },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+  }
 }

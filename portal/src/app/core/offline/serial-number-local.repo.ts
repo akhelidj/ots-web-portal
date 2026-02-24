@@ -64,6 +64,21 @@ export class SerialNumberLocalRepo {
     });
   }
 
+  async delete(id: string): Promise<void> {
+    const db = await this.dbService.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readwrite');
+      const store = tx.objectStore(this.STORE_NAME);
+      const req = store.delete(id);
+
+      req.onsuccess = () => {
+        this.changesSubject.next();
+        resolve();
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   async bulkUpsert(serialNumbers: LocalSerialNumber[]): Promise<void> {
     if (serialNumbers.length === 0) return;
     const db = await this.dbService.getDb();

@@ -50,7 +50,7 @@ export class CreateInspectionReportComponent {
         poNumber: this.formPoNumber,
         templateKey: this.formTemplateKey
       });
-      this.router.navigate(['/inspector/reports']);
+      this.router.navigate(['/receiver']);
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to create report.';

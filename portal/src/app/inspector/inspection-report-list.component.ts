@@ -38,6 +38,9 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   public sortBy: 'updatedAt' | 'poNumber' | 'status' = 'updatedAt';
 
   public isCustomer = false;
+  public isReceiver = false;
+  public isAdmin = false;
+  
   public reportStatsCache: Record<string, { serialCount: number, serialValues: string[] }> = {};
   public validationCache: Record<string, ValidationResult> = {};
   private subs = new Subscription();
@@ -53,6 +56,8 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
     
     this.subs.add(this.sessionService.profile$.subscribe(p => {
        this.isCustomer = p?.role === 'CUSTOMER';
+       this.isReceiver = p?.role === 'RECEIVER';
+       this.isAdmin = p?.role === 'ADMIN';
     }));
 
     this.subs.add(this.customerRepo.changes$.subscribe(() => this.loadCustomers()));

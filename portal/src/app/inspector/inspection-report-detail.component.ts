@@ -193,6 +193,18 @@ export class InspectionReportDetailComponent implements OnInit {
     }
   }
 
+  public async onDeleteSn(sn: LocalSerialNumber): Promise<void> {
+    if (!confirm(`Are you sure you want to delete ${sn.value}? This cannot be undone.`)) return;
+    
+    try {
+      await this.irService.deleteSerialNumberOffline(sn.id);
+      this.refreshData();
+    } catch (error) {
+      const e = error as Error;
+      this.formError = e.message || 'Failed to delete serial number.';
+    }
+  }
+
   public openInspectionForm(sn: LocalSerialNumber): void {
     this.inspectingSn = sn;
     this.inspectionFormData = sn.inspectionJson ? JSON.parse(JSON.stringify(sn.inspectionJson)) : {};

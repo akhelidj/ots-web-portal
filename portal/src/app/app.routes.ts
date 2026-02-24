@@ -46,9 +46,12 @@ export const appRoutes: Route[] = [
       },
       { 
         path: AppRoutes.RECEIVER, 
-        component: ReceiverWorkspaceComponent, 
         canActivate: [roleGuard],
-        data: { roles: ['RECEIVER'] }
+        data: { roles: ['RECEIVER'] },
+        children: [
+          { path: '', component: ReceiverWorkspaceComponent, pathMatch: 'full' },
+          { path: 'reports/create', component: CreateInspectionReportComponent }
+        ]
       },
       { 
         path: AppRoutes.INSPECTOR, 
@@ -57,7 +60,6 @@ export const appRoutes: Route[] = [
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
           { path: 'reports', component: InspectionReportListComponent },
-          { path: 'reports/create', component: CreateInspectionReportComponent },
           { path: 'reports/:id', component: InspectionReportDetailComponent },
         ]
       },

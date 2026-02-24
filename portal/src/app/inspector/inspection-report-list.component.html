@@ -1,8 +1,10 @@
 <div class="p-6 max-w-7xl mx-auto">
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-3xl font-bold text-gray-900">Inspection Reports</h1>
-    @if (!isCustomer) {
-      <a routerLink="create" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md font-medium transition-colors">Create Report</a>
+    @if (isReceiver) {
+      <a routerLink="/receiver/reports/create" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md font-medium transition-colors">Create Report</a>
+    } @else if (isAdmin) {
+      <a routerLink="/admin/reports/create" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md font-medium transition-colors">Create Report</a>
     }
   </div>
 
