@@ -16,7 +16,10 @@ export class NavigationService {
     switch (role) {
       case 'ADMIN':
         return [
-          { label: 'Admin Workspace', route: ['/', AppRoutes.ADMIN], exact: false },
+          { label: 'Reports', route: ['/', AppRoutes.ADMIN, 'reports'], exact: false },
+          { label: 'Users', route: ['/', AppRoutes.ADMIN, 'users'], exact: false },
+          { label: 'Customers', route: ['/', AppRoutes.ADMIN, 'customers'], exact: false },
+          { label: 'Templates', route: ['/', AppRoutes.ADMIN, 'templates'], exact: false },
         ];
       case 'RECEIVER':
         return [

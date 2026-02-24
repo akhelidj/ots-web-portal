@@ -6,12 +6,11 @@ import { UserLocalRepo } from '../core/offline/user-local.repo';
 import { OutboxService } from '../core/offline/outbox.service';
 import { LocalUser, LocalCustomer } from '../core/offline/types';
 import { CustomerLocalRepo } from '../core/offline/customer-local.repo';
-import { AdminCustomersComponent } from './admin-customers.component';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, AdminCustomersComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent implements OnInit {

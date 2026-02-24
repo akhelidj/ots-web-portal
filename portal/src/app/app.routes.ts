@@ -1,6 +1,8 @@
 import { Route } from '@angular/router';
 import { ShellComponent } from './shared/shell/shell.component';
 import { AdminUsersComponent } from './admin/admin-users.component';
+import { AdminCustomersComponent } from './admin/admin-customers.component';
+import { AdminTemplatesComponent } from './admin/admin-templates.component';
 import { SupervisorWorkspaceComponent } from './supervisor/supervisor-workspace.component';
 import { InspectionReportListComponent } from './inspector/inspection-report-list.component';
 import { CreateInspectionReportComponent } from './inspector/create-inspection-report.component';
@@ -40,9 +42,16 @@ export const appRoutes: Route[] = [
       { path: '', component: LandingComponent, pathMatch: 'full' },
       { 
         path: AppRoutes.ADMIN, 
-        component: AdminUsersComponent, 
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN'] }
+        data: { roles: ['ADMIN'] },
+        children: [
+          { path: '', redirectTo: 'users', pathMatch: 'full' },
+          { path: 'reports', component: InspectionReportListComponent },
+          { path: 'reports/:id', component: InspectionReportDetailComponent },
+          { path: 'users', component: AdminUsersComponent },
+          { path: 'customers', component: AdminCustomersComponent },
+          { path: 'templates', component: AdminTemplatesComponent },
+        ]
       },
       { 
         path: AppRoutes.RECEIVER, 

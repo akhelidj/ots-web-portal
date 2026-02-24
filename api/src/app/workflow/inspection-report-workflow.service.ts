@@ -147,13 +147,20 @@ export class InspectionReportWorkflowService {
     });
 
     return transitionLogs.map(log => {
-      const matchingAudit = auditLogs.find(a => 
-        a.userId === log.userId && 
-        Math.abs(a.timestamp.getTime() - log.timestamp.getTime()) < 2000
-      );
+      let closestAudit = null;
+      let minDiff = Infinity;
+      for (const a of auditLogs) {
+        if (a.userId === log.userId) {
+          const diff = Math.abs(a.timestamp.getTime() - log.timestamp.getTime());
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestAudit = a;
+          }
+        }
+      }
       return {
         ...log,
-        reason: matchingAudit?.reason || null
+        reason: (minDiff < 10000 && closestAudit) ? closestAudit.reason : null
       };
     });
   }
