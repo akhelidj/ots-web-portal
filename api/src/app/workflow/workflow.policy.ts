@@ -28,11 +28,6 @@ export const INSPECTION_REPORT_TRANSITIONS: Record<UserRole, Partial<Record<Insp
     [InspectionReportStatus.READY_FOR_CLEANING]: [InspectionReportStatus.READY_FOR_INSPECTION],
   },
   [UserRole.SUPERVISOR]: {
-    [InspectionReportStatus.DRAFT]: [InspectionReportStatus.ON_HOLD],
-    [InspectionReportStatus.RECEIVED]: [InspectionReportStatus.READY_FOR_CLEANING, InspectionReportStatus.ON_HOLD],
-    [InspectionReportStatus.READY_FOR_CLEANING]: [InspectionReportStatus.READY_FOR_INSPECTION, InspectionReportStatus.ON_HOLD],
-    [InspectionReportStatus.READY_FOR_INSPECTION]: [InspectionReportStatus.IN_INSPECTION, InspectionReportStatus.ON_HOLD],
-    [InspectionReportStatus.IN_INSPECTION]: [InspectionReportStatus.ON_HOLD],
     [InspectionReportStatus.PENDING_APPROVAL]: [InspectionReportStatus.IN_INSPECTION, InspectionReportStatus.APPROVED, InspectionReportStatus.ON_HOLD, InspectionReportStatus.CLOSED],
     [InspectionReportStatus.APPROVED]: [InspectionReportStatus.ON_HOLD, InspectionReportStatus.CLOSED],
     [InspectionReportStatus.ON_HOLD]: [InspectionReportStatus.CLOSED], // Logic for "Previous Active State" handled in service

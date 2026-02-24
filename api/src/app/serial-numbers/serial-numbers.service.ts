@@ -42,6 +42,10 @@ export class SerialNumbersService {
       throw new BadRequestException('Items array must be provided and not empty');
     }
 
+    if (report.status === 'APPROVED' || report.status === 'CLOSED') {
+      throw new BadRequestException('Cannot add serial numbers to an Approved or Closed report.');
+    }
+
     // Process items: trim, reject empty
     const processedItems: { clientRef: string, serial: string }[] = [];
     const duplicatesInPayload = new Set<string>();
@@ -231,6 +235,44 @@ export class SerialNumbersService {
           inspectionData: updated.inspectionData,
           updatedAt: updated.updatedAt
       };
+    });
+  }
+
+  async deleteSerialNumber(tenantId: string, id: string, userId: string) {
+    const serialToDelete = await this.prisma.serialNumber.findFirst({
+      where: { id, tenantId },
+      include: { inspectionReport: true }
+    });
+
+    if (!serialToDelete) {
+      throw new NotFoundException(`SerialNumber not found`);
+    }
+
+    const reportStatus = serialToDelete.inspectionReport.status;
+    const allowedStatuses = ['DRAFT', 'RECEIVED', 'READY_FOR_CLEANING'];
+
+    if (!allowedStatuses.includes(reportStatus)) {
+      throw new BadRequestException('Serial numbers can only be removed before the inspection stage (DRAFT, RECEIVED, READY_FOR_CLEANING).');
+    }
+
+    return await this.prisma.$transaction(async (tx) => {
+      await tx.serialNumber.delete({
+        where: { id }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'DELETE',
+          entity: 'SerialNumber',
+          entityId: id,
+          tenantId,
+          userId,
+          inspectionReportId: serialToDelete.inspectionReportId,
+          reason: `Deleted serial number ${serialToDelete.serial}`
+        }
+      });
+
+      return { ok: true };
     });
   }
 }

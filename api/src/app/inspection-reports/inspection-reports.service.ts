@@ -129,6 +129,10 @@ export class InspectionReportsService {
       throw new ConflictException(`Version mismatch. Expected ${existing.version}, got ${version}`);
     }
 
+    if (existing.status === 'APPROVED' || existing.status === 'CLOSED') {
+      throw new BadRequestException('Cannot mutate an Approved or Closed report. Admin revision required.');
+    }
+
     return await this.prisma.$transaction(async (tx) => {
       const updateResult = await tx.inspectionReport.updateMany({
         where: { 

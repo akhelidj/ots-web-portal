@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Req, UseGuards } from '@nestjs/common';
 import { SerialNumbersService } from './serial-numbers.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -38,5 +38,14 @@ export class SerialNumbersController {
     }
     const { version, ...data } = body;
     return this.serialNumbersService.updateSerialNumber(req.user.tenantId, id, req.user.id, data, version);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER)
+  @Delete('serial-numbers/:id')
+  async deleteSerialNumber(
+    @Req() req: any,
+    @Param('id') id: string,
+  ) {
+    return this.serialNumbersService.deleteSerialNumber(req.user.tenantId, id, req.user.id);
   }
 }
