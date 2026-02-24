@@ -29,6 +29,9 @@ export class ExportService {
     if (report.tenantId !== user.tenantId) {
       throw new ForbiddenException('Access denied');
     }
+    if (user.role === 'CUSTOMER' && report.customerId !== user.customerId) {
+      throw new ForbiddenException('Access denied: report does not belong to customer');
+    }
     if (report.status !== 'APPROVED') {
       throw new ForbiddenException('Export is only allowed for APPROVED reports');
     }

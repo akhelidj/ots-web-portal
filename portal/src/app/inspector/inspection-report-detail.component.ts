@@ -7,6 +7,7 @@ import { HttpClient, HttpResponse, HttpErrorResponse } from '@angular/common/htt
 import { InspectionReportsService } from './inspection-reports.service';
 import { ChildReportsService } from './child-reports.service';
 import { environment } from '../../environments/environment';
+import { SessionService } from '../core/auth/session.service';
 import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog, LocalChildReport } from '../core/offline/types';
 import { DRILL_PIPE_FIELDS } from './config/drill-pipe-fields';
 
@@ -21,6 +22,7 @@ export class InspectionReportDetailComponent implements OnInit {
   private irService = inject(InspectionReportsService);
   private crService = inject(ChildReportsService);
   private http = inject(HttpClient);
+  private session = inject(SessionService);
 
   public reportId = '';
   public reportSubj = new BehaviorSubject<LocalInspectionReport | null>(null);
@@ -48,8 +50,10 @@ export class InspectionReportDetailComponent implements OnInit {
   public creatingChildReportForSn: LocalSerialNumber | null = null;
   public childReportNotes = '';
   public isExporting = false;
+  public isCustomer = false;
 
   async ngOnInit() {
+    this.session.profile$.subscribe(p => this.isCustomer = p?.role === 'CUSTOMER');
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
       this.refreshData();

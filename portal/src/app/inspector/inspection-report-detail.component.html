@@ -65,36 +65,38 @@
         <div class="mb-4 bg-red-100 text-red-700 p-2 rounded text-sm whitespace-pre-line">{{ formError }}</div>
       }
       
-      @if (report.pendingTransitionToStatus) {
-        <div class="p-3 bg-yellow-50 text-yellow-800 text-sm rounded border border-yellow-200">
-           Transition to <span class="font-bold border px-1 rounded bg-yellow-100">{{ report.pendingTransitionToStatus }}</span> pending.
-        </div>
-      } @else {
-          <div class="flex flex-wrap gap-2 mb-4">
-             @for (transition of allowedTransitions; track transition.toStatus) {
-                <button (click)="openReasonSelect(transition)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-sm rounded transition-colors">
-                  {{ transition.toStatus }}
-                </button>
-             }
-             @if (allowedTransitions.length === 0) {
-                <p class="text-sm text-gray-500">No transitions available.</p>
-             }
+      @if (!isCustomer) {
+        @if (report.pendingTransitionToStatus) {
+          <div class="p-3 bg-yellow-50 text-yellow-800 text-sm rounded border border-yellow-200">
+             Transition to <span class="font-bold border px-1 rounded bg-yellow-100">{{ report.pendingTransitionToStatus }}</span> pending.
           </div>
+        } @else {
+            <div class="flex flex-wrap gap-2 mb-4">
+               @for (transition of allowedTransitions; track transition.toStatus) {
+                  <button (click)="openReasonSelect(transition)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-sm rounded transition-colors">
+                    {{ transition.toStatus }}
+                  </button>
+               }
+               @if (allowedTransitions.length === 0) {
+                  <p class="text-sm text-gray-500">No transitions available.</p>
+               }
+            </div>
 
-          @if (selectedTransition) {
-             <div class="mt-4 p-3 border rounded bg-gray-50 flex flex-col gap-2">
-                <p class="text-sm font-medium text-gray-900">Confirm transition to {{ selectedTransition.toStatus }}</p>
-                @if (selectedTransition.requiresReason) {
-                   <input type="text" [(ngModel)]="formReason" placeholder="Reason (Required)" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
-                } @else {
-                   <input type="text" [(ngModel)]="formReason" placeholder="Reason (Optional)" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
-                }
-                <div class="flex gap-2">
-                   <button (click)="onTransition()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 text-sm rounded transition-colors disabled:opacity-50" [disabled]="selectedTransition.requiresReason && !formReason.trim()">Confirm</button>
-                   <button (click)="selectedTransition = null; formReason = ''" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-1.5 text-sm rounded transition-colors">Cancel</button>
-                </div>
-             </div>
-          }
+            @if (selectedTransition) {
+               <div class="mt-4 p-3 border rounded bg-gray-50 flex flex-col gap-2">
+                  <p class="text-sm font-medium text-gray-900">Confirm transition to {{ selectedTransition.toStatus }}</p>
+                  @if (selectedTransition.requiresReason) {
+                     <input type="text" [(ngModel)]="formReason" placeholder="Reason (Required)" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
+                  } @else {
+                     <input type="text" [(ngModel)]="formReason" placeholder="Reason (Optional)" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
+                  }
+                  <div class="flex gap-2">
+                     <button (click)="onTransition()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 text-sm rounded transition-colors disabled:opacity-50" [disabled]="selectedTransition.requiresReason && !formReason.trim()">Confirm</button>
+                     <button (click)="selectedTransition = null; formReason = ''" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-1.5 text-sm rounded transition-colors">Cancel</button>
+                  </div>
+               </div>
+            }
+        }
       }
     </div>
 
@@ -147,11 +149,13 @@
                              }">{{ sn.inspectionJson.disposition }}</span>
                            }
                            
-                           @if (sn.inspectionJson?.disposition && sn.inspectionJson.disposition !== 'PASS') {
-                              <button (click)="openChildReportForm(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors" title="Create Child Report">Create CR</button>
-                           }
+                           @if (!isCustomer) {
+                             @if (sn.inspectionJson?.disposition && sn.inspectionJson.disposition !== 'PASS') {
+                                <button (click)="openChildReportForm(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors" title="Create Child Report">Create CR</button>
+                             }
 
-                           <button (click)="onEditSn(sn)" class="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 bg-gray-50 rounded transition-colors hide-on-readonly" title="Edit Serial Number">Rename</button>
+                             <button (click)="onEditSn(sn)" class="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 bg-gray-50 rounded transition-colors hide-on-readonly" title="Edit Serial Number">Rename</button>
+                           }
                         } @else {
                            <button (click)="openInspectionForm(sn)" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 bg-indigo-50 rounded transition-colors" title="View Inspection">View</button>
                         }
@@ -233,7 +237,7 @@
         </div>
         
         <form (ngSubmit)="saveInspectionForm()">
-           <fieldset [disabled]="report.status === 'APPROVED' || report.status === 'CLOSED'">
+           <fieldset [disabled]="report.status === 'APPROVED' || report.status === 'CLOSED' || isCustomer">
 
               <!-- Disposition Required Field -->
               <div class="mb-4">
@@ -270,7 +274,7 @@
               }
               
               <div class="flex gap-2 mt-6">
-                 @if (report.status !== 'APPROVED' && report.status !== 'CLOSED') {
+                 @if (!isCustomer && report.status !== 'APPROVED' && report.status !== 'CLOSED') {
                     <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
                        Save Inspection
                     </button>
@@ -282,19 +286,19 @@
            </fieldset>
         </form>
       </div>
-    } @else {
-      <!-- Add SN -->
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-fit">
-        <h2 class="text-xl font-bold mb-4 border-b pb-2">Add Serial Numbers</h2>
-        <p class="text-sm text-gray-500 mb-4">Paste multiple serial numbers (one per line):</p>
-        
-        <textarea [(ngModel)]="formBulkSerials" rows="6" class="w-full border border-gray-300 p-3 rounded-md mb-4 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="SN-001&#10;SN-002&#10;SN-003" [disabled]="report.status === 'APPROVED' || report.status === 'CLOSED'"></textarea>
-        
-        <button (click)="onAddSerials()" [disabled]="!formBulkSerials.trim() || report.status === 'APPROVED' || report.status === 'CLOSED'" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-          Enqueue Serial Numbers
-        </button>
-      </div>
-    }
+    } @else if (!isCustomer) {
+        <!-- Add SN -->
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-fit">
+          <h2 class="text-xl font-bold mb-4 border-b pb-2">Add Serial Numbers</h2>
+          <p class="text-sm text-gray-500 mb-4">Paste multiple serial numbers (one per line):</p>
+          
+          <textarea [(ngModel)]="formBulkSerials" rows="6" class="w-full border border-gray-300 p-3 rounded-md mb-4 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="SN-001&#10;SN-002&#10;SN-003" [disabled]="report.status === 'APPROVED' || report.status === 'CLOSED'"></textarea>
+          
+          <button (click)="onAddSerials()" [disabled]="!formBulkSerials.trim() || report.status === 'APPROVED' || report.status === 'CLOSED'" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            Enqueue Serial Numbers
+          </button>
+        </div>
+      }
   </div>
 </div>
 
