@@ -75,7 +75,7 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'CUSTOMER_CREATE': {
+        case 'CUSTOMER:CREATE': {
           const createRes = await this.adminCustomers.createOnServer(item.payload);
 
           const tempCustomer = await this.customerRepo.getById(item.entityId);
@@ -95,14 +95,14 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'CUSTOMER_UPDATE': {
+        case 'CUSTOMER:UPDATE': {
           const updateRes = await this.adminCustomers.patchOnServer(item.entityId, item.payload);
           await this.customerRepo.upsert({ ...updateRes, syncState: 'SYNCED' });
           await this.adminCustomers.pullAllAndCache();
           return true;
         }
 
-        case 'CUSTOMER_SET_ACTIVE': {
+        case 'CUSTOMER:SET_ACTIVE': {
           const activeRes = await this.adminCustomers.setActiveOnServer(
             item.entityId, 
             item.payload['isActive'] as boolean, 
@@ -114,7 +114,7 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'IR_CREATE': {
+        case 'INSPECTION_REPORT:CREATE': {
           const createRes = await firstValueFrom(
             this.http.post<LocalInspectionReport>(`${environment.apiUrl}/inspection-reports`, item.payload)
           );
@@ -144,7 +144,7 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'IR_UPDATE': {
+        case 'INSPECTION_REPORT:UPDATE': {
           const updateRes = await firstValueFrom(
             this.http.patch<LocalInspectionReport>(`${environment.apiUrl}/inspection-reports/${item.entityId}`, item.payload)
           );
@@ -152,7 +152,7 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'IR_TRANSITION': {
+        case 'INSPECTION_REPORT:TRANSITION': {
           const transitionRes = await firstValueFrom(
             this.http.post<LocalInspectionReport>(`${environment.apiUrl}/inspection-reports/${item.entityId}/transitions`, item.payload)
           );
@@ -163,7 +163,7 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'SN_BULK_CREATE': {
+        case 'SERIAL_NUMBER:BULK_CREATE': {
           const reportId = item.payload['inspectionReportId'] as string;
           const itemsPayload = item.payload['items'] as Record<string, unknown>[];
           
@@ -202,7 +202,7 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'SN_UPDATE': {
+        case 'SERIAL_NUMBER:UPDATE': {
           const backendPayload = {
              serialNumber: item.payload['value'] as string,
              version: item.payload['version'] as number
@@ -219,7 +219,7 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'SN_UPDATE_INSPECTION': {
+        case 'SERIAL_NUMBER:SN_UPDATE_INSPECTION': {
           const backendPayload = {
              inspectionData: item.payload['inspectionData'],
              version: item.payload['version'] as number
@@ -236,7 +236,7 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'SN_DELETE': {
+        case 'SERIAL_NUMBER:SN_DELETE': {
           await firstValueFrom(
             this.http.delete(`${environment.apiUrl}/serial-numbers/${item.entityId}`)
           );
@@ -244,7 +244,7 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'CR_CREATE': {
+        case 'CHILD_REPORT:CREATE': {
           const createRes = await firstValueFrom(
             this.http.post<LocalChildReport>(`${environment.apiUrl}/child-reports`, item.payload)
           );
@@ -266,7 +266,7 @@ export class SyncDispatcherService {
           return true;
         }
 
-        case 'CR_UPDATE': {
+        case 'CHILD_REPORT:UPDATE': {
           const updateRes = await firstValueFrom(
             this.http.patch<LocalChildReport>(`${environment.apiUrl}/child-reports/${item.entityId}`, item.payload)
           );
