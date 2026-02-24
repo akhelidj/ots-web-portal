@@ -1,133 +1,197 @@
-<h2>Customers</h2>
-
-<div style="margin-bottom: 20px;">
-  <button (click)="refreshFromServer()">Refresh from server</button>
-</div>
-
-<form (ngSubmit)="onSubmitCreate()" aria-labelledby="create-customer-legend">
-  <fieldset>
-    <legend id="create-customer-legend">Create New Customer</legend>
-    
+<div>
+  <div class="flex items-center justify-between mb-8">
     <div>
-      <label for="c-name">Name</label>
-      <input type="text" id="c-name" name="name" [(ngModel)]="formName" required />
+      <h2 class="text-2xl font-bold tracking-tight text-primary">Key Customers</h2>
+      <p class="mt-1 text-sm text-gray-500">Manage companies requiring OTS inspection services.</p>
     </div>
+    <button (click)="refreshFromServer()" class="inline-flex items-center text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
+      <svg class="mr-2 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Sync Directory
+    </button>
+  </div>
 
-    <div>
-      <label for="c-code">Code (Optional)</label>
-      <input type="text" id="c-code" name="code" [(ngModel)]="formCode" />
-    </div>
+  <!-- Create Customer Form -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+    <form (ngSubmit)="onSubmitCreate()" #customerForm="ngForm" aria-labelledby="create-customer-legend" class="space-y-6">
+      <fieldset>
+        <legend id="create-customer-legend" class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-3 w-full mb-6">Register Customer</legend>
+        
+        <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label for="c-name" class="block text-sm font-medium text-gray-700">Company Name <span class="text-error">*</span></label>
+            <div class="mt-1">
+              <input type="text" id="c-name" name="name" [(ngModel)]="formName" required #nameField="ngModel" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors" 
+              [ngClass]="{'border-error focus:ring-error focus:border-error': nameField.invalid && (nameField.dirty || nameField.touched)}" />
+            </div>
+            @if (nameField.invalid && (nameField.dirty || nameField.touched)) {
+              <p class="mt-1 text-xs text-error">Company Name is required.</p>
+            }
+          </div>
 
-    <div>
-      <label for="c-email">Email (Optional)</label>
-      <input type="email" id="c-email" name="email" [(ngModel)]="formEmail" />
-    </div>
+          <div>
+            <label for="c-code" class="block text-sm font-medium text-gray-700">Code (Optional)</label>
+            <div class="mt-1">
+              <input type="text" id="c-code" name="code" [(ngModel)]="formCode" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors" />
+            </div>
+          </div>
 
-    <div>
-      <label for="c-phone">Phone (Optional)</label>
-      <input type="text" id="c-phone" name="phone" [(ngModel)]="formPhone" />
-    </div>
+          <div>
+            <label for="c-email" class="block text-sm font-medium text-gray-700">Email (Optional)</label>
+            <div class="mt-1">
+              <input type="email" id="c-email" name="email" [(ngModel)]="formEmail" email #emailField="ngModel" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+              [ngClass]="{'border-error focus:ring-error focus:border-error': emailField.invalid && (emailField.dirty || emailField.touched)}" />
+            </div>
+            @if (emailField.invalid && (emailField.dirty || emailField.touched)) {
+              <p class="mt-1 text-xs text-error">Must be a valid email.</p>
+            }
+          </div>
 
-    <button type="submit">Create Customer</button>
-  </fieldset>
+          <div>
+            <label for="c-phone" class="block text-sm font-medium text-gray-700">Phone (Optional)</label>
+            <div class="mt-1">
+              <input type="text" id="c-phone" name="phone" [(ngModel)]="formPhone" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors" />
+            </div>
+          </div>
+        </div>
 
-  @if (formError) {
-    <div role="alert" class="error-region">{{ formError }}</div>
-  }
-</form>
-
-@if (editingCustomer) {
-  <form (ngSubmit)="confirmEdit()" aria-labelledby="edit-customer-legend" style="margin-top:20px; border:1px solid #ccc; padding:10px;">
-    <fieldset>
-      <legend id="edit-customer-legend">Edit Customer</legend>
-      
-      <div>
-        <label for="e-name">Name</label>
-        <input type="text" id="e-name" name="ename" [(ngModel)]="editName" required />
-      </div>
-
-      <div>
-        <label for="e-code">Code</label>
-        <input type="text" id="e-code" name="ecode" [(ngModel)]="editCode" />
-      </div>
-      
-      <div>
-        <label for="e-email">Email</label>
-        <input type="email" id="e-email" name="eemail" [(ngModel)]="editEmail" />
-      </div>
-      
-      <div>
-        <label for="e-phone">Phone</label>
-        <input type="text" id="e-phone" name="ephone" [(ngModel)]="editPhone" />
-      </div>
-
-      <button type="submit">Save Changes</button>
-      <button type="button" (click)="cancelEdit()">Cancel</button>
-
-      @if (editError) {
-        <div role="alert" class="error-region">{{ editError }}</div>
-      }
-    </fieldset>
-  </form>
-}
-
-@if (selectedCustomer) {
-  <form (ngSubmit)="confirmDeactivate()" aria-labelledby="deactivate-legend" style="margin-top:20px; border:1px solid #ccc; padding:10px;">
-    <fieldset>
-      <legend id="deactivate-legend">Deactivate Customer {{ selectedCustomer.name }}</legend>
-      
-      <div>
-        <label for="d-reason">Reason for deactivation</label>
-        <input type="text" id="d-reason" name="reason" [(ngModel)]="deactivationReason" required />
-      </div>
-
-      <button type="submit">Confirm</button>
-      <button type="button" (click)="cancelDeactivate()">Cancel</button>
-
-      @if (deactivationError) {
-        <div role="alert" class="error-region">{{ deactivationError }}</div>
-      }
-    </fieldset>
-  </form>
-}
-
-<table aria-label="Customers List" style="margin-top:20px; width:100%;">
-  <thead>
-    <tr>
-      <th scope="col">Name</th>
-      <th scope="col">Code</th>
-      <th scope="col">Email</th>
-      <th scope="col">Active</th>
-      <th scope="col">Sync Status</th>
-      <th scope="col">Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    @for (cust of customers$ | async; track cust.id) {
-      <tr>
-        <td>{{ cust.name }}</td>
-        <td>{{ cust.code || '-' }}</td>
-        <td>{{ cust.email || '-' }}</td>
-        <td>{{ cust.isActive ? 'Yes' : 'No' }}</td>
-        <td>
-          @if (cust.syncState === 'PENDING') {
-            <span class="chip pending">Pending Sync</span>
-          } @else if (cust.syncState === 'CONFLICT') {
-             <span class="chip conflict" title="Refresh from server to resolve">Conflict</span>
-             <br><small>Refresh to resolve</small>
-          } @else if (cust.syncState === 'ERROR') {
-             <span class="chip error">Error</span>
-          } @else {
-             <span class="chip synced">Synced</span>
-          }
-        </td>
-        <td>
-          <button (click)="promptEdit(cust)" [disabled]="cust.syncState === 'CONFLICT'">Edit</button>
-          <button (click)="onToggleActive(cust)" [disabled]="cust.syncState === 'CONFLICT'">
-            {{ cust.isActive ? 'Deactivate' : 'Activate' }}
+        <div class="mt-6 flex justify-end">
+          <button type="submit" [disabled]="!customerForm.form.valid" class="inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            Create Customer
           </button>
-        </td>
-      </tr>
-    }
-  </tbody>
-</table>
+        </div>
+      </fieldset>
+
+      @if (formError) {
+        <div role="alert" class="mt-4 text-sm text-error bg-error-light py-2 px-3 rounded-md border-l-4 border-error">
+          {{ formError }}
+        </div>
+      }
+    </form>
+  </div>
+
+  <!-- Inline Edit Form -->
+  @if (editingCustomer) {
+    <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-8 shadow-inner">
+      <form (ngSubmit)="confirmEdit()" aria-labelledby="edit-customer-legend" class="space-y-6">
+        <fieldset>
+          <legend id="edit-customer-legend" class="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2 w-full mb-4">Edit Configuration: <span class="text-accent">{{ editingCustomer.name }}</span></legend>
+          
+          <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label for="e-name" class="block text-sm font-medium text-gray-700">Name</label>
+              <input type="text" id="e-name" name="ename" [(ngModel)]="editName" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-accent focus:border-accent sm:text-sm" />
+            </div>
+            <div>
+              <label for="e-code" class="block text-sm font-medium text-gray-700">Code</label>
+              <input type="text" id="e-code" name="ecode" [(ngModel)]="editCode" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-accent focus:border-accent sm:text-sm" />
+            </div>
+            <div>
+              <label for="e-email" class="block text-sm font-medium text-gray-700">Email</label>
+              <input type="email" id="e-email" name="eemail" [(ngModel)]="editEmail" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-accent focus:border-accent sm:text-sm" />
+            </div>
+            <div>
+              <label for="e-phone" class="block text-sm font-medium text-gray-700">Phone</label>
+              <input type="text" id="e-phone" name="ephone" [(ngModel)]="editPhone" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-accent focus:border-accent sm:text-sm" />
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-end gap-3">
+            <button type="button" (click)="cancelEdit()" class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+              Cancel
+            </button>
+            <button type="submit" class="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent">
+              Save Changes
+            </button>
+          </div>
+
+          @if (editError) {
+            <div role="alert" class="mt-4 text-sm text-error bg-error-light py-2 px-3 rounded-md">{{ editError }}</div>
+          }
+        </fieldset>
+      </form>
+    </div>
+  }
+
+  <!-- Deactivation Form -->
+  @if (selectedCustomer) {
+    <div class="bg-red-50 p-6 rounded-xl border border-red-100 mb-8">
+      <form (ngSubmit)="confirmDeactivate()" aria-labelledby="deactivate-legend" class="space-y-4">
+        <fieldset>
+          <legend id="deactivate-legend" class="text-base font-semibold text-red-900 border-b border-red-200 pb-2 w-full mb-4">Deactivate Customer: <span class="font-bold">{{ selectedCustomer.name }}</span></legend>
+          
+          <div>
+            <label for="d-reason" class="block text-sm font-medium text-red-800 mb-1">Reason for deactivation</label>
+            <input type="text" id="d-reason" name="reason" [(ngModel)]="deactivationReason" required class="appearance-none block w-full max-w-lg px-3 py-2 border border-red-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Please provide a reason..." />
+          </div>
+
+          <div class="mt-4 flex gap-3">
+            <button type="submit" class="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+              Confirm Deactivation
+            </button>
+            <button type="button" (click)="cancelDeactivate()" class="px-4 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+              Cancel
+            </button>
+          </div>
+
+          @if (deactivationError) {
+            <div role="alert" class="mt-4 text-sm text-red-700 bg-red-100 py-2 px-3 rounded-md">{{ deactivationError }}</div>
+          }
+        </fieldset>
+      </form>
+    </div>
+  }
+
+  <!-- Data Table -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+    <table aria-label="Customers List" class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Code</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sync Status</th>
+          <th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        @for (cust of customers$ | async; track cust.id) {
+          <tr class="hover:bg-primary/5 transition-colors">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ cust.name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ cust.code || '-' }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ cust.email || '-' }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+              @if (cust.isActive) {
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark">Yes</span>
+              } @else {
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">No</span>
+              }
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+              @if (cust.syncState === 'PENDING') {
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning-dark">Pending Sync</span>
+              } @else if (cust.syncState === 'CONFLICT') {
+                 <div class="flex flex-col">
+                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error-light text-error-dark" title="Refresh from server to resolve">Sync Error</span>
+                   <span class="text-[10px] text-gray-400 mt-1">Refresh to resolve</span>
+                 </div>
+              } @else if (cust.syncState === 'ERROR') {
+                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error-light text-error-dark">Error</span>
+              } @else {
+                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark">Synced</span>
+              }
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+              <button (click)="promptEdit(cust)" [disabled]="cust.syncState === 'CONFLICT'" class="text-primary hover:text-primary-light transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
+              <button (click)="onToggleActive(cust)" [disabled]="cust.syncState === 'CONFLICT'" class="text-accent hover:text-accent-hover transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+                {{ cust.isActive ? 'Deactivate' : 'Activate' }}
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -37,6 +37,13 @@ export class OutboxService {
     }
   }
 
+  public async clearConflicts(): Promise<void> {
+    await this.repo.clearConflicts();
+    await this.rehydrateCount();
+    // After clearing conflicts, there are no conflict items, but we should reset the subject immediately
+    this.hasConflictSubj.next(false);
+  }
+
   public async enqueue(item: OutboxItem): Promise<void> {
     item.status = 'PENDING';
     item.attemptCount = 0;

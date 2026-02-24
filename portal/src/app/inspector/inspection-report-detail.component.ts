@@ -13,6 +13,7 @@ import { DRILL_PIPE_FIELDS } from './config/drill-pipe-fields';
 import { ReportValidationService, ValidationResult } from '../core/validation/report-validation.service';
 import { OutboxLocalRepo } from '../core/offline/outbox-local.repo';
 import { getInspectionReportUiState, InspectionReportUiState, UserRole, ReportStatus } from '../core/ui-policy/inspection-report-ui-policy';
+import { SyncOrchestratorService } from '../core/offline/sync-orchestrator.service';
 
 @Component({
   selector: 'app-inspection-report-detail',
@@ -28,6 +29,7 @@ export class InspectionReportDetailComponent implements OnInit {
   private session = inject(SessionService);
   private validationService = inject(ReportValidationService);
   private outboxRepo = inject(OutboxLocalRepo);
+  private syncOrchestrator = inject(SyncOrchestratorService);
 
   public reportId = '';
   public reportSubj = new BehaviorSubject<LocalInspectionReport | null>(null);
@@ -68,9 +70,10 @@ export class InspectionReportDetailComponent implements OnInit {
 
   async ngOnInit() {
     this.session.profile$.subscribe(p => {
-      this.userRole = p?.role || '';
-      this.isCustomer = p?.role === 'CUSTOMER';
-      this.isReceiver = p?.role === 'RECEIVER';
+      if (!p) return;
+      this.userRole = p.role || '';
+      this.isCustomer = p.role === 'CUSTOMER';
+      this.isReceiver = p.role === 'RECEIVER';
       if (this.reportId) {
          this.refreshData();
       }
@@ -292,8 +295,12 @@ export class InspectionReportDetailComponent implements OnInit {
 
     try {
       await this.irService.saveSerialNumberInspectionOffline(this.inspectingSn.id, this.inspectionFormData);
-      this.closeInspectionForm();
+      
       this.refreshData();
+      
+      if (this.isOnline) {
+         this.syncOrchestrator.runSyncSequence().catch(err => console.error('Auto-sync failed', err));
+      }
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to save inspection data.';

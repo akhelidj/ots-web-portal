@@ -136,9 +136,25 @@ export class InspectionReportWorkflowService {
     }
 
     // Fetch the safely scoped logs
-    return this.prisma.inspectionReportTransitionLog.findMany({
+    const transitionLogs = await this.prisma.inspectionReportTransitionLog.findMany({
         where: { inspectionReportId: reportId },
         orderBy: { timestamp: 'desc' }
+    });
+
+    const auditLogs = await this.prisma.auditLog.findMany({
+        where: { inspectionReportId: reportId, action: 'TRANSITION' },
+        orderBy: { timestamp: 'desc' }
+    });
+
+    return transitionLogs.map(log => {
+      const matchingAudit = auditLogs.find(a => 
+        a.userId === log.userId && 
+        Math.abs(a.timestamp.getTime() - log.timestamp.getTime()) < 2000
+      );
+      return {
+        ...log,
+        reason: matchingAudit?.reason || null
+      };
     });
   }
 

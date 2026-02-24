@@ -40,6 +40,11 @@ export class ShellComponent {
     this.router.navigate(['/login']);
   }
 
+  public async clearSyncErrors() {
+    await this.outbox.clearConflicts();
+    this.orchestrator.runSyncSequence();
+  }
+
   public async simulateOfflineMutation() {
     if (!this.isDevMode) return;
 
@@ -60,5 +65,21 @@ export class ShellComponent {
     if (this.connectivity.isOnline()) {
       await this.outbox.processQueue();
     }
+  }
+
+  public formatLastSynced(isoStr: string | null): string {
+    if (!isoStr) return '';
+    const date = new Date(isoStr);
+    const today = new Date();
+    
+    // Check if it's today
+    if (date.getDate() === today.getDate() && 
+        date.getMonth() === today.getMonth() && 
+        date.getFullYear() === today.getFullYear()) {
+      return `Today, ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+    }
+    
+    // Otherwise
+    return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}, ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
   }
 }

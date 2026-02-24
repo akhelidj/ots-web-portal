@@ -1,98 +1,155 @@
-<h1>Users</h1>
+<div class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto py-8">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight text-primary">User Management</h1>
+    <p class="mt-2 text-sm text-gray-500">Create, configure, and manage user access roles across the platform.</p>
+  </div>
 
-<form (ngSubmit)="onSubmitCreate()" aria-labelledby="create-user-legend">
-  <fieldset>
-    <legend id="create-user-legend">Create New User</legend>
-    
-    <div>
-      <label for="email">Email</label>
-      <input type="email" id="email" name="email" [(ngModel)]="formEmail" required />
-    </div>
+  <!-- Create User Form -->
+  <div class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100 mb-10">
+    <form (ngSubmit)="onSubmitCreate()" #userForm="ngForm" aria-labelledby="create-user-legend" class="space-y-6">
+      <fieldset>
+        <legend id="create-user-legend" class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-3 w-full mb-6">Create New User</legend>
+        
+        <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700">Email <span class="text-error">*</span></label>
+            <div class="mt-1">
+              <input type="email" id="email" name="email" [(ngModel)]="formEmail" required email #emailField="ngModel" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+               [ngClass]="{'border-error focus:ring-error focus:border-error': emailField.invalid && (emailField.dirty || emailField.touched)}" />
+            </div>
+            @if (emailField.invalid && (emailField.dirty || emailField.touched)) {
+              <p class="mt-1 text-xs text-error">A valid email is required.</p>
+            }
+          </div>
 
-    <div>
-      <label for="name">Name (Optional)</label>
-      <input type="text" id="name" name="name" [(ngModel)]="formName" />
-    </div>
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700">Name (Optional)</label>
+            <div class="mt-1">
+              <input type="text" id="name" name="name" [(ngModel)]="formName" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors" />
+            </div>
+          </div>
 
-    <div>
-      <label for="role">Role</label>
-      <select id="role" name="role" [(ngModel)]="formRole">
-        <option value="ADMIN">Admin</option>
-        <option value="RECEIVER">Receiver</option>
-        <option value="INSPECTOR">Inspector</option>
-        <option value="SUPERVISOR">Supervisor</option>
-        <option value="CUSTOMER">Customer</option>
-      </select>
-    </div>
+          <div>
+            <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
+            <div class="mt-1">
+              <select id="role" name="role" [(ngModel)]="formRole" class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors">
+                <option value="ADMIN">Admin</option>
+                <option value="RECEIVER">Receiver</option>
+                <option value="INSPECTOR">Inspector</option>
+                <option value="SUPERVISOR">Supervisor</option>
+                <option value="CUSTOMER">Customer</option>
+              </select>
+            </div>
+          </div>
 
-    @if (formRole === 'CUSTOMER') {
-      <div>
-        <label for="customerId">Associated Customer</label>
-        <select id="customerId" name="customerId" [(ngModel)]="formCustomerId" required>
-          <option value="" disabled>Select a customer...</option>
-          @for (c of customers; track c.id) {
-            <option [value]="c.id">{{ c.name }}</option>
+          @if (formRole === 'CUSTOMER') {
+            <div>
+              <label for="customerId" class="block text-sm font-medium text-gray-700">Associated Customer</label>
+              <div class="mt-1">
+                <select id="customerId" name="customerId" [(ngModel)]="formCustomerId" required class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors">
+                  <option value="" disabled>Select a customer...</option>
+                  @for (c of customers; track c.id) {
+                    <option [value]="c.id">{{ c.name }}</option>
+                  }
+                </select>
+              </div>
+            </div>
           }
-        </select>
-      </div>
-    }
-
-    <button type="submit">Create User</button>
-  </fieldset>
-
-  @if (formError) {
-    <div role="alert" class="error-region">
-      {{ formError }}
-    </div>
-  }
-</form>
-
-<!-- Password notification area (populated via global hook if desired) -->
-@if (tempPasswordDisplay) {
-  <dialog open style="padding: 1rem; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; z-index: 100;">
-    <h3>User created successfully.</h3>
-    <p><strong>Temporary password:</strong> {{ tempPasswordDisplay }}</p>
-    <p style="color: red; font-size: 0.9em;">This password will not be shown again.</p>
-    <button type="button" (click)="dismissTempPassword()">Close</button>
-  </dialog>
-}
-
-<table aria-label="Internal Users List">
-  <thead>
-    <tr>
-      <th scope="col">Email</th>
-      <th scope="col">Name</th>
-      <th scope="col">Role</th>
-      <th scope="col">Active</th>
-      <th scope="col">Sync Status</th>
-      <th scope="col">Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    @for (user of users$ | async; track user.id) {
-      <tr>
-        <td>{{ user.email }}</td>
-        <td>{{ user.name || '-' }}</td>
-        <td>{{ user.role }}</td>
-        <td>{{ user.isActive ? 'Yes' : 'No' }}</td>
-        <td>
-          @if (user.syncState === 'PENDING_CREATE') {
-            <span>Pending Create Sync</span>
-          } @else if (user.syncState === 'PENDING_UPDATE') {
-             <span>Pending Update Sync</span>
-          } @else {
-             <span>Synced</span>
-          }
-        </td>
-        <td>
-          <button (click)="onToggleActive(user)">
-            {{ user.isActive ? 'Deactivate' : 'Activate' }}
+        </div>
+        
+        <div class="mt-8 flex justify-end">
+          <button type="submit" [disabled]="!userForm.form.valid || (formRole === 'CUSTOMER' && !formCustomerId)" class="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            Create User
           </button>
-        </td>
-      </tr>
-    }
-  </tbody>
-</table>
+        </div>
+      </fieldset>
 
-<hr style="margin: 40px 0;">
-<app-admin-customers></app-admin-customers>
+      @if (formError) {
+        <div role="alert" class="mt-4 text-sm text-error bg-error-light py-3 px-4 rounded-md border-l-4 border-error">
+          {{ formError }}
+        </div>
+      }
+    </form>
+  </div>
+
+  <!-- Password notification dialog -->
+  @if (tempPasswordDisplay) {
+    <!-- Semi-transparent overlay -->
+    <div class="fixed inset-0 bg-primary/40 transition-opacity z-40 backdrop-blur-sm" aria-hidden="true"></div>
+    <dialog open class="fixed inset-0 z-50 overflow-y-auto w-full max-w-lg p-0 bg-white rounded-xl shadow-2xl m-auto border-none">
+      <div class="p-8 text-center">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-success-light mb-4">
+          <svg class="h-6 w-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">User created successfully!</h3>
+        
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 my-6">
+          <p class="text-sm text-gray-500 mb-2">Temporary Password:</p>
+          <p class="text-2xl font-mono tracking-widest font-semibold text-primary">{{ tempPasswordDisplay }}</p>
+        </div>
+        
+        <p class="text-sm text-error font-medium mb-8">Please copy this now. It will not be shown again.</p>
+        
+        <button type="button" (click)="dismissTempPassword()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-primary-light focus:outline-none sm:text-sm transition-colors">
+          I've copied the password. Close.
+        </button>
+      </div>
+    </dialog>
+  }
+
+  <!-- Users Data Table -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto mb-12">
+    <table aria-label="Internal Users List" class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sync Status</th>
+          <th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        @for (user of users$ | async; track user.id) {
+          <tr class="hover:bg-primary/5 transition-colors">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ user.email }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.name || '-' }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-md font-medium text-xs bg-gray-100 text-gray-800 border border-gray-200 tracking-wide uppercase">{{ user.role }}</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+              @if (user.isActive) {
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark">Yes</span>
+              } @else {
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">No</span>
+              }
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+              @if (user.syncState === 'PENDING_CREATE') {
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning-dark">Pending Create Sync</span>
+              } @else if (user.syncState === 'PENDING_UPDATE') {
+                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning-dark">Pending Update Sync</span>
+              } @else {
+                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark">Synced</span>
+              }
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <button (click)="onToggleActive(user)" class="text-accent hover:text-accent-hover font-semibold transition-colors">
+                {{ user.isActive ? 'Deactivate' : 'Activate' }}
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="my-8 border-t border-gray-200">
+  
+  <div class="mt-8">
+    <app-admin-customers></app-admin-customers>
+  </div>
+</div>

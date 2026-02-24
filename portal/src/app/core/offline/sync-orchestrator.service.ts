@@ -8,7 +8,7 @@ import { AdminUsersService } from '../../admin/admin-users.service';
 import { AdminCustomersService } from '../../admin/admin-customers.service';
 import { InspectionReportsService } from '../../inspector/inspection-reports.service';
 
-export type SyncStatus = 'Offline' | 'Syncing...' | 'Up to date' | 'Conflict';
+export type SyncStatus = 'Offline' | 'Syncing...' | 'Up to date' | 'Sync Error';
 
 @Injectable({
   providedIn: 'root',
@@ -56,7 +56,7 @@ export class SyncOrchestratorService {
 
     // 2. Listen to Outbox conflicts to lock status
     this.outbox.hasConflict$.pipe(filter(hasConflict => hasConflict)).subscribe(() => {
-      this.syncStatusSubj.next('Conflict');
+      this.syncStatusSubj.next('Sync Error');
     });
   }
 
@@ -65,7 +65,7 @@ export class SyncOrchestratorService {
     
     const initiallyHasConflict = await firstValueFrom(this.outbox.hasConflict$);
     if (initiallyHasConflict) {
-      this.syncStatusSubj.next('Conflict');
+      this.syncStatusSubj.next('Sync Error');
       // Do not return here, continue to pull operations
     }
     
@@ -79,7 +79,7 @@ export class SyncOrchestratorService {
       // Check if conflict arose during processQueue
       const conflictDetected = await firstValueFrom(this.outbox.hasConflict$);
       if (conflictDetected) {
-        this.syncStatusSubj.next('Conflict');
+        this.syncStatusSubj.next('Sync Error');
         // Do not return here, we still want to pull fresh items
       }
 
@@ -98,7 +98,7 @@ export class SyncOrchestratorService {
 
       await Promise.all(syncTasks);
 
-      const now = new Date().toLocaleTimeString();
+      const now = new Date().toISOString();
       this.lastSyncedAtSubj.next(now);
       if (!conflictDetected) {
         this.syncStatusSubj.next('Up to date');

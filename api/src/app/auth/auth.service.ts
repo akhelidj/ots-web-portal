@@ -21,6 +21,10 @@ export class AuthService {
 
     const user = await this.prisma.user.findFirst({
       where: { email },
+      include: {
+        tenant: { select: { name: true } },
+        customer: { select: { name: true } },
+      }
     });
 
     if (user && await bcrypt.compare(pass, user.passwordHash)) {
@@ -136,10 +140,13 @@ export class AuthService {
       select: {
         id: true,
         email: true,
+        name: true,
         role: true,
         tenantId: true,
         customerId: true,
         mustChangePassword: true,
+        tenant: { select: { name: true } },
+        customer: { select: { name: true } },
       }
     });
 

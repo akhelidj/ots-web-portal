@@ -27,6 +27,14 @@ export class ChangePasswordComponent {
   public formSuccess = '';
   public isLoading = false;
 
+  public showCurrentPassword = false;
+  public showNewPassword = false;
+  public showConfirmPassword = false;
+
+  public toggleCurrentPassword() { this.showCurrentPassword = !this.showCurrentPassword; }
+  public toggleNewPassword() { this.showNewPassword = !this.showNewPassword; }
+  public toggleConfirmPassword() { this.showConfirmPassword = !this.showConfirmPassword; }
+
   public async onSubmit() {
     this.formError = '';
     this.formSuccess = '';
@@ -63,8 +71,12 @@ export class ChangePasswordComponent {
        const userProfile: UserProfile = {
            id: response.user.id,
            email: response.user.email,
+           name: response.user.name,
            role: response.user.role,
            tenantId: response.user.tenantId,
+           tenant: response.user.tenant,
+           customerId: response.user.customerId,
+           customer: response.user.customer,
            mustChangePassword: response.user.mustChangePassword
        };
 

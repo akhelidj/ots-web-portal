@@ -1,25 +1,34 @@
-<div class="p-6 max-w-7xl mx-auto">
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="text-3xl font-bold text-gray-900">Inspection Reports</h1>
-    @if (isReceiver) {
-      <a routerLink="/receiver/reports/create" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md font-medium transition-colors">Create Report</a>
-    } @else if (isAdmin) {
-      <a routerLink="/admin/reports/create" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md font-medium transition-colors">Create Report</a>
-    }
+<div class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto py-6">
+  <div class="sm:flex sm:items-center sm:justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight text-primary">Inspection Reports</h1>
+      <p class="mt-2 text-sm text-gray-500">Manage and track your inspection workflow seamlessly.</p>
+    </div>
+    <div class="mt-4 sm:mt-0">
+      @if (isReceiver) {
+        <a routerLink="/receiver/reports/create" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors">
+          Create Report
+        </a>
+      } @else if (isAdmin) {
+        <a routerLink="/admin/reports/create" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors">
+          Create Report
+        </a>
+      }
+    </div>
   </div>
 
-  <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6 flex gap-4 flex-wrap">
-    <div class="flex-1 min-w-[150px]">
-       <label for="qFilter" class="block text-sm font-medium text-gray-700 mb-1">Search PO</label>
-       <input type="text" id="qFilter" [(ngModel)]="qFilter" placeholder="Min 2 chars..." class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
+  <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-8 flex gap-4 flex-wrap items-end transition-shadow hover:shadow-md">
+    <div class="flex-1 min-w-[200px]">
+       <label for="qFilter" class="block text-sm font-medium text-gray-700 mb-1.5">Search PO</label>
+       <input type="text" id="qFilter" [(ngModel)]="qFilter" placeholder="Min 2 chars..." class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 px-3 border transition-colors">
     </div>
-    <div class="flex-1 min-w-[150px]">
-       <label for="snFilter" class="block text-sm font-medium text-gray-700 mb-1">Search SN</label>
-       <input type="text" id="snFilter" [(ngModel)]="snFilter" placeholder="Min 2 chars..." class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
+    <div class="flex-1 min-w-[200px]">
+       <label for="snFilter" class="block text-sm font-medium text-gray-700 mb-1.5">Search SN</label>
+       <input type="text" id="snFilter" [(ngModel)]="snFilter" placeholder="Min 2 chars..." class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 px-3 border transition-colors">
     </div>
-    <div class="flex-1 min-w-[150px]">
-      <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1">Status Filter</label>
-      <select id="statusFilter" [(ngModel)]="statusFilter" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
+    <div class="flex-1 min-w-[200px]">
+      <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1.5">Status Filter</label>
+      <select id="statusFilter" [(ngModel)]="statusFilter" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 px-3 border bg-white transition-colors">
         <option value="">All Statuses</option>
         <option value="DRAFT">DRAFT</option>
         <option value="RECEIVED">RECEIVED</option>
@@ -33,9 +42,9 @@
       </select>
     </div>
     @if (!isCustomer) {
-      <div class="flex-1 min-w-[150px]">
-        <label for="customerFilter" class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-        <select id="customerFilter" [(ngModel)]="customerFilter" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
+      <div class="flex-1 min-w-[200px]">
+        <label for="customerFilter" class="block text-sm font-medium text-gray-700 mb-1.5">Customer</label>
+        <select id="customerFilter" [(ngModel)]="customerFilter" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 px-3 border bg-white transition-colors">
           <option value="">All Customers</option>
           @for (c of customers$ | async; track c.id) {
             <option [value]="c.id">{{c.name}}</option>
@@ -43,9 +52,9 @@
         </select>
       </div>
     }
-    <div class="flex-1 min-w-[150px]">
-       <label for="sortBy" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
-       <select id="sortBy" [(ngModel)]="sortBy" class="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500">
+    <div class="flex-1 min-w-[200px]">
+       <label for="sortBy" class="block text-sm font-medium text-gray-700 mb-1.5">Sort By</label>
+       <select id="sortBy" [(ngModel)]="sortBy" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 px-3 border bg-white transition-colors">
          <option value="updatedAt">Last Updated</option>
          <option value="poNumber">PO Number</option>
          <option value="status">Status</option>
@@ -53,60 +62,64 @@
     </div>
   </div>
 
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-    <table class="w-full text-left border-collapse">
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+    <table class="min-w-full text-left border-collapse">
       <thead class="bg-gray-50 border-b border-gray-200">
         <tr>
-          <th class="p-4 font-semibold text-gray-900">PO Number</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">PO Number</th>
           @if (!isCustomer) {
-            <th class="p-4 font-semibold text-gray-900">Customer</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
           }
-          <th class="p-4 font-semibold text-gray-900">Status</th>
-          <th class="p-4 font-semibold text-gray-900">Rev.</th>
-          <th class="p-4 font-semibold text-gray-900">Last Updated</th>
-          <th class="p-4 font-semibold text-gray-900">Items</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rev.</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Updated</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Items</th>
           @if (!isCustomer) {
-            <th class="p-4 font-semibold text-gray-900">Readiness</th>
-            <th class="p-4 font-semibold text-gray-900">Sync State</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Readiness</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sync State</th>
           }
-          <th class="p-4 font-semibold text-gray-900 text-right">Actions</th>
+          <th class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-200">
+      <tbody class="divide-y divide-gray-200 bg-white">
         @if (reports$ | async; as reports) {
           @for (r of getFilteredReports(reports); track r.id) {
-            <tr class="hover:bg-gray-50 transition-colors">
-              <td class="p-4 text-gray-800">{{ r.poNumber }}</td>
+            <tr class="hover:bg-primary/5 transition-colors group cursor-pointer" [routerLink]="[r.id]">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ r.poNumber }}</td>
               @if (!isCustomer) {
-                <td class="p-4 text-gray-600 truncate max-w-xs">{{ r.customerId }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate" [title]="r.customerId">{{ r.customerId }}</td>
               }
-              <td class="p-4 text-gray-800">{{ r.status }}</td>
-              <td class="p-4 text-gray-600 font-mono text-sm">Rev {{ r.version || 1 }}</td>
-              <td class="p-4 text-gray-600 text-sm">{{ r.updatedAt ? (r.updatedAt | date:'medium') : 'N/A' }}</td>
-              <td class="p-4 text-gray-600 font-mono text-sm">{{ reportStatsCache[r.id]?.serialCount || 0 }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  {{ r.status }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">Rev {{ r.version || 1 }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ r.updatedAt ? (r.updatedAt | date:'medium') : 'N/A' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ reportStatsCache[r.id]?.serialCount || 0 }}</td>
               
               @if (!isCustomer) {
-                <td class="p-4">
+                <td class="px-6 py-4 whitespace-nowrap">
                   @if (validationCache[r.id]) {
                       @if (validationCache[r.id].isReady) {
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Ready</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-light text-success-dark">Ready</span>
                       } @else {
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Not Ready</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-error-light text-error-dark">Not Ready</span>
                       }
                   } @else {
-                      <span class="text-xs text-gray-400">Loading...</span>
+                      <span class="text-xs text-gray-400 italic">Evaluating...</span>
                   }
                 </td>
-                <td class="p-4">
+                <td class="px-6 py-4 whitespace-nowrap">
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" [ngClass]="{
-                    'bg-red-100 text-red-800': r.syncState === 'CONFLICT',
-                    'bg-yellow-100 text-yellow-800': r.syncState === 'PENDING',
-                    'bg-green-100 text-green-800': r.syncState === 'SYNCED'
+                    'bg-error-light text-error-dark': r.syncState === 'CONFLICT' || r.syncState === 'ERROR',
+                    'bg-warning-light text-warning-dark': r.syncState === 'PENDING',
+                    'bg-success-light text-success-dark': r.syncState === 'SYNCED'
                   }">{{ r.syncState }}</span>
                 </td>
               }
-              <td class="p-4 text-right">
-                <a [routerLink]="[r.id]" class="text-blue-600 hover:text-blue-900 font-medium">View Detail</a>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <span class="text-accent hover:text-accent-hover transition-colors font-semibold group-hover:underline">View<span class="hidden sm:inline"> Detail</span></span>
               </td>
             </tr>
           }

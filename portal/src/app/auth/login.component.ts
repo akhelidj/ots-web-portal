@@ -22,6 +22,11 @@ export class LoginComponent {
   public password = '';
   public formError = '';
   public isLoading = false;
+  public showPassword = false;
+
+  public togglePassword() {
+    this.showPassword = !this.showPassword;
+  }
 
   public async onSubmit() {
     this.formError = '';

@@ -7,9 +7,12 @@ import { DbService } from '../offline/db.service';
 export interface UserProfile {
   id: string;
   email: string;
+  name?: string;
   role: string;
   tenantId: string;
+  tenant?: { name: string };
   customerId?: string;
+  customer?: { name: string };
   mustChangePassword?: boolean;
 }
 
