@@ -9,10 +9,10 @@ import { UserRole } from '@prisma/client';
 export class SerialNumbersController {
   constructor(private readonly serialNumbersService: SerialNumbersService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR, UserRole.INSPECTOR)
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR, UserRole.INSPECTOR, UserRole.CUSTOMER)
   @Get('inspection-reports/:id/serial-numbers')
   async getSerialNumbers(@Req() req: any, @Param('id') reportId: string) {
-    return this.serialNumbersService.getSerialNumbers(req.user.tenantId, reportId);
+    return this.serialNumbersService.getSerialNumbers(req.user, reportId);
   }
 
   @Roles(UserRole.ADMIN, UserRole.RECEIVER)
@@ -35,6 +35,10 @@ export class SerialNumbersController {
     if (body.version === undefined || body.version === null) {
        const { BadRequestException } = require('@nestjs/common');
        throw new BadRequestException('version is required');
+    }
+    if (body.inspectionData !== undefined && req.user.role === UserRole.RECEIVER) {
+       const { ForbiddenException } = require('@nestjs/common');
+       throw new ForbiddenException('RECEIVER role cannot inspect serial numbers');
     }
     const { version, ...data } = body;
     return this.serialNumbersService.updateSerialNumber(req.user.tenantId, id, req.user.id, data, version);

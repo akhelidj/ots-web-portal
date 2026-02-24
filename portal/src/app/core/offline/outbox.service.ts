@@ -46,6 +46,11 @@ export class OutboxService {
     // Update count immediately after successful DB write
     const currentCount = this.pendingCountSubj.value;
     this.pendingCountSubj.next(currentCount + 1);
+
+    if (navigator.onLine) {
+      // Trigger sync immediately if online
+      this.processQueue().catch(err => console.error('Immediate sync failed:', err));
+    }
   }
 
   public async processQueue(): Promise<void> {
@@ -95,8 +100,13 @@ export class OutboxService {
             item.lastError = err?.message || 'Conflict detected during sync.';
             skipEntities.add(item.entityId);
           } else {
-            item.status = 'PENDING';
+            if (err?.status && err.status >= 400 && err.status < 500) {
+              item.status = 'FAILED';
+            } else {
+              item.status = 'PENDING';
+            }
             item.lastError = err?.message || 'Unknown error during dispatch.';
+            skipEntities.add(item.entityId);
           }
         }
 

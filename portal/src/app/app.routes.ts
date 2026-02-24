@@ -50,7 +50,8 @@ export const appRoutes: Route[] = [
         data: { roles: ['RECEIVER'] },
         children: [
           { path: '', component: ReceiverWorkspaceComponent, pathMatch: 'full' },
-          { path: 'reports/create', component: CreateInspectionReportComponent }
+          { path: 'reports/create', component: CreateInspectionReportComponent },
+          { path: ':id', component: InspectionReportDetailComponent }
         ]
       },
       { 
@@ -65,9 +66,12 @@ export const appRoutes: Route[] = [
       },
       { 
         path: AppRoutes.SUPERVISOR, 
-        component: SupervisorWorkspaceComponent, 
         canActivate: [roleGuard],
-        data: { roles: ['SUPERVISOR'] }
+        data: { roles: ['SUPERVISOR'] },
+        children: [
+          { path: '', component: SupervisorWorkspaceComponent, pathMatch: 'full' },
+          { path: ':id', component: InspectionReportDetailComponent }
+        ]
       },
       { 
         path: AppRoutes.CUSTOMER, 

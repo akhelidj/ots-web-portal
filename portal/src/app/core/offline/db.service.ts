@@ -5,7 +5,7 @@ import { Injectable } from '@angular/core';
 })
 export class DbService {
   private readonly DB_PREFIX = 'ots_';
-  private readonly DB_VERSION = 5;
+  private readonly DB_VERSION = 6;
   private dbInstance: IDBDatabase | null = null;
   private initPromise: Promise<IDBDatabase> | null = null;
   private currentTenantId: string | null = null;
@@ -71,6 +71,12 @@ export class DbService {
         if (!crStore.indexNames.contains('inspectionReportId')) crStore.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
         if (!crStore.indexNames.contains('serialNumberId')) crStore.createIndex('serialNumberId', 'serialNumberId', { unique: false });
         if (!crStore.indexNames.contains('syncState')) crStore.createIndex('syncState', 'syncState', { unique: false });
+
+        if (!db.objectStoreNames.contains('transitionLogs')) {
+          const tlStore = db.createObjectStore('transitionLogs', { keyPath: 'id' });
+          tlStore.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
+          tlStore.createIndex('childReportId', 'childReportId', { unique: false });
+        }
 
         if (!db.objectStoreNames.contains('outbox')) {
           const store = db.createObjectStore('outbox', { keyPath: 'id' });

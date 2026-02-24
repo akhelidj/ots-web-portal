@@ -48,6 +48,43 @@ async function provisionTenant(name: string, adminEmail: string, adminName: stri
     });
     console.log(`User created. ID: ${user.id}`);
   }
+
+  // Provision initial template
+  const templateKey = 'DRILL_PIPE_REPORT';
+  const existingTemplate = await prisma.template.findFirst({
+    where: { tenantId: tenant.id, templateKey, status: 'ACTIVE' }
+  });
+
+  if (!existingTemplate) {
+    console.log(`No active template found for ${templateKey}. Provisioning one...`);
+    const fs = require('fs');
+    const path = require('path');
+    const crypto = require('crypto');
+    
+    const filePath = path.join(__dirname, 'valid-template.xlsx');
+    if (fs.existsSync(filePath)) {
+      const fileBuffer = fs.readFileSync(filePath);
+      const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+      
+      await prisma.template.create({
+        data: {
+          tenantId: tenant.id,
+          templateKey,
+          templateVersion: 1,
+          status: 'ACTIVE',
+          fileBlob: fileBuffer,
+          hash: fileHash,
+          changeNote: 'Initial automated provision',
+          createdById: user.id
+        }
+      });
+      console.log(`Template ${templateKey} v1 provisioned successfully.`);
+    } else {
+      console.warn(`Template file not found at ${filePath}. Skipping template provision.`);
+    }
+  } else {
+    console.log(`Active template for ${templateKey} already exists.`);
+  }
 }
 
 async function main() {

@@ -5,16 +5,20 @@ import { PrismaService } from '../prisma/prisma.service';
 export class SerialNumbersService {
   constructor(private prisma: PrismaService) {}
 
-  async getSerialNumbers(tenantId: string, reportId: string) {
+  async getSerialNumbers(user: any, reportId: string) {
+    const where: any = { tenantId: user.tenantId, id: reportId };
+    if (user.role === 'CUSTOMER') {
+      where.customerId = user.customerId;
+    }
     const report = await this.prisma.inspectionReport.findFirst({
-      where: { tenantId, id: reportId },
+      where,
     });
     if (!report) {
       throw new NotFoundException(`InspectionReport ${reportId} not found`);
     }
 
     const serials = await this.prisma.serialNumber.findMany({
-      where: { tenantId, inspectionReportId: reportId },
+      where: { tenantId: user.tenantId, inspectionReportId: reportId },
       orderBy: { serial: 'asc' },
     });
 

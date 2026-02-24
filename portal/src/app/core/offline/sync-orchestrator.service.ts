@@ -84,11 +84,19 @@ export class SyncOrchestratorService {
       }
 
       // Step 2: Hydrate/refresh from server
-      await Promise.all([
-        this.adminUsers.pullAllAndCache(),
-        this.adminCustomers.pullAllAndCache(),
+      const profile = await firstValueFrom(this.session.profile$);
+      const isTenantAdmin = profile?.role === 'ADMIN';
+
+      const syncTasks: Promise<void>[] = [
         this.inspectionReports.pullAllAndCache()
-      ]);
+      ];
+
+      if (isTenantAdmin) {
+        syncTasks.push(this.adminUsers.pullAllAndCache());
+        syncTasks.push(this.adminCustomers.pullAllAndCache());
+      }
+
+      await Promise.all(syncTasks);
 
       const now = new Date().toLocaleTimeString();
       this.lastSyncedAtSubj.next(now);

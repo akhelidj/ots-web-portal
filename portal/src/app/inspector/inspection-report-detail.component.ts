@@ -57,13 +57,17 @@ export class InspectionReportDetailComponent implements OnInit {
   public childReportNotes = '';
   public isExporting = false;
   public isCustomer = false;
+  public isReceiver = false;
 
   public get isOnline(): boolean {
     return navigator.onLine;
   }
 
   async ngOnInit() {
-    this.session.profile$.subscribe(p => this.isCustomer = p?.role === 'CUSTOMER');
+    this.session.profile$.subscribe(p => {
+      this.isCustomer = p?.role === 'CUSTOMER';
+      this.isReceiver = p?.role === 'RECEIVER';
+    });
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
       this.refreshData();

@@ -135,6 +135,9 @@ export class SyncDispatcherService {
             }
             if (pending.entityType === 'SERIAL_NUMBER' && pending.payload['inspectionReportId'] === item.entityId) {
               pending.payload['inspectionReportId'] = createRes.id;
+              if (pending.entityId === item.entityId) {
+                pending.entityId = createRes.id;
+              }
               changed = true;
             }
             if (changed) {
@@ -156,10 +159,25 @@ export class SyncDispatcherService {
           const transitionRes = await firstValueFrom(
             this.http.post<LocalInspectionReport>(`${environment.apiUrl}/inspection-reports/${item.entityId}/transitions`, item.payload)
           );
-          const rep = await this.irRepo.getById(item.entityId);
+          let rep = await this.irRepo.getById(item.entityId);
           if (rep) {
             await this.irRepo.upsert({ ...rep, ...transitionRes, syncState: 'SYNCED', pendingTransitionToStatus: null });
           }
+
+          try {
+            const availableRes = await firstValueFrom(
+              this.http.get<{ fromStatus: string; transitions: { toStatus: string; requiresReason: boolean }[] }>(
+                `${environment.apiUrl}/inspection-reports/${item.entityId}/available-transitions`
+              )
+            );
+            rep = await this.irRepo.getById(item.entityId);
+            if (rep) {
+              await this.irRepo.upsert({ ...rep, availableTransitions: JSON.stringify(availableRes) });
+            }
+          } catch (err) {
+            console.error('Failed to update available transitions after sync', err);
+          }
+
           return true;
         }
 
@@ -183,11 +201,12 @@ export class SyncDispatcherService {
             const tempSn = await this.snRepo.getById(tempId);
             if (tempSn) {
               await this.snRepo.remapId(tempId, { 
+                ...tempSn,
                 ...mapped, 
                 value: mapped.serialNumber,
                 inspectionReportId: reportId,
                 syncState: 'SYNCED' 
-              } as LocalSerialNumber);
+              } as unknown as LocalSerialNumber);
             }
 
             // Remap any dependent outbox items waiting on this SN
@@ -215,7 +234,8 @@ export class SyncDispatcherService {
           const mappedUpdate = { ...updateRes, value: updateRes.serialNumber } as Partial<{ serialNumber: unknown }> & { value: string; [key: string]: unknown };
           delete mappedUpdate.serialNumber;
           
-          await this.snRepo.upsert({ ...mappedUpdate, syncState: 'SYNCED' } as unknown as LocalSerialNumber);
+          const existingSn = await this.snRepo.getById(item.entityId);
+          await this.snRepo.upsert({ ...existingSn, ...mappedUpdate, syncState: 'SYNCED' } as unknown as LocalSerialNumber);
           return true;
         }
 
@@ -232,7 +252,8 @@ export class SyncDispatcherService {
           const mappedUpdate = { ...updateRes, value: updateRes.serialNumber } as Partial<{ serialNumber: unknown }> & { value: string; [key: string]: unknown };
           delete mappedUpdate.serialNumber;
           
-          await this.snRepo.upsert({ ...mappedUpdate, syncState: 'SYNCED' } as unknown as LocalSerialNumber);
+          const existingSn = await this.snRepo.getById(item.entityId);
+          await this.snRepo.upsert({ ...existingSn, ...mappedUpdate, syncState: 'SYNCED' } as unknown as LocalSerialNumber);
           return true;
         }
 

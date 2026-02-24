@@ -51,16 +51,20 @@ export class InspectionReportsService {
   }
 
   async createReport(tenantId: string, userId: string, data: CreateInspectionReportDto) {
-    // 1. Validate customer belongs to tenant
-    const customer = await this.prisma.customer.findFirst({
-      where: {
-        id: data.customerId,
-        tenantId,
-      },
-    });
+    console.log('CREATE REPORT DATA:', data);
+    
+    // 1. Validate customer belongs to tenant if provided
+    if (data.customerId && data.customerId.trim() !== '') {
+        const customer = await this.prisma.customer.findFirst({
+        where: {
+            id: data.customerId,
+            tenantId,
+        },
+        });
 
-    if (!customer) {
-      throw new NotFoundException('Customer not found in this tenant');
+        if (!customer) {
+        throw new NotFoundException('Customer not found in this tenant');
+        }
     }
 
     // 2. Resolve template binding (DRILL_PIPE_REPORT v1 scope)
@@ -82,17 +86,22 @@ export class InspectionReportsService {
 
     // 3. Create report + Audit Log transaction
     return await this.prisma.$transaction(async (tx) => {
+      const createData: any = {
+        tenantId,
+        poNumber: data.poNumber,
+        status: 'DRAFT',
+        templateKey: template.templateKey,
+        templateVersion: template.templateVersion,
+        templateHash: template.hash,
+        version: 1,
+      };
+
+      if (data.customerId && data.customerId.trim() !== '') {
+        createData.customerId = data.customerId;
+      }
+
       const report = await tx.inspectionReport.create({
-        data: {
-          tenantId,
-          customerId: data.customerId,
-          poNumber: data.poNumber,
-          status: 'DRAFT',
-          templateKey: template.templateKey,
-          templateVersion: template.templateVersion,
-          templateHash: template.hash,
-          version: 1,
-        },
+        data: createData,
       });
 
       await tx.auditLog.create({

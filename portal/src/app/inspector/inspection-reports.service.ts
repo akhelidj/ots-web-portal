@@ -115,7 +115,7 @@ export class InspectionReportsService {
       for (const rep of reports) {
         try {
           const serials = await firstValueFrom(
-            this.http.get<{ id: string; serial: string; [key: string]: unknown }[]>(`${environment.apiUrl}/inspection-reports/${rep.id}/serial-numbers`)
+            this.http.get<{ id: string; serialNumber: string; [key: string]: unknown }[]>(`${environment.apiUrl}/inspection-reports/${rep.id}/serial-numbers`)
           );
           
           const localSnList = await this.snRepo.listByReportId(rep.id);
@@ -125,8 +125,8 @@ export class InspectionReportsService {
           for (const s of serials) {
             const local = localSnMap.get(s.id);
             if (!local || local.syncState === 'SYNCED') {
-               const { serial, ...restS } = s;
-               const ls = { ...restS, value: serial, syncState: 'SYNCED' };
+               const { serialNumber, inspectionData, ...restS } = s;
+               const ls = { ...restS, value: serialNumber, inspectionJson: inspectionData, inspectionReportId: rep.id, syncState: 'SYNCED' };
                toUpsertSn.push(ls as unknown as LocalSerialNumber);
             }
           }
