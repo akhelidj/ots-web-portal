@@ -138,7 +138,25 @@ export class ChildReportDetailComponent implements OnInit {
     }
   }
 
+  public getParentReportLink(parentId: string): string[] {
+    const role = this.userRole.toLowerCase();
+    if (role === 'admin' || role === 'inspector') {
+       return ['/', role, 'reports', parentId];
+    }
+    return ['/', role, parentId];
+  }
+
   public goBack() {
-    this.router.navigate(['/', this.userRole.toLowerCase(), 'reports', this.parentReportSubj.value?.id]);
+    const parentId = this.parentReportSubj.value?.id;
+    if (parentId) {
+      this.router.navigate(this.getParentReportLink(parentId));
+    } else {
+      const role = this.userRole.toLowerCase();
+      if (role === 'admin' || role === 'inspector') {
+        this.router.navigate(['/', role, 'reports']);
+      } else {
+        this.router.navigate(['/', role]);
+      }
+    }
   }
 }

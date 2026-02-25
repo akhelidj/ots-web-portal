@@ -15,7 +15,7 @@
         <p class="text-sm font-medium text-gray-500 mt-1 flex items-center gap-2">
           <span>Child Report of</span>
           @if (parentReport$ | async; as parent) {
-             <a [routerLink]="['/', userRole | lowercase, 'reports', parent.id]" class="font-mono bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-primary hover:underline hover:text-primary-light transition-colors">{{ parent.poNumber }}</a>
+             <a [routerLink]="getParentReportLink(parent.id)" class="font-mono bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-primary hover:underline hover:text-primary-light transition-colors">{{ parent.poNumber }}</a>
           }
         </p>
       </div>
