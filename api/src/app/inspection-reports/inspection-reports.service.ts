@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 
@@ -53,17 +54,32 @@ export class InspectionReportsService {
   async createReport(tenantId: string, userId: string, data: CreateInspectionReportDto) {
     console.log('CREATE REPORT DATA:', data);
     
-    // 1. Validate customer belongs to tenant if provided
-    if (data.customerId && data.customerId.trim() !== '') {
-        const customer = await this.prisma.customer.findFirst({
-        where: {
-            id: data.customerId,
-            tenantId,
-        },
-        });
+    // 1. Validate customer belongs to tenant
+    if (!data.customerId || data.customerId.trim() === '') {
+      throw new BadRequestException('Customer ID is required to generate a report number.');
+    }
 
-        if (!customer) {
-        throw new NotFoundException('Customer not found in this tenant');
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+          id: data.customerId,
+          tenantId,
+      },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found in this tenant');
+    }
+    
+    let customerPrefix = '';
+    if (customer.code && customer.code.trim().length > 0) {
+        customerPrefix = customer.code.trim().toUpperCase();
+    } else {
+        // Fallback to initials
+        const parts = customer.name.trim().split(/\s+/);
+        if (parts.length === 1) {
+            customerPrefix = parts[0].substring(0, 3).toUpperCase();
+        } else {
+            customerPrefix = parts.map(w => w[0]).join('').substring(0, 4).toUpperCase();
         }
     }
 
@@ -84,21 +100,29 @@ export class InspectionReportsService {
       throw new BadRequestException(`No active template found for ${templateKey}`);
     }
 
-    // 3. Create report + Audit Log transaction
+    // 3. Generate Report Number (PREFIX-YYMMDD-HHMMSS)
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const sec = String(now.getSeconds()).padStart(2, '0');
+    const generatedReportNumber = `${customerPrefix}-${yy}${mm}${dd}-${hh}${min}${sec}`;
+
+    // 4. Create report + Audit Log transaction
     return await this.prisma.$transaction(async (tx) => {
       const createData: any = {
         tenantId,
+        customerId: data.customerId,
         poNumber: data.poNumber,
+        reportNumber: generatedReportNumber,
         status: 'DRAFT',
         templateKey: template.templateKey,
         templateVersion: template.templateVersion,
         templateHash: template.hash,
         version: 1,
       };
-
-      if (data.customerId && data.customerId.trim() !== '') {
-        createData.customerId = data.customerId;
-      }
 
       const report = await tx.inspectionReport.create({
         data: createData,
@@ -143,16 +167,35 @@ export class InspectionReportsService {
     }
 
     return await this.prisma.$transaction(async (tx) => {
+      const updateData: any = {
+        updatedAt: new Date(),
+        version: existing.version + 1,
+      };
+
+      if (data.inspectorComment !== undefined) updateData.inspectorComment = data.inspectorComment;
+      if (data.inspectionAddress !== undefined) updateData.inspectionAddress = data.inspectionAddress;
+      if (data.standardUsed !== undefined) updateData.standardUsed = data.standardUsed;
+      if (data.equipmentUsed !== undefined) {
+         updateData.equipmentUsed = data.equipmentUsed === null ? Prisma.DbNull : data.equipmentUsed;
+      }
+      if (data.inspectionMethod !== undefined) {
+         updateData.inspectionMethod = data.inspectionMethod === null ? Prisma.DbNull : data.inspectionMethod;
+      }
+      if (data.grade !== undefined) updateData.grade = data.grade;
+      if (data.range !== undefined) updateData.range = data.range;
+      if (data.weight !== undefined) updateData.weight = data.weight;
+      if (data.nomWT !== undefined) updateData.nomWT = data.nomWT;
+      if (data.nomOD !== undefined) updateData.nomOD = data.nomOD;
+      if (data.nomID !== undefined) updateData.nomID = data.nomID;
+      if (data.connection !== undefined) updateData.connection = data.connection;
+      
       const updateResult = await tx.inspectionReport.updateMany({
         where: { 
             id,
             tenantId,
             version: existing.version
         },
-        data: {
-          ...data,
-          version: existing.version + 1,
-        },
+        data: updateData,
       });
 
       if (updateResult.count === 0) {

@@ -176,6 +176,32 @@ export class InspectionReportsService {
     });
   }
 
+  public async updateReportOffline(id: string, updates: Partial<LocalInspectionReport>): Promise<void> {
+    const rep = await this.irRepo.getById(id);
+    if (!rep) throw new Error('Report not found');
+
+    const updatedRep: LocalInspectionReport = {
+      ...rep,
+      ...updates,
+      syncState: 'PENDING',
+    };
+
+    await this.irRepo.upsert(updatedRep);
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'INSPECTION_REPORT',
+      entityId: id,
+      operation: 'UPDATE',
+      payload: { ...updates, version: rep.version },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+  }
+
   public async transitionOffline(id: string, toStatus: string, reason?: string): Promise<void> {
     const rep = await this.irRepo.getById(id);
     if (!rep) throw new Error('Report not found');

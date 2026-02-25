@@ -14,11 +14,26 @@ export interface LocalInspectionReport {
   id: string;
   customerId: string | null;
   poNumber: string;
+  reportNumber?: string | null;
   status: string;
   templateKey: string;
   templateVersion: number;
   templateHash: string;
   version: number;
+  inspectorComment?: string | null;
+  inspectionAddress?: string | null;
+  standardUsed?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  equipmentUsed?: any[] | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  inspectionMethod?: any[] | null;
+  grade?: string | null;
+  range?: string | null;
+  weight?: string | null;
+  nomWT?: string | null;
+  nomOD?: string | null;
+  nomID?: string | null;
+  connection?: string | null;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
   updatedAt?: string;
   pendingTransitionToStatus?: string | null;
@@ -30,6 +45,7 @@ export interface LocalSerialNumber {
   inspectionReportId: string;
   value: string;
   version: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   inspectionJson?: any;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
   updatedAt?: string;
@@ -102,6 +118,7 @@ export interface LocalChildReport {
   tenantId: string;
   inspectionReportId: string;
   serialNumberId: string;
+  reportNumber?: string | null;
   type: 'REWORK' | 'SCRAP' | 'HOLD';
   status: 'DRAFT' | 'IN_INSPECTION' | 'PENDING_APPROVAL' | 'APPROVED' | 'CLOSED';
   notes?: string | null;

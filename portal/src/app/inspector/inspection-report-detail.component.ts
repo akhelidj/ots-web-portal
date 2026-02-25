@@ -9,18 +9,18 @@ import { ChildReportsService } from './child-reports.service';
 import { environment } from '../../environments/environment';
 import { SessionService } from '../core/auth/session.service';
 import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog, LocalChildReport } from '../core/offline/types';
-import { DRILL_PIPE_FIELDS } from './config/drill-pipe-fields';
 import { ReportValidationService, ValidationResult } from '../core/validation/report-validation.service';
 import { OutboxLocalRepo } from '../core/offline/outbox-local.repo';
 import { getInspectionReportUiState, InspectionReportUiState, UserRole, ReportStatus } from '../core/ui-policy/inspection-report-ui-policy';
 import { SyncOrchestratorService } from '../core/offline/sync-orchestrator.service';
 import { UserLocalRepo } from '../core/offline/user-local.repo';
 import { CustomerLocalRepo } from '../core/offline/customer-local.repo';
+import { SerialInspectionReactiveFormComponent } from './serial-inspection-reactive-form.component';
 
 @Component({
   selector: 'app-inspection-report-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SerialInspectionReactiveFormComponent],
   templateUrl: './inspection-report-detail.component.html'
 })
 export class InspectionReportDetailComponent implements OnInit {
@@ -50,6 +50,28 @@ export class InspectionReportDetailComponent implements OnInit {
   public formError = '';
   public editingSnId: string | null = null;
   public editingSnValue = '';
+  
+  // Meta Fields
+  public formInspectorComment = '';
+  public formInspectionAddress = '';
+  public formStandardUsed = '';
+  public formEquipmentUsed: Array<{ name: string, number: string, isOther: boolean }> = [];
+  public formInspectionMethod: Array<{ name: string, isOther: boolean }> = [];
+  
+  // Pipe Details
+  public formGrade = '';
+  public formRange = '';
+  public formWeight = '';
+  public formNomWT = '';
+  public formNomOD = '';
+  public formNomID = '';
+  public formConnection = '';
+
+  public isEditingMeta = false;
+
+  // Dropdown Options
+  public readonly METHOD_OPTIONS = ['Wet', 'Dry', 'EAI', 'UT-EAI', 'VTI', 'TGI', 'Other'];
+  public readonly EQUIPMENT_OPTIONS = ['UV Light', 'AC Yoke', 'DC Coil', 'EMI Unit', 'UT-EA', 'WT', 'Other'];
 
   public uiState: InspectionReportUiState | null = null;
   public userRole = '';
@@ -69,7 +91,6 @@ export class InspectionReportDetailComponent implements OnInit {
   public kpiHold = 0;
   public kpiPassRate = 0;
 
-  // Meta Info
   public inspectedByName = 'N/A';
   public approvedByName = 'N/A';
   public customerAddress = 'N/A';
@@ -78,7 +99,6 @@ export class InspectionReportDetailComponent implements OnInit {
   public activeModalStatus: 'PASS' | 'REWORK' | 'SCRAP' | 'HOLD' | null = null;
   public modalEquipmentList: LocalSerialNumber[] = [];
 
-  public drillPipeFields = DRILL_PIPE_FIELDS;
   public inspectingSn: LocalSerialNumber | null = null;
   public inspectionFormData: Record<string, unknown> = {};
 
@@ -90,6 +110,12 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public get isOnline(): boolean {
     return navigator.onLine;
+  }
+
+  public getDisposition(sn: LocalSerialNumber): string | null {
+    if (!sn.inspectionJson) return null;
+    const finalSection = sn.inspectionJson['final'] as Record<string, unknown> | undefined;
+    return (finalSection?.['disposition'] as string) || (sn.inspectionJson['disposition'] as string) || null;
   }
 
   async ngOnInit() {
@@ -217,7 +243,9 @@ export class InspectionReportDetailComponent implements OnInit {
       const reworkList: { sn: LocalSerialNumber, childLinked: LocalChildReport | null }[] = [];
 
       for (const sn of snList) {
-         const disp = sn.inspectionJson?.disposition;
+         const rawDisp = this.getDisposition(sn);
+         const disp = rawDisp ? rawDisp.toUpperCase() : null;
+         
          if (disp === 'PASS') pass++;
          else if (disp === 'REWORK') {
              rework++;
@@ -241,6 +269,36 @@ export class InspectionReportDetailComponent implements OnInit {
       this.kpiScrap = scrap;
       this.kpiHold = hold;
       this.kpiPassRate = total > 0 ? Math.round((pass / total) * 100) : 0;
+
+      if (!this.isEditingMeta) {
+         this.formInspectorComment = r.inspectorComment || '';
+         this.formInspectionAddress = r.inspectionAddress || '';
+         this.formStandardUsed = r.standardUsed || '';
+
+         const eqList: Array<{name?: string, number?: string}> = Array.isArray(r.equipmentUsed) ? (r.equipmentUsed as Array<{name?: string, number?: string}>) : [];
+         this.formEquipmentUsed = eqList.map(e => ({
+            name: e.name || '',
+            number: e.number || '',
+            isOther: !this.EQUIPMENT_OPTIONS.includes(e.name || '')
+         }));
+
+         const methodList: Array<{name?: string}> = Array.isArray(r.inspectionMethod) ? (r.inspectionMethod as Array<{name?: string}>) : (typeof r.inspectionMethod === 'string' ? [{ name: r.inspectionMethod }] : []);
+         this.formInspectionMethod = methodList.map(m => {
+            const mName = typeof m === 'string' ? m : (m.name || '');
+            return {
+               name: mName,
+               isOther: mName !== '' && !this.METHOD_OPTIONS.includes(mName)
+            };
+         });
+
+         this.formGrade = r.grade || '';
+         this.formRange = r.range || '';
+         this.formWeight = r.weight || '';
+         this.formNomWT = r.nomWT || '';
+         this.formNomOD = r.nomOD || '';
+         this.formNomID = r.nomID || '';
+         this.formConnection = r.connection || '';
+      }
 
     } else {
       this.validationResult = null;
@@ -404,21 +462,14 @@ export class InspectionReportDetailComponent implements OnInit {
     return index > 0;
   }
 
-  public async saveInspectionForm(): Promise<void> {
+  public async saveInspectionForm(inspectionData: Record<string, unknown>): Promise<void> {
     if (!this.inspectingSn) return;
 
-    // Validate required fields
-    for (const field of this.drillPipeFields) {
-      if (field.required && !this.inspectionFormData[field.key]) {
-        this.formError = `Field ${field.label} is required.`;
-        return;
-      }
-    }
-
     try {
-      await this.irService.saveSerialNumberInspectionOffline(this.inspectingSn.id, this.inspectionFormData);
+      await this.irService.saveSerialNumberInspectionOffline(this.inspectingSn.id, inspectionData as Record<string, unknown>);
       
       this.refreshData();
+      this.closeInspectionForm();
       
       if (this.isOnline) {
          this.syncOrchestrator.runSyncSequence().catch(err => console.error('Auto-sync failed', err));
@@ -426,6 +477,74 @@ export class InspectionReportDetailComponent implements OnInit {
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to save inspection data.';
+    }
+  }
+
+  public addEquipmentFormRow(): void {
+    this.formEquipmentUsed.push({ name: '', number: '', isOther: false });
+  }
+
+  public removeEquipmentFormRow(index: number): void {
+    this.formEquipmentUsed.splice(index, 1);
+  }
+
+  public onEquipmentSelectChange(index: number): void {
+     if (this.formEquipmentUsed[index].name === 'Other') {
+        this.formEquipmentUsed[index].isOther = true;
+        this.formEquipmentUsed[index].name = ''; // Clear for user to type
+     } else {
+         this.formEquipmentUsed[index].isOther = false;
+     }
+  }
+
+  public addMethodFormRow(): void {
+    this.formInspectionMethod.push({ name: '', isOther: false });
+  }
+
+  public removeMethodFormRow(index: number): void {
+    this.formInspectionMethod.splice(index, 1);
+  }
+
+  public onMethodSelectChange(index: number): void {
+     if (this.formInspectionMethod[index].name === 'Other') {
+        this.formInspectionMethod[index].isOther = true;
+        this.formInspectionMethod[index].name = ''; // Clear for user to type
+     } else {
+         this.formInspectionMethod[index].isOther = false;
+     }
+  }
+
+  public async saveMeta(): Promise<void> {
+    this.formError = '';
+    try {
+       // Filter out empty equipment rows before saving
+       const cleanEquipment = this.formEquipmentUsed
+          .filter(e => e.name.trim() !== '' || e.number.trim() !== '')
+          .map(e => ({ name: e.name, number: e.number }));
+       
+       const cleanMethod = this.formInspectionMethod
+          .filter(m => m.name.trim() !== '')
+          .map(m => ({ name: m.name }));
+
+       await this.irService.updateReportOffline(this.reportId, { 
+          inspectorComment: this.formInspectorComment,
+          inspectionAddress: this.formInspectionAddress,
+          standardUsed: this.formStandardUsed,
+          equipmentUsed: cleanEquipment.length > 0 ? cleanEquipment : null,
+          inspectionMethod: cleanMethod.length > 0 ? cleanMethod : null,
+          grade: this.formGrade,
+          range: this.formRange,
+          weight: this.formWeight,
+          nomWT: this.formNomWT,
+          nomOD: this.formNomOD,
+          nomID: this.formNomID,
+          connection: this.formConnection
+       });
+       this.isEditingMeta = false;
+       this.refreshData();
+    } catch (error) {
+       const e = error as Error;
+       this.formError = e.message || 'Failed to save details.';
     }
   }
 
@@ -443,7 +562,7 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public async submitChildReport(): Promise<void> {
     if (!this.creatingChildReportForSn) return;
-    const type = this.creatingChildReportForSn.inspectionJson?.disposition;
+    const type = this.getDisposition(this.creatingChildReportForSn);
     if (!type || type === 'PASS') {
       this.formError = 'Cannot create Child Report: Invalid disposition source.';
       return;
@@ -505,7 +624,9 @@ export class InspectionReportDetailComponent implements OnInit {
       
       if (!filename) {
          const ext = blob.type === 'application/zip' ? '.zip' : '.xlsx';
-         filename = `inspection-report-${this.reportId}${ext}`;
+         const currentReport = this.reportSubj.value;
+         const displayId = currentReport?.reportNumber || this.reportId;
+         filename = `inspection-report-${displayId}${ext}`;
       }
 
       const url = URL.createObjectURL(blob);
@@ -536,7 +657,7 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public openKpiModal(status: 'PASS' | 'REWORK' | 'SCRAP' | 'HOLD'): void {
       this.activeModalStatus = status;
-      this.modalEquipmentList = this.serialsSubj.value.filter(sn => sn.inspectionJson?.disposition === status);
+      this.modalEquipmentList = this.serialsSubj.value.filter(sn => this.getDisposition(sn) === status);
   }
 
   public closeKpiModal(): void {

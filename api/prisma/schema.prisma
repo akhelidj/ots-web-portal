@@ -127,6 +127,18 @@ model InspectionReport {
   templateKey           String
   templateVersion       Int
   version               Int                             @default(1)
+  inspectorComment      String?
+  inspectionAddress     String?
+  standardUsed          String?
+  equipmentUsed         Json?
+  inspectionMethod      Json?
+  grade                 String?
+  range                 String?
+  weight                String?
+  nomWT                 String?
+  nomOD                 String?
+  nomID                 String?
+  connection            String?
   auditLogs             AuditLog[]
   childReports          ChildReport[]
   customer              Customer?                       @relation(fields: [customerId], references: [id])

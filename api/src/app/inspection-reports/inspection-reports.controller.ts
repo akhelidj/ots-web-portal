@@ -33,7 +33,7 @@ export class InspectionReportsController {
     return this.reportsService.getReportById(req.user, id);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.RECEIVER)
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.INSPECTOR, UserRole.SUPERVISOR)
   @Patch(':id')
   async updateReport(
     @Req() req: any,

@@ -43,7 +43,8 @@ export async function mapDrillPipeReportV1(
     row.getCell('A').value = serial.serialNumber || '';
 
     // Disposition Mapping
-    const disposition = serial.disposition;
+    const serialData: any = serial.inspectionData || {};
+    const disposition = serialData?.final?.disposition || serialData?.disposition || serial.disposition;
     if (disposition === 'PASS') {
       row.getCell('AD').value = 'X';
     } else if (disposition === 'REWORK') {

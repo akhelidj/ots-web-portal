@@ -2,11 +2,14 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: 'api/.env' });
 import { PrismaClient, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
 async function provisionTenant(name: string, adminEmail: string, adminName: string, passwordString: string) {
-  console.log(`Provisioning tenant "${name}" with admin "${adminEmail}"...`);
+  console.log(`\n--- Provisioning tenant "${name}" ---`);
 
   // Check if exist
   let tenant = await prisma.tenant.findFirst({ where: { name } });
@@ -46,7 +49,7 @@ async function provisionTenant(name: string, adminEmail: string, adminName: stri
         tenantId: tenant.id
       }
     });
-    console.log(`User created. ID: ${user.id}`);
+    console.log(`Admin user created. ID: ${user.id}`);
   }
 
   // Provision initial template
@@ -57,10 +60,6 @@ async function provisionTenant(name: string, adminEmail: string, adminName: stri
 
   if (!existingTemplate) {
     console.log(`No active template found for ${templateKey}. Provisioning one...`);
-    const fs = require('fs');
-    const path = require('path');
-    const crypto = require('crypto');
-    
     const filePath = path.join(__dirname, 'valid-template.xlsx');
     if (fs.existsSync(filePath)) {
       const fileBuffer = fs.readFileSync(filePath);
@@ -85,6 +84,42 @@ async function provisionTenant(name: string, adminEmail: string, adminName: stri
   } else {
     console.log(`Active template for ${templateKey} already exists.`);
   }
+
+  return tenant;
+}
+
+async function provisionRolesForTenant(tenant: any, domain: string, passwordString: string) {
+  console.log(`\n--- Provisioning roles for "${tenant.name}" (@${domain}) ---`);
+  const passwordHash = await bcrypt.hash(passwordString, 10);
+
+  const users = [
+    { email: `receiver@${domain}`, role: UserRole.RECEIVER, name: 'Charlie (Receiver)' },
+    { email: `supervisor@${domain}`, role: UserRole.SUPERVISOR, name: 'Alice (Supervisor)' },
+    { email: `inspector@${domain}`, role: UserRole.INSPECTOR, name: 'Bob (Inspector)' },
+    { email: `customer@${domain}`, role: UserRole.CUSTOMER, name: 'Dave (Customer)' },
+  ];
+
+  for (const u of users) {
+    const existing = await prisma.user.findFirst({ where: { email: u.email, tenantId: tenant.id } });
+    if (!existing) {
+        await prisma.user.create({
+            data: {
+                email: u.email,
+                name: u.name,
+                passwordHash,
+                role: u.role,
+                tenantId: tenant.id
+            }
+        });
+        console.log(`Created ${u.role}: ${u.email}`);
+    } else {
+        await prisma.user.update({
+            where: { id: existing.id },
+            data: { name: u.name, passwordHash } // update names and passwords to ensure consistent state
+        });
+        console.log(`Updated ${u.role}: ${u.email} (Name: ${u.name})`);
+    }
+  }
 }
 
 async function main() {
@@ -95,11 +130,19 @@ async function main() {
 
   if (argTenant && argEmail) {
       // Manual run with args
-      await provisionTenant(argTenant, argEmail, argName || 'Admin', argPass || 'password123');
+      const t = await provisionTenant(argTenant, argEmail, argName || 'Admin', argPass || 'password123');
+      const domainMatch = argEmail.match(/@(.+)$/);
+      const domain = domainMatch ? domainMatch[1] : 'example.com';
+      await provisionRolesForTenant(t, domain, argPass || 'password123');
   } else {
       // Default / Dev Bootstrap mode
-      await provisionTenant('Oilfield Tubular Services', 'admin@oilfield-tubular-services.com', 'Anis Khelidj', 'password123');
-      await provisionTenant('Acme Corp', 'admin@acme.com', 'Admin User', 'password123');
+      const t1 = await provisionTenant('Oilfield Tubular Services', 'admin@oilfield-tubular-services.com', 'Anis Khelidj', 'password123');
+      await provisionRolesForTenant(t1, 'oilfield-tubular-services.com', 'password123');
+      
+      const t2 = await provisionTenant('Acme Corp', 'admin@acme.com', 'Admin User', 'password123');
+      await provisionRolesForTenant(t2, 'acme.com', 'password123');
+      
+      console.log('\n--- Seed completed successfully! ---');
   }
 }
 

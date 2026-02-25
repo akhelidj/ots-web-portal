@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, Input, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, Input, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { BehaviorSubject, Subscription, combineLatest, startWith } from 'rxjs';
@@ -26,6 +26,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   private snRepo = inject(SerialNumberLocalRepo);
   private childReportRepo = inject(ChildReportLocalRepo);
   private sessionService = inject(SessionService);
+  private cdr = inject(ChangeDetectorRef);
 
   public reports$ = this.irService.reports$;
   private customersSubj = new BehaviorSubject<LocalCustomer[]>([]);
@@ -97,11 +98,19 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
        const serials = await this.snRepo.listByReportId(r.id);
        newStats[r.id] = {
          serialCount: serials.length,
-         passCount: serials.filter(s => s.inspectionJson?.['disposition'] === 'PASS').length,
+         passCount: serials.filter(s => {
+            const finalSection = s.inspectionJson?.['final'] as Record<string, unknown> | undefined;
+            const rawDisp = (finalSection?.['disposition'] as string) || (s.inspectionJson?.['disposition'] as string) || null;
+            return rawDisp ? rawDisp.toUpperCase() === 'PASS' : false;
+         }).length,
          serialValues: serials.map(s => s.value.toLowerCase())
        };
     }
     this.reportStatsCache = newStats;
+    // We need to trigger change detection here if Angular isn't picking up the async mutation to the cache
+    // But since this is called from an observable subscription, it should be fine. Just to be safe, we re-assign the object reference
+    this.reportStatsCache = { ...newStats };
+    this.cdr.markForCheck();
   }
 
   private computeCustomerKpis(reports: LocalInspectionReport[]) {

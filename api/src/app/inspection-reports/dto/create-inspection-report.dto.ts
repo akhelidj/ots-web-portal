@@ -1,9 +1,9 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class CreateInspectionReportDto {
-  @IsOptional()
   @IsString()
-  customerId?: string;
+  @IsNotEmpty()
+  customerId: string;
 
   @IsString()
   @IsNotEmpty()

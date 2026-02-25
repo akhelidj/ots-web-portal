@@ -15,7 +15,17 @@ import {
 } from './workflow.policy';
 import { RevisionService } from '../revision/revision.service';
 
-const DRILL_PIPE_REQUIRED_KEYS = ['outerDiameter', 'wallThickness', 'threadCondition'];
+const DRILL_PIPE_REQUIRED_KEYS = [
+  'box.minTongSpace', 'box.minOD', 'box.minBoxThreads', 'box.minEccShoulder',
+  'box.maxCounterBoreDiameter', 'box.maxCounterBoreLength', 'box.bevelDiameterMin',
+  'box.bevelDiameterMax', 'box.condition',
+  'pin.minTongSpace', 'pin.minOD', 'pin.maxID', 'pin.minEccShoulder',
+  'pin.lengthPinConnMin', 'pin.lengthPinConnMax', 'pin.maxLengthPinBase',
+  'pin.bevelDiameterMin', 'pin.bevelDiameterMax', 'pin.condition',
+  'box.hardBanding', 'body.wallRemaining', 'body.odDecrease', 'body.emiResult',
+  'body.slipArea', 'body.corrosionIn', 'body.corrosionOut', 'body.ipc', 'body.bentJoints',
+  'final.isNew', 'final.isPremium', 'final.isC2', 'final.isScrap'
+];
 
 @Injectable()
 export class InspectionReportWorkflowService {
@@ -277,10 +287,11 @@ export class InspectionReportWorkflowService {
 
       for (const sn of serials) {
           const data: any = sn.inspectionData || {};
+          const disposition = data.final?.disposition || data.disposition;
           
-          if (!data.disposition) {
+          if (!disposition) {
               missingDispositionSerials.push(sn.serial);
-          } else if (data.disposition === 'REWORK') {
+          } else if (disposition === 'REWORK') {
               // Check if a ChildReport exists for this serial number
               const hasChildReport = report.childReports.some(cr => cr.serialNumberId === sn.id);
               if (!hasChildReport) {
@@ -289,7 +300,10 @@ export class InspectionReportWorkflowService {
           }
 
           if (report.templateKey === 'DRILL_PIPE_REPORT') {
-              const missingKeys = DRILL_PIPE_REQUIRED_KEYS.filter(rk => !data[rk]);
+              const missingKeys = DRILL_PIPE_REQUIRED_KEYS.filter(rk => {
+                  const val = rk.split('.').reduce((acc, part) => acc && acc[part], data);
+                  return val === undefined || val === null || val === '';
+              });
               if (missingKeys.length > 0) {
                   missingRequiredFields[sn.serial] = missingKeys;
               }

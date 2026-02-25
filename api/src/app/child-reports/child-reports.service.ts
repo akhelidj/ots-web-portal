@@ -21,7 +21,8 @@ export class ChildReportsService {
       include: {
         serialNumbers: {
            where: { id: payload.serialNumberId, tenantId }
-        }
+        },
+        childReports: true
       }
     });
 
@@ -39,7 +40,8 @@ export class ChildReportsService {
 
     const serialNumber = report.serialNumbers[0];
     const data = (serialNumber.inspectionData as Record<string, unknown>) || {};
-    const disposition = data.disposition;
+    const finalSection = data['final'] as Record<string, unknown> | undefined;
+    const disposition = (finalSection?.['disposition'] as string) || (data['disposition'] as string);
 
     if (!disposition || disposition === 'PASS') {
       throw new BadRequestException('Child Reports can only be created for Serial Numbers with a REWORK, SCRAP, or HOLD disposition.');
@@ -49,6 +51,15 @@ export class ChildReportsService {
       throw new BadRequestException(`Disposition mismatch: Cannot create a ${payload.type} Child Report for a Serial Number marked as ${disposition}.`);
     }
 
+    // Determine Child Report Number: ParentReportNumber-TypeCount
+    let generatedChildReportNumber: string | undefined = undefined;
+    if (report.reportNumber) {
+        const existingOfType = report.childReports.filter(cr => cr.type === payload.type);
+        const sequenceNum = existingOfType.length + 1;
+        const typeInitial = payload.type.charAt(0); // R for REWORK, S for SCRAP, H for HOLD
+        generatedChildReportNumber = `${report.reportNumber}-${typeInitial}${sequenceNum}`;
+    }
+
     // Atomic Create
     const childReport = await this.prisma.childReport.create({
       data: {
@@ -56,6 +67,7 @@ export class ChildReportsService {
         tenantId,
         inspectionReportId: payload.inspectionReportId,
         serialNumberId: payload.serialNumberId,
+        reportNumber: generatedChildReportNumber,
         type: payload.type,
         notes: payload.notes,
         status: ChildReportStatus.DRAFT,

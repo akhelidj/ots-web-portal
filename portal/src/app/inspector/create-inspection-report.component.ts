@@ -39,8 +39,8 @@ export class CreateInspectionReportComponent {
   public async onSubmit() {
     this.formError = '';
     
-    if (!this.formPoNumber || !this.formTemplateKey) {
-      this.formError = 'PO Number and Template Key are required.';
+    if (!this.formCustomer || !this.formPoNumber || !this.formTemplateKey) {
+      this.formError = 'Customer, PO Number and Template Key are required.';
       return;
     }
 

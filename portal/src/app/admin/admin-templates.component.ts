@@ -66,8 +66,9 @@ export class AdminTemplatesComponent implements OnInit {
       this.formTemplateKey = '';
       this.formChangeNote = '';
       this.formFile = null;
-    } catch (error: Error | any) {
-      this.formError = error?.error?.message || error?.message || 'Failed to upload template. TemplateKey/Version combo might already exist.';
+    } catch (error: unknown) {
+      const e = error as { error?: { message?: string }; message?: string };
+      this.formError = e?.error?.message || e?.message || 'Failed to upload template. TemplateKey/Version combo might already exist.';
     } finally {
       this.isSubmitting = false;
     }
@@ -78,8 +79,9 @@ export class AdminTemplatesComponent implements OnInit {
     
     try {
       await this.templatesService.deprecateTemplate(id);
-    } catch (error: Error | any) {
-      this.formError = error?.error?.message || error?.message || 'Failed to deprecate template.';
+    } catch (error: unknown) {
+      const e = error as { error?: { message?: string }; message?: string };
+      this.formError = e?.error?.message || e?.message || 'Failed to deprecate template.';
     }
   }
 }

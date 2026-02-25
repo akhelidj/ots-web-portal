@@ -67,13 +67,21 @@
       <div>
         <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
            <h2 class="text-lg font-semibold text-gray-900">Executive Summary</h2>
-           <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">{{ report.status }}</span>
+           <div class="flex items-center gap-3">
+             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">{{ report.status }}</span>
+             @if (!isEditingMeta && userRole !== 'CUSTOMER' && uiState?.actions?.['IR_EDIT_SERIAL']?.visible) {
+               <button (click)="isEditingMeta = true" class="px-3 py-1 text-xs font-bold text-primary bg-white border border-primary/30 rounded shadow-sm hover:bg-primary/5 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                 Update Job Data
+               </button>
+             }
+           </div>
         </div>
         
         <div class="grid grid-cols-2 gap-y-5 gap-x-4 mb-4">
           <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Report #</span>
-            <span class="font-medium text-gray-900 text-sm font-mono tracking-widest text-accent">{{ report.id.substring(0,8) | uppercase }}</span>
+            <span class="font-medium text-gray-900 text-sm font-mono tracking-widest text-accent">{{ report.reportNumber || (report.id.substring(0,8) | uppercase) }}</span>
           </div>
           <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Date</span>
@@ -81,7 +89,7 @@
           </div>
           <div class="col-span-2">
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Address of Inspection</span>
-            <span class="font-medium text-gray-900 text-sm">{{ customerAddress }}</span>
+            <span class="font-medium text-gray-900 text-sm">{{ report.inspectionAddress || customerAddress || 'N/A' }}</span>
           </div>
           <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">PO #</span>
@@ -89,7 +97,11 @@
           </div>
           <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Standard Used</span>
-            <span class="font-medium text-gray-900 text-sm font-mono">{{ report.templateKey }}<br><span class="text-xs text-gray-500">v{{ report.templateVersion }}</span></span>
+            @if (report.standardUsed) {
+              <span class="font-medium text-gray-900 text-sm font-mono">{{ report.standardUsed }}</span>
+            } @else {
+              <span class="font-medium text-gray-900 text-sm font-mono">{{ report.templateKey }} <span class="text-xs text-gray-500">v{{ report.templateVersion }}</span></span>
+            }
           </div>
           <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Inspected By</span>
@@ -99,7 +111,224 @@
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Approved By</span>
             <span class="font-medium text-gray-900 text-sm">{{ approvedByName }}</span>
           </div>
-        </div>
+         </div>
+         
+          <div class="mt-8 border-t border-gray-100 pt-5">
+            <div class="flex justify-between items-center mb-2">
+               <h3 class="text-sm font-semibold text-gray-900">Overall Inspector Comment</h3>
+            </div>
+            
+            @if (isEditingMeta) {
+               <textarea [(ngModel)]="formInspectorComment" rows="3" class="w-full border border-gray-300 p-3 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm transition-colors mb-3" placeholder="Add an overall comment for the inspection..."></textarea>
+            } @else {
+               <div class="p-4 border border-gray-200 bg-white rounded-lg min-h-[60px] text-sm text-gray-700 whitespace-pre-wrap shadow-inner mb-4">
+                  @if (report.inspectorComment) {
+                     {{ report.inspectorComment }}
+                  } @else {
+                     <span class="text-gray-400 italic">No overall comment provided.</span>
+                  }
+               </div>
+            }
+
+            <div class="flex justify-between items-center mb-2 mt-4 pt-4 border-t border-gray-100">
+               <h3 class="text-sm font-semibold text-gray-900">Additional Meta Information</h3>
+            </div>
+
+            @if (isEditingMeta) {
+               <!-- Pipe Details Grid -->
+               <div class="mb-4">
+                  <h4 class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Pipe Details</h4>
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                     <div>
+                        <label for="form_grade" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Grade</label>
+                        <input id="form_grade" type="text" [(ngModel)]="formGrade" placeholder="e.g. S135" class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                     </div>
+                     <div>
+                        <label for="form_range" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Range</label>
+                        <input id="form_range" type="text" [(ngModel)]="formRange" placeholder="e.g. 2" class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                     </div>
+                     <div>
+                        <label for="form_weight" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Weight</label>
+                        <input id="form_weight" type="text" [(ngModel)]="formWeight" placeholder="e.g. 19.50 ppf" class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                     </div>
+                     <div>
+                        <label for="form_nom_wt" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Nom. W.T</label>
+                        <input id="form_nom_wt" type="text" [(ngModel)]="formNomWT" placeholder="e.g. 0.362&quot;" class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                     </div>
+                     <div>
+                        <label for="form_nom_od" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Nom OD</label>
+                        <input id="form_nom_od" type="text" [(ngModel)]="formNomOD" placeholder="e.g. 5&quot;" class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                     </div>
+                     <div>
+                        <label for="form_nom_id" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Nom ID</label>
+                        <input id="form_nom_id" type="text" [(ngModel)]="formNomID" placeholder="e.g. 4.276&quot;" class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                     </div>
+                     <div class="col-span-2 md:col-span-2">
+                        <label for="form_connection" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Connection</label>
+                        <input id="form_connection" type="text" [(ngModel)]="formConnection" placeholder="e.g. NC50" class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                     </div>
+                  </div>
+               </div>
+
+               <!-- Inspection Job Meta -->
+               <div class="mb-4">
+                  <h4 class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Job Info</h4>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                     <div class="md:col-span-2">
+                        <label for="form_inspection_address" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Inspection Address</label>
+                        <input id="form_inspection_address" type="text" [(ngModel)]="formInspectionAddress" placeholder="e.g. 123 Industrial Pkwy" class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                     </div>
+                     <div class="md:col-span-2">
+                        <label for="form_standard_used" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Standard Used</label>
+                        <input id="form_standard_used" type="text" [(ngModel)]="formStandardUsed" placeholder="e.g. API RP 7G-2" class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                     </div>
+                  </div>
+               </div>
+
+               <div class="mb-4">
+                  <div class="flex justify-between items-center mb-2">
+                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">Inspection Methods</span>
+                     <button (click)="addMethodFormRow()" class="text-xs text-primary hover:underline font-medium flex items-center gap-1">
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Add
+                     </button>
+                  </div>
+                  
+                  @if (formInspectionMethod.length === 0) {
+                     <p class="text-xs text-gray-400 italic mb-2">No methods added.</p>
+                  }
+
+                  <div class="space-y-2">
+                     @for (m of formInspectionMethod; track $index; let i = $index) {
+                        <div class="flex items-center gap-2">
+                           <div class="flex-1 flex gap-2">
+                              <select [(ngModel)]="m.name" (change)="onMethodSelectChange(i)" class="w-full sm:w-1/2 border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm bg-white">
+                                 <option value="" disabled selected>Select method...</option>
+                                 @for (opt of METHOD_OPTIONS; track opt) {
+                                    <option [value]="opt">{{ opt }}</option>
+                                 }
+                              </select>
+                              @if (m.isOther) {
+                                 <input type="text" [(ngModel)]="m.name" placeholder="Specify..." class="w-full sm:w-1/2 border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                              }
+                           </div>
+                           <button (click)="removeMethodFormRow(i)" class="p-1.5 text-error hover:bg-error-light rounded transition-colors" title="Remove">
+                              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                           </button>
+                        </div>
+                     }
+                  </div>
+               </div>
+
+
+               <div class="mb-4">
+                  <div class="flex justify-between items-center mb-2">
+                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">Equipment Used</span>
+                     <button (click)="addEquipmentFormRow()" class="text-xs text-primary hover:underline font-medium flex items-center gap-1">
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Add
+                     </button>
+                  </div>
+                  
+                  @if (formEquipmentUsed.length === 0) {
+                     <p class="text-xs text-gray-400 italic mb-2">No equipment added.</p>
+                  }
+
+                  <div class="space-y-2">
+                     @for (eq of formEquipmentUsed; track $index; let i = $index) {
+                        <div class="flex items-center gap-2">
+                           <div class="w-1/2 flex gap-2">
+                              <select [(ngModel)]="eq.name" (change)="onEquipmentSelectChange(i)" class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm bg-white">
+                                 <option value="" disabled selected>Select equipment...</option>
+                                 @for (opt of EQUIPMENT_OPTIONS; track opt) {
+                                    <option [value]="opt">{{ opt }}</option>
+                                 }
+                              </select>
+                              @if (eq.isOther) {
+                                 <input type="text" [(ngModel)]="eq.name" placeholder="Specify..." class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                              }
+                           </div>
+                           <input type="text" [(ngModel)]="eq.number" placeholder="S/N or ID (Optional)" class="flex-1 border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm">
+                           <button (click)="removeEquipmentFormRow(i)" class="p-1.5 text-error hover:bg-error-light rounded transition-colors" title="Remove">
+                              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                           </button>
+                        </div>
+                     }
+                  </div>
+               </div>
+
+               <div class="flex gap-2 justify-end mt-4">
+                  <button (click)="isEditingMeta = false; formInspectorComment = report.inspectorComment || ''; formInspectionAddress = report.inspectionAddress || ''; formStandardUsed = report.standardUsed || ''" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors">Cancel</button>
+                  <button (click)="saveMeta()" class="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded shadow-sm hover:bg-primary/95 transition-colors">Save Details</button>
+               </div>
+            } @else {
+               <div class="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-4 mb-4">
+                  <div class="col-span-2 md:col-span-4 border-b border-gray-100 pb-2 mb-2">
+                     <h4 class="text-xs font-bold text-primary uppercase tracking-wide">Job Info & Pipe Specifications</h4>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Grade</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ report.grade || '-' }}</span>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Range</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ report.range || '-' }}</span>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Weight</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ report.weight || '-' }}</span>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Nom. W.T</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ report.nomWT || '-' }}</span>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Nom OD</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ report.nomOD || '-' }}</span>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Nom ID</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ report.nomID || '-' }}</span>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Connection</span>
+                    <span class="font-medium text-gray-900 text-sm px-1 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs select-all">{{ report.connection || '-' }}</span>
+                  </div>
+                  <div class="col-span-2 md:col-span-4 mt-2 border-t border-gray-100 pt-3">
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Inspection Methods</span>
+                    @if ($any(report.inspectionMethod) && $any(report.inspectionMethod).length > 0) {
+                        <div class="flex flex-wrap gap-2">
+                           @for (m of $any(report.inspectionMethod); track $index) {
+                              <span class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold border border-blue-200/50 shadow-sm">
+                                 <svg class="h-3 w-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                 {{ m.name || m }}
+                              </span>
+                           }
+                        </div>
+                    } @else {
+                        <span class="font-medium text-gray-400 text-sm italic">None added.</span>
+                    }
+                  </div>
+
+                  <div class="col-span-2 md:col-span-4 mt-2">
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Equipment Used</span>
+                    @if ($any(report.equipmentUsed) && $any(report.equipmentUsed).length > 0) {
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-1">
+                           @for (eq of $any(report.equipmentUsed); track $index) {
+                              <div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100 shadow-sm">
+                                 <svg class="h-3 w-3 text-accent shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                 <span class="font-medium text-gray-900 text-sm truncate" [title]="eq.name">{{ eq.name }}</span>
+                                 @if (eq.number) {
+                                    <span class="font-mono text-gray-500 text-[10px] ml-auto bg-white px-1.5 py-0.5 rounded border border-gray-200 shrink-0">#{{ eq.number }}</span>
+                                 }
+                              </div>
+                           }
+                        </div>
+                    } @else {
+                        <span class="font-medium text-gray-400 text-sm italic">None added.</span>
+                    }
+                  </div>
+               </div>
+            }
+         </div>
       </div>
       
       @if (validationResult) {
@@ -171,7 +400,7 @@
         </div>
       }
       
-      <div class="mt-auto">
+      <div class="mt-auto pt-4 border-t border-gray-100">
         @if (userRole !== 'CUSTOMER') {
           @if (report.pendingTransitionToStatus) {
             <div class="p-4 bg-warning-light text-warning-dark text-sm rounded-lg border border-warning/30 flex items-center gap-3">
@@ -181,7 +410,8 @@
                <span>Transition to <span class="font-bold bg-white/50 px-1.5 py-0.5 rounded shadow-sm text-warning-dark border border-warning/20">{{ report.pendingTransitionToStatus }}</span> pending sync.</span>
             </div>
           } @else {
-              <div class="flex flex-wrap gap-3">
+              <div class="flex flex-wrap items-center gap-3">
+                 <span class="text-sm font-semibold text-gray-700 mr-2">Available Actions:</span>
                  @for (transition of allowedTransitions; track transition.toStatus) {
                     <button (click)="openReasonSelect(transition)" class="inline-flex items-center bg-primary hover:bg-primary/95 text-white px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
                             [disabled]="!transition.enabled"
@@ -193,47 +423,47 @@
                     </button>
                  }
                  @if (allowedTransitions.length === 0) {
-                    <p class="text-sm text-gray-500 italic mt-2">No transitions available based on current status and role.</p>
+                    <p class="text-sm text-gray-500 italic">No transitions available based on current status and role.</p>
                  }
               </div>
 
                @if (selectedTransition) {
-                 <div class="mt-5 p-5 border border-gray-200 rounded-xl bg-gray-50 shadow-inner flex flex-col gap-4">
-                    <p class="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                      Confirm transition to <span class="text-accent">{{ selectedTransition.toStatus }}</span>
+                 <div class="mt-4 p-4 border border-gray-200 rounded-xl bg-gray-50 shadow-inner flex flex-col md:flex-row md:items-center gap-4">
+                    <p class="text-sm font-semibold text-gray-900 flex items-center gap-2 whitespace-nowrap">
+                      Confirm <span class="text-accent">{{ selectedTransition.toStatus }}</span>
                     </p>
-                    <div>
+                    <div class="flex-grow">
                       @if (selectedTransition.requiresReason) {
                          <input type="text" [(ngModel)]="formReason" placeholder="Reason for transition (Required)" class="w-full border border-gray-300 shadow-sm px-3 py-2 rounded-md focus:ring-accent focus:border-accent text-sm transition-colors">
                       } @else {
                          <input type="text" [(ngModel)]="formReason" placeholder="Notes or remarks (Optional)" class="w-full border border-gray-300 shadow-sm px-3 py-2 rounded-md focus:ring-accent focus:border-accent text-sm transition-colors">
                       }
                     </div>
-                    <div class="flex gap-3">
-                       <button (click)="onTransition()" class="bg-accent hover:bg-accent-hover text-white px-5 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50" 
+                    <div class="flex gap-2 whitespace-nowrap">
+                       <button (click)="onTransition()" class="bg-accent hover:bg-accent-hover text-white px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50" 
                           [disabled]="(selectedTransition.requiresReason && !formReason.trim()) || (selectedTransition.toStatus === 'APPROVED' && (!validationResult || !validationResult.isReady || hasUnresolvedChildren))">
-                          Confirm & Proceed
+                          Confirm
                        </button>
-                       <button (click)="selectedTransition = null; formReason = ''" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-5 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                       <button (click)="selectedTransition = null; formReason = ''" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
                           Cancel
                        </button>
                     </div>
-                    @if (selectedTransition.toStatus === 'APPROVED' && hasUnresolvedChildren) {
-                       <p class="text-xs text-error font-medium flex items-center gap-1 mt-1">
-                         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                         </svg>
-                         Rework serials must be resolved before approval.
-                       </p>
-                    } @else if (selectedTransition.toStatus === 'APPROVED' && (!validationResult || !validationResult.isReady)) {
-                       <p class="text-xs text-error font-medium flex items-center gap-1 mt-1">
-                         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                         </svg>
-                         Cannot confirm approval until all issues are resolved.
-                       </p>
-                    }
                  </div>
+                 @if (selectedTransition.toStatus === 'APPROVED' && hasUnresolvedChildren) {
+                    <p class="text-xs text-error font-medium flex items-center gap-1 mt-2">
+                       <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                       </svg>
+                       Rework serials must be resolved before approval.
+                    </p>
+                 } @else if (selectedTransition.toStatus === 'APPROVED' && (!validationResult || !validationResult.isReady)) {
+                    <p class="text-xs text-error font-medium flex items-center gap-1 mt-2">
+                       <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                       </svg>
+                       Cannot confirm approval until all issues are resolved.
+                    </p>
+                 }
               }
           }
         }
@@ -299,7 +529,7 @@
                   </td>
                   @if (item.childLinked) {
                     <td class="px-6 py-4 font-mono text-xs text-gray-600">
-                       <a [routerLink]="['/', userRole | lowercase, 'reports', item.childLinked.id, 'child']" class="text-primary hover:text-primary-light hover:underline transition-colors">{{ report.id.substring(0,8) | uppercase }} — Rework</a>
+                       <a [routerLink]="['/', userRole | lowercase, 'reports', item.childLinked.id, 'child']" class="text-primary hover:text-primary-light hover:underline transition-colors">{{ report.reportNumber || (report.id.substring(0,8) | uppercase) }} — Rework</a>
                     </td>
                     <td class="px-6 py-4">
                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border border-transparent" [ngClass]="{'bg-success-light text-success-dark': item.childLinked.status === 'APPROVED' || item.childLinked.status === 'CLOSED', 'bg-primary/10 text-primary': item.childLinked.status !== 'APPROVED' && item.childLinked.status !== 'CLOSED'}">{{ item.childLinked.status }}</span>
@@ -326,9 +556,9 @@
     </div>
   }
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="flex flex-col xl:flex-row gap-6 mb-8 items-start w-full">
     <!-- SN list -->
-    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full max-h-[800px]">
+    <div class="flex-grow w-full bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full max-h-[800px] overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/50 rounded-t-xl flex justify-between items-center sticky top-0 z-10">
         <h2 class="font-bold text-lg text-primary flex items-center gap-2">
           Equipment List 
@@ -338,23 +568,66 @@
       <div class="overflow-x-auto overflow-y-auto flex-grow">
         <table class="min-w-full text-left border-collapse">
           <thead class="bg-gray-50 sticky top-0 shadow-sm z-20 border-b border-gray-200">
+            <!-- Top Header Row -->
             <tr>
-              <th scope="col" class="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-30 shadow-[1px_0_0_0_#eee]">Serial Number</th>
-              <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-gray-50">Disposition</th>
-              @for (f of drillPipeFields; track f.key) {
-                 <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-gray-50">{{ f.label }}</th>
-              }
-              <th scope="col" class="px-4 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-gray-50">Actions</th>
+              <th scope="col" colspan="2" class="px-5 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky left-0 top-0 bg-gray-50 z-40 shadow-[1px_0_0_0_#eee] border-r border-gray-200">Info / Actions</th>
               @if (userRole !== 'CUSTOMER') {
-                <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 bg-gray-50">Sync</th>
+                <th scope="col" rowspan="2" class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 sticky top-0 bg-gray-50 z-30 border-r border-gray-200">Sync</th>
               }
+              <th scope="col" colspan="7" class="px-3 py-2 text-center text-[10px] font-bold text-blue-700 uppercase tracking-wider sticky top-0 bg-blue-50 z-30 border-r border-gray-200 border-b border-blue-200/50">Box Connection</th>
+              <th scope="col" colspan="7" class="px-3 py-2 text-center text-[10px] font-bold text-indigo-700 uppercase tracking-wider sticky top-0 bg-indigo-50 z-30 border-r border-gray-200 border-b border-indigo-200/50">Pin Connection</th>
+              <th scope="col" colspan="8" class="px-3 py-2 text-center text-[10px] font-bold text-purple-700 uppercase tracking-wider sticky top-0 bg-purple-50 z-30 border-r border-gray-200 border-b border-purple-200/50">Body</th>
+              <th scope="col" colspan="4" class="px-3 py-2 text-center text-[10px] font-bold text-gray-700 uppercase tracking-wider sticky top-0 bg-gray-100 z-30 border-r border-gray-200 border-b border-gray-200/50">Final</th>
+              <th scope="col" rowspan="2" class="px-4 py-3 text-center text-[10px] font-bold text-gray-700 uppercase tracking-wider sticky top-0 bg-gray-100 z-30 min-w-[200px] border-l border-gray-200 border-b border-gray-200/50">Remarks</th>
+            </tr>
+            <!-- Sub Header Row -->
+            <tr>
+              <th scope="col" class="px-5 py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky left-0 top-8 bg-gray-50 z-40 shadow-[1px_0_0_0_#eee] w-48 min-w-[12rem] max-w-[12rem] border-r border-gray-200">Serial Number</th>
+              <th scope="col" class="px-4 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky left-[12rem] top-8 bg-gray-50 z-40 border-r border-gray-200 shadow-[1px_0_0_0_#eee] min-w-[120px]">Disp. / Act.</th>
+              
+              <!-- BOX Columns -->
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Tong Spc.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Min OD</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Box Thd.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Ecc Shoulder">Ecc Sh.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Counter Bore Dia.">CBor D.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Counter Bore Len.">CBor L.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Bevel Diameter (Min/Max)">Bvl D.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Cond.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200" title="Hard Banding">Hard B.</th>
+              
+              <!-- PIN Columns -->
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Tong Spc.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Min OD</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Max ID</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Ecc Shoulder">Ecc Sh.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Pin Conn (Min/Max)">P. Conn</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Max Pin Base">P. Base</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Bevel Diameter (Min/Max)">Bvl D.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Cond.</th>
+
+              <!-- BODY Columns -->
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Wall Remaining">Wall R.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">OD Decr.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">EMI Res.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Slip Area</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Corr. In</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Corr. Out</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">IPC</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Bent Jts</th>
+
+              <!-- FINAL Columns -->
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">New</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Premium</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">C2</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Scrap</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 bg-white">
             @if (serials$ | async; as serials) {
               @for (sn of serials; track sn.id) {
                 <tr class="hover:bg-primary/5 transition-colors group">
-                  <td class="px-5 py-4 align-top sticky left-0 bg-white z-10 shadow-[1px_0_0_0_#eee] group-hover:bg-primary/5 transition-colors">
+                  <td class="px-5 py-3 align-top sticky left-0 bg-white z-20 shadow-[1px_0_0_0_#eee] group-hover:bg-[#f3f4f6] transition-colors border-r border-gray-200 w-48 min-w-[12rem] max-w-[12rem]">
                     @if (editingSnId === sn.id) {
                       <div class="flex items-center gap-2 max-w-[180px]">
                         <input type="text" [(ngModel)]="editingSnValue" class="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:ring-accent focus:border-accent text-xs font-mono" (keyup.enter)="saveEditSn(sn)">
@@ -366,7 +639,7 @@
                         </button>
                       </div>
                     } @else {
-                      <div class="flex flex-col gap-1.5">
+                      <div class="flex flex-col gap-1.5 h-full justify-center">
                         <span class="font-mono font-bold text-gray-900 text-sm whitespace-nowrap">{{ sn.value }}</span>
                         @if (childReports$ | async; as crList) {
                            <div class="space-y-1">
@@ -383,57 +656,141 @@
                       </div>
                     }
                   </td>
-                  <td class="px-4 py-4 align-top whitespace-nowrap">
-                    @if (sn.inspectionJson?.disposition) {
-                       <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border flex items-center gap-1 w-fit shadow-sm" [ngClass]="{
-                         'bg-success-light text-success-dark border-success/30': sn.inspectionJson.disposition === 'PASS',
-                         'bg-warning-light text-warning-dark border-warning/30': sn.inspectionJson.disposition === 'REWORK',
-                         'bg-error-light text-error-dark border-error/30': sn.inspectionJson.disposition === 'SCRAP',
-                         'bg-primary/10 text-primary border-primary/20': sn.inspectionJson.disposition === 'HOLD'
-                       }">
-                         <span class="w-1.5 h-1.5 rounded-full" [ngClass]="{'bg-success': sn.inspectionJson.disposition === 'PASS', 'bg-warning': sn.inspectionJson.disposition === 'REWORK', 'bg-error': sn.inspectionJson.disposition === 'SCRAP', 'bg-primary': sn.inspectionJson.disposition === 'HOLD'}"></span>
-                         {{ sn.inspectionJson.disposition }}
-                       </span>
-                    } @else {
-                       <span class="text-xs text-gray-400 italic font-medium">Pending</span>
-                    }
+                  <td class="px-3 py-3 align-top whitespace-nowrap bg-white group-hover:bg-[#f3f4f6] transition-colors border-r border-gray-200 min-w-[120px] sticky left-[12rem] z-20 shadow-[1px_0_0_0_#eee]">
+                    <div class="flex flex-col items-center gap-2">
+                       @if (getDisposition(sn); as disp) {
+                          <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border flex items-center justify-center gap-1 w-full shadow-sm" [ngClass]="{
+                            'bg-success-light text-success-dark border-success/30': disp === 'PASS',
+                            'bg-warning-light text-warning-dark border-warning/30': disp === 'REWORK',
+                            'bg-error-light text-error-dark border-error/30': disp === 'SCRAP',
+                            'bg-primary/10 text-primary border-primary/20': disp === 'HOLD'
+                          }">
+                            {{ disp }}
+                          </span>
+                       } @else {
+                          <span class="text-xs text-gray-400 italic font-medium">Pending</span>
+                       }
+                       
+                       <div class="flex items-center justify-center gap-1 w-full bg-gray-50 border border-gray-200 rounded p-0.5">
+                          @if (uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.visible || uiState?.actions?.['SN_SET_DISPOSITION']?.visible) {
+                             <button (click)="openInspectionForm(sn)" class="text-accent hover:text-accent-hover hover:underline text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5" title="Inspect">
+                               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                               Insp.
+                             </button>
+                          } @else {
+                             <button (click)="openInspectionForm(sn)" class="text-primary hover:text-primary-light hover:underline text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5" title="View Inspection">
+                               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                               View
+                             </button>
+                          }
+                          @if (uiState?.actions?.['IR_EDIT_SERIAL']?.visible) {
+                             <button (click)="onEditSn(sn)" class="text-gray-500 hover:text-gray-800 text-[10px] font-semibold transition-colors px-1" title="Rename"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                          }
+                          @if (uiState?.actions?.['CR_CREATE_FROM_REWORK']?.visible && getDisposition(sn) && getDisposition(sn) !== 'PASS') {
+                             <button (click)="openChildReportForm(sn)" class="text-warning-dark hover:text-yellow-700 text-[10px] font-semibold transition-colors px-1" title="Branch"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg></button>
+                          }
+                          @if (uiState?.actions?.['IR_REMOVE_SERIAL']?.visible) {
+                             <button (click)="onDeleteSn(sn)" class="text-error hover:text-error-dark text-[10px] font-semibold transition-colors px-1 border-l border-gray-200 ml-0.5 pl-1.5" title="Remove"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                          }
+                       </div>
+                    </div>
                   </td>
-                  @for (f of drillPipeFields; track f.key) {
-                    <td class="px-4 py-4 align-top whitespace-nowrap text-sm text-gray-600 font-medium">{{ sn.inspectionJson?.[f.key] || '-' }}</td>
-                  }
-                  <td class="px-4 py-4 align-top whitespace-nowrap text-right bg-white group-hover:bg-primary/5 transition-colors">
-                     <div class="flex flex-col items-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                        @if (uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.visible || uiState?.actions?.['SN_SET_DISPOSITION']?.visible) {
-                           <button (click)="openInspectionForm(sn)" class="text-accent hover:text-accent-hover hover:underline text-xs font-bold flex items-center gap-1" title="Inspect">
-                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-                             Inspect
-                           </button>
-                        } @else {
-                           <button (click)="openInspectionForm(sn)" class="text-primary hover:text-primary-light hover:underline text-xs font-bold flex items-center gap-1" title="View Inspection">
-                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                             View
-                           </button>
-                        }
-                        @if (uiState?.actions?.['CR_CREATE_FROM_REWORK']?.visible && sn.inspectionJson?.disposition && sn.inspectionJson.disposition !== 'PASS') {
-                           <button (click)="openChildReportForm(sn)" class="text-warning-dark hover:text-yellow-700 hover:underline text-xs font-bold transition-colors">Branch</button>
-                        }
-                        @if (uiState?.actions?.['IR_EDIT_SERIAL']?.visible) {
-                           <button (click)="onEditSn(sn)" class="text-gray-500 hover:text-gray-800 hover:underline text-xs font-semibold transition-colors">Rename</button>
-                        }
-                        @if (uiState?.actions?.['IR_REMOVE_SERIAL']?.visible) {
-                           <button (click)="onDeleteSn(sn)" class="text-error hover:text-error-dark hover:underline text-xs font-semibold flex items-center gap-1 transition-colors">Remove</button>
-                        }
-                     </div>
-                  </td>
+
                   @if (userRole !== 'CUSTOMER') {
-                    <td class="px-6 py-4 align-top">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border" [ngClass]="{
+                    <td class="px-2 py-3 align-top text-center border-r border-gray-100">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border" [ngClass]="{
                         'bg-error-light text-error-dark border-error/20': sn.syncState === 'CONFLICT' || sn.syncState === 'ERROR',
                         'bg-warning-light text-warning-dark border-warning/20': sn.syncState === 'PENDING',
                         'bg-success-light text-success-dark border-success/20': sn.syncState === 'SYNCED'
                       }">{{ sn.syncState }}</span>
                     </td>
                   }
+
+                  <!-- BOX Data -->
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20">{{ sn.inspectionJson?.box?.minTongSpace || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20">{{ sn.inspectionJson?.box?.minOD || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20">{{ sn.inspectionJson?.box?.minBoxThreads || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20">{{ sn.inspectionJson?.box?.minEccShoulder || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20">{{ sn.inspectionJson?.box?.maxCounterBoreDiameter || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20">{{ sn.inspectionJson?.box?.maxCounterBoreLength || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-mono text-gray-500 whitespace-nowrap group-hover:bg-blue-50/20">
+                     @if(sn.inspectionJson?.box?.bevelDiameterMin) { 
+                       {{sn.inspectionJson?.box?.bevelDiameterMin}} - {{sn.inspectionJson?.box?.bevelDiameterMax}} 
+                     } @else { - }
+                  </td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-blue-50/20">{{ sn.inspectionJson?.box?.condition || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-blue-50/20 border-r border-gray-100">{{ sn.inspectionJson?.box?.hardBanding || '-' }}</td>
+
+                  <!-- PIN Data -->
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-indigo-50/20">{{ sn.inspectionJson?.pin?.minTongSpace || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-indigo-50/20">{{ sn.inspectionJson?.pin?.minOD || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-indigo-50/20">{{ sn.inspectionJson?.pin?.maxID || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-indigo-50/20">{{ sn.inspectionJson?.pin?.minEccShoulder || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-mono text-gray-500 whitespace-nowrap group-hover:bg-indigo-50/20">
+                     @if(sn.inspectionJson?.pin?.lengthPinConnMin) { 
+                       {{sn.inspectionJson?.pin?.lengthPinConnMin}} - {{sn.inspectionJson?.pin?.lengthPinConnMax}} 
+                     } @else { - }
+                  </td>
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-indigo-50/20">{{ sn.inspectionJson?.pin?.maxLengthPinBase || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-mono text-gray-500 whitespace-nowrap group-hover:bg-indigo-50/20">
+                     @if(sn.inspectionJson?.pin?.bevelDiameterMin) { 
+                       {{sn.inspectionJson?.pin?.bevelDiameterMin}} - {{sn.inspectionJson?.pin?.bevelDiameterMax}} 
+                     } @else { - }
+                  </td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-indigo-50/20 border-r border-gray-100">{{ sn.inspectionJson?.pin?.condition || '-' }}</td>
+
+                  <!-- BODY Data -->
+                  <td class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-purple-50/20">{{ sn.inspectionJson?.body?.wallRemaining || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-mono text-gray-500 uppercase group-hover:bg-purple-50/20">{{ sn.inspectionJson?.body?.odDecrease || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20">{{ sn.inspectionJson?.body?.emiResult || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-mono text-gray-500 uppercase group-hover:bg-purple-50/20">{{ sn.inspectionJson?.body?.slipArea || '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20">
+                     @if(sn.inspectionJson?.body?.corrosionIn !== undefined) {
+                        {{ sn.inspectionJson?.body?.corrosionIn ? 'Yes' : 'No' }}
+                     } @else { - }
+                  </td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20">
+                     @if(sn.inspectionJson?.body?.corrosionOut !== undefined) {
+                        {{ sn.inspectionJson?.body?.corrosionOut ? 'Yes' : 'No' }}
+                     } @else { - }
+                  </td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20">
+                     @if(sn.inspectionJson?.body?.ipc !== undefined) {
+                        {{ sn.inspectionJson?.body?.ipc ? 'Yes' : 'No' }}
+                     } @else { - }
+                  </td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20 border-r border-gray-100">
+                     @if(sn.inspectionJson?.body?.bentJoints !== undefined) {
+                        {{ sn.inspectionJson?.body?.bentJoints ? 'Yes' : 'No' }}
+                     } @else { - }
+                  </td>
+
+                  <!-- FINAL Data -->
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-gray-50/20">
+                     @if(sn.inspectionJson?.final?.isNew !== undefined) {
+                        <span [ngClass]="{'text-success': sn.inspectionJson?.final?.isNew}">{{ sn.inspectionJson?.final?.isNew ? 'Y' : 'N' }}</span>
+                     } @else { - }
+                  </td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-gray-50/20">
+                     @if(sn.inspectionJson?.final?.isPremium !== undefined) {
+                        <span [ngClass]="{'text-success': sn.inspectionJson?.final?.isPremium}">{{ sn.inspectionJson?.final?.isPremium ? 'Y' : 'N' }}</span>
+                     } @else { - }
+                  </td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-gray-50/20">
+                     @if(sn.inspectionJson?.final?.isC2 !== undefined) {
+                        {{ sn.inspectionJson?.final?.isC2 ? 'Y' : 'N' }}
+                     } @else { - }
+                  </td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-gray-50/20 border-r border-gray-100">
+                     @if(sn.inspectionJson?.final?.isScrap !== undefined) {
+                        <span [ngClass]="{'text-error': sn.inspectionJson?.final?.isScrap}">{{ sn.inspectionJson?.final?.isScrap ? 'Y' : 'N' }}</span>
+                     } @else { - }
+                  </td>
+
+                  <!-- Final Remarks -->
+                  <td class="px-4 py-3 align-top text-xs text-gray-600 line-clamp-2 max-w-xs break-words bg-white group-hover:bg-gray-50 border-l border-gray-100" [title]="sn.inspectionJson?.final?.condition_notes || sn.inspectionJson?.final?.remarks || sn.inspectionJson?.remarks || ''">
+                    {{ sn.inspectionJson?.final?.condition_notes || sn.inspectionJson?.final?.remarks || sn.inspectionJson?.remarks || '-' }}
+                  </td>
                 </tr>
               }
               @if (serials.length === 0) {
@@ -453,8 +810,10 @@
       </div>
     </div>
 
-    @if (creatingChildReportForSn) {
-      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-fit">
+    @if (creatingChildReportForSn || uiState?.actions?.['IR_ADD_SERIAL']?.visible) {
+      <div class="w-full xl:w-[320px] shrink-0 space-y-6">
+        @if (creatingChildReportForSn) {
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-fit">
          <div class="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
             <h2 class="text-lg font-semibold text-gray-900">New Branch Report</h2>
             <button (click)="cancelChildReportForm()" class="text-gray-400 hover:text-gray-600 transition-colors">
@@ -465,7 +824,7 @@
          <form (ngSubmit)="submitChildReport()">
             <div class="mb-5">
                <label for="cr_type" class="block text-sm font-medium text-gray-700 mb-1">Type (Derived from Disposition)</label>
-               <input id="cr_type" type="text" [value]="creatingChildReportForSn.inspectionJson?.['disposition']" disabled class="w-full border border-gray-200 p-2.5 rounded-md bg-gray-50 text-gray-500 text-sm font-bold shadow-sm">
+               <input id="cr_type" type="text" [value]="getDisposition(creatingChildReportForSn!)" disabled class="w-full border border-gray-200 p-2.5 rounded-md bg-gray-50 text-gray-500 text-sm font-bold shadow-sm">
             </div>
             <div class="mb-5">
                <label for="cr_notes" class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
@@ -480,94 +839,68 @@
                </button>
             </div>
          </form>
-      </div>
-    } @else if (inspectingSn) {
-      <!-- Inspection Form Panel -->
-      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-fit">
-        <div class="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
-           <div class="flex gap-4 items-center">
-             <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-               Inspect 
-               <span class="font-mono bg-gray-50 px-2 py-0.5 rounded border border-gray-200 text-sm font-normal">{{ inspectingSn.value }}</span>
-             </h2>
-             <div class="flex gap-1 ml-2">
-               <button (click)="goToPrevSn()" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 p-1.5 rounded-md shadow-sm disabled:opacity-50 transition-colors" [disabled]="!hasPrevSn" title="Previous Item">
-                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-               </button>
-               <button (click)="goToNextSn()" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 p-1.5 rounded-md shadow-sm disabled:opacity-50 transition-colors" [disabled]="!hasNextSn" title="Next Item">
-                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-               </button>
-             </div>
-           </div>
-           <button (click)="closeInspectionForm()" class="text-gray-400 hover:text-gray-600 transition-colors">
-             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-           </button>
-        </div>
-        
-        <form (ngSubmit)="saveInspectionForm()">
-           <fieldset>
-              <!-- Disposition Required Field -->
-              <div class="mb-5 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                  <label for="disposition" class="block text-sm font-semibold text-gray-900 mb-2">
-                      Disposition Target <span class="text-error">*</span>
-                  </label>
-                  <select id="disposition" name="disposition" [(ngModel)]="inspectionFormData['disposition']" class="w-full border border-gray-300 p-2.5 rounded-md focus:ring-accent focus:border-accent text-sm bg-white shadow-sm disabled:bg-gray-100 disabled:text-gray-500 transition-colors" [disabled]="uiState?.fieldModes?.['disposition'] !== 'editable'" required>
-                      <option value="PASS">PASS</option>
-                      <option value="REWORK">REWORK</option>
-                      <option value="SCRAP">SCRAP</option>
-                      <option value="HOLD">HOLD</option>
-                  </select>
-              </div>
-
-              @for (field of drillPipeFields; track field.key) {
-                 <div class="mb-4">
-                    <label [for]="field.key" class="block text-sm font-medium text-gray-700 mb-1">
-                       {{ field.label }}
-                       @if (field.required) { <span class="text-error">*</span> }
-                    </label>
-                    @if (field.type === 'select') {
-                       <select [id]="field.key" [name]="field.key" [(ngModel)]="inspectionFormData[field.key]" class="w-full border border-gray-300 p-2.5 rounded-md focus:ring-accent focus:border-accent text-sm bg-white shadow-sm disabled:bg-gray-100 disabled:text-gray-500 transition-colors" [disabled]="uiState?.fieldModes?.['inspectionData'] !== 'editable'">
-                          <option [ngValue]="undefined">Select an option...</option>
-                          @for (opt of field.options; track opt) {
-                             <option [value]="opt">{{ opt }}</option>
-                          }
-                       </select>
-                    } @else if (field.type === 'number') {
-                       <input type="number" [id]="field.key" [name]="field.key" [(ngModel)]="inspectionFormData[field.key]" class="w-full border border-gray-300 p-2.5 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-500 transition-colors" [disabled]="uiState?.fieldModes?.['inspectionData'] !== 'editable'">
-                    } @else {
-                       <input type="text" [id]="field.key" [name]="field.key" [(ngModel)]="inspectionFormData[field.key]" class="w-full border border-gray-300 p-2.5 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-500 transition-colors" [disabled]="uiState?.fieldModes?.['inspectionData'] !== 'editable'">
-                    }
-                 </div>
-              }
-              
-              <div class="flex gap-3 mt-8 pt-4 border-t border-gray-100">
-                 @if (uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.visible || uiState?.actions?.['SN_SET_DISPOSITION']?.visible) {
-                    <button type="submit" class="bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded-md text-sm font-medium shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent w-full sm:w-auto" [disabled]="!uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.enabled && !uiState?.actions?.['SN_SET_DISPOSITION']?.enabled">
-                       Save Record
-                    </button>
-                 }
-                 <button type="button" (click)="closeInspectionForm()" class="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-5 py-2 rounded-md text-sm font-medium shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary w-full sm:w-auto">
-                    {{ (uiState?.fieldModes?.['inspectionData'] !== 'editable' && uiState?.fieldModes?.['disposition'] !== 'editable') ? 'Close View' : 'Cancel' }}
-                 </button>
-              </div>
-           </fieldset>
-        </form>
-      </div>
-    } @else if (uiState?.actions?.['IR_ADD_SERIAL']?.visible) {
-        <!-- Add SN -->
-        <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 flex flex-col h-fit shadow-inner">
+          </div>
+        } 
+        @if (uiState?.actions?.['IR_ADD_SERIAL']?.visible) {
+            <!-- Add SN -->
+            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 flex flex-col h-fit shadow-inner">
           <h2 class="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-200 pb-2">Register Inventory</h2>
           <p class="text-xs text-gray-500 mb-4">Paste multiple serial numbers (one per line):</p>
           
           <textarea [(ngModel)]="formBulkSerials" rows="6" class="w-full border border-gray-300 p-3 rounded-md mb-4 focus:ring-accent focus:border-accent font-mono text-sm shadow-sm transition-colors" placeholder="SN-001&#10;SN-002&#10;SN-003" [disabled]="!uiState?.actions?.['IR_ADD_SERIAL']?.enabled"></textarea>
           
           <button (click)="onAddSerials()" [disabled]="!formBulkSerials.trim() || !uiState?.actions?.['IR_ADD_SERIAL']?.enabled" class="w-full bg-primary hover:bg-primary/95 text-white py-2.5 rounded-md text-sm font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
-            Enqueue Items
-          </button>
-        </div>
-      }
+            </button>
+          </div>
+        }
+      </div>
+    }
   </div>
 </div>
+
+@if (inspectingSn) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all p-4 lg:p-8">
+    <div tabindex="0" class="absolute inset-0" (click)="closeInspectionForm()" (keydown.enter)="closeInspectionForm()"></div>
+    
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-full flex flex-col border border-gray-200 z-10 animate-[sliceIn_0.2s_ease-out] overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0">
+         <div class="flex gap-4 items-center">
+           <h2 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
+             <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+             Inspect 
+             <span class="font-mono bg-white px-2.5 py-1 rounded-md border border-gray-200 text-base font-bold text-primary shadow-sm">{{ inspectingSn.value }}</span>
+           </h2>
+           <!-- Navigation within modal -->
+           <div class="flex gap-1.5 ml-4 pl-4 border-l border-gray-200">
+             <button (click)="goToPrevSn()" class="bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-600 p-1.5 rounded-md shadow-sm disabled:opacity-40 disabled:shadow-none transition-all flex items-center gap-1" [disabled]="!hasPrevSn" title="Previous Item">
+               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+               <span class="text-xs font-medium sr-only sm:not-sr-only">Prev</span>
+             </button>
+             <button (click)="goToNextSn()" class="bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-600 p-1.5 rounded-md shadow-sm disabled:opacity-40 disabled:shadow-none transition-all flex items-center gap-1" [disabled]="!hasNextSn" title="Next Item">
+               <span class="text-xs font-medium sr-only sm:not-sr-only">Next</span>
+               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+             </button>
+           </div>
+         </div>
+         <button (click)="closeInspectionForm()" class="text-gray-400 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-full transition-colors flex items-center justify-center shrink-0">
+           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+         </button>
+      </div>
+      
+      <!-- Modal Body (Scrollable) -->
+      <div class="flex-grow overflow-y-auto p-6 bg-gray-50/30">
+        <app-serial-inspection-reactive-form
+           [initialData]="inspectionFormData"
+           [schemaKey]="report.templateKey"
+           [isReadOnly]="uiState?.fieldModes?.['inspectionData'] !== 'editable' && uiState?.fieldModes?.['disposition'] !== 'editable'"
+           (saveData)="saveInspectionForm($event)"
+           (formCancel)="closeInspectionForm()">
+        </app-serial-inspection-reactive-form>
+      </div>
+    </div>
+  </div>
+}
 
   @if (userRole !== 'CUSTOMER') {
     <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-7xl mx-auto">

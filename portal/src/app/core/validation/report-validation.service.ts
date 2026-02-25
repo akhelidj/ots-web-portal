@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { LocalInspectionReport, LocalSerialNumber, LocalChildReport } from '../offline/types';
-import { DRILL_PIPE_FIELDS } from '../../inspector/config/drill-pipe-fields';
+import { DRILL_PIPE_V1_SCHEMA } from '../../inspection/form-schema/drill-pipe-v1.schema';
 
 export interface ValidationIssue {
   code: string;
@@ -41,7 +41,7 @@ export class ReportValidationService {
 
     for (const sn of serials) {
       const data = sn.inspectionJson || {};
-      const disposition = data.disposition;
+      const disposition = (this.getNestedValue(data, 'final.disposition') as string) || (data['disposition'] as string);
 
       if (!disposition) {
         issues.push({
@@ -75,9 +75,21 @@ export class ReportValidationService {
       }
 
       if (report.templateKey === 'DRILL_PIPE_REPORT') {
-        const missingFields = DRILL_PIPE_FIELDS.filter(f => f.required && !data[f.key]);
-        if (missingFields.length > 0) {
-          const fieldLabels = missingFields.map(f => f.label).join(', ');
+        const missingFieldLabels: string[] = [];
+        
+        for (const section of DRILL_PIPE_V1_SCHEMA.sections) {
+           for (const field of section.fields) {
+              if (field.required) {
+                 const val = this.getNestedValue(data, field.key);
+                 if (val === undefined || val === null || val === '') {
+                    missingFieldLabels.push(field.label);
+                 }
+              }
+           }
+        }
+        
+        if (missingFieldLabels.length > 0) {
+          const fieldLabels = missingFieldLabels.join(', ');
           issues.push({
             code: 'MISSING_FIELDS',
             level: 'BLOCKER',
@@ -98,5 +110,16 @@ export class ReportValidationService {
       serialCount: serials.length,
       dispositionCounts
     };
+  }
+
+  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+    if (!obj) return undefined;
+    const parts = path.split('.');
+    let current: unknown = obj;
+    for (const part of parts) {
+      if (typeof current !== 'object' || current === null || (current as Record<string, unknown>)[part] === undefined) return undefined;
+      current = (current as Record<string, unknown>)[part];
+    }
+    return current;
   }
 }

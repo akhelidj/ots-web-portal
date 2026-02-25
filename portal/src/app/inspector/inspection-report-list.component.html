@@ -107,7 +107,7 @@
         @if (reports$ | async; as reports) {
           @for (r of getFilteredReports(reports); track r.id) {
             <tr class="hover:bg-primary/5 transition-colors group cursor-pointer" [routerLink]="[r.id]">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 font-mono tracking-widest">{{ r.id.substring(0,8) | uppercase }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 font-mono tracking-widest">{{ r.reportNumber || (r.id.substring(0,8) | uppercase) }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ r.poNumber }}</td>
               @if (!isCustomer) {
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate" [title]="getCustomerName(r.customerId)">{{ getCustomerName(r.customerId) }}</td>

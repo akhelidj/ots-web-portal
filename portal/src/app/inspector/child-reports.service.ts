@@ -60,7 +60,34 @@ export class ChildReportsService {
     });
   }
 
-  public async updateOffline(id: string, payload: { status?: 'DRAFT' | 'IN_INSPECTION' | 'PENDING_APPROVAL' | 'APPROVED' | 'CLOSED'; notes?: string }): Promise<void> {
+  public async transitionOffline(id: string, toStatus: LocalChildReport['status'], reason?: string): Promise<void> {
+    const cr = await this.crRepo.getById(id);
+    if (!cr) throw new Error(`Child report not found locally: ${id}`);
+
+    const updatedCr: LocalChildReport = {
+      ...cr,
+      status: toStatus,
+      syncState: 'PENDING',
+      updatedAt: new Date().toISOString()
+    };
+
+    await this.crRepo.upsert(updatedCr);
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'CHILD_REPORT',
+      entityId: id,
+      operation: 'TRANSITION',
+      payload: { toStatus, reason, version: cr.version },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null
+    });
+  }
+
+  public async updateOffline(id: string, payload: { notes?: string }): Promise<void> {
     const cr = await this.crRepo.getById(id);
     if (!cr) throw new Error(`Child report not found locally: ${id}`);
 

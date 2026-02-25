@@ -12,8 +12,9 @@
     "db:migrate": "npx dotenv -e api/.env -- npx prisma migrate dev --schema api/prisma/schema.prisma",
     "db:studio": "npx dotenv -e api/.env -- npx prisma studio --schema api/prisma/schema.prisma",
     "db:generate": "npx prisma generate --schema api/prisma/schema.prisma",
-    "db:provision:tenant": "npx -y tsx api/scripts/provision-tenant.ts",
-    "db:provision:roles": "npx -y tsx api/scripts/provision-roles.ts"
+    "db:seed": "npx -y tsx api/scripts/seed.ts",
+    "db:seed:build": "npx esbuild api/scripts/seed.ts --bundle --platform=node --packages=external --outfile=dist/seed.js",
+    "db:seed:run": "node dist/seed.js"
   },
   "private": true,
   "devDependencies": {

@@ -85,8 +85,16 @@ export class SyncDispatcherService {
 
           const pendingItems = await this.outboxRepo.getPendingItems();
           for (const pending of pendingItems) {
+            let changed = false;
             if (pending.entityType === 'CUSTOMER' && pending.entityId === item.entityId) {
               pending.entityId = createRes.id;
+              changed = true;
+            }
+            if (pending.entityType === 'INSPECTION_REPORT' && pending.payload['customerId'] === item.entityId) {
+              pending.payload['customerId'] = createRes.id;
+              changed = true;
+            }
+            if (changed) {
               await this.outboxRepo.upsert(pending);
             }
           }
@@ -292,6 +300,17 @@ export class SyncDispatcherService {
             this.http.patch<LocalChildReport>(`${environment.apiUrl}/child-reports/${item.entityId}`, item.payload)
           );
           await this.crRepo.upsert({ ...updateRes, syncState: 'SYNCED' });
+          return true;
+        }
+
+        case 'CHILD_REPORT:TRANSITION': {
+          const transitionRes = await firstValueFrom(
+            this.http.post<LocalChildReport>(`${environment.apiUrl}/child-reports/${item.entityId}/transition`, item.payload)
+          );
+          const rep = await this.crRepo.getById(item.entityId);
+          if (rep) {
+            await this.crRepo.upsert({ ...rep, ...transitionRes, syncState: 'SYNCED' });
+          }
           return true;
         }
 

@@ -69,7 +69,7 @@ export class ChildReportDetailComponent implements OnInit {
   }
 
   private async refreshData() {
-    const list = await (this.crService as any).crRepo.list(); 
+    const list = await (this.crService as unknown as { crRepo: { list: () => Promise<LocalChildReport[]> } }).crRepo.list(); 
     const cr = list.find((x: LocalChildReport) => x.id === this.reportId) || null;
     this.crSubj.next(cr);
 
@@ -82,7 +82,7 @@ export class ChildReportDetailComponent implements OnInit {
       const parent = allIR.find((x: LocalInspectionReport) => x.id === cr.inspectionReportId) || null;
       this.parentReportSubj.next(parent);
 
-      const allSn = await (this.irService as any).snRepo.listByReportId(cr.inspectionReportId);
+      const allSn = await (this.irService as unknown as { snRepo: { listByReportId: (id: string) => Promise<LocalSerialNumber[]> } }).snRepo.listByReportId(cr.inspectionReportId);
       const sn = allSn.find((x: LocalSerialNumber) => x.id === cr.serialNumberId) || null;
       this.serialSubj.next(sn);
 
@@ -112,10 +112,14 @@ export class ChildReportDetailComponent implements OnInit {
     if (!this.selectedTransition) return;
 
     try {
-      await this.crService.updateOffline(this.reportId, { 
-        status: this.selectedTransition.toStatus as ChildReportStatus,
-        notes: this.notes !== this.crSubj.value?.notes ? this.notes : undefined
-      });
+      if (this.notes !== this.crSubj.value?.notes) {
+        await this.crService.updateOffline(this.reportId, { notes: this.notes });
+      }
+      await this.crService.transitionOffline(
+        this.reportId, 
+        this.selectedTransition.toStatus as LocalChildReport['status'],
+        this.formReason
+      );
       this.selectedTransition = null;
       this.formReason = '';
       this.isEditingNotes = false;

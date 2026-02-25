@@ -1,7 +1,7 @@
 
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, InspectionReportStatus, ChildReportStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class RevisionService {
@@ -83,7 +83,7 @@ export class RevisionService {
         id: sn.id,
         serial: sn.serial,
         inspectionData: sn.inspectionData,
-        disposition: sn.disposition,
+        disposition: (sn.inspectionData as any)?.final?.disposition || (sn.inspectionData as any)?.disposition || null,
         updatedAt: sn.updatedAt,
       })),
       childReports: report.childReports, // Already minimal selected above
@@ -170,7 +170,7 @@ export class RevisionService {
             linkId: s.id, // Link table ID
             serialId: s.serialNumberId,
             serial: s.serialNumber.serial,
-            disposition: s.serialNumber.disposition,
+            disposition: (s.serialNumber.inspectionData as any)?.final?.disposition || (s.serialNumber.inspectionData as any)?.disposition || null,
             // Child reports might have their own specific data in future, 
             // currently they just link. Inclusion of serial value is key.
         })),
