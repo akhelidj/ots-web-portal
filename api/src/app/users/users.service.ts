@@ -27,8 +27,9 @@ export class UsersService {
   }
 
   async createUser(tenantId: string, data: { email: string; name?: string; role: UserRole; isActive?: boolean; customerId?: string }) {
+    const normalizedEmail = data.email.toLowerCase().trim();
     const existing = await this.prisma.user.findUnique({
-      where: { tenantId_email: { tenantId, email: data.email } },
+      where: { tenantId_email: { tenantId, email: normalizedEmail } },
     });
 
     if (existing) {
@@ -49,7 +50,7 @@ export class UsersService {
     const user = await this.prisma.user.create({
       data: {
         tenantId,
-        email: data.email,
+        email: normalizedEmail,
         name: data.name,
         role: data.role,
         isActive: data.isActive ?? true,

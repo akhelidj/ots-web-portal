@@ -19,8 +19,10 @@ export class AuthService {
       return null;
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     const user = await this.prisma.user.findFirst({
-      where: { email },
+      where: { email: normalizedEmail },
       include: {
         tenant: { select: { name: true } },
         customer: { select: { name: true } },

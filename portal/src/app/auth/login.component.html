@@ -91,7 +91,7 @@
             </div>
 
             <div>
-              <button type="submit" [disabled]="!loginForm.valid || isLoading"
+              <button type="submit" [disabled]="isLoading"
                       class="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#0B1A2A] hover:bg-[#152b42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0B1A2A] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                 <span>{{ isLoading ? 'Signing in…' : 'Sign in' }}</span>
               </button>
