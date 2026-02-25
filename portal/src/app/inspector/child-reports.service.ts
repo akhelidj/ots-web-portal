@@ -29,7 +29,7 @@ export class ChildReportsService {
       serialNumberId: payload.serialNumberId,
       type: payload.type,
       notes: payload.notes || null,
-      status: 'OPEN',
+      status: 'DRAFT',
       version: 1,
       syncState: 'PENDING',
       updatedAt: new Date().toISOString()
@@ -60,7 +60,7 @@ export class ChildReportsService {
     });
   }
 
-  public async updateOffline(id: string, payload: { status?: 'OPEN' | 'COMPLETED'; notes?: string }): Promise<void> {
+  public async updateOffline(id: string, payload: { status?: 'DRAFT' | 'IN_INSPECTION' | 'PENDING_APPROVAL' | 'APPROVED' | 'CLOSED'; notes?: string }): Promise<void> {
     const cr = await this.crRepo.getById(id);
     if (!cr) throw new Error(`Child report not found locally: ${id}`);
 

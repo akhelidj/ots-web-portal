@@ -206,9 +206,19 @@ export class InspectionReportsService {
     const validSerials = serials.map(s => s.trim()).filter(s => s.length > 0);
     if (validSerials.length === 0) return;
 
+    const existingSns = await this.snRepo.listByReportId(reportId);
+    const existingVals = new Set(existingSns.map(s => s.value.toLowerCase()));
+
+    const uniqueSerials = [...new Set(validSerials)];
+    const newSerials = uniqueSerials.filter(s => !existingVals.has(s.toLowerCase()));
+
+    if (newSerials.length === 0) {
+       throw new Error('All provided serial numbers already exist in this report.');
+    }
+
     const itemsPayload: { clientRef: string, serialNumber: string }[] = [];
 
-    for (const serial of validSerials) {
+    for (const serial of newSerials) {
       const tempId = 'local-sn-' + crypto.randomUUID();
       const sn: LocalSerialNumber = {
         id: tempId,
@@ -240,9 +250,15 @@ export class InspectionReportsService {
     const sn = await this.snRepo.getById(id);
     if (!sn) throw new Error('Serial number not found locally');
 
+    const trimmed = newSerial.trim();
+    const existingSns = await this.snRepo.listByReportId(sn.inspectionReportId);
+    if (existingSns.some(s => s.id !== id && s.value.toLowerCase() === trimmed.toLowerCase())) {
+       throw new Error(`Serial number '${trimmed}' already exists in this report.`);
+    }
+
     const updatedSn: LocalSerialNumber = {
       ...sn,
-      value: newSerial.trim(),
+      value: trimmed,
       version: sn.version + 1,
       syncState: 'PENDING',
     };

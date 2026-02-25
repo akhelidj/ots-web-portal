@@ -1,0 +1,144 @@
+import { Component, inject, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterModule, Router } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
+import { ChildReportsService } from './child-reports.service';
+import { InspectionReportsService } from './inspection-reports.service';
+import { SessionService } from '../core/auth/session.service';
+import { LocalChildReport, LocalInspectionReport, LocalSerialNumber } from '../core/offline/types';
+import { getChildReportUiState, ChildReportUiState, UserRole, ChildReportStatus } from '../core/ui-policy/child-report-ui-policy';
+
+@Component({
+  selector: 'app-child-report-detail',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule],
+  templateUrl: './child-report-detail.component.html'
+})
+export class ChildReportDetailComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private crService = inject(ChildReportsService);
+  private irService = inject(InspectionReportsService);
+  private session = inject(SessionService);
+
+  public reportId = '';
+  public crSubj = new BehaviorSubject<LocalChildReport | null>(null);
+  public cr$ = this.crSubj.asObservable();
+  
+  public parentReportSubj = new BehaviorSubject<LocalInspectionReport | null>(null);
+  public parentReport$ = this.parentReportSubj.asObservable();
+  
+  public serialSubj = new BehaviorSubject<LocalSerialNumber | null>(null);
+  public serial$ = this.serialSubj.asObservable();
+
+  public uiState: ChildReportUiState | null = null;
+  public userRole = '';
+  public allowedTransitions: { toStatus: string; requiresReason: boolean; enabled: boolean; label?: string; disabledReason?: string; }[] = []; 
+  public selectedTransition: { toStatus: string; requiresReason: boolean; label?: string } | null = null;
+  public formReason = '';
+  public formError = '';
+  
+  public notes = '';
+  public isEditingNotes = false;
+
+  public get isOnline(): boolean {
+    return navigator.onLine;
+  }
+
+  ngOnInit() {
+    this.session.profile$.subscribe(p => {
+      if (!p) return;
+      this.userRole = p.role || '';
+      if (this.reportId) {
+         this.refreshData();
+      }
+    });
+    
+    this.reportId = this.route.snapshot.paramMap.get('id') || '';
+    if (this.reportId) {
+      this.refreshData();
+      
+      this.crService.changes$.subscribe(() => {
+        this.refreshData();
+      });
+      this.irService.reports$.subscribe(() => {
+        this.refreshData();
+      });
+    }
+  }
+
+  private async refreshData() {
+    const list = await (this.crService as any).crRepo.list(); 
+    const cr = list.find((x: LocalChildReport) => x.id === this.reportId) || null;
+    this.crSubj.next(cr);
+
+    if (cr) {
+      if (!this.isEditingNotes) {
+         this.notes = cr.notes || '';
+      }
+
+      const allIR = await this.irService.irRepo.list();
+      const parent = allIR.find((x: LocalInspectionReport) => x.id === cr.inspectionReportId) || null;
+      this.parentReportSubj.next(parent);
+
+      const allSn = await (this.irService as any).snRepo.listByReportId(cr.inspectionReportId);
+      const sn = allSn.find((x: LocalSerialNumber) => x.id === cr.serialNumberId) || null;
+      this.serialSubj.next(sn);
+
+      this.uiState = getChildReportUiState({
+         role: this.userRole as UserRole,
+         reportStatus: cr.status as ChildReportStatus,
+         parentReportStatus: parent?.status || 'UNKNOWN',
+         isOffline: !this.isOnline,
+         syncState: cr.syncState as 'SYNCED' | 'PENDING' | 'CONFLICT'
+      });
+
+      this.allowedTransitions = this.uiState.transitionChoices;
+    } else {
+      this.uiState = null;
+      this.allowedTransitions = [];
+    }
+  }
+
+  public openReasonSelect(transition: { toStatus: string; requiresReason: boolean }): void {
+    this.selectedTransition = transition;
+    this.formReason = '';
+    this.formError = '';
+  }
+
+  public async onTransition() {
+    this.formError = '';
+    if (!this.selectedTransition) return;
+
+    try {
+      await this.crService.updateOffline(this.reportId, { 
+        status: this.selectedTransition.toStatus as ChildReportStatus,
+        notes: this.notes !== this.crSubj.value?.notes ? this.notes : undefined
+      });
+      this.selectedTransition = null;
+      this.formReason = '';
+      this.isEditingNotes = false;
+      this.refreshData();
+    } catch (error) {
+      const e = error as Error;
+      this.formError = e.message || 'Failed to transition report.';
+    }
+  }
+
+  public async saveNotes() {
+    this.formError = '';
+    try {
+      await this.crService.updateOffline(this.reportId, { notes: this.notes });
+      this.isEditingNotes = false;
+      this.refreshData();
+    } catch (error) {
+       const e = error as Error;
+       this.formError = e.message || 'Failed to save notes.';
+    }
+  }
+
+  public goBack() {
+    this.router.navigate(['/', this.userRole.toLowerCase(), 'reports', this.parentReportSubj.value?.id]);
+  }
+}

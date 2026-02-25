@@ -57,6 +57,9 @@ export class InspectionReportDetailComponent implements OnInit {
   public selectedTransition: { toStatus: string; requiresReason: boolean; label?: string } | null = null;
 
   public validationResult: ValidationResult | null = null;
+  public reworkSerials: { sn: LocalSerialNumber, childLinked: LocalChildReport | null }[] = [];
+  public hasMissingChildrenForRework = false;
+  public hasUnresolvedChildren = false;
 
   // KPIs
   public kpiTotal = 0;
@@ -205,19 +208,32 @@ export class InspectionReportDetailComponent implements OnInit {
       }
 
       // KPI Calcs
-      let total = snList.length;
+      const total = snList.length;
       let pass = 0;
       let rework = 0;
       let scrap = 0;
       let hold = 0;
 
+      const reworkList: { sn: LocalSerialNumber, childLinked: LocalChildReport | null }[] = [];
+
       for (const sn of snList) {
          const disp = sn.inspectionJson?.disposition;
          if (disp === 'PASS') pass++;
-         else if (disp === 'REWORK') rework++;
+         else if (disp === 'REWORK') {
+             rework++;
+             const child = childReports.find(cr => cr.serialNumberId === sn.id) || null;
+             reworkList.push({sn, childLinked: child});
+         }
          else if (disp === 'SCRAP') scrap++;
          else if (disp === 'HOLD') hold++;
       }
+
+      this.reworkSerials = reworkList;
+      this.hasMissingChildrenForRework = reworkList.some(r => !r.childLinked);
+      this.hasUnresolvedChildren = reworkList.some(r => {
+          if (!r.childLinked) return true;
+          return !['APPROVED', 'CLOSED', 'COMPLETED'].includes(r.childLinked.status);
+      });
 
       this.kpiTotal = total;
       this.kpiPassed = pass;
@@ -236,16 +252,35 @@ export class InspectionReportDetailComponent implements OnInit {
       this.kpiScrap = 0;
       this.kpiHold = 0;
       this.kpiPassRate = 0;
+      this.reworkSerials = [];
+      this.hasMissingChildrenForRework = false;
+      this.hasUnresolvedChildren = false;
     }
   }
 
   public async onAddSerials() {
     this.formError = '';
-    const lines = this.formBulkSerials.split('\n').filter(l => l.trim().length > 0);
-    if (lines.length === 0) return;
+    const rawLines = this.formBulkSerials.split('\n').filter(l => l.trim().length > 0);
+    if (rawLines.length === 0) return;
+
+    const lines = rawLines.map(l => l.trim());
+    const uniqueLines = [...new Set(lines)];
+    if (uniqueLines.length !== lines.length) {
+      this.formError = 'Duplicate serial numbers found in the input list.';
+      return;
+    }
+
+    const existingSns = this.serialsSubj.value;
+    const existingVals = new Set(existingSns.map(s => s.value.toLowerCase()));
+    const duplicates = uniqueLines.filter(l => existingVals.has(l.toLowerCase()));
+    
+    if (duplicates.length > 0) {
+      this.formError = `These serial numbers already exist in this report: ${duplicates.join(', ')}`;
+      return;
+    }
 
     try {
-      await this.irService.addSerialNumberOffline(this.reportId, lines);
+      await this.irService.addSerialNumberOffline(this.reportId, uniqueLines);
       this.formBulkSerials = '';
       this.refreshData();
     } catch (error) {
@@ -286,13 +321,21 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public async saveEditSn(sn: LocalSerialNumber): Promise<void> {
-    if (!this.editingSnValue.trim() || this.editingSnValue === sn.value) {
+    const newValue = this.editingSnValue.trim();
+    if (!newValue || newValue === sn.value) {
       this.cancelEditSn();
       return;
     }
 
+    const existingSns = this.serialsSubj.value;
+    const duplicateExists = existingSns.some(s => s.id !== sn.id && s.value.toLowerCase() === newValue.toLowerCase());
+    if (duplicateExists) {
+       this.formError = `Serial number '${newValue}' already exists in this report.`;
+       return;
+    }
+
     try {
-      await this.irService.renameSerialNumberOffline(sn.id, this.editingSnValue);
+      await this.irService.renameSerialNumberOffline(sn.id, newValue);
       this.cancelEditSn();
       this.refreshData();
     } catch (error) {

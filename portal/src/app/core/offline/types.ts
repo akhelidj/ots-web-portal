@@ -103,7 +103,7 @@ export interface LocalChildReport {
   inspectionReportId: string;
   serialNumberId: string;
   type: 'REWORK' | 'SCRAP' | 'HOLD';
-  status: 'OPEN' | 'COMPLETED';
+  status: 'DRAFT' | 'IN_INSPECTION' | 'PENDING_APPROVAL' | 'APPROVED' | 'CLOSED';
   notes?: string | null;
   version: number;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';

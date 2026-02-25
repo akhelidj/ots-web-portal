@@ -1,0 +1,152 @@
+@if (cr$ | async; as cr) {
+<div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div class="flex items-center gap-4">
+      <button (click)="goBack()" class="text-gray-400 hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-full hover:bg-gray-100">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+      </button>
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight text-primary flex items-center gap-3">
+          Branch Report: <span class="font-mono text-gray-500 text-xl pt-1">{{ cr.id.substring(0,8) | uppercase }}</span>
+        </h1>
+        <p class="text-sm font-medium text-gray-500 mt-1 flex items-center gap-2">
+          <span>Child Report of</span>
+          @if (parentReport$ | async; as parent) {
+             <a [routerLink]="['/', userRole | lowercase, 'reports', parent.id]" class="font-mono bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-primary hover:underline hover:text-primary-light transition-colors">{{ parent.poNumber }}</a>
+          }
+        </p>
+      </div>
+    </div>
+    @if (userRole !== 'CUSTOMER') {
+      <div class="flex items-center gap-2">
+         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest bg-gray-100 text-gray-700 border border-gray-200">
+           {{ cr.type }}
+         </span>
+         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest" [ngClass]="{
+           'bg-error-light text-error-dark': cr.syncState === 'CONFLICT' || cr.syncState === 'ERROR',
+           'bg-warning-light text-warning-dark': cr.syncState === 'PENDING',
+           'bg-success-light text-success-dark': cr.syncState === 'SYNCED'
+         }">
+           {{ cr.syncState }}
+         </span>
+      </div>
+    }
+  </div>
+
+  <!-- Banners -->
+  @if (uiState?.banners?.length) {
+    <div class="mb-8 space-y-3">
+      @for (banner of uiState!.banners; track banner.message) {
+        <div class="p-4 rounded-lg flex items-start shadow-sm border" [ngClass]="{
+          'bg-blue-50 text-blue-900 border-blue-200': banner.type === 'info',
+          'bg-warning-light text-warning-dark border-warning': banner.type === 'warning',
+          'bg-error-light text-error-dark border-error': banner.type === 'error',
+          'bg-success-light text-success-dark border-success': banner.type === 'success'
+        }">
+          <p class="text-sm font-medium">{{ banner.message }}</p>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-full">
+      <div class="border-b border-gray-100 pb-3 mb-5 flex justify-between items-center">
+         <h2 class="text-lg font-semibold text-gray-900">Details & Disposition</h2>
+         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">{{ cr.status }}</span>
+      </div>
+      @if (serial$ | async; as sn) {
+         <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
+           <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Target Equipment</span>
+           <span class="font-mono font-bold text-gray-900 text-base">{{ sn.value }}</span>
+           <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+             <div><span class="text-gray-500 font-medium text-xs">Original Disposition:</span> <span class="font-bold text-warning-dark">{{ sn.inspectionJson?.disposition || 'Pending' }}</span></div>
+           </div>
+         </div>
+      }
+
+      <div class="flex-grow flex flex-col">
+         <div class="flex justify-between items-center mb-2">
+           <label for="operatorNotes" class="block text-sm font-semibold text-gray-900">Operator Notes / Findings</label>
+           @if (!isEditingNotes && (uiState?.fieldModes?.['inspectionData'] === 'editable')) {
+              <button (click)="isEditingNotes = true" class="text-xs text-primary hover:underline font-medium">Edit Notes</button>
+           }
+         </div>
+         @if (isEditingNotes) {
+           <textarea id="operatorNotes" [(ngModel)]="notes" rows="4" class="w-full border border-gray-300 p-3 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm transition-colors mb-3"></textarea>
+           <div class="flex gap-2 justify-end">
+             <button (click)="isEditingNotes = false; notes = cr.notes || ''" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors">Cancel</button>
+             <button (click)="saveNotes()" class="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded shadow-sm hover:bg-primary/95 transition-colors">Save Notes</button>
+           </div>
+         } @else {
+           <div class="p-4 border border-gray-200 bg-white rounded-lg min-h-[100px] text-sm text-gray-700 whitespace-pre-wrap flex-grow shadow-inner">
+             @if (cr.notes) {
+               {{ cr.notes }}
+             } @else {
+               <span class="text-gray-400 italic">No notes provided.</span>
+             }
+           </div>
+         }
+      </div>
+    </div>
+
+    <!-- Transition Section -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-full">
+      <div class="border-b border-gray-100 pb-3 mb-5">
+        <h2 class="text-lg font-semibold text-gray-900">Resolve Branch Workflow</h2>
+      </div>
+
+      @if (formError && !formError.includes('[object Object]')) {
+        <div class="mb-5 bg-error-light border-l-4 border-error text-error-dark p-3 rounded-r-md text-sm whitespace-pre-line shadow-sm">
+           {{ formError }}
+        </div>
+      }
+
+      <div class="mt-auto">
+      @if (userRole !== 'CUSTOMER') {
+        <div class="flex flex-wrap gap-3">
+           @for (transition of allowedTransitions; track transition.toStatus) {
+              <button (click)="openReasonSelect(transition)" class="inline-flex items-center bg-primary hover:bg-primary/95 text-white px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
+                      [disabled]="!transition.enabled"
+                      [title]="transition.disabledReason || ''">
+                {{ transition.label || transition.toStatus }}
+                <svg class="ml-2 -mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
+           }
+           @if (allowedTransitions.length === 0) {
+              <p class="text-sm text-gray-500 italic mt-2">No transitions available based on current status and role.</p>
+           }
+        </div>
+
+        @if (selectedTransition) {
+           <div class="mt-5 p-5 border border-gray-200 rounded-xl bg-gray-50 shadow-inner flex flex-col gap-4">
+              <p class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                Confirm transition to <span class="text-accent">{{ selectedTransition.toStatus }}</span>
+              </p>
+              @if (selectedTransition.requiresReason) {
+                <div>
+                   <input type="text" [(ngModel)]="formReason" placeholder="Reason for transition (Required)" class="w-full border border-gray-300 shadow-sm px-3 py-2 rounded-md focus:ring-accent focus:border-accent text-sm transition-colors">
+                </div>
+              }
+              <div class="flex gap-3">
+                 <button (click)="onTransition()" class="bg-accent hover:bg-accent-hover text-white px-5 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50" 
+                    [disabled]="selectedTransition.requiresReason && !formReason.trim()">
+                    Confirm & Proceed
+                 </button>
+                 <button (click)="selectedTransition = null; formReason = ''" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-5 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    Cancel
+                 </button>
+              </div>
+           </div>
+        }
+      }
+      </div>
+    </div>
+  </div>
+</div>
+}

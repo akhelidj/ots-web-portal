@@ -20,17 +20,17 @@
   @if (isCustomer) {
     <!-- Customer KPI Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div (click)="statusFilter = ''" class="bg-white p-6 rounded-xl shadow-sm border border-primary/20 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-center items-center text-center relative overflow-hidden" [ngClass]="{'ring-2 ring-primary ring-offset-2': statusFilter === ''}">
+      <div tabindex="0" (click)="statusFilter = ''" (keydown.enter)="statusFilter = ''" class="bg-white p-6 rounded-xl shadow-sm border border-primary/20 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-center items-center text-center relative overflow-hidden" [ngClass]="{'ring-2 ring-primary ring-offset-2': statusFilter === ''}">
         <div class="absolute inset-0 bg-primary/5 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
         <span class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 z-10">Total Reports</span>
         <span class="text-4xl font-black text-gray-900 z-10 tracking-tight">{{ kpiTotalReports }}</span>
       </div>
-      <div (click)="statusFilter = 'OPEN'" class="bg-white p-6 rounded-xl shadow-sm border border-warning/30 hover:border-warning/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-center items-center text-center relative overflow-hidden" [ngClass]="{'ring-2 ring-warning ring-offset-2': statusFilter === 'OPEN'}">
+      <div tabindex="0" (click)="statusFilter = 'OPEN'" (keydown.enter)="statusFilter = 'OPEN'" class="bg-white p-6 rounded-xl shadow-sm border border-warning/30 hover:border-warning/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-center items-center text-center relative overflow-hidden" [ngClass]="{'ring-2 ring-warning ring-offset-2': statusFilter === 'OPEN'}">
         <div class="absolute inset-0 bg-warning/5 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
         <span class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 z-10">Open Reports</span>
         <span class="text-4xl font-black text-warning-dark z-10 tracking-tight">{{ kpiOpenReports }}</span>
       </div>
-      <div (click)="statusFilter = 'CLOSED'" class="bg-white p-6 rounded-xl shadow-sm border border-success/30 hover:border-success/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-center items-center text-center relative overflow-hidden" [ngClass]="{'ring-2 ring-success ring-offset-2': statusFilter === 'CLOSED'}">
+      <div tabindex="0" (click)="statusFilter = 'CLOSED'" (keydown.enter)="statusFilter = 'CLOSED'" class="bg-white p-6 rounded-xl shadow-sm border border-success/30 hover:border-success/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-center items-center text-center relative overflow-hidden" [ngClass]="{'ring-2 ring-success ring-offset-2': statusFilter === 'CLOSED'}">
         <div class="absolute inset-0 bg-success/5 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
         <span class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 z-10">Closed Reports</span>
         <span class="text-4xl font-black text-success-dark z-10 tracking-tight">{{ kpiClosedReports }}</span>
@@ -88,16 +88,16 @@
     <table class="min-w-full text-left border-collapse">
       <thead class="bg-gray-50 border-b border-gray-200">
         <tr>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Report #</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">PO Number</th>
           @if (!isCustomer) {
             <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
           }
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rev.</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Updated</th>
-          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Items</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Joints</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Pass Rate</th>
           @if (!isCustomer) {
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Readiness</th>
             <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sync State</th>
           }
           <th class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
@@ -107,31 +107,23 @@
         @if (reports$ | async; as reports) {
           @for (r of getFilteredReports(reports); track r.id) {
             <tr class="hover:bg-primary/5 transition-colors group cursor-pointer" [routerLink]="[r.id]">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 font-mono tracking-widest">{{ r.id.substring(0,8) | uppercase }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ r.poNumber }}</td>
               @if (!isCustomer) {
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate" [title]="r.customerId">{{ r.customerId }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate" [title]="getCustomerName(r.customerId)">{{ getCustomerName(r.customerId) }}</td>
               }
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                   {{ r.status }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">Rev {{ r.version || 1 }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ r.updatedAt ? (r.updatedAt | date:'medium') : 'N/A' }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ reportStatsCache[r.id]?.serialCount || 0 }}</td>
+              <td class="px-6 py-4 whitespace-nowrap font-mono text-sm text-gray-900">
+                {{ (getPassRate(r.id) || 0) | percent:'1.0-0' }}
+              </td>
               
               @if (!isCustomer) {
-                <td class="px-6 py-4 whitespace-nowrap">
-                  @if (validationCache[r.id]) {
-                      @if (validationCache[r.id].isReady) {
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-light text-success-dark">Ready</span>
-                      } @else {
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-error-light text-error-dark">Not Ready</span>
-                      }
-                  } @else {
-                      <span class="text-xs text-gray-400 italic">Evaluating...</span>
-                  }
-                </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" [ngClass]="{
                     'bg-error-light text-error-dark': r.syncState === 'CONFLICT' || r.syncState === 'ERROR',

@@ -7,6 +7,7 @@ import { SupervisorWorkspaceComponent } from './supervisor/supervisor-workspace.
 import { InspectionReportListComponent } from './inspector/inspection-report-list.component';
 import { CreateInspectionReportComponent } from './inspector/create-inspection-report.component';
 import { InspectionReportDetailComponent } from './inspector/inspection-report-detail.component';
+import { ChildReportDetailComponent } from './inspector/child-report-detail.component';
 
 import { CustomerWorkspaceComponent } from './customer/customer-workspace.component';
 import { roleGuard } from './core/auth/role.guard';
@@ -48,6 +49,7 @@ export const appRoutes: Route[] = [
           { path: '', redirectTo: 'users', pathMatch: 'full' },
           { path: 'reports', component: InspectionReportListComponent },
           { path: 'reports/:id', component: InspectionReportDetailComponent },
+          { path: 'reports/:id/child', component: ChildReportDetailComponent },
           { path: 'users', component: AdminUsersComponent },
           { path: 'customers', component: AdminCustomersComponent },
           { path: 'templates', component: AdminTemplatesComponent },
@@ -60,7 +62,8 @@ export const appRoutes: Route[] = [
         children: [
           { path: '', component: ReceiverWorkspaceComponent, pathMatch: 'full' },
           { path: 'reports/create', component: CreateInspectionReportComponent },
-          { path: ':id', component: InspectionReportDetailComponent }
+          { path: ':id', component: InspectionReportDetailComponent },
+          { path: 'reports/:id/child', component: ChildReportDetailComponent }
         ]
       },
       { 
@@ -71,6 +74,7 @@ export const appRoutes: Route[] = [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
           { path: 'reports', component: InspectionReportListComponent },
           { path: 'reports/:id', component: InspectionReportDetailComponent },
+          { path: 'reports/:id/child', component: ChildReportDetailComponent },
         ]
       },
       { 
@@ -79,7 +83,8 @@ export const appRoutes: Route[] = [
         data: { roles: ['SUPERVISOR'] },
         children: [
           { path: '', component: SupervisorWorkspaceComponent, pathMatch: 'full' },
-          { path: ':id', component: InspectionReportDetailComponent }
+          { path: ':id', component: InspectionReportDetailComponent },
+          { path: 'reports/:id/child', component: ChildReportDetailComponent }
         ]
       },
       { 
@@ -88,7 +93,8 @@ export const appRoutes: Route[] = [
         data: { roles: ['CUSTOMER'] },
         children: [
           { path: '', component: CustomerWorkspaceComponent, pathMatch: 'full' },
-          { path: ':id', component: InspectionReportDetailComponent }
+          { path: ':id', component: InspectionReportDetailComponent },
+          { path: 'reports/:id/child', component: ChildReportDetailComponent }
         ]
       },
     ],

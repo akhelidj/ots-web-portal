@@ -45,7 +45,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   public kpiOpenReports = 0;
   public kpiClosedReports = 0;
   
-  public reportStatsCache: Record<string, { serialCount: number, serialValues: string[] }> = {};
+  public reportStatsCache: Record<string, { serialCount: number, passCount: number, serialValues: string[] }> = {};
   public validationCache: Record<string, ValidationResult> = {};
   private subs = new Subscription();
 
@@ -91,12 +91,13 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   }
 
   private async computeStats(reports: LocalInspectionReport[]) {
-    const newStats: Record<string, { serialCount: number, serialValues: string[] }> = {};
+    const newStats: Record<string, { serialCount: number, passCount: number, serialValues: string[] }> = {};
     for (const r of reports) {
        // Only fetch serials for reports in the current scope
        const serials = await this.snRepo.listByReportId(r.id);
        newStats[r.id] = {
          serialCount: serials.length,
+         passCount: serials.filter(s => s.inspectionJson?.['disposition'] === 'PASS').length,
          serialValues: serials.map(s => s.value.toLowerCase())
        };
     }
@@ -135,6 +136,18 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
        );
     }
     this.validationCache = newCache;
+  }
+
+  getCustomerName(id: string | null): string {
+    if (!id) return 'Unknown';
+    const customer = this.customersSubj.value.find(c => c.id === id);
+    return customer ? customer.name : id;
+  }
+
+  getPassRate(reportId: string): number | null {
+    const stats = this.reportStatsCache[reportId];
+    if (!stats || stats.serialCount === 0) return null;
+    return stats.passCount / stats.serialCount;
   }
 
   getFilteredReports(reports: LocalInspectionReport[]) {

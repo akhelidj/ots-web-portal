@@ -117,7 +117,7 @@
                         class="text-warning-dark hover:text-warning font-semibold transition-colors focus:outline-none">
                   Deprecate
                 </button>
-              } @else if (tmpl.status === 'ACTIVE' && !(isOnline$ | async)) {
+              } @else if (tmpl.status === 'ACTIVE' && (isOnline$ | async) === false) {
                 <span class="text-xs text-gray-400 italic">Offline</span>
               } @else {
                 <span class="text-xs text-gray-400 italic">No Actions</span>
