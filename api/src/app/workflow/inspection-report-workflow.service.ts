@@ -336,8 +336,7 @@ export class InspectionReportWorkflowService {
     // Moving revisionNumber and shouldSnapshot logic to inside transaction or preparing flags here.
     // actually we can keep flags here but calculation inside.
     // Moving revisionNumber and shouldSnapshot logic to inside transaction or preparing flags here.
-    // actually we can keep flags here but calculation inside.
-    const isFirstApproval = toStatus === InspectionReportStatus.APPROVED && report.revisionNumber === null;
+    const isFirstApproval = toStatus === InspectionReportStatus.APPROVED && report.revisionNumber === 0;
 
     const isReopen = 
         (currentStatus === InspectionReportStatus.APPROVED && toStatus === InspectionReportStatus.IN_INSPECTION) ||

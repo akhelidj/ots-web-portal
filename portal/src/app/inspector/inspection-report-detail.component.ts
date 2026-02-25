@@ -112,6 +112,10 @@ export class InspectionReportDetailComponent implements OnInit {
     return navigator.onLine;
   }
 
+  public get isInspectorCapable(): boolean {
+    return ['INSPECTOR', 'SUPERVISOR', 'ADMIN'].includes(this.userRole);
+  }
+
   public getDisposition(sn: LocalSerialNumber): string | null {
     if (!sn.inspectionJson) return null;
     const finalSection = sn.inspectionJson['final'] as Record<string, unknown> | undefined;
@@ -634,9 +638,13 @@ export class InspectionReportDetailComponent implements OnInit {
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Defer click so Angular's change detection can process isExporting=false
+      // before the browser download dialog takes focus
+      setTimeout(() => {
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
     } catch (err: unknown) {
       const error = err as HttpErrorResponse;
       if (error.status === 0) {

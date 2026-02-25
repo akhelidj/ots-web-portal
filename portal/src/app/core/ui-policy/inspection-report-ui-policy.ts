@@ -68,6 +68,9 @@ export function getInspectionReportUiState(ctx: UiPolicyContext): InspectionRepo
    if (ctx.reportStatus === 'APPROVED') {
       state.banners.push({ type: 'info', message: 'Locked — Approved (exportable).' + (ctx.role === 'ADMIN' ? ' Admin edits create a Revision.' : '') });
    }
+   if (ctx.reportStatus === 'CLOSED') {
+      state.banners.push({ type: 'info', message: 'Locked — Closed (exportable).' });
+   }
 
    // Default actions
    state.actions['IR_CREATE'] = { visible: false, enabled: false };
@@ -79,6 +82,11 @@ export function getInspectionReportUiState(ctx: UiPolicyContext): InspectionRepo
    state.actions['CR_CREATE_FROM_REWORK'] = { visible: false, enabled: false };
    state.actions['CUSTOMER_EXPORT'] = { visible: false, enabled: false };
    state.actions['ADMIN_EXPORT'] = { visible: false, enabled: false };
+
+   // Enable Job Data edits for Inspector/Supervisor unconditionally for the UI button
+   if (['INSPECTOR', 'SUPERVISOR', 'ADMIN'].includes(ctx.role)) {
+       state.actions['IR_EDIT_SERIAL'] = { visible: true, enabled: true };
+   }
    
    // Apply Role + Status constraints
    if (ctx.syncState !== 'CONFLICT') {
@@ -124,9 +132,9 @@ export function getInspectionReportUiState(ctx: UiPolicyContext): InspectionRepo
 
    // Target Export visibility via Roles
    if (['CUSTOMER', 'ADMIN', 'SUPERVISOR'].includes(ctx.role)) {
-      const isApproved = ctx.reportStatus === 'APPROVED';
-      const isExportEnabled = isApproved && !ctx.isOffline;
-      const disabledReason = !isApproved ? 'Only available when Approved.' : (ctx.isOffline ? 'Export requires internet connection.' : undefined);
+      const isApprovedOrClosed = ctx.reportStatus === 'APPROVED' || ctx.reportStatus === 'CLOSED';
+      const isExportEnabled = isApprovedOrClosed && !ctx.isOffline;
+      const disabledReason = !isApprovedOrClosed ? 'Only available when Approved or Closed.' : (ctx.isOffline ? 'Export requires internet connection.' : undefined);
       
       const key = ctx.role === 'CUSTOMER' ? 'CUSTOMER_EXPORT' : 'ADMIN_EXPORT';
       state.actions[key] = {

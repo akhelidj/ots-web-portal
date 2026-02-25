@@ -1,81 +1,175 @@
-<div class="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-  <div class="max-w-md w-full bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-    <div class="bg-primary px-8 py-6 text-center">
-      <h2 class="text-3xl font-extrabold text-white tracking-tight">Sign In</h2>
-      <p class="mt-2 text-sm text-gray-300">Welcome to the OTS Portal</p>
+<div class="min-h-screen w-screen flex flex-col lg:flex-row overflow-hidden antialiased bg-white">
+
+  <!-- Left column: form -->
+  <div class="flex-1 flex flex-col justify-between py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 bg-white w-full lg:w-1/2 z-10 relative">
+
+    <!-- Logo -->
+    <div class="flex items-center justify-between">
+      <a routerLink="/" class="flex items-center gap-2 group">
+        <div class="bg-[#0B1A2A] text-white font-semibold text-lg tracking-tighter px-2 py-1 rounded group-hover:bg-[#FF9800] transition-colors">
+          OTS
+        </div>
+        <span class="text-slate-900 font-semibold tracking-tight text-lg group-hover:opacity-80 transition-opacity">Portal</span>
+      </a>
     </div>
 
-    <div class="px-8 py-8">
+    <!-- Form body -->
+    <div class="mx-auto w-full max-w-sm lg:w-96">
+
+      <div>
+        <h2 class="mt-6 text-2xl font-semibold tracking-tight text-slate-900">Welcome back</h2>
+        <p class="mt-2 text-sm text-slate-500">Please sign in to access your account.</p>
+      </div>
+
       @if ((connectivity.isOnline$ | async) === false) {
-        <div role="alert" class="mb-6 bg-error-light border-l-4 border-error p-4 rounded-r-md">
+        <div role="alert" class="mt-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-md">
           <div class="flex">
             <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-error" viewBox="0 0 20 20" fill="currentColor">
+              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
               </svg>
             </div>
             <div class="ml-3">
-              <h3 class="text-sm font-medium text-error-dark">Offline Mode</h3>
-              <p class="text-sm text-error mt-1">A network connection is required to sign in.</p>
+              <h3 class="text-sm font-medium text-red-800">Offline Mode</h3>
+              <p class="text-sm text-red-700 mt-1">A network connection is required to sign in.</p>
             </div>
           </div>
         </div>
       }
 
-      <form (ngSubmit)="onSubmit()" #loginForm="ngForm" aria-labelledby="login-legend" class="space-y-6">
-        <fieldset [disabled]="isLoading || (connectivity.isOnline$ | async) === false" class="space-y-6 disabled:opacity-75">
-          <legend id="login-legend" class="sr-only">Access your account</legend>
-          
-          <div>
-            <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-            <div class="mt-1">
-              <input type="email" id="email" name="email" [(ngModel)]="email" required email #emailField="ngModel" autocomplete="email" 
-                     class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
-                     [ngClass]="{'border-error focus:ring-error focus:border-error': emailField.invalid && (emailField.dirty || emailField.touched)}" />
-            </div>
-            @if (emailField.invalid && (emailField.dirty || emailField.touched)) {
-              <p class="mt-1 text-xs text-error">Please enter a valid email address.</p>
-            }
-          </div>
+      <div class="mt-8">
+        <form (ngSubmit)="onSubmit()" #loginForm="ngForm" aria-labelledby="login-legend" class="space-y-6">
+          <fieldset [disabled]="isLoading || (connectivity.isOnline$ | async) === false" class="space-y-6 disabled:opacity-75">
+            <legend id="login-legend" class="sr-only">Access your account</legend>
 
-          <div>
-            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-            <div class="mt-1 relative rounded-md shadow-sm">
-              <input [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password" required #passwordField="ngModel" autocomplete="current-password" 
-                     class="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
-                     [ngClass]="{'border-error focus:ring-error focus:border-error': passwordField.invalid && (passwordField.dirty || passwordField.touched)}" />
-              <button type="button" (click)="togglePassword()" tabindex="-1" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
-                @if (showPassword) {
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0a10.01 10.01 0 015.71-2.29c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0l-3.29-3.29" />
-                  </svg>
-                } @else {
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                }
+            <div>
+              <label for="email" class="block text-sm font-medium text-slate-700">Email address</label>
+              <div class="mt-1">
+                <input
+                  type="email" id="email" name="email"
+                  [(ngModel)]="email" required email
+                  #emailField="ngModel"
+                  autocomplete="email"
+                  class="text-slate-900 appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-[#0B1A2A] focus:border-[#0B1A2A] sm:text-sm"
+                  [ngClass]="{'border-red-400 focus:ring-red-400 focus:border-red-400': emailField.invalid && (emailField.dirty || emailField.touched)}"
+                />
+              </div>
+              @if (emailField.invalid && (emailField.dirty || emailField.touched)) {
+                <p class="mt-1 text-xs text-red-600">Please enter a valid email address.</p>
+              }
+            </div>
+
+            <div>
+              <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
+              <div class="mt-1 relative">
+                <input
+                  [type]="showPassword ? 'text' : 'password'"
+                  id="password" name="password"
+                  [(ngModel)]="password" required
+                  #passwordField="ngModel"
+                  autocomplete="current-password"
+                  class="text-slate-900 appearance-none block w-full px-3 py-2 pr-10 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-[#0B1A2A] focus:border-[#0B1A2A] sm:text-sm"
+                  [ngClass]="{'border-red-400 focus:ring-red-400 focus:border-red-400': passwordField.invalid && (passwordField.dirty || passwordField.touched)}"
+                />
+                <button type="button" (click)="togglePassword()" tabindex="-1"
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors">
+                  @if (showPassword) {
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0a10.01 10.01 0 015.71-2.29c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0l-3.29-3.29" />
+                    </svg>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  }
+                </button>
+              </div>
+              @if (passwordField.invalid && (passwordField.dirty || passwordField.touched)) {
+                <p class="mt-1 text-xs text-red-600">Password is required.</p>
+              }
+            </div>
+
+            <div>
+              <button type="submit" [disabled]="!loginForm.valid || isLoading"
+                      class="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#0B1A2A] hover:bg-[#152b42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0B1A2A] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                <span>{{ isLoading ? 'Signing in…' : 'Sign in' }}</span>
               </button>
             </div>
-            @if (passwordField.invalid && (passwordField.dirty || passwordField.touched)) {
-              <p class="mt-1 text-xs text-error">Password is required.</p>
-            }
-          </div>
+          </fieldset>
 
+          @if (formError) {
+            <div role="alert" class="mt-4 text-sm text-center text-red-700 bg-red-50 py-2 px-3 rounded-md">
+              {{ formError }}
+            </div>
+          }
+        </form>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="flex items-center justify-between text-xs text-slate-400">
+      <p>© 2025 OTS. All rights reserved.</p>
+      <div class="flex gap-4">
+        <a href="#" class="hover:text-slate-600 transition-colors">Privacy</a>
+        <a href="#" class="hover:text-slate-600 transition-colors">Terms</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right column: dark brand panel -->
+  <div class="hidden lg:block relative w-0 flex-1 bg-[#0B1A2A]">
+    <!-- Background image + overlay -->
+    <div class="absolute inset-0 z-0">
+      <img
+        src="https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?q=80&w=2070&auto=format&fit=crop"
+        alt="Industrial Pipe Inspection"
+        class="h-full w-full object-cover opacity-40 mix-blend-overlay"
+      />
+      <div class="absolute inset-0 bg-gradient-to-t from-[#0B1A2A] via-[#0B1A2A]/60 to-[#0B1A2A]/30"></div>
+    </div>
+
+    <!-- Content -->
+    <div class="relative z-10 flex flex-col justify-end h-full p-20">
+      <div class="mb-12">
+        <blockquote class="mb-6">
+          <p class="text-2xl font-light text-white leading-relaxed tracking-tight">
+            The OTS portal streamlines your inventory tracking and inspection reports significantly.
+            It's the standard for operational transparency in the region.
+          </p>
+        </blockquote>
+        <div class="flex items-center gap-4">
           <div>
-            <button type="submit" [disabled]="!loginForm.valid || isLoading"
-                    class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {{ isLoading ? 'Signing in...' : 'Sign In' }}
-            </button>
+            <div class="text-sm font-semibold text-white">Our goal is to help you</div>
+            <div class="text-xs text-slate-400 font-medium">OTS Team</div>
           </div>
-        </fieldset>
+        </div>
+      </div>
 
-        @if (formError) {
-          <div role="alert" class="mt-4 text-sm text-center text-error bg-error-light py-2 px-3 rounded-md">
-            {{ formError }}
-          </div>
-        }
-      </form>
+      <div class="grid grid-cols-2 gap-8 border-t border-white/10 pt-8">
+        <div>
+          <h3 class="text-white text-sm font-semibold mb-1 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#FF9800]">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+            Secure Access
+          </h3>
+          <p class="text-xs text-slate-400 leading-relaxed">Enterprise-grade encryption for all inspection data.</p>
+        </div>
+        <div>
+          <h3 class="text-white text-sm font-semibold mb-1 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#FF9800]">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            View your data
+          </h3>
+          <p class="text-xs text-slate-400 leading-relaxed">Instant availability of bucking graphs.</p>
+        </div>
+      </div>
     </div>
   </div>
+
 </div>

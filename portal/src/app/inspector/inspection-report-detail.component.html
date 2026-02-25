@@ -69,10 +69,10 @@
            <h2 class="text-lg font-semibold text-gray-900">Executive Summary</h2>
            <div class="flex items-center gap-3">
              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">{{ report.status }}</span>
-             @if (!isEditingMeta && userRole !== 'CUSTOMER' && uiState?.actions?.['IR_EDIT_SERIAL']?.visible) {
+             @if (!isEditingMeta && isInspectorCapable && uiState?.actions?.['IR_EDIT_SERIAL']?.visible) {
                <button (click)="isEditingMeta = true" class="px-3 py-1 text-xs font-bold text-primary bg-white border border-primary/30 rounded shadow-sm hover:bg-primary/5 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                 Update Job Data
+                 Update Inspection Report Data
                </button>
              }
            </div>
@@ -172,7 +172,7 @@
 
                <!-- Inspection Job Meta -->
                <div class="mb-4">
-                  <h4 class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Job Info</h4>
+                  <h4 class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Inspection Report Info</h4>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                      <div class="md:col-span-2">
                         <label for="form_inspection_address" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Inspection Address</label>
@@ -262,7 +262,7 @@
             } @else {
                <div class="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-4 mb-4">
                   <div class="col-span-2 md:col-span-4 border-b border-gray-100 pb-2 mb-2">
-                     <h4 class="text-xs font-bold text-primary uppercase tracking-wide">Job Info & Pipe Specifications</h4>
+                     <h4 class="text-xs font-bold text-primary uppercase tracking-wide">Inspection Report Info & Pipe Specifications</h4>
                   </div>
                   <div>
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Grade</span>
@@ -369,7 +369,7 @@
                  <svg class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                  </svg>
-                 Export Snapshot
+                 Export Excel
                }
              </button>
              @if (!isOnline) {
@@ -574,10 +574,10 @@
               @if (userRole !== 'CUSTOMER') {
                 <th scope="col" rowspan="2" class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 sticky top-0 bg-gray-50 z-30 border-r border-gray-200">Sync</th>
               }
-              <th scope="col" colspan="7" class="px-3 py-2 text-center text-[10px] font-bold text-blue-700 uppercase tracking-wider sticky top-0 bg-blue-50 z-30 border-r border-gray-200 border-b border-blue-200/50">Box Connection</th>
-              <th scope="col" colspan="7" class="px-3 py-2 text-center text-[10px] font-bold text-indigo-700 uppercase tracking-wider sticky top-0 bg-indigo-50 z-30 border-r border-gray-200 border-b border-indigo-200/50">Pin Connection</th>
+              <th scope="col" colspan="9" class="px-3 py-2 text-center text-[10px] font-bold text-blue-700 uppercase tracking-wider sticky top-0 bg-blue-50 z-30 border-r border-gray-200 border-b border-blue-200/50">Box Connection</th>
+              <th scope="col" colspan="8" class="px-3 py-2 text-center text-[10px] font-bold text-indigo-700 uppercase tracking-wider sticky top-0 bg-indigo-50 z-30 border-r border-gray-200 border-b border-indigo-200/50">Pin Connection</th>
               <th scope="col" colspan="8" class="px-3 py-2 text-center text-[10px] font-bold text-purple-700 uppercase tracking-wider sticky top-0 bg-purple-50 z-30 border-r border-gray-200 border-b border-purple-200/50">Body</th>
-              <th scope="col" colspan="4" class="px-3 py-2 text-center text-[10px] font-bold text-gray-700 uppercase tracking-wider sticky top-0 bg-gray-100 z-30 border-r border-gray-200 border-b border-gray-200/50">Final</th>
+              <th scope="col" colspan="4" class="px-3 py-2 text-center text-[10px] font-bold text-gray-700 uppercase tracking-wider sticky top-0 bg-gray-100 z-30 border-r border-gray-200 border-b border-gray-200/50">Joint Class</th>
               <th scope="col" rowspan="2" class="px-4 py-3 text-center text-[10px] font-bold text-gray-700 uppercase tracking-wider sticky top-0 bg-gray-100 z-30 min-w-[200px] border-l border-gray-200 border-b border-gray-200/50">Remarks</th>
             </tr>
             <!-- Sub Header Row -->
@@ -616,11 +616,12 @@
               <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">IPC</th>
               <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Bent Jts</th>
 
-              <!-- FINAL Columns -->
+              <!-- JOINT CLASS sub-columns: New | Premium | C2 | Scrap -->
               <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">New</th>
               <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Premium</th>
               <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">C2</th>
               <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Scrap</th>
+
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 bg-white">
@@ -850,7 +851,7 @@
           <textarea [(ngModel)]="formBulkSerials" rows="6" class="w-full border border-gray-300 p-3 rounded-md mb-4 focus:ring-accent focus:border-accent font-mono text-sm shadow-sm transition-colors" placeholder="SN-001&#10;SN-002&#10;SN-003" [disabled]="!uiState?.actions?.['IR_ADD_SERIAL']?.enabled"></textarea>
           
           <button (click)="onAddSerials()" [disabled]="!formBulkSerials.trim() || !uiState?.actions?.['IR_ADD_SERIAL']?.enabled" class="w-full bg-primary hover:bg-primary/95 text-white py-2.5 rounded-md text-sm font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
-            </button>
+            Add serial numbers</button>
           </div>
         }
       </div>

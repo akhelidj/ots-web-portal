@@ -41,6 +41,9 @@ export class RevisionService {
             // Minimal linkage info
           }
         },
+        transitionLogs: {
+          orderBy: { timestamp: 'asc' }
+        }
         // We do NOT include full child report data here, only linkage.
         // Child reports have their own revisions.
       },
@@ -72,6 +75,20 @@ export class RevisionService {
         customerId: report.customerId,
         createdAt: report.createdAt,
         updatedAt: report.updatedAt,
+        // Pipe Specifications
+        grade: report.grade,
+        range: report.range,
+        weight: report.weight,
+        nomWT: report.nomWT,
+        nomOD: report.nomOD,
+        nomID: report.nomID,
+        connection: report.connection,
+        // Job Info
+        inspectionAddress: report.inspectionAddress,
+        standardUsed: report.standardUsed,
+        inspectorComment: report.inspectorComment,
+        equipmentUsed: report.equipmentUsed,
+        inspectionMethod: report.inspectionMethod,
       },
       template: {
         key: report.templateKey,
@@ -83,10 +100,12 @@ export class RevisionService {
         id: sn.id,
         serial: sn.serial,
         inspectionData: sn.inspectionData,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         disposition: (sn.inspectionData as any)?.final?.disposition || (sn.inspectionData as any)?.disposition || null,
         updatedAt: sn.updatedAt,
       })),
       childReports: report.childReports, // Already minimal selected above
+      transitionLogs: report.transitionLogs,
     };
 
     // 5. Create Revision Record
@@ -98,6 +117,7 @@ export class RevisionService {
         revisionReason: reason,
         revisedById: userId,
         revisedAt: new Date(), // Capture exact time of revision
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         snapshotJson: snapshotData as any, // Cast to Json (Prisma type)
       },
     });
@@ -170,6 +190,7 @@ export class RevisionService {
             linkId: s.id, // Link table ID
             serialId: s.serialNumberId,
             serial: s.serialNumber.serial,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             disposition: (s.serialNumber.inspectionData as any)?.final?.disposition || (s.serialNumber.inspectionData as any)?.disposition || null,
             // Child reports might have their own specific data in future, 
             // currently they just link. Inclusion of serial value is key.
@@ -185,6 +206,7 @@ export class RevisionService {
             revisionReason: reason,
             revisedById: userId,
             revisedAt: new Date(),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             snapshotJson: snapshotData as any,
         },
     });

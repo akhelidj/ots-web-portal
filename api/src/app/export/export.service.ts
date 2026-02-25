@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { RevisionService } from '../revision/revision.service';
-import { TemplateService } from '../template/template.service';
 import * as ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { mapDrillPipeReportV1 } from './mappings/drill-pipe-report.v1.mapping';
@@ -14,6 +13,7 @@ export class ExportService {
   ) {}
 
   async exportInspectionReport(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     user: any,
     reportId: string,
     requestedRevision?: number,
@@ -32,8 +32,8 @@ export class ExportService {
     if (user.role === 'CUSTOMER' && report.customerId !== user.customerId) {
       throw new ForbiddenException('Access denied: report does not belong to customer');
     }
-    if (report.status !== 'APPROVED') {
-      throw new ForbiddenException('Export is only allowed for APPROVED reports');
+    if (report.status !== 'APPROVED' && report.status !== 'CLOSED') {
+      throw new ForbiddenException('Export is only allowed for APPROVED or CLOSED reports');
     }
 
     // 2. Resolve Revision
@@ -42,23 +42,97 @@ export class ExportService {
       revisionNumber = report.revisionNumber;
     }
 
-    const revision = await this.prisma.inspectionReportRevision.findUnique({
-      where: {
-        inspectionReportId_revisionNumber: {
-          inspectionReportId: reportId,
-          revisionNumber: revisionNumber,
-        },
-      },
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let snapshot: any;
 
-    if (!revision) {
-      throw new NotFoundException(`Revision ${revisionNumber} not found`);
+    if (revisionNumber === 0) {
+      // No snapshot was ever created (report approved before snapshot feature was active).
+      // Build an equivalent snapshot on-the-fly from live data so export still works.
+      const liveReport = await this.prisma.inspectionReport.findUnique({
+        where: { id: reportId },
+        include: {
+          serialNumbers: { orderBy: { serial: 'asc' } },
+          childReports: {
+            orderBy: { reportNumber: 'asc' },
+            select: { id: true, reportNumber: true, status: true },
+          },
+          transitionLogs: { orderBy: { timestamp: 'asc' } },
+        },
+      });
+      if (!liveReport) {
+        throw new NotFoundException('Inspection report not found');
+      }
+      snapshot = {
+        header: {
+          id: liveReport.id,
+          poNumber: liveReport.poNumber,
+          reportNumber: liveReport.reportNumber,
+          status: liveReport.status,
+          customerId: liveReport.customerId,
+          createdAt: liveReport.createdAt,
+          updatedAt: liveReport.updatedAt,
+          // Pipe Specifications
+          grade: liveReport.grade,
+          range: liveReport.range,
+          weight: liveReport.weight,
+          nomWT: liveReport.nomWT,
+          nomOD: liveReport.nomOD,
+          nomID: liveReport.nomID,
+          connection: liveReport.connection,
+          // Job Info
+          inspectionAddress: liveReport.inspectionAddress,
+          standardUsed: liveReport.standardUsed,
+          inspectorComment: liveReport.inspectorComment,
+          equipmentUsed: liveReport.equipmentUsed,
+          inspectionMethod: liveReport.inspectionMethod,
+        },
+        template: {
+          key: liveReport.templateKey,
+          version: liveReport.templateVersion,
+          hash: liveReport.templateHash,
+          versionId: liveReport.templateVersionId,
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        serialNumbers: liveReport.serialNumbers.map((sn: any) => ({
+          id: sn.id,
+          serial: sn.serial,
+          inspectionData: sn.inspectionData,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          disposition: (sn.inspectionData as any)?.final?.disposition || (sn.inspectionData as any)?.disposition || null,
+          updatedAt: sn.updatedAt,
+        })),
+        childReports: liveReport.childReports,
+        transitionLogs: liveReport.transitionLogs,
+      };
+    } else {
+      const revision = await this.prisma.inspectionReportRevision.findUnique({
+        where: {
+          inspectionReportId_revisionNumber: {
+            inspectionReportId: reportId,
+            revisionNumber: revisionNumber,
+          },
+        },
+      });
+
+      if (!revision) {
+        throw new NotFoundException(`Revision ${revisionNumber} not found`);
+      }
+
+      snapshot = revision.snapshotJson as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+      if (!snapshot) {
+        throw new InternalServerErrorException('Snapshot data is missing');
+      }
     }
 
-    // 3. Fetch Snapshot
-    const snapshot = revision.snapshotJson as any;
-    if (!snapshot) {
-      throw new InternalServerErrorException('Snapshot data is missing');
+    // Inject User Data into Snapshot for the export mappers to compute "Inspected By" and "Approved By"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const transitionUserIds = (snapshot.transitionLogs || []).map((l: any) => l.userId).filter(Boolean);
+    if (transitionUserIds.length > 0) {
+        const users = await this.prisma.user.findMany({
+            where: { id: { in: transitionUserIds } },
+            select: { id: true, name: true, email: true }
+        });
+        snapshot.users = users;
     }
 
     // 4. Fetch Template Bytes and verify
@@ -89,10 +163,12 @@ export class ExportService {
     if (N <= 10) {
       // Return Single XLSX
       const workbook = new ExcelJS.Workbook();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await workbook.xlsx.load(templateBuffer as any);
       
       try {
         await this.applyMapping(report.templateKey, workbook, snapshot, allSerialNumbers);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         throw new BadRequestException(err.message || 'Error applying template mapping');
       }
@@ -114,10 +190,12 @@ export class ExportService {
         const chunkSerials = allSerialNumbers.slice(startIndex, endIndex);
 
         const workbook = new ExcelJS.Workbook();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await workbook.xlsx.load(templateBuffer as any); // Always load from original blank template bytes
         
         try {
           await this.applyMapping(report.templateKey, workbook, snapshot, chunkSerials);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
           throw new BadRequestException(`Error in part ${k}: ${err.message || 'Error applying template mapping'}`);
         }
@@ -125,6 +203,7 @@ export class ExportService {
         const partBuffer = await workbook.xlsx.writeBuffer();
         const partFilename = `InspectionReport_${report.reportNumber || reportId}_rev${revisionNumber}_part${k}of${chunks}.xlsx`;
         
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         zip.file(partFilename, partBuffer as any);
       }
 
@@ -137,6 +216,7 @@ export class ExportService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async applyMapping(templateKey: string, workbook: ExcelJS.Workbook, snapshot: any, chunk: any[]): Promise<void> {
     // Currently only supporting DRILL_PIPE_REPORT v1 exactly as specified.
     if (templateKey === 'DRILL_PIPE_REPORT') {
