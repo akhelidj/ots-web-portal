@@ -60,16 +60,16 @@
     </div>
   }
 
-  <div class="grid grid-cols-1 gap-6 mb-8" [ngClass]="{'lg:grid-cols-2': !isCustomer}">
+  <div class="grid grid-cols-1 gap-6 mb-8" [ngClass]="{'lg:grid-cols-3': !isCustomer}">
     
     <!-- Meta Section -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between" [ngClass]="{'lg:col-span-2': !isCustomer}">
       <div>
         <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
            <h2 class="text-lg font-semibold text-gray-900">Executive Summary</h2>
            <div class="flex items-center gap-3">
              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">{{ report.status }}</span>
-             @if (!isEditingMeta && isInspectorCapable && uiState?.actions?.['IR_EDIT_SERIAL']?.visible) {
+             @if (!isEditingMeta && isInspectorCapable && uiState?.actions?.['IR_EDIT_META']?.visible) {
                <button (click)="isEditingMeta = true" class="px-3 py-1 text-xs font-bold text-primary bg-white border border-primary/30 rounded shadow-sm hover:bg-primary/5 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                  Update Inspection Report Data

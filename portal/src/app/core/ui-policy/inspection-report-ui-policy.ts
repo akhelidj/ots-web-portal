@@ -77,6 +77,7 @@ export function getInspectionReportUiState(ctx: UiPolicyContext): InspectionRepo
    state.actions['IR_ADD_SERIAL'] = { visible: false, enabled: false };
    state.actions['IR_EDIT_SERIAL'] = { visible: false, enabled: false };
    state.actions['IR_REMOVE_SERIAL'] = { visible: false, enabled: false };
+   state.actions['IR_EDIT_META'] = { visible: false, enabled: false };
    state.actions['SN_EDIT_INSPECTION_DATA'] = { visible: false, enabled: false };
    state.actions['SN_SET_DISPOSITION'] = { visible: false, enabled: false };
    state.actions['CR_CREATE_FROM_REWORK'] = { visible: false, enabled: false };
@@ -115,6 +116,7 @@ export function getInspectionReportUiState(ctx: UiPolicyContext): InspectionRepo
           if (ctx.role === 'INSPECTOR' || ctx.role === 'ADMIN') {
              state.fieldModes['inspectionData'] = 'editable';
              state.fieldModes['disposition'] = 'editable';
+             state.actions['IR_EDIT_META'] = { visible: true, enabled: true };
              state.actions['SN_EDIT_INSPECTION_DATA'] = { visible: true, enabled: true };
              state.actions['SN_SET_DISPOSITION'] = { visible: true, enabled: true };
              state.actions['CR_CREATE_FROM_REWORK'] = { visible: true, enabled: true };
