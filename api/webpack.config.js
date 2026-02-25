@@ -15,7 +15,11 @@ module.exports = {
       compiler: 'tsc',
       main: './src/main.ts',
       tsConfig: './tsconfig.app.json',
-      assets: ['./src/assets'],
+      assets: [
+        './src/assets',
+        { input: './prisma', output: 'prisma', glob: '**/*' },
+        { input: './scripts', output: 'scripts', glob: 'valid-template.xlsx' },
+      ],
       optimization: false,
       outputHashing: 'none',
       generatePackageJson: true,

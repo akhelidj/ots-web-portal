@@ -6,15 +6,16 @@
     "start:api": "nx serve api",
     "start:portal": "nx serve portal",
     "build:api": "nx build api",
-    "build:portal": "nx build portal",
+    "build:portal": "nx build portal --configuration=production",
     "lint": "nx run-many -t lint",
     "graph": "nx graph",
     "db:migrate": "npx dotenv -e api/.env -- npx prisma migrate dev --schema api/prisma/schema.prisma",
     "db:studio": "npx dotenv -e api/.env -- npx prisma studio --schema api/prisma/schema.prisma",
     "db:generate": "npx prisma generate --schema api/prisma/schema.prisma",
     "db:seed": "npx -y tsx api/scripts/seed.ts",
-    "db:seed:build": "npx esbuild api/scripts/seed.ts --bundle --platform=node --packages=external --outfile=dist/seed.js",
-    "db:seed:run": "node dist/seed.js"
+    "db:seed:build": "npx esbuild api/scripts/seed.ts --bundle --platform=node --packages=external --outfile=dist/api/scripts/seed.js",
+    "db:seed:run": "node dist/api/scripts/seed.js",
+    "build:deploy": "npm run db:seed:build && nx build api"
   },
   "private": true,
   "devDependencies": {
