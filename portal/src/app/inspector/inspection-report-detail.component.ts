@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -34,6 +34,7 @@ export class InspectionReportDetailComponent implements OnInit {
   private syncOrchestrator = inject(SyncOrchestratorService);
   private userRepo = inject(UserLocalRepo);
   private customerRepo = inject(CustomerLocalRepo);
+  private cdr = inject(ChangeDetectorRef);
 
   public reportId = '';
   public reportSubj = new BehaviorSubject<LocalInspectionReport | null>(null);
@@ -145,9 +146,11 @@ export class InspectionReportDetailComponent implements OnInit {
         this.refreshData();
       });
 
-      await this.irService.refreshAvailableTransitions(this.reportId);
-      await this.irService.refreshTransitionLogs(this.reportId);
-      await this.crService.pullForInspectionFromServer(this.reportId);
+      if (!this.reportId.startsWith('local-ir-') && this.reportId !== 'create') {
+        await this.irService.refreshAvailableTransitions(this.reportId);
+        await this.irService.refreshTransitionLogs(this.reportId);
+        await this.crService.pullForInspectionFromServer(this.reportId);
+      }
     }
   }
 
@@ -661,6 +664,7 @@ export class InspectionReportDetailComponent implements OnInit {
       }
     } finally {
       this.isExporting = false;
+      this.cdr.detectChanges();
     }
   }
 

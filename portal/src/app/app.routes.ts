@@ -48,6 +48,7 @@ export const appRoutes: Route[] = [
         children: [
           { path: '', redirectTo: 'users', pathMatch: 'full' },
           { path: 'reports', component: InspectionReportListComponent },
+          { path: 'reports/create', component: CreateInspectionReportComponent },
           { path: 'reports/:id', component: InspectionReportDetailComponent },
           { path: 'reports/:id/child', component: ChildReportDetailComponent },
           { path: 'users', component: AdminUsersComponent },
@@ -73,6 +74,7 @@ export const appRoutes: Route[] = [
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
           { path: 'reports', component: InspectionReportListComponent },
+          { path: 'reports/create', component: CreateInspectionReportComponent },
           { path: 'reports/:id', component: InspectionReportDetailComponent },
           { path: 'reports/:id/child', component: ChildReportDetailComponent },
         ]
@@ -83,6 +85,7 @@ export const appRoutes: Route[] = [
         data: { roles: ['SUPERVISOR'] },
         children: [
           { path: '', component: SupervisorWorkspaceComponent, pathMatch: 'full' },
+          { path: 'reports/create', component: CreateInspectionReportComponent },
           { path: ':id', component: InspectionReportDetailComponent },
           { path: 'reports/:id/child', component: ChildReportDetailComponent }
         ]

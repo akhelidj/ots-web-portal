@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { InspectionReportsService } from './inspection-reports.service';
 import { CustomerLocalRepo } from '../core/offline/customer-local.repo';
@@ -17,6 +17,7 @@ export class CreateInspectionReportComponent {
   private irService = inject(InspectionReportsService);
   private customerRepo = inject(CustomerLocalRepo);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   private customersSubj = new BehaviorSubject<LocalCustomer[]>([]);
   public customers$ = this.customersSubj.asObservable();
@@ -50,7 +51,9 @@ export class CreateInspectionReportComponent {
         poNumber: this.formPoNumber,
         templateKey: this.formTemplateKey
       });
-      this.router.navigate(['/receiver']);
+      const segment = this.router.url.split('/');
+      segment.pop();
+      this.router.navigate(segment);
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to create report.';
