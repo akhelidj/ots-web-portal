@@ -90,13 +90,29 @@ export async function mapDrillPipeReportV1(
   // 3. Process Serial Numbers (if template row found)
   if (templateRowIndex > -1) {
     const templateRow = sheet.getRow(templateRowIndex);
-    // Format requested by user: 1 for Yes, 0 for No
-    const yesNo = (val: unknown) => (val === undefined || val === null ? '' : val ? '1' : '0');
+    // Format requested by user: 1 for Yes, '' for No
+    const yesNo = (val: unknown) => (val === undefined || val === null ? '' : val ? '1' : '');
 
     // Make room for the new rows below the template row
     if (serialNumbersChunk.length > 0) {
       // exceljs specific: insert empty rows to make room
       sheet.spliceRows(templateRowIndex + 1, 0, ...new Array(serialNumbersChunk.length).fill([]));
+      
+      // EXCELJS BUG FIX: spliceRows breaks merges below the inserted rows.
+      // We must manually shift the model of any merge that starts below our insertion point.
+      const shiftAmount = serialNumbersChunk.length;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const merges = (sheet as any)._merges;
+      if (merges) {
+        Object.keys(merges).forEach(key => {
+          const merge = merges[key];
+          // If the merge block starts strictly after our insertion point, shift it down
+          if (merge.model && merge.model.top > templateRowIndex) {
+            merge.model.top += shiftAmount;
+            merge.model.bottom += shiftAmount;
+          }
+        });
+      }
 
       // Now fill injected rows
       for (let i = 0; i < serialNumbersChunk.length; i++) {
@@ -186,6 +202,19 @@ export async function mapDrillPipeReportV1(
 
     // Delete the original template row
     sheet.spliceRows(templateRowIndex, 1);
+    
+    // EXCELJS BUG FIX: we must shift the merges back up by 1 because we deleted the template row
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mergesAfterDelete = (sheet as any)._merges;
+    if (mergesAfterDelete) {
+      Object.keys(mergesAfterDelete).forEach(key => {
+        const merge = mergesAfterDelete[key];
+        if (merge.model && merge.model.top > templateRowIndex) {
+          merge.model.top -= 1;
+          merge.model.bottom -= 1;
+        }
+      });
+    }
   }
 
   // 4. Perform Global Replacement
