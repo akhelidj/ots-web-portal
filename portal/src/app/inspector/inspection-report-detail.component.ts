@@ -109,6 +109,8 @@ export class InspectionReportDetailComponent implements OnInit {
   public isExporting = false;
   public isCustomer = false;
   public isReceiver = false;
+  
+  public isTransitionExpanded = true;
 
   public get isOnline(): boolean {
     return navigator.onLine;
@@ -427,11 +429,13 @@ export class InspectionReportDetailComponent implements OnInit {
     this.inspectionFormData = sn.inspectionJson ? JSON.parse(JSON.stringify(sn.inspectionJson)) : {};
     
     this.formError = '';
+    this.isTransitionExpanded = false; // Auto-collapse transition bar to save screen space
   }
 
   public closeInspectionForm(): void {
     this.inspectingSn = null;
     this.inspectionFormData = {};
+    this.isTransitionExpanded = true; // Auto-expand when done
   }
 
   public goToNextSn(): void {
