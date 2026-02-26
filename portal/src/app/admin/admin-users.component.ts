@@ -1,6 +1,6 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { AdminUsersService } from './admin-users.service';
 import { UserLocalRepo } from '../core/offline/user-local.repo';
 import { OutboxService } from '../core/offline/outbox.service';
@@ -20,10 +20,13 @@ export class AdminUsersComponent implements OnInit {
 
   public users$ = this.usersService.users$;
 
+  @ViewChild('userForm') userForm!: NgForm;
+
   // Form state
   public formEmail = '';
   public formName = '';
   public formRole = 'RECEIVER';
+  public formPassword = '';
   public formCustomerId = '';
   public formError = '';
 
@@ -36,32 +39,8 @@ export class AdminUsersComponent implements OnInit {
   public customers: LocalCustomer[] = [];
   private customerRepo = inject(CustomerLocalRepo);
 
-  public tempPasswordDisplay: string | null = null;
-  public passwordCopied = false;
-
   constructor() {
-    this.usersService.tempPasswordNotified$.subscribe((pwd) => {
-      if (pwd) {
-        this.passwordCopied = false;
-        this.tempPasswordDisplay = pwd;
-      }
-    });
-  }
-
-  public async copyPassword(pwd: string | null) {
-    if (!pwd) return;
-    try {
-      await navigator.clipboard.writeText(pwd);
-      this.passwordCopied = true;
-      setTimeout(() => this.passwordCopied = false, 2000);
-    } catch (e) {
-      console.error('Failed to copy', e);
-    }
-  }
-
-  public dismissTempPassword(): void {
-    this.tempPasswordDisplay = null;
-    this.passwordCopied = false;
+    // legacy temp password listener can be removed or kept empty if service still emits
   }
 
   ngOnInit() {
@@ -78,10 +57,14 @@ export class AdminUsersComponent implements OnInit {
 
   public async onSubmitCreate(): Promise<void> {
     this.formError = '';
-    this.tempPasswordDisplay = null;
 
     if (!this.formEmail) {
       this.formError = 'Email is required.';
+      return;
+    }
+
+    if (!this.formPassword) {
+      this.formError = 'Temporary password is required.';
       return;
     }
 
@@ -122,6 +105,7 @@ export class AdminUsersComponent implements OnInit {
           role: newUser.role,
           isActive: true,
           customerId: newUser.customerId,
+          password: this.formPassword,
         },
         status: 'PENDING',
         attemptCount: 0,
@@ -131,9 +115,13 @@ export class AdminUsersComponent implements OnInit {
       // 3. Immediately refresh Local Stream
       await this.usersService.reloadStreamFromLocal();
 
-      // Reset form
+      // Reset form state and validation
+      if (this.userForm) {
+        this.userForm.resetForm();
+      }
       this.formEmail = '';
       this.formName = '';
+      this.formPassword = '';
       this.formRole = 'RECEIVER';
       this.formCustomerId = '';
     } catch (e) {

@@ -30,6 +30,17 @@
           </div>
 
           <div>
+            <label for="password" class="block text-sm font-medium text-gray-700">Temporary Password <span class="text-error">*</span></label>
+            <div class="mt-1">
+              <input type="text" id="password" name="password" [(ngModel)]="formPassword" required #passwordField="ngModel" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+               [ngClass]="{'border-error focus:ring-error focus:border-error': passwordField.invalid && (passwordField.dirty || passwordField.touched)}" />
+            </div>
+            @if (passwordField.invalid && (passwordField.dirty || passwordField.touched)) {
+              <p class="mt-1 text-xs text-error">Temporary password is required.</p>
+            }
+          </div>
+
+          <div>
             <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
             <div class="mt-1">
               <select id="role" name="role" [(ngModel)]="formRole" class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors">
@@ -72,41 +83,6 @@
     </form>
   </div>
 
-  <!-- Password notification dialog -->
-  @if (tempPasswordDisplay) {
-    <!-- Semi-transparent overlay -->
-    <div class="fixed inset-0 bg-primary/40 transition-opacity z-40 backdrop-blur-sm" aria-hidden="true"></div>
-    <dialog open class="fixed inset-0 z-50 overflow-y-auto w-full max-w-lg p-0 bg-white rounded-xl shadow-2xl m-auto border-none">
-      <div class="p-8 text-center">
-        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-success-light mb-4">
-          <svg class="h-6 w-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h3 class="text-xl font-bold text-gray-900 mb-2">User created successfully!</h3>
-        
-        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 my-6">
-          <p class="text-sm text-gray-500 mb-2">Temporary Password:</p>
-          <div class="flex items-center justify-center gap-3">
-            <p class="text-2xl font-mono tracking-widest font-semibold text-primary">{{ tempPasswordDisplay }}</p>
-            <button type="button" (click)="copyPassword(tempPasswordDisplay)" class="p-2 text-gray-400 hover:text-primary transition-colors focus:outline-none bg-white rounded-md border border-gray-200 hover:border-primary shadow-sm" title="Copy to clipboard">
-              @if (!passwordCopied) {
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-              } @else {
-                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-              }
-            </button>
-          </div>
-        </div>
-        
-        <p class="text-sm text-error font-medium mb-8">Please copy this now. It will not be shown again.</p>
-        
-        <button type="button" (click)="dismissTempPassword()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-primary-light focus:outline-none sm:text-sm transition-colors">
-          I've copied the password. Close.
-        </button>
-      </div>
-    </dialog>
-  }
 
   <!-- Edit User Modal -->
   @if (editUserId) {
