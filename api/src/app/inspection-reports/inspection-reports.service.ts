@@ -188,6 +188,7 @@ export class InspectionReportsService {
       if (data.nomOD !== undefined) updateData.nomOD = data.nomOD;
       if (data.nomID !== undefined) updateData.nomID = data.nomID;
       if (data.connection !== undefined) updateData.connection = data.connection;
+      if (data.poNumber !== undefined) updateData.poNumber = data.poNumber;
       
       const updateResult = await tx.inspectionReport.updateMany({
         where: { 
