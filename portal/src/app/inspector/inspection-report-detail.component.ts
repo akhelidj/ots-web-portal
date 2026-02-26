@@ -50,6 +50,7 @@ export class InspectionReportDetailComponent implements OnInit {
   public formError = '';
   public editingSnId: string | null = null;
   public editingSnValue = '';
+  public isValidationModalOpen = false;
   
   // Meta Fields
   public formInspectorComment = '';

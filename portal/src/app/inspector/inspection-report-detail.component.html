@@ -60,10 +60,10 @@
     </div>
   }
 
-  <div class="grid grid-cols-1 gap-6 mb-8" [ngClass]="{'lg:grid-cols-3': !isCustomer}">
+  <div class="mb-8">
     
     <!-- Meta Section -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between" [ngClass]="{'lg:col-span-2': !isCustomer}">
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
       <div>
         <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
            <h2 class="text-lg font-semibold text-gray-900">Executive Summary</h2>
@@ -348,11 +348,13 @@
         </div>
       }
     </div>
+  </div>
 
-    <!-- Transition Section -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-full">
-      <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-5">
-        <h2 class="text-lg font-semibold text-gray-900">Status Transition</h2>
+  <!-- Transition Section -->
+  <div class="fixed bottom-0 left-0 right-0 z-[60] bg-white border-t border-gray-200 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] w-full max-h-[50vh] overflow-y-auto">
+    <div class="p-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col h-full w-full">
+      <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-3">
+        <h2 class="text-base font-semibold text-gray-900">Status Transition</h2>
         
         @if (uiState?.actions?.['ADMIN_EXPORT']?.visible || uiState?.actions?.['CUSTOMER_EXPORT']?.visible) {
            <div class="flex flex-col items-end">
@@ -379,28 +381,26 @@
         }
       </div>
       @if (formError && !formError.includes('[object Object]')) {
-        <div class="mb-5 bg-error-light border-l-4 border-error text-error-dark p-3 rounded-r-md text-sm whitespace-pre-line shadow-sm">
+        <div class="mb-3 bg-error-light border-l-4 border-error text-error-dark p-3 rounded-r-md text-sm whitespace-pre-line shadow-sm">
            {{ formError }}
         </div>
       }
 
       @if (userRole !== 'CUSTOMER' && validationResult && !validationResult.isReady) {
-        <div class="mb-5 bg-error-light/50 border border-error/30 p-4 rounded-lg text-sm">
-          <p class="font-bold text-error-dark flex items-center gap-2 mb-2">
+        <div class="mb-3 bg-error-light/50 border border-error/30 p-3 rounded-lg flex items-center justify-between text-sm shadow-sm">
+          <p class="font-bold text-error-dark flex items-center gap-2">
             <svg class="h-5 w-5 text-error" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
             </svg>
-            Not Ready for Approval ({{ validationResult.issues.length }} blocks)
+            Not Ready for Approval ({{ validationResult.issues.length }} conditions)
           </p>
-          <ul class="list-disc pl-7 mt-1 text-error-dark/80 space-y-1">
-            @for (issue of validationResult.issues; track issue.message) {
-              <li>{{ issue.message }}</li>
-            }
-          </ul>
+          <button (click)="isValidationModalOpen = true" class="text-xs font-bold bg-white text-error-dark border border-error/30 hover:bg-error/10 px-3 py-1.5 rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-error">
+            Show Details
+          </button>
         </div>
       }
       
-      <div class="mt-auto pt-4 border-t border-gray-100">
+      <div class="mt-auto pt-2">
         @if (userRole !== 'CUSTOMER') {
           @if (report.pendingTransitionToStatus) {
             <div class="p-4 bg-warning-light text-warning-dark text-sm rounded-lg border border-warning/30 flex items-center gap-3">
@@ -428,7 +428,7 @@
               </div>
 
                @if (selectedTransition) {
-                 <div class="mt-4 p-4 border border-gray-200 rounded-xl bg-gray-50 shadow-inner flex flex-col md:flex-row md:items-center gap-4">
+                 <div class="mt-3 p-4 border border-gray-200 rounded-xl bg-gray-50 shadow-inner flex flex-col md:flex-row md:items-center flex-wrap gap-4">
                     <p class="text-sm font-semibold text-gray-900 flex items-center gap-2 whitespace-nowrap">
                       Confirm <span class="text-accent">{{ selectedTransition.toStatus }}</span>
                     </p>
@@ -939,6 +939,8 @@
       </div>
     </div>
   }
+  
+  <div class="h-80 lg:h-64 w-full shrink-0"></div>
 }
 
 @if (activeModalStatus) {
@@ -978,6 +980,40 @@
        </div>
        <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end rounded-b-xl">
           <button (click)="closeKpiModal()" class="px-5 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">Close</button>
+       </div>
+    </div>
+  </div>
+}
+
+@if (isValidationModalOpen && validationResult) {
+  <div class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all p-4 lg:p-8">
+    <div tabindex="0" class="absolute inset-0" (click)="isValidationModalOpen = false" (keydown.enter)="isValidationModalOpen = false"></div>
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col border border-gray-200 z-10 animate-[sliceIn_0.2s_ease-out]">
+       <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-error-light/30 rounded-t-xl shrink-0">
+         <h3 class="text-lg font-bold text-error-dark flex items-center gap-2">
+           <svg class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+             <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+           </svg>
+           Missing Prerequisites for Approval ({{ validationResult.issues.length }})
+         </h3>
+         <button (click)="isValidationModalOpen = false" class="text-gray-400 hover:text-gray-900 hover:bg-gray-100 p-1.5 rounded-full transition-colors flex items-center justify-center shrink-0">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+         </button>
+       </div>
+       <div class="p-6 overflow-y-auto flex-grow bg-white">
+          <ul class="space-y-3">
+            @for (issue of validationResult.issues; track issue.message) {
+              <li class="flex items-start gap-3 p-3.5 bg-gray-50 rounded-lg border border-gray-100">
+                <svg class="h-5 w-5 text-warning flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span class="text-sm text-gray-700 leading-relaxed font-medium">{{ issue.message }}</span>
+              </li>
+            }
+          </ul>
+       </div>
+       <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end rounded-b-xl shrink-0">
+          <button (click)="isValidationModalOpen = false" class="px-5 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">Close</button>
        </div>
     </div>
   </div>
