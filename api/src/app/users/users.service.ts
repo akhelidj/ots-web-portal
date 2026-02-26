@@ -44,7 +44,7 @@ export class UsersService {
     }
 
     // Generate random 16-character base64 password (it's secure and reasonably easy to copy-paste)
-    const tempPassword = crypto.randomBytes(12).toString('base64');
+    const tempPassword = crypto.randomBytes(12).toString('hex');
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
     const user = await this.prisma.user.create({
