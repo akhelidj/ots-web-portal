@@ -2,8 +2,6 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
-
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
@@ -26,7 +24,7 @@ export class UsersService {
     });
   }
 
-  async createUser(tenantId: string, data: { email: string; name?: string; role: UserRole; isActive?: boolean; customerId?: string }) {
+  async createUser(tenantId: string, data: { email: string; name?: string; role: UserRole; password: string; isActive?: boolean; customerId?: string }) {
     const normalizedEmail = data.email.toLowerCase().trim();
     const existing = await this.prisma.user.findUnique({
       where: { tenantId_email: { tenantId, email: normalizedEmail } },
@@ -43,9 +41,8 @@ export class UsersService {
       throw new ConflictException('Customer ID is only allowed for Customer role');
     }
 
-    // Generate random 16-character base64 password (it's secure and reasonably easy to copy-paste)
-    const tempPassword = crypto.randomBytes(12).toString('hex');
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    // Use provided password
+    const passwordHash = await bcrypt.hash(data.password, 10);
 
     const user = await this.prisma.user.create({
       data: {
@@ -73,7 +70,7 @@ export class UsersService {
 
     return {
       ...user,
-      temporaryPassword: tempPassword,
+      temporaryPassword: data.password,
     };
   }
 
