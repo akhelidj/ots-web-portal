@@ -18,11 +18,7 @@ export const mustChangePasswordGuard: CanActivateFn = (route, state) => {
         }
         return router.parseUrl('/change-password');
       } else {
-        // If they don't need to change password, they shouldn't be going to /change-password explicitly
-        if (isNavigatingToChangePassword) {
-            // Send them back to root, LandingComponent will figure it out
-            return router.parseUrl('/'); 
-        }
+        // They can go anywhere, including /change-password explicitly via settings
         return true;
       }
     })
