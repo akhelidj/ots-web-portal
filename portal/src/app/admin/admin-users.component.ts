@@ -77,7 +77,7 @@ export class AdminUsersComponent implements OnInit {
     const newUser: LocalUser = {
       id: tempId,
       tenantId: 'local-temp', // UI doesn't strictly need accurate tenantId for local creation display
-      email: this.formEmail.trim(),
+      email: this.formEmail.toLowerCase().trim(),
       name: this.formName || null,
       role: this.formRole,
       isActive: true,

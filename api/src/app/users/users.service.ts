@@ -25,7 +25,7 @@ export class UsersService {
   }
 
   async createUser(tenantId: string, data: { email: string; name?: string; role: UserRole; password: string; isActive?: boolean; customerId?: string }) {
-    const email = data.email.trim();
+    const email = data.email.toLowerCase().trim();
     const existing = await this.prisma.user.findUnique({
       where: { tenantId_email: { tenantId, email } },
     });
@@ -67,6 +67,26 @@ export class UsersService {
         updatedAt: true,
       },
     });
+
+    const sampleEmail = `
+=========================================
+[SAMPLE EMAIL]
+To: ${email}
+Subject: Welcome to OTS
+
+Hello ${data.name || 'User'},
+
+Welcome to the OTS Portal! Your account has been successfully created.
+
+Here are your access details:
+- Login Email: ${email}
+- Role: ${data.role}
+- Temporary Password: ${data.password}
+${data.role === UserRole.CUSTOMER ? '\\nNote: As a customer user, you will be prompted to update your password at your first connection.\\n' : ''}
+Please log in to the portal to get started.
+=========================================
+`;
+    console.log(sampleEmail);
 
     return {
       ...user,

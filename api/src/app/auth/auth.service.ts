@@ -20,7 +20,7 @@ export class AuthService {
     }
 
     const user = await this.prisma.user.findFirst({
-      where: { email: email.trim() },
+      where: { email: email.toLowerCase().trim() },
       include: {
         tenant: { select: { name: true } },
         customer: { select: { name: true } },

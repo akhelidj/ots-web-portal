@@ -57,7 +57,7 @@ export class LoginComponent {
 
     try {
       const response = await firstValueFrom(this.http.post<{ user: UserProfile, accessToken: string, refreshToken: string }>(`${environment.apiUrl}/auth/login`, {
-        email: this.email.trim(),
+        email: this.email.toLowerCase().trim(),
         password: this.password,
       }));
 
