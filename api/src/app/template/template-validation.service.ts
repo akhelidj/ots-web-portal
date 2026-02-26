@@ -3,53 +3,52 @@ import * as ExcelJS from 'exceljs';
 import { Readable } from 'stream';
 import 'multer';
 
+// Browsers on Windows can send .xlsx files with different MIME types
+// (e.g. application/octet-stream). We rely on the file extension and
+// successful ExcelJS parsing as the source of truth instead.
+const XLSX_MIME_TYPES = new Set([
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'application/octet-stream',
+  'application/zip', // .xlsx is a zip internally
+]);
+
 @Injectable()
 export class TemplateValidationService {
-  private readonly ALLOWED_MIME_TYPES = [
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  ];
-  private readonly REQUIRED_SHEETS = ['Drill Pipe summary'];
-
-
   async validateTemplate(file: any): Promise<void> {
-    // 1. Validation: Extension and MIME
+    // 1. Extension check
     if (!file.originalname.toLowerCase().endsWith('.xlsx')) {
       throw new BadRequestException(
         'Only .xlsx Excel templates are supported. Convert legacy .xls files before uploading.',
       );
     }
 
-    if (!this.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    // 2. MIME type – accept known variants (browsers are inconsistent on Windows)
+    if (!XLSX_MIME_TYPES.has(file.mimetype)) {
       throw new BadRequestException(
-        'Only .xlsx Excel templates are supported. Convert legacy .xls files before uploading.',
+        `Unexpected MIME type "${file.mimetype}". Only .xlsx Excel templates are supported.`,
       );
     }
 
-    // 2. Parse Excel
+    // 3. Parse Excel – verify it is a valid, readable workbook
     const workbook = new ExcelJS.Workbook();
     try {
       const stream = new Readable();
       stream.push(file.buffer);
       stream.push(null);
       await workbook.xlsx.read(stream);
-    } catch (error) {
+    } catch {
       throw new BadRequestException(
         'Failed to parse Excel file. Ensure it is a valid .xlsx file.',
       );
     }
 
-    // 3. Validate Required Sheets
-    const sheetNames = workbook.worksheets.map((ws) => ws.name);
-    const missingSheets = this.REQUIRED_SHEETS.filter(
-      (required) => !sheetNames.includes(required),
-    );
-
-    if (missingSheets.length > 0) {
+    // 4. Ensure at least one sheet exists
+    if (workbook.worksheets.length === 0) {
       throw new BadRequestException(
-        `Missing required Key sheets: ${missingSheets.join(', ')}`,
+        'The uploaded Excel file contains no worksheets.',
       );
     }
-
   }
 }
 

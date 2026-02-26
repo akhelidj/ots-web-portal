@@ -1,15 +1,136 @@
+import JSZip from 'jszip';
+
+/** Minimal XML character escaping for cell values */
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Shift every row ref > afterRow in the worksheet XML by `delta`.
+ * Touches only:
+ *   - <row r="N"> attributes
+ *   - <c r="XN"> cell address attributes
+ *   - <mergeCell ref="X1:Y2"> top-left and bottom-right refs
+ */
+function shiftRowsInXml(xml: string, afterRow: number, delta: number): string {
+  // <row r="N">
+  xml = xml.replace(/(<row\b[^>]*\br=")(\d+)(")/g, (_m, pre, rStr, post) => {
+    const r = parseInt(rStr, 10);
+    return r > afterRow ? `${pre}${r + delta}${post}` : _m;
+  });
+
+  // <c r="XN" …>
+  xml = xml.replace(/(<c\b[^>]*\br=")([A-Z]+)(\d+)(")/g, (_m, pre, col, rStr, post) => {
+    const r = parseInt(rStr, 10);
+    return r > afterRow ? `${pre}${col}${r + delta}${post}` : _m;
+  });
+
+  // <mergeCell ref="X1:Y2"/>
+  xml = xml.replace(/<mergeCell\s+ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"\s*\/>/g,
+    (_m, c1, r1s, c2, r2s) => {
+      const r1 = parseInt(r1s, 10);
+      const r2 = parseInt(r2s, 10);
+      if (r1 > afterRow) {
+        return `<mergeCell ref="${c1}${r1 + delta}:${c2}${r2 + delta}"/>`;
+      }
+      return _m;
+    }
+  );
+
+  return xml;
+}
+
+/**
+ * Parse the sharedStrings.xml into an array of raw <si>…</si> blocks.
+ * Returns the array of strings as plain text (for token detection) and the
+ * raw XML blocks (for reconstruction).
+ */
+function parseSharedStrings(xml: string): { plain: string[]; blocks: string[] } {
+  const blocks: string[] = [];
+  const plain: string[] = [];
+  const re = /<si>([\s\S]*?)<\/si>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml)) !== null) {
+    blocks.push(m[0]);
+    // Extract all text between <t>…</t> for a plain-text representation
+    const text = (m[1].match(/<t[^>]*>([\s\S]*?)<\/t>/g) || [])
+      .map(t => t.replace(/<\/?t[^>]*>/g, ''))
+      .join('');
+    plain.push(text);
+  }
+  return { blocks, plain };
+}
+
+/**
+ * Rebuild the sharedStrings.xml given a new ordered list of <si> blocks.
+ */
+function rebuildSharedStrings(originalXml: string, newBlocks: string[]): string {
+  // Replace everything between the opening <sst…> tag and </sst> with our new entries
+  const count = newBlocks.length;
+  return originalXml.replace(
+    /(<sst[^>]*>)([\s\S]*)(<\/sst>)/,
+    (_m, open, _body, close) => {
+      // Update count attributes
+      const updatedOpen = open
+        .replace(/\bcount="[^"]*"/, `count="${count}"`)
+        .replace(/\buniqueCount="[^"]*"/, `uniqueCount="${count}"`);
+      return `${updatedOpen}${newBlocks.join('')}${close}`;
+    }
+  );
+}
+
+/**
+ * Replace tokens inside a single <si> block, returning the updated block.
+ * Handles both simple <t>text</t> and rich text <r><t>text</t></r> nodes.
+ */
+function replaceTokensInSiBlock(block: string, tokens: Record<string, string>): string {
+  let result = block;
+  for (const [token, value] of Object.entries(tokens)) {
+    const escaped = token.replace(/[{}]/g, '\\$&');
+    result = result.replace(new RegExp(escaped, 'g'), escapeXml(value));
+  }
+  return result;
+}
+
+/**
+ * Given a worksheet XML row string and the sharedStrings plain-text array,
+ * collect all sharedString indices referenced by cells in this row.
+ * Returns a Set<number> of indices.
+ */
+function getSharedStringIndicesForRow(rowXml: string): Set<number> {
+  const indices = new Set<number>();
+  // Cells with type="s" (shared string): <c r="..." t="s"><v>N</v></c>
+  const cellRe = /<c\b[^>]*\bt="s"[^>]*>([\s\S]*?)<\/c>/g;
+  let m: RegExpExecArray | null;
+  while ((m = cellRe.exec(rowXml)) !== null) {
+    const vMatch = m[1].match(/<v>(\d+)<\/v>/);
+    if (vMatch) indices.add(parseInt(vMatch[1], 10));
+  }
+  return cellRe.lastIndex, indices;
+}
+
+/**
+ * Clone a template row XML string for a new row number, updating:
+ *   - <row r="N"> attribute
+ *   - every <c r="XN"> cell address
+ */
+function cloneRowForNumber(templateRowXml: string, newRowNum: number): string {
+  let xml = templateRowXml;
+  // Update row number
+  xml = xml.replace(/(<row\b[^>]*\br=")(\d+)(")/, `$1${newRowNum}$3`);
+  // Update all cell addresses to new row number
+  xml = xml.replace(/(<c\b[^>]*\br=")([A-Z]+)(\d+)(")/g, (_m, pre, col, _rStr, post) => {
+    return `${pre}${col}${newRowNum}${post}`;
+  });
+  return xml;
+}
+
 import * as ExcelJS from 'exceljs';
-
-// Column layout (31 total) — mirrors the UI Equipment List table exactly:
-// A          = Serial No.
-// B..J (9)  = Box Connection:  Tong Spc | Min OD | Box Thd | Ecc Sh | CBor D | CBor L | Bvl D | Cond | Hard B
-// K..R (8)  = Pin Connection:  Tong Spc | Min OD | Max ID  | Ecc Sh | P. Conn| P. Base| Bvl D | Cond
-// S..Z (8)  = Tube Body:       Wall R   | OD Decr| EMI Res | Slip   | Corr In| Corr Out| IPC  | Bent Jts
-// AA..AD(4) = Joint Class:     New | Premium | C2 | Scrap
-// AE        = Remarks
-
-const LAST_COL = 'AE';
-const TOTAL_COLS = 31;
 
 export async function mapDrillPipeReportV1(
   workbook: ExcelJS.Workbook,
@@ -18,150 +139,13 @@ export async function mapDrillPipeReportV1(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   serialNumbersChunk: any[],
 ): Promise<void> {
-  // Remove the 'ok' validation sheet entirely so it doesn't appear in the export
-  const okSheet = workbook.getWorksheet('ok');
-  if (okSheet) {
-    workbook.removeWorksheet(okSheet.id);
-  }
-
-  // Target the correct output sheet by name
-  const sheet = workbook.getWorksheet('Drill Pipe summary');
-  if (!sheet) {
-    throw new Error('Template does not contain a "Drill Pipe summary" worksheet');
-  }
-
-  // Clear existing template data
-  sheet.spliceRows(1, 1000);
-
-  // ── Column widths ──────────────────────────────────────────────────────────
-  sheet.columns = [
-    { key: 'sn',        width: 16 }, // A  Serial No.
-    { key: 'b_ts',      width: 8  }, // B  Box Tong Spc.
-    { key: 'b_od',      width: 8  }, // C  Box Min OD
-    { key: 'b_thd',     width: 8  }, // D  Box Thd.
-    { key: 'b_ecc',     width: 8  }, // E  Box Ecc Sh.
-    { key: 'b_cbd',     width: 8  }, // F  Box CBor D.
-    { key: 'b_cbl',     width: 8  }, // G  Box CBor L.
-    { key: 'b_bvl',     width: 10 }, // H  Box Bvl D.
-    { key: 'b_cond',    width: 7  }, // I  Box Cond.
-    { key: 'b_hard',    width: 7  }, // J  Box Hard B.
-    { key: 'p_ts',      width: 8  }, // K  Pin Tong Spc.
-    { key: 'p_od',      width: 8  }, // L  Pin Min OD
-    { key: 'p_id',      width: 8  }, // M  Pin Max ID
-    { key: 'p_ecc',     width: 8  }, // N  Pin Ecc Sh.
-    { key: 'p_conn',    width: 10 }, // O  Pin P. Conn
-    { key: 'p_base',    width: 8  }, // P  Pin P. Base
-    { key: 'p_bvl',     width: 10 }, // Q  Pin Bvl D.
-    { key: 'p_cond',    width: 7  }, // R  Pin Cond.
-    { key: 'wall',      width: 8  }, // S  Wall R.
-    { key: 'od_decr',   width: 8  }, // T  OD Decr.
-    { key: 'emi',       width: 8  }, // U  EMI Res.
-    { key: 'slip',      width: 8  }, // V  Slip Area
-    { key: 'corr_in',   width: 7  }, // W  Corr. In
-    { key: 'corr_out',  width: 7  }, // X  Corr. Out
-    { key: 'ipc',       width: 6  }, // Y  IPC
-    { key: 'bent',      width: 7  }, // Z  Bent Jts
-    { key: 'jc_new',    width: 7  }, // AA New
-    { key: 'jc_prem',   width: 8  }, // AB Premium
-    { key: 'jc_c2',     width: 6  }, // AC C2
-    { key: 'jc_scrap',  width: 7  }, // AD Scrap
-    { key: 'remarks',   width: 30 }, // AE Remarks
-  ];
-
-  // ── Style helpers ──────────────────────────────────────────────────────────
-  const primaryFill: ExcelJS.Fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
-  const secondaryFill: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
-  const accentFill: ExcelJS.Fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
-  const sectionFill: ExcelJS.Fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
-  const textWhite: Partial<ExcelJS.Font> = { color: { argb: 'FFFFFFFF' }, bold: true, size: 10 };
-  const textBold:  Partial<ExcelJS.Font> = { bold: true, size: 10 };
-  const textLabel: Partial<ExcelJS.Font> = { bold: true, size: 9, color: { argb: 'FF64748B' } };
-  const borderAll: Partial<ExcelJS.Borders> = {
-    top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-    left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-    bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-    right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-  };
-  const borderBottom = { bottom: { style: 'thin' as const, color: { argb: 'FFCBD5E1' } } };
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const h = (snapshot.header || snapshot) as any;
 
-  let currentRow = 1;
-
-  // ── TITLE ─────────────────────────────────────────────────────────────────
-  sheet.mergeCells(`A${currentRow}:${LAST_COL}${currentRow + 1}`);
-  const titleCell = sheet.getCell(`A${currentRow}`);
-  titleCell.value = 'DRILL PIPE INSPECTION REPORT';
-  titleCell.font = { size: 16, bold: true, color: { argb: 'FF0F172A' } };
-  titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  titleCell.fill = accentFill;
-  currentRow += 3;
-
-  // ── Meta helpers ───────────────────────────────────────────────────────────
-  const setLabel = (cell: string, text: string) => {
-    sheet.getCell(cell).value = text;
-    sheet.getCell(cell).font = textLabel;
-    sheet.getCell(cell).alignment = { horizontal: 'right' };
-  };
-  const setVal = (from: string, to: string, text: string) => {
-    sheet.mergeCells(`${from}:${to}`);
-    sheet.getCell(from).value = text;
-    sheet.getCell(from).border = { bottom: borderBottom.bottom };
-    sheet.getCell(from).font = { size: 10 };
-  };
-  const addMetaRow = (l1: string, v1: string, l2: string, v2: string) => {
-    setLabel(`A${currentRow}`, l1);
-    setVal(`B${currentRow}`, `F${currentRow}`, v1);
-    setLabel(`I${currentRow}`, l2);
-    setVal(`J${currentRow}`, `O${currentRow}`, v2);
-    currentRow += 2;
-  };
-
-  // ── INSPECTION REPORT INFORMATION ─────────────────────────────────────────
-  sheet.mergeCells(`A${currentRow}:${LAST_COL}${currentRow}`);
-  const irHeader = sheet.getCell(`A${currentRow}`);
-  irHeader.value = 'INSPECTION REPORT INFORMATION';
-  irHeader.fill = primaryFill;
-  irHeader.font = textWhite;
-  currentRow++;
-
+  // 1. Build global token map
   const reportDate = h.updatedAt
     ? new Date(h.updatedAt).toLocaleDateString()
     : h.createdAt ? new Date(h.createdAt).toLocaleDateString() : 'N/A';
-
-  addMetaRow('Report No:', h.reportNumber || 'N/A', 'Date:', reportDate);
-  addMetaRow('PO / Work Order:', h.poNumber || 'N/A', 'Standard Used:', h.standardUsed || 'N/A');
-  addMetaRow('Address of Inspection:', h.inspectionAddress || 'N/A', '', '');
-  currentRow++;
-
-  // ── PIPE SPECIFICATIONS ────────────────────────────────────────────────────
-  sheet.mergeCells(`A${currentRow}:${LAST_COL}${currentRow}`);
-  const pipeHeader = sheet.getCell(`A${currentRow}`);
-  pipeHeader.value = 'PIPE SPECIFICATIONS';
-  pipeHeader.fill = primaryFill;
-  pipeHeader.font = textWhite;
-  currentRow++;
-
-  addMetaRow('Grade:', h.grade || 'N/A', 'Range:', h.range || 'N/A');
-
-  setLabel(`A${currentRow}`, 'Weight:');
-  setVal(`B${currentRow}`, `F${currentRow}`, h.weight || 'N/A');
-  setLabel(`I${currentRow}`, 'Nom. W.T:');
-  setVal(`J${currentRow}`, `O${currentRow}`, h.nomWT || 'N/A');
-  currentRow += 2;
-
-  addMetaRow('Nom. OD:', h.nomOD || 'N/A', 'Nom. ID:', h.nomID || 'N/A');
-  addMetaRow('Connection:', h.connection || 'N/A', '', '');
-  currentRow++;
-
-  // ── EQUIPMENT & METHODS ────────────────────────────────────────────────────
-  sheet.mergeCells(`A${currentRow}:${LAST_COL}${currentRow}`);
-  const eqBanner = sheet.getCell(`A${currentRow}`);
-  eqBanner.value = 'EQUIPMENT & METHODS USED';
-  eqBanner.fill = primaryFill;
-  eqBanner.font = textWhite;
-  currentRow++;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const eqNames = ((h.equipmentUsed || snapshot.equipmentUsed) as any[] || [])
@@ -172,188 +156,8 @@ export async function mapDrillPipeReportV1(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .map((m: any) => m.name || m).join(', ') || 'None specified';
 
-  sheet.mergeCells(`A${currentRow}:P${currentRow}`);
-  const eqCell = sheet.getCell(`A${currentRow}`);
-  eqCell.value = `Equipment: ${eqNames}`;
-  eqCell.font = { italic: true, size: 9 };
-  eqCell.fill = sectionFill;
-
-  sheet.mergeCells(`Q${currentRow}:${LAST_COL}${currentRow}`);
-  const mCell = sheet.getCell(`Q${currentRow}`);
-  mCell.value = `Methods: ${mNames}`;
-  mCell.font = { italic: true, size: 9 };
-  mCell.fill = sectionFill;
-  currentRow += 2;
-
-  // ── DATA TABLE ─────────────────────────────────────────────────────────────
-  const applyHeaderStyle = (cellStr: string, title: string) => {
-    const c = sheet.getCell(cellStr);
-    c.value = title;
-    c.fill = primaryFill;
-    c.font = textWhite;
-    c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    c.border = borderAll;
-  };
-
-  // Group headers
-  applyHeaderStyle(`A${currentRow}`, 'PIPE INFO');
-
-  sheet.mergeCells(`B${currentRow}:J${currentRow}`);
-  applyHeaderStyle(`B${currentRow}`, 'BOX CONNECTION (TOOL JOINT)');
-
-  sheet.mergeCells(`K${currentRow}:R${currentRow}`);
-  applyHeaderStyle(`K${currentRow}`, 'PIN CONNECTION (TOOL JOINT)');
-
-  sheet.mergeCells(`S${currentRow}:Z${currentRow}`);
-  applyHeaderStyle(`S${currentRow}`, 'TUBE BODY');
-
-  sheet.mergeCells(`AA${currentRow}:AD${currentRow}`);
-  applyHeaderStyle(`AA${currentRow}`, 'JOINT CLASS');
-
-  applyHeaderStyle(`AE${currentRow}`, 'FINAL REMARKS');
-  currentRow++;
-
-  // Sub headers (row 2 of header)
-  const subHeaders: [string, string][] = [
-    ['A', 'Serial No.'],
-    // Box
-    ['B', 'Tong Spc.'], ['C', 'Min OD'], ['D', 'Box Thd.'], ['E', 'Ecc Sh.'],
-    ['F', 'CBor D.'],   ['G', 'CBor L.'], ['H', 'Bvl D.'],  ['I', 'Cond.'], ['J', 'Hard B.'],
-    // Pin
-    ['K', 'Tong Spc.'], ['L', 'Min OD'], ['M', 'Max ID'],   ['N', 'Ecc Sh.'],
-    ['O', 'P. Conn'],   ['P', 'P. Base'], ['Q', 'Bvl D.'],  ['R', 'Cond.'],
-    // Body
-    ['S', 'Wall R.'],   ['T', 'OD Decr.'], ['U', 'EMI Res.'], ['V', 'Slip Area'],
-    ['W', 'Corr. In'],  ['X', 'Corr. Out'], ['Y', 'IPC'],    ['Z', 'Bent Jts'],
-    // Joint Class
-    ['AA', 'NEW'], ['AB', 'PREM'], ['AC', 'C2'], ['AD', 'SCRAP'],
-    // Remarks
-    ['AE', 'Remarks'],
-  ];
-  subHeaders.forEach(([col, label]) => applyHeaderStyle(`${col}${currentRow}`, label));
-  currentRow++;
-
-  // ── Serial data rows ───────────────────────────────────────────────────────
-  if (serialNumbersChunk.length === 0) {
-    sheet.mergeCells(`A${currentRow}:${LAST_COL}${currentRow}`);
-    const c = sheet.getCell(`A${currentRow}`);
-    c.value = 'No serial numbers in this report.';
-    c.alignment = { horizontal: 'center' };
-    currentRow++;
-  }
-
-  const yesNo = (val: unknown) => (val === undefined || val === null ? '' : val ? 'Yes' : 'No');
-
-  for (const sn of serialNumbersChunk) {
-    const d = sn.inspectionData || sn.inspectionJson || {};
-    const box   = d.box   || {};
-    const pin   = d.pin   || {};
-    const body  = d.body  || {};
-    const final = d.final || {};
-
-    const boxBvl  = box.bevelDiameterMin  ? `${box.bevelDiameterMin}-${box.bevelDiameterMax || ''}`   : '';
-    const pinConn = pin.lengthPinConnMin  ? `${pin.lengthPinConnMin}-${pin.lengthPinConnMax || ''}`   : '';
-    const pinBvl  = pin.bevelDiameterMin  ? `${pin.bevelDiameterMin}-${pin.bevelDiameterMax || ''}`   : '';
-
-    const rowValues = [
-      // A  Serial No.
-      sn.serial || sn.serialNumber || sn.value || '',
-      // B-J  Box
-      box.minTongSpace            || '',
-      box.minOD                   || '',
-      box.minBoxThreads           || '',
-      box.minEccShoulder          || '',
-      box.maxCounterBoreDiameter  || '',
-      box.maxCounterBoreLength    || '',
-      boxBvl,
-      box.condition               || '',
-      box.hardBanding             || '',
-      // K-R  Pin
-      pin.minTongSpace            || '',
-      pin.minOD                   || '',
-      pin.maxID                   || '',
-      pin.minEccShoulder          || '',
-      pinConn,
-      pin.maxLengthPinBase        || '',
-      pinBvl,
-      pin.condition               || '',
-      // S-Z  Body
-      body.wallRemaining          || '',
-      body.odDecrease             || '',
-      body.emiResult              || '',
-      body.slipArea               || '',
-      yesNo(body.corrosionIn),
-      yesNo(body.corrosionOut),
-      yesNo(body.ipc),
-      yesNo(body.bentJoints),
-      // AA-AD  Joint Class
-      final.isNew     ? 'X' : '',
-      final.isPremium ? 'X' : '',
-      final.isC2      ? 'X' : '',
-      final.isScrap   ? 'X' : '',
-      // AE  Remarks
-      final.condition_notes || final.remarks || d.remarks || '',
-    ];
-
-    const row = sheet.getRow(currentRow);
-    row.values = rowValues;
-    row.height = 22;
-
-    row.eachCell((cell, col) => {
-      cell.border = borderAll;
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-
-      // Remarks: left-align
-      if (col === TOTAL_COLS) {
-        cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
-      }
-      // Joint class X colouring: col 27=New,28=Prem,29=C2,30=Scrap
-      if (col >= 27 && col <= 30 && cell.value === 'X') {
-        cell.font = { bold: true, color: { argb: col === 30 ? 'FFDC2626' : 'FF16A34A' } };
-      }
-    });
-
-    // Alternating row shading
-    if (currentRow % 2 === 0) {
-      for (let i = 1; i <= TOTAL_COLS; i++) {
-        row.getCell(i).fill = secondaryFill;
-      }
-    }
-
-    currentRow++;
-  }
-  currentRow++;
-
-  // Legend
-  sheet.mergeCells(`AA${currentRow}:AD${currentRow}`);
-  const legCell = sheet.getCell(`AA${currentRow}`);
-  legCell.value = 'X = classification assigned. Green = Pass, Red = Scrap.';
-  legCell.font = { italic: true, size: 9, color: { argb: 'FF64748B' } };
-  currentRow += 2;
-
-  // ── FOOTER: Comments & Approval ────────────────────────────────────────────
-  sheet.mergeCells(`A${currentRow}:${LAST_COL}${currentRow}`);
-  const fHeader = sheet.getCell(`A${currentRow}`);
-  fHeader.value = 'COMMENTS & APPROVAL';
-  fHeader.fill = primaryFill;
-  fHeader.font = textWhite;
-  currentRow++;
-
-  sheet.getCell(`A${currentRow}`).value = 'Overall Inspector Comment:';
-  sheet.getCell(`A${currentRow}`).font = textBold;
-  currentRow++;
-
-  sheet.mergeCells(`A${currentRow}:${LAST_COL}${currentRow + 3}`);
-  const commentCell = sheet.getCell(`A${currentRow}`);
-  commentCell.value = h.inspectorComment || snapshot.inspectorComment || 'No comments provided.';
-  commentCell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
-  commentCell.border = borderAll;
-  currentRow += 5;
-
-  // Signatures
   let inspectedByName = 'N/A';
   let approvedByName  = 'N/A';
-
   const transitionLogs = snapshot.transitionLogs || [];
   if (Array.isArray(transitionLogs) && transitionLogs.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -376,15 +180,211 @@ export async function mapDrillPipeReportV1(
     }
   }
 
-  sheet.getCell(`A${currentRow}`).value = 'Inspected By:';
-  sheet.getCell(`A${currentRow}`).font = textBold;
-  sheet.mergeCells(`B${currentRow}:G${currentRow}`);
-  sheet.getCell(`B${currentRow}`).value = inspectedByName;
-  sheet.getCell(`B${currentRow}`).border = { bottom: { style: 'thin', color: { argb: 'FF000000' } } };
+  const globalTokens: Record<string, string> = {
+    '{{customer}}': h.customerName || 'N/A',
+    '{{reportNumber}}': h.reportNumber || 'N/A',
+    '{{reportDate}}': reportDate,
+    '{{poNumber}}': h.poNumber || 'N/A',
+    '{{standardUsed}}': h.standardUsed || 'N/A',
+    '{{inspectionAddress}}': h.inspectionAddress || 'N/A',
+    '{{grade}}': h.grade || 'N/A',
+    '{{range}}': h.range || 'N/A',
+    '{{weight}}': h.weight || 'N/A',
+    '{{nomWT}}': h.nomWT || 'N/A',
+    '{{nomOD}}': h.nomOD || 'N/A',
+    '{{nomID}}': h.nomID || 'N/A',
+    '{{connection}}': h.connection || 'N/A',
+    '{{equipment}}': eqNames,
+    '{{methods}}': mNames,
+    '{{inspectorComment}}': h.inspectorComment || snapshot.inspectorComment || 'No comments provided.',
+    '{{inspectedBy}}': inspectedByName,
+    '{{approvedBy}}': approvedByName,
+  };
 
-  sheet.getCell(`M${currentRow}`).value = 'Approved By:';
-  sheet.getCell(`M${currentRow}`).font = textBold;
-  sheet.mergeCells(`N${currentRow}:S${currentRow}`);
-  sheet.getCell(`N${currentRow}`).value = approvedByName;
-  sheet.getCell(`N${currentRow}`).border = { bottom: { style: 'thin', color: { argb: 'FF000000' } } };
+  // 2. Serialize the workbook to raw bytes, then open with JSZip
+  const rawBuffer = await workbook.xlsx.writeBuffer();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const zip = await JSZip.loadAsync(rawBuffer as any);
+
+  const sheetPath = 'xl/worksheets/sheet1.xml';
+  const ssPath    = 'xl/sharedStrings.xml';
+
+  let sheetXml = await zip.file(sheetPath)?.async('string') ?? '';
+  let ssXml    = await zip.file(ssPath)?.async('string') ?? '';
+
+  if (!sheetXml) throw new Error('Could not read worksheet XML from template');
+
+  // 3. Parse shared strings — this is where the actual token text lives
+  const { blocks: ssBlocks, plain: ssPlain } = parseSharedStrings(ssXml);
+
+  // 4. Find the template row that contains {{sn}} by checking shared string values
+  //    A row references shared strings as <c t="s"><v>INDEX</v></c>
+  const rowRegex = /(<row\b[^>]*\br="(\d+)"[^>]*>[\s\S]*?<\/row>)/g;
+  let templateRowXml = '';
+  let templateRowNumber = -1;
+
+  let rowMatch: RegExpExecArray | null;
+  while ((rowMatch = rowRegex.exec(sheetXml)) !== null) {
+    const rowXml = rowMatch[1];
+    const indices = getSharedStringIndicesForRow(rowXml);
+    for (const idx of indices) {
+      if (ssPlain[idx] && ssPlain[idx].includes('{{sn}}')) {
+        templateRowNumber = parseInt(rowMatch[2], 10);
+        templateRowXml = rowXml;
+        break;
+      }
+    }
+    if (templateRowNumber !== -1) break;
+  }
+
+  // 5. Handle serial number row expansion (if {{sn}} template row found)
+  if (templateRowNumber !== -1 && serialNumbersChunk.length > 0) {
+    const yesNo = (val: unknown) => (val === undefined || val === null ? '' : val ? '1' : '');
+    const N = serialNumbersChunk.length;
+    const delta = N - 1; // net rows added (we replace 1 template row with N data rows)
+
+    // Shift all rows AFTER the template row down by delta
+    if (delta > 0) {
+      sheetXml = shiftRowsInXml(sheetXml, templateRowNumber, delta);
+    }
+
+    // For each serial number, we need the per-row shared string indices
+    // We will ADD new <si> entries to the shared strings table for per-row data,
+    // and update the cell <v> references in the cloned row XMLs.
+    //
+    // Strategy: find which shared string indices are used in the template row,
+    // build a token->value map for each SN, add new si entries, replace cell refs.
+    const templateIndices = getSharedStringIndicesForRow(templateRowXml);
+
+    // Build an index map: siIndex -> token string (for template row cells)
+    const indexToToken: Map<number, string> = new Map();
+    for (const idx of templateIndices) {
+      const text = ssPlain[idx];
+      if (text) {
+        // Check if this shared string contains any per-row token
+        const allRowTokenKeys = [
+          '{{sn}}','{{b_ts}}','{{b_od}}','{{b_thd}}','{{b_ecc}}','{{b_cbd}}','{{b_cbl}}',
+          '{{b_bvl}}','{{b_cond}}','{{b_hard}}','{{p_ts}}','{{p_od}}','{{p_id}}','{{p_ecc}}',
+          '{{p_conn}}','{{p_base}}','{{p_bvl}}','{{p_cond}}','{{wall}}','{{od_decr}}','{{emi}}',
+          '{{slip}}','{{corr_in}}','{{corr_out}}','{{ipc}}','{{bent}}',
+          '{{jc_new}}','{{jc_prem}}','{{jc_c2}}','{{jc_scrap}}','{{remarks}}',
+        ];
+        for (const tok of allRowTokenKeys) {
+          if (text.includes(tok)) {
+            indexToToken.set(idx, text);
+            break;
+          }
+        }
+      }
+    }
+
+    // For each SN, build cloned row XMLs with new shared string indices
+    const newRowsXml: string[] = [];
+
+    for (let i = 0; i < N; i++) {
+      const sn = serialNumbersChunk[i];
+      const rowNum = templateRowNumber + i;
+
+      const d = sn.inspectionData || sn.inspectionJson || {};
+      const box   = d.box   || {};
+      const pin   = d.pin   || {};
+      const body  = d.body  || {};
+      const final = d.final || {};
+      const boxBvl  = box.bevelDiameterMin  ? `${box.bevelDiameterMin}-${box.bevelDiameterMax || ''}` : '';
+      const pinConn = pin.lengthPinConnMin  ? `${pin.lengthPinConnMin}-${pin.lengthPinConnMax || ''}` : '';
+      const pinBvl  = pin.bevelDiameterMin  ? `${pin.bevelDiameterMin}-${pin.bevelDiameterMax || ''}` : '';
+
+      const rowTokens: Record<string, string> = {
+        '{{sn}}': sn.serial || sn.serialNumber || sn.value || '',
+        '{{b_ts}}': box.minTongSpace || '',
+        '{{b_od}}': box.minOD || '',
+        '{{b_thd}}': box.minBoxThreads || '',
+        '{{b_ecc}}': box.minEccShoulder || '',
+        '{{b_cbd}}': box.maxCounterBoreDiameter || '',
+        '{{b_cbl}}': box.maxCounterBoreLength || '',
+        '{{b_bvl}}': boxBvl,
+        '{{b_cond}}': box.condition || '',
+        '{{b_hard}}': box.hardBanding || '',
+        '{{p_ts}}': pin.minTongSpace || '',
+        '{{p_od}}': pin.minOD || '',
+        '{{p_id}}': pin.maxID || '',
+        '{{p_ecc}}': pin.minEccShoulder || '',
+        '{{p_conn}}': pinConn,
+        '{{p_base}}': pin.maxLengthPinBase || '',
+        '{{p_bvl}}': pinBvl,
+        '{{p_cond}}': pin.condition || '',
+        '{{wall}}': body.wallRemaining || '',
+        '{{od_decr}}': body.odDecrease || '',
+        '{{emi}}': body.emiResult || '',
+        '{{slip}}': body.slipArea || '',
+        '{{corr_in}}': yesNo(body.corrosionIn),
+        '{{corr_out}}': yesNo(body.corrosionOut),
+        '{{ipc}}': yesNo(body.ipc),
+        '{{bent}}': yesNo(body.bentJoints),
+        '{{jc_new}}': final.isNew ? 'X' : '',
+        '{{jc_prem}}': final.isPremium ? 'X' : '',
+        '{{jc_c2}}': final.isC2 ? 'X' : '',
+        '{{jc_scrap}}': final.isScrap ? 'X' : '',
+        '{{remarks}}': final.condition_notes || final.remarks || d.remarks || '',
+      };
+
+      // For each template cell that has a token, add a new shared string entry
+      // and build a remapping: old index -> new index
+      const indexRemap: Map<number, number> = new Map();
+      for (const [idx, templateText] of indexToToken.entries()) {
+        // Build the resolved value by applying row tokens to the template text
+        let resolved = templateText;
+        for (const [tok, val] of Object.entries(rowTokens)) {
+          resolved = resolved.split(tok).join(val);
+        }
+        // Add as a new simple <si><t>value</t></si> block (preserve-space for safety)
+        const newBlock = `<si><t xml:space="preserve">${escapeXml(resolved)}</t></si>`;
+        const newIdx = ssBlocks.length;
+        ssBlocks.push(newBlock);
+        ssPlain.push(resolved);
+        indexRemap.set(idx, newIdx);
+      }
+
+      // Clone the template row and remap shared string indices
+      let clonedRow = cloneRowForNumber(templateRowXml, rowNum);
+      // Replace <v>OLD_IDX</v> in cells that had tokens with new indices
+      for (const [oldIdx, newIdx] of indexRemap.entries()) {
+        // Match cells with t="s" that reference oldIdx
+        // We match the specific pattern: <c ... t="s" ...><v>oldIdx</v></c>
+        const cellPattern = new RegExp(
+          `(<c\\b[^>]*\\bt="s"[^>]*>(?:<[^v/][^>]*>)*<v>)${oldIdx}(<\\/v>)`,
+          'g'
+        );
+        clonedRow = clonedRow.replace(cellPattern, `$1${newIdx}$2`);
+      }
+
+      newRowsXml.push(clonedRow);
+    }
+
+    // Replace the template row with the N cloned rows
+    sheetXml = sheetXml.replace(templateRowXml, newRowsXml.join(''));
+
+    // Rebuild shared strings XML with the new entries
+    ssXml = rebuildSharedStrings(ssXml, ssBlocks);
+  }
+
+  // 6. Apply global token replacement directly in the shared strings XML
+  //    (global tokens can't be per-row so we just do a global replace on all si blocks)
+  for (const [token, value] of Object.entries(globalTokens)) {
+    const escaped = token.replace(/[{}]/g, '\\$&');
+    ssXml = ssXml.replace(new RegExp(escaped, 'g'), escapeXml(value));
+  }
+
+  // 7. Write modified XMLs back and generate final buffer
+  zip.file(sheetPath, sheetXml);
+  if (ssXml) zip.file(ssPath, ssXml);
+
+  const finalBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+  // 8. Reload into the ExcelJS workbook so ExportService can call writeBuffer() on it
+  while (workbook.worksheets.length > 0) {
+    workbook.removeWorksheet(workbook.worksheets[0].id);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await workbook.xlsx.load(finalBuffer as any);
 }

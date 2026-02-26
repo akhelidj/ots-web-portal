@@ -41,6 +41,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   public isCustomer = false;
   public isReceiver = false;
   public isAdmin = false;
+  private customerScopeId: string | null = null;
 
   public kpiTotalReports = 0;
   public kpiOpenReports = 0;
@@ -63,6 +64,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
        this.isCustomer = p?.role === 'CUSTOMER';
        this.isReceiver = p?.role === 'RECEIVER';
        this.isAdmin = p?.role === 'ADMIN';
+       this.customerScopeId = (p?.role === 'CUSTOMER' && p?.customerId) ? p.customerId : null;
     }));
 
     this.subs.add(this.customerRepo.changes$.subscribe(() => this.loadCustomers()));
@@ -161,6 +163,12 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
 
   getFilteredReports(reports: LocalInspectionReport[]) {
     const filtered = reports.filter(r => {
+      // Safety: always scope CUSTOMER users to their own customerId in case
+      // stale IndexedDB data from another customer is present
+      if (this.customerScopeId && r.customerId !== this.customerScopeId) {
+        return false;
+      }
+
       let matchStatus = true;
       if (this.statusFilter === 'OPEN') {
          matchStatus = r.status !== 'CLOSED';

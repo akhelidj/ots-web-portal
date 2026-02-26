@@ -26,7 +26,7 @@ The `TemplateVersion` table is legacy and currently unused but retained for comp
 Strict validation logic enforces:
 - **File Type**: Only `.xlsx` (OpenXML) is allowed. `.xls` is rejected.
 - **Structure**:
-    - Must contain sheets: `ok`, `Drill Pipe summary`.
+    - Must contain sheets: `ok`, `Drill Pipe Inspection Report`.
 - **Markers**:
     - Specific standard cells in the `ok` sheet must match expected text (e.g., A4 = "DMMT Work Ordre N°:").
     - Comparison is case-insensitive and trimmed.

@@ -2,8 +2,6 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
-
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
@@ -26,10 +24,10 @@ export class UsersService {
     });
   }
 
-  async createUser(tenantId: string, data: { email: string; name?: string; role: UserRole; isActive?: boolean; customerId?: string }) {
-    const normalizedEmail = data.email.toLowerCase().trim();
+  async createUser(tenantId: string, data: { email: string; name?: string; role: UserRole; password: string; isActive?: boolean; customerId?: string }) {
+    const email = data.email.toLowerCase().trim();
     const existing = await this.prisma.user.findUnique({
-      where: { tenantId_email: { tenantId, email: normalizedEmail } },
+      where: { tenantId_email: { tenantId, email } },
     });
 
     if (existing) {
@@ -43,14 +41,13 @@ export class UsersService {
       throw new ConflictException('Customer ID is only allowed for Customer role');
     }
 
-    // Generate random 16-character base64 password (it's secure and reasonably easy to copy-paste)
-    const tempPassword = crypto.randomBytes(12).toString('base64');
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    // Use provided password
+    const passwordHash = await bcrypt.hash(data.password, 10);
 
     const user = await this.prisma.user.create({
       data: {
         tenantId,
-        email: normalizedEmail,
+        email,
         name: data.name,
         role: data.role,
         isActive: data.isActive ?? true,
@@ -71,9 +68,29 @@ export class UsersService {
       },
     });
 
+    const sampleEmail = `
+=========================================
+[SAMPLE EMAIL]
+To: ${email}
+Subject: Welcome to OTS
+
+Hello ${data.name || 'User'},
+
+Welcome to the OTS Portal! Your account has been successfully created.
+
+Here are your access details:
+- Login Email: ${email}
+- Role: ${data.role}
+- Temporary Password: ${data.password}
+${data.role === UserRole.CUSTOMER ? '\\nNote: As a customer user, you will be prompted to update your password at your first connection.\\n' : ''}
+Please log in to the portal to get started.
+=========================================
+`;
+    console.log(sampleEmail);
+
     return {
       ...user,
-      temporaryPassword: tempPassword,
+      temporaryPassword: data.password,
     };
   }
 

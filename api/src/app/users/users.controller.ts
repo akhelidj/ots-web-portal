@@ -8,6 +8,7 @@ export interface CreateUserDto {
   email: string;
   name?: string;
   role: UserRole;
+  password: string;
   isActive?: boolean;
   customerId?: string;
 }
