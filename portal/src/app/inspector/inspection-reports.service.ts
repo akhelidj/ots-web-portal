@@ -69,6 +69,14 @@ export class InspectionReportsService {
       const localLogs = await this.tlRepo.listByReportId(reportId);
       const localMap = new Map(localLogs.map(l => [l.id, l]));
 
+      // Clear pseudo-logs created locally
+      for (const lg of localLogs) {
+         if (lg.id.startsWith('local-tl-')) {
+            await this.tlRepo.delete(lg.id);
+            localMap.delete(lg.id);
+         }
+      }
+
       const toUpsert: LocalTransitionLog[] = [];
       for (const lg of logs) {
          if (!localMap.has(lg.id)) {
@@ -213,6 +221,21 @@ export class InspectionReportsService {
     };
 
     await this.irRepo.upsert(updatedRep);
+
+    const profile = await firstValueFrom(this.session.profile$);
+    if (profile) {
+      const tempLogId = 'local-tl-' + crypto.randomUUID();
+      const tempLog: LocalTransitionLog = {
+        id: tempLogId,
+        inspectionReportId: id,
+        fromStatus: rep.status,
+        toStatus: toStatus,
+        reason: reason || '',
+        userId: profile.id,
+        timestamp: new Date().toISOString()
+      };
+      await this.tlRepo.upsert(tempLog);
+    }
 
     await this.outbox.enqueue({
       id: crypto.randomUUID(),
