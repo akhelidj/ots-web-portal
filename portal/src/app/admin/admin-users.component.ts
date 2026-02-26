@@ -37,17 +37,31 @@ export class AdminUsersComponent implements OnInit {
   private customerRepo = inject(CustomerLocalRepo);
 
   public tempPasswordDisplay: string | null = null;
+  public passwordCopied = false;
 
   constructor() {
     this.usersService.tempPasswordNotified$.subscribe((pwd) => {
       if (pwd) {
+        this.passwordCopied = false;
         this.tempPasswordDisplay = pwd;
       }
     });
   }
 
+  public async copyPassword(pwd: string | null) {
+    if (!pwd) return;
+    try {
+      await navigator.clipboard.writeText(pwd);
+      this.passwordCopied = true;
+      setTimeout(() => this.passwordCopied = false, 2000);
+    } catch (e) {
+      console.error('Failed to copy', e);
+    }
+  }
+
   public dismissTempPassword(): void {
     this.tempPasswordDisplay = null;
+    this.passwordCopied = false;
   }
 
   ngOnInit() {
