@@ -390,50 +390,7 @@ export class InspectionReportWorkflowService {
         // remove capture of nextRevisionNumber as it is handled by service
 
 
-        // Create Snapshot if needed
-        if (isFirstApproval) {
-            await this.revisionService.createInspectionReportSnapshot(
-                tx,
-                reportId,
-                reason || 'Initial approval',
-                user.id,
-                user.tenantId
-            );
-        } else if (isReopen) {
-            // Reopen logic (Admin mutation) - This should eventually use createMutationRevision equivalent if fully consistent
-            // But per specs: "Any Admin data mutation... create Revision n+1"
-            // Reopen is a status mutation.
-            // Requirement 5.2: "Any API operation that mutates... while status=APPROVED"
-            // Reopen moves FROM Approved.
-            // Wait, "Reopen transitions" usually mean going back to draft/inspection.
-            // If we are leaving APPROVED, we are mutating the STATUS of an APPROVED report.
-            // So yes, this counts as a mutation of an approved report.
-            // However, the snapshot should capture the state BEFORE the transition? 
-            // Or AFTER?
-            // "snapshotJson = snapshot after the mutation"
-            // If we change status to IN_INSPECTION, the snapshot will show IN_INSPECTION?
-            // That seems wrong for an "Approved Revision". 
-            // Actually, T0.5.3 says: "Any Admin data mutation... create Revision n+1".
-            // If we are reopening, we are effectively creating a NEW version of the report history?
-            // Use case: Mistake in approved report. Admin reopens (Rev 1). Admin fixes. Admin Approves (Rev 2).
-            // So the Reopen action itself might be the trigger for Rev 2?
-            // Let's stick to the explicit instruction for now: "Admin post-approval mutation requires reason and creates Rev n+1".
-            // Changing status is a mutation.
-            
-            // However, the snapshot service implementation fetches the report from DB.
-            // Inside this transaction, we updated the status to 'toStatus' (IN_INSPECTION) just above.
-            // So `createInspectionReportSnapshot` will see IN_INSPECTION.
-            
-            await this.revisionService.createInspectionReportSnapshot(
-                tx,
-                reportId,
-                reason!, // Reason mandatory for reopen
-                user.id,
-                user.tenantId
-            );
-        }
-
-        // Create Transition Log
+        // Create Transition Log first so it is included in the snapshot
         await tx.inspectionReportTransitionLog.create({
             data: {
                 inspectionReportId: reportId,
@@ -443,6 +400,25 @@ export class InspectionReportWorkflowService {
                 previousActiveStatus: toStatus === InspectionReportStatus.ON_HOLD ? currentStatus : null,
             }
         });
+
+        // Create Snapshot if needed (after transition log so the approvedBy userId is captured)
+        if (isFirstApproval) {
+            await this.revisionService.createInspectionReportSnapshot(
+                tx,
+                reportId,
+                reason || 'Initial approval',
+                user.id,
+                user.tenantId
+            );
+        } else if (isReopen) {
+            await this.revisionService.createInspectionReportSnapshot(
+                tx,
+                reportId,
+                reason!, // Reason mandatory for reopen
+                user.id,
+                user.tenantId
+            );
+        }
 
         // Create Audit Log
         await tx.auditLog.create({
