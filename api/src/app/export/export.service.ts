@@ -21,6 +21,7 @@ export class ExportService {
     // 1. Fetch Report & Validate Approval
     const report = await this.prisma.inspectionReport.findUnique({
       where: { id: reportId },
+      include: { customer: { select: { name: true } } },
     });
 
     if (!report) {
@@ -133,6 +134,11 @@ export class ExportService {
             select: { id: true, name: true, email: true }
         });
         snapshot.users = users;
+    }
+
+    // Inject Customer Data
+    if (!snapshot.header.customerName) {
+      snapshot.header.customerName = report.customer?.name || 'N/A';
     }
 
     // 4. Fetch Template Bytes and verify

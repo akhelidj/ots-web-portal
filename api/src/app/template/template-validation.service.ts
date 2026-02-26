@@ -8,7 +8,7 @@ export class TemplateValidationService {
   private readonly ALLOWED_MIME_TYPES = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   ];
-  private readonly REQUIRED_SHEETS = ['Drill Pipe summary'];
+  private readonly REQUIRED_SHEETS = ['Drill Pipe Inspection Report'];
 
 
   async validateTemplate(file: any): Promise<void> {
