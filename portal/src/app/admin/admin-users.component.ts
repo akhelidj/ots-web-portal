@@ -27,6 +27,12 @@ export class AdminUsersComponent implements OnInit {
   public formCustomerId = '';
   public formError = '';
 
+  // Edit User Form state
+  public editUserId: string | null = null;
+  public editFormName = '';
+  public editFormPassword = '';
+  public editFormError = '';
+
   public customers: LocalCustomer[] = [];
   private customerRepo = inject(CustomerLocalRepo);
 
@@ -153,6 +159,68 @@ export class AdminUsersComponent implements OnInit {
     } catch (e) {
       console.error(e);
       this.formError = 'Failed to toggle active state.';
+    }
+  }
+
+  public openEditModal(user: LocalUser): void {
+    this.editUserId = user.id;
+    this.editFormName = user.name || '';
+    this.editFormPassword = '';
+    this.editFormError = '';
+  }
+
+  public closeEditModal(): void {
+    this.editUserId = null;
+  }
+
+  public async onSubmitEdit(): Promise<void> {
+    this.editFormError = '';
+    
+    if (!this.editUserId) return;
+    
+    // Create optimistic copy
+    const userToEdit = await this.repo.getById(this.editUserId);
+    if (!userToEdit) {
+      this.editFormError = 'User not found.';
+      return;
+    }
+
+    try {
+      const updatedUser: LocalUser = {
+        ...userToEdit,
+        name: this.editFormName || null,
+        syncState: 'PENDING_UPDATE',
+      };
+      
+      // 1. Write exclusively to Local Repo
+      await this.repo.upsert(updatedUser);
+
+      // 2. Enqueue Outbox mutation
+      const payload: Record<string, string | null> = { name: this.editFormName || null };
+      if (this.editFormPassword) {
+        payload['password'] = this.editFormPassword;
+      }
+
+      await this.outbox.enqueue({
+        id: crypto.randomUUID(),
+        idempotencyKey: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        entityType: 'USER',
+        entityId: this.editUserId,
+        operation: 'UPDATE_PROFILE',
+        payload,
+        status: 'PENDING',
+        attemptCount: 0,
+        lastError: null,
+      });
+
+      // 3. Immediately refresh Local Stream
+      await this.usersService.reloadStreamFromLocal();
+
+      this.closeEditModal();
+    } catch (e) {
+      console.error(e);
+      this.editFormError = 'Failed to enqueue editing user.';
     }
   }
 

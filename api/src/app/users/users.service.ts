@@ -102,4 +102,40 @@ export class UsersService {
       },
     });
   }
+
+  async updateUser(tenantId: string, id: string, data: { name?: string; password?: string }) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updateData: import('@prisma/client').Prisma.UserUpdateInput = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    
+    if (data.password) {
+      updateData.passwordHash = await bcrypt.hash(data.password, 10);
+      updateData.mustChangePassword = true; // force the user to rotate it again for security
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        customerId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
 }

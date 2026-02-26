@@ -75,6 +75,19 @@ export class SyncDispatcherService {
           return true;
         }
 
+        case 'USER:UPDATE_PROFILE': {
+          const updateRes = await firstValueFrom(
+            this.http.patch<LocalUser>(`${environment.apiUrl}/users/${item.entityId}`, {
+              name: item.payload['name'],
+              password: item.payload['password'], // Will be hashed by server
+            })
+          );
+          
+          await this.userRepo.upsert({ ...updateRes, syncState: 'CLEAN' });
+          await this.adminUsers.reloadStreamFromLocal();
+          return true;
+        }
+
         case 'CUSTOMER:CREATE': {
           const createRes = await this.adminCustomers.createOnServer(item.payload);
 

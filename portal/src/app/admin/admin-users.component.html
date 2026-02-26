@@ -99,6 +99,56 @@
     </dialog>
   }
 
+  <!-- Edit User Modal -->
+  @if (editUserId) {
+    <!-- Semi-transparent overlay -->
+    <div class="fixed inset-0 bg-primary/40 transition-opacity z-40 backdrop-blur-sm" aria-hidden="true" (click)="closeEditModal()"></div>
+    <dialog open class="fixed inset-0 z-50 overflow-y-auto w-full max-w-lg p-0 bg-white rounded-xl shadow-2xl m-auto border border-gray-100">
+      <div class="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50">
+         <h3 class="text-lg font-bold text-gray-900">Edit User Details</h3>
+         <button (click)="closeEditModal()" class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-full transition-colors flex items-center justify-center">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+         </button>
+      </div>
+      <div class="p-6">
+         <form (ngSubmit)="onSubmitEdit()" #editUserForm="ngForm" class="space-y-6">
+            <div>
+               <label for="editName" class="block text-sm font-medium text-gray-700">Name (Optional)</label>
+               <div class="mt-1">
+                 <input type="text" id="editName" name="editName" [(ngModel)]="editFormName" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors" />
+               </div>
+            </div>
+            
+            <div class="bg-warning-light/30 border border-warning/20 p-4 rounded-lg">
+               <label for="editPassword" class="block text-sm font-medium text-gray-800 flex items-center gap-2 mb-1">
+                 <svg class="w-4 h-4 text-warning-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
+                 Force Reset Password
+               </label>
+               <p class="text-[11px] text-gray-600 mb-3 leading-tight">If a password is provided here, it will immediately overwrite the user's password. They will be forced to change it again on their next login attempt.</p>
+               <div class="mt-1">
+                 <input type="text" id="editPassword" name="editPassword" [(ngModel)]="editFormPassword" placeholder="Leave blank to keep current password..." class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-warning focus:border-warning sm:text-sm transition-colors" />
+               </div>
+            </div>
+
+            @if (editFormError) {
+              <div role="alert" class="mt-4 text-sm text-error bg-error-light py-2 px-3 rounded-md">
+                {{ editFormError }}
+              </div>
+            }
+
+            <div class="flex gap-3 pt-4 border-t border-gray-100">
+               <button type="button" (click)="closeEditModal()" class="w-full bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium py-2 rounded-md text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                  Cancel
+               </button>
+               <button type="submit" [disabled]="!editUserForm.valid" class="w-full bg-primary hover:bg-primary/95 text-white font-medium py-2 rounded-md text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                  Save Changes
+               </button>
+            </div>
+         </form>
+      </div>
+    </dialog>
+  }
+
   <!-- Users Data Table -->
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto mb-12">
     <table aria-label="Internal Users List" class="min-w-full divide-y divide-gray-200">
@@ -136,7 +186,10 @@
                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark">Synced</span>
               }
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-3 justify-end">
+              <button (click)="openEditModal(user)" class="text-gray-500 hover:text-gray-900 font-semibold transition-colors">
+                Edit
+              </button>
               <button (click)="onToggleActive(user)" class="text-accent hover:text-accent-hover font-semibold transition-colors">
                 {{ user.isActive ? 'Deactivate' : 'Activate' }}
               </button>

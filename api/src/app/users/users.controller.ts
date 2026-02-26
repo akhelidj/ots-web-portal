@@ -16,6 +16,11 @@ export interface UpdateUserActiveDto {
   isActive: boolean;
 }
 
+export interface UpdateUserDto {
+  name?: string;
+  password?: string;
+}
+
 @UseGuards(RolesGuard)
 @Controller('users')
 export class UsersController {
@@ -40,5 +45,12 @@ export class UsersController {
   async updateActiveStatus(@Req() req: any, @Param('id') id: string, @Body() data: UpdateUserActiveDto) {
     const tenantId = req.user.tenantId;
     return this.usersService.updateActiveStatus(tenantId, id, data.isActive);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Patch(':id')
+  async updateUser(@Req() req: any, @Param('id') id: string, @Body() data: UpdateUserDto) {
+    const tenantId = req.user.tenantId;
+    return this.usersService.updateUser(tenantId, id, data);
   }
 }
