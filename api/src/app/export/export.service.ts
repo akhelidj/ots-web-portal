@@ -180,9 +180,16 @@ export class ExportService {
       }
 
       const outBuffer = await workbook.xlsx.writeBuffer();
+      // Filename should be identical to the requested format
+      const poStr = report.poNumber && report.poNumber.trim().length > 0 
+        ? report.poNumber.trim().replace(/\s+/g, '_').toUpperCase() 
+        : 'NOPO';
+      const reportNum = report.reportNumber || 'UNKNOWN';
+      const finalFilename = `OTS_${poStr}_${reportNum}_${revisionNumber}.xlsx`;
+
       return {
         buffer: Buffer.from(outBuffer), // Ensure it's a Buffer native object
-        filename: `InspectionReport_${report.reportNumber || reportId}_rev${revisionNumber}.xlsx`,
+        filename: finalFilename,
         mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       };
     } else {
@@ -207,16 +214,25 @@ export class ExportService {
         }
 
         const partBuffer = await workbook.xlsx.writeBuffer();
-        const partFilename = `InspectionReport_${report.reportNumber || reportId}_rev${revisionNumber}_part${k}of${chunks}.xlsx`;
+        
+        const poStr = report.poNumber && report.poNumber.trim().length > 0 
+          ? report.poNumber.trim().replace(/\s+/g, '_').toUpperCase() 
+          : 'NOPO';
+        const reportNum = report.reportNumber || 'UNKNOWN';
+        const partFilename = `OTS_${poStr}_${reportNum}_${revisionNumber}_part${k}of${chunks}.xlsx`;
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         zip.file(partFilename, partBuffer as any);
       }
 
       const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+      const poStrZip = report.poNumber && report.poNumber.trim().length > 0 
+        ? report.poNumber.trim().replace(/\s+/g, '_').toUpperCase() 
+        : 'NOPO';
+      const reportNumZip = report.reportNumber || 'UNKNOWN';
       return {
         buffer: zipBuffer as unknown as Buffer,
-        filename: `InspectionReport_${report.reportNumber || reportId}_rev${revisionNumber}.zip`,
+        filename: `OTS_${poStrZip}_${reportNumZip}_${revisionNumber}.zip`,
         mimetype: 'application/zip',
       };
     }

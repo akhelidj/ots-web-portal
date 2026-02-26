@@ -90,19 +90,28 @@ export async function mapDrillPipeReportV1(
   // 3. Process Serial Numbers (if template row found)
   if (templateRowIndex > -1) {
     const templateRow = sheet.getRow(templateRowIndex);
-
-    const yesNo = (val: unknown) => (val === undefined || val === null ? '' : val ? 'Yes' : 'No');
+    // Format requested by user: 1 for Yes, 0 for No
+    const yesNo = (val: unknown) => (val === undefined || val === null ? '' : val ? '1' : '0');
 
     // Make room for the new rows below the template row
     if (serialNumbersChunk.length > 0) {
-      // exceljs specific: duplicate the template row N times by inserting rows
-      sheet.duplicateRow(templateRowIndex, serialNumbersChunk.length, true);
+      // exceljs specific: insert empty rows to make room
+      sheet.spliceRows(templateRowIndex + 1, 0, ...new Array(serialNumbersChunk.length).fill([]));
 
       // Now fill injected rows
       for (let i = 0; i < serialNumbersChunk.length; i++) {
         const sn = serialNumbersChunk[i];
-        const newRowIndex = templateRowIndex + i;
+        const newRowIndex = templateRowIndex + 1 + i;
         const newRow = sheet.getRow(newRowIndex);
+
+        // Copy row properties and cell styles from templateRow
+        newRow.height = templateRow.height;
+        newRow.hidden = templateRow.hidden;
+        templateRow.eachCell({ includeEmpty: true }, (templateCell, colNumber) => {
+          const newCell = newRow.getCell(colNumber);
+          newCell.value = templateCell.value;
+          newCell.style = Object.assign({}, templateCell.style);
+        });
 
         const d = sn.inspectionData || sn.inspectionJson || {};
         const box   = d.box   || {};
@@ -150,12 +159,18 @@ export async function mapDrillPipeReportV1(
 
         // Replace tokens in the new row
         newRow.eachCell({ includeEmpty: false }, (cell) => {
+          // If the cell is part of a merge but it's not the top-left master cell, do not modify its value
+          // Otherwise exceljs will silently break the merge
+          if (cell.isMerged && cell.master !== cell) {
+            return;
+          }
+          
           if (cell.type === ExcelJS.ValueType.String) {
             let strValue = cell.value.toString();
             let replaced = false;
             for (const [token, value] of Object.entries(rowTokens)) {
               if (strValue.includes(token)) {
-                strValue = strValue.replace(new RegExp(token, 'g'), value);
+                strValue = strValue.replace(new RegExp(token, 'g'), value.toString());
                 replaced = true;
               }
             }
@@ -169,20 +184,24 @@ export async function mapDrillPipeReportV1(
       }
     }
 
-    // Delete the original template row which is now pushed down by serialNumbersChunk.length
-    // If chunk is 0, we just delete it so {{sn}} doesn't show
-    sheet.spliceRows(templateRowIndex + serialNumbersChunk.length, 1);
+    // Delete the original template row
+    sheet.spliceRows(templateRowIndex, 1);
   }
 
   // 4. Perform Global Replacement
   sheet.eachRow({ includeEmpty: false }, (row) => {
     row.eachCell({ includeEmpty: false }, (cell) => {
+      // Avoid breaking merges
+      if (cell.isMerged && cell.master !== cell) {
+        return;
+      }
+
       if (cell.type === ExcelJS.ValueType.String) {
         let strValue = cell.value.toString();
         let replaced = false;
         for (const [token, value] of Object.entries(globalTokens)) {
           if (strValue.includes(token)) {
-            strValue = strValue.replace(new RegExp(token, 'g'), value);
+            strValue = strValue.replace(new RegExp(token, 'g'), value.toString());
             replaced = true;
           }
         }
