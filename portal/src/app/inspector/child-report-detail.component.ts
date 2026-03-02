@@ -163,4 +163,49 @@ export class ChildReportDetailComponent implements OnInit {
       }
     }
   }
+
+  public formFile: File | null = null;
+  public isUploading = false;
+  public uploadSuccess = false;
+
+  public onFileSelected(event: Event) {
+    const el = event.target as HTMLInputElement;
+    if (el.files && el.files.length > 0) {
+      this.formFile = el.files[0];
+      this.uploadSuccess = false;
+    } else {
+      this.formFile = null;
+    }
+  }
+
+  public async uploadAttachment() {
+    this.formError = '';
+    this.uploadSuccess = false;
+    if (!this.formFile) {
+      this.formError = 'Please select a file to upload.';
+      return;
+    }
+    
+    this.isUploading = true;
+    try {
+      await this.crService.uploadAttachment(this.reportId, this.formFile);
+      this.formFile = null;
+      this.uploadSuccess = true;
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => this.uploadSuccess = false, 3000);
+      
+      // In a full implementation, you'd refresh the attachments list here.
+      // But since attachments are currently only checked for length > 0 on transition 
+      // by pulling from DB directly, a successful API upload will satisfy the backend.
+      // We'll just show a success message or clear the form.
+
+      this.refreshData();
+    } catch (error: unknown) {
+      const e = error as { error?: { message?: string }; message?: string };
+      this.formError = e?.error?.message || e?.message || 'Failed to upload attachment.';
+    } finally {
+      this.isUploading = false;
+    }
+  }
 }

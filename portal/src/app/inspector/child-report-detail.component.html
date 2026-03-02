@@ -146,6 +146,46 @@
         }
       }
       </div>
+      
+      <!-- Attachments Section -->
+      @if (userRole !== 'CUSTOMER') {
+        <div class="mt-8 border-t border-gray-100 pt-5">
+          <h3 class="text-md font-semibold text-gray-900 mb-3">Attachments (required)</h3>
+          
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-inner">
+            <p class="text-sm text-gray-600 mb-3">Upload a file required for final approval (e.g. photos, supplementary documents).</p>
+            
+            @if (uploadSuccess) {
+              <div class="mb-3 p-3 bg-success-light text-success-dark border border-success rounded-md text-sm font-medium flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                Attachment uploaded successfully!
+              </div>
+            }
+
+            <div class="flex flex-col sm:flex-row gap-3 items-center">
+              <div class="flex-grow w-full">
+                <input type="file" (change)="onFileSelected($event)" 
+                       class="block w-full text-sm text-gray-500
+                              file:mr-4 file:py-2 file:px-4
+                              file:rounded-md file:border-0
+                              file:text-sm file:font-semibold
+                              file:bg-primary/10 file:text-primary
+                              hover:file:bg-primary/20 transition-colors
+                              cursor-pointer bg-white border border-gray-300 rounded-md">
+              </div>
+              <button (click)="uploadAttachment()" 
+                      [disabled]="!formFile || isUploading"
+                      class="w-full sm:w-auto bg-primary hover:bg-primary/95 text-white px-5 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50">
+                @if (isUploading) {
+                  Uploading...
+                } @else {
+                  Upload
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   </div>
 </div>

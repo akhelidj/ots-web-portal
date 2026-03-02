@@ -1,6 +1,17 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, Request, BadRequestException, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import 'multer';
 import { ChildReportsService } from './child-reports.service';
 import { ChildReportStatus, ChildReportType } from '@prisma/client';
+
+export interface UploadedFileDto {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
 
 @Controller('child-reports')
 export class ChildReportsController {
@@ -44,5 +55,18 @@ export class ChildReportsController {
       }, 
       body['version'] as number
     );
+  }
+
+  @Post(':id/attachments')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAttachment(
+    @Request() req: any,
+    @Param('id') id: string,
+    @UploadedFile() file: UploadedFileDto
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    return this.childReportsService.addAttachment(req.user.tenantId, id, file);
   }
 }

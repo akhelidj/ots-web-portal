@@ -143,4 +143,13 @@ export class ChildReportsService {
       console.error(`Failed to pull Child Reports from server for report ${inspectionReportId}`, e);
     }
   }
+
+  public async uploadAttachment(id: string, file: File): Promise<void> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    await firstValueFrom(
+      this.http.post(`${environment.apiUrl}/child-reports/${id}/attachments`, formData)
+    );
+  }
 }

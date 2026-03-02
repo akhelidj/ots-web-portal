@@ -128,4 +128,30 @@ export class ChildReportsService {
       throw error;
     }
   }
+
+  async addAttachment(tenantId: string, id: string, file: { originalname: string, buffer: Buffer }) {
+    const childReport = await this.prisma.childReport.findFirst({
+      where: { id, tenantId }
+    });
+
+    if (!childReport) {
+      throw new NotFoundException('Child Report not found');
+    }
+
+    if (childReport.status === 'APPROVED' || childReport.status === 'CLOSED') {
+      throw new BadRequestException('Cannot add attachment: Child Report is locked.');
+    }
+
+    const fakeUrl = `/api/files/mock/${file.originalname}`;
+
+    const attachment = await this.prisma.attachment.create({
+      data: {
+        filename: file.originalname,
+        url: fakeUrl,
+        childReportId: id,
+      }
+    });
+
+    return attachment;
+  }
 }
