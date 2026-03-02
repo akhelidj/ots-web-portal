@@ -44,6 +44,8 @@ export const INSPECTION_REPORT_TRANSITIONS: Record<UserRole, Partial<Record<Insp
 // ----------------------------------------------------------------------
 export const CHILD_REPORT_TRANSITIONS: Record<UserRole, Partial<Record<ChildReportStatus, ChildReportStatus[]>>> = {
   [UserRole.ADMIN]: {
+    [ChildReportStatus.DRAFT]: [ChildReportStatus.IN_INSPECTION],
+    [ChildReportStatus.IN_INSPECTION]: [ChildReportStatus.PENDING_APPROVAL],
     [ChildReportStatus.PENDING_APPROVAL]: [ChildReportStatus.APPROVED],
     [ChildReportStatus.APPROVED]: [ChildReportStatus.CLOSED, ChildReportStatus.IN_INSPECTION],
   },
