@@ -599,8 +599,26 @@
       <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/50 rounded-t-xl flex justify-between items-center sticky top-0 z-10">
         <h2 class="font-bold text-lg text-primary flex items-center gap-2">
           Equipment List 
-          <span class="bg-primary/10 text-primary text-xs py-0.5 px-2.5 rounded-full">{{(serials$ | async)?.length || 0}}</span>
+          <span class="bg-primary/10 text-primary text-xs py-0.5 px-2.5 rounded-full">{{ filteredSerials().length }}</span>
         </h2>
+        
+        @if (userRole !== 'CUSTOMER') {
+          <div class="relative w-64">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <input type="text" [ngModel]="snSearchQuery()" (ngModelChange)="snSearchQuery.set($event)" placeholder="Search S/N..." class="block w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-accent focus:border-accent sm:text-sm transition-colors shadow-sm">
+            @if (snSearchQuery()) {
+              <button (click)="snSearchQuery.set('')" class="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            }
+          </div>
+        }
       </div>
       <div class="overflow-x-auto overflow-y-auto flex-grow">
         <table class="min-w-full text-left border-collapse">
@@ -662,9 +680,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 bg-white">
-            @if (serials$ | async; as serials) {
-              @for (sn of serials; track sn.id) {
-                <tr class="hover:bg-primary/5 transition-colors group">
+            @for (sn of filteredSerials(); track sn.id) {
+              <tr class="hover:bg-primary/5 transition-colors group">
                   <td class="px-5 py-3 align-top sticky left-0 bg-white z-20 shadow-[1px_0_0_0_#eee] group-hover:bg-[#f3f4f6] transition-colors border-r border-gray-200 w-48 min-w-[12rem] max-w-[12rem]">
                     @if (editingSnId === sn.id) {
                       <div class="flex items-center gap-2 max-w-[180px]">
@@ -797,42 +814,6 @@
                         {{ sn.inspectionJson?.body?.ipc ? 'Yes' : 'No' }}
                      } @else { - }
                   </td>
-                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20 border-r border-gray-100">
-                     @if(sn.inspectionJson?.body?.bentJoints !== undefined) {
-                        {{ sn.inspectionJson?.body?.bentJoints ? 'Yes' : 'No' }}
-                     } @else { - }
-                  </td>
-
-                  <!-- FINAL Data -->
-                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-gray-50/20">
-                     @if(sn.inspectionJson?.final?.isNew !== undefined) {
-                        <span [ngClass]="{'text-success': sn.inspectionJson?.final?.isNew}">{{ sn.inspectionJson?.final?.isNew ? 'Y' : 'N' }}</span>
-                     } @else { - }
-                  </td>
-                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-gray-50/20">
-                     @if(sn.inspectionJson?.final?.isPremium !== undefined) {
-                        <span [ngClass]="{'text-success': sn.inspectionJson?.final?.isPremium}">{{ sn.inspectionJson?.final?.isPremium ? 'Y' : 'N' }}</span>
-                     } @else { - }
-                  </td>
-                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-gray-50/20">
-                     @if(sn.inspectionJson?.final?.isC2 !== undefined) {
-                        {{ sn.inspectionJson?.final?.isC2 ? 'Y' : 'N' }}
-                     } @else { - }
-                  </td>
-                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-gray-50/20 border-r border-gray-100">
-                     @if(sn.inspectionJson?.final?.isScrap !== undefined) {
-                        <span [ngClass]="{'text-error': sn.inspectionJson?.final?.isScrap}">{{ sn.inspectionJson?.final?.isScrap ? 'Y' : 'N' }}</span>
-                     } @else { - }
-                  </td>
-
-                  <!-- Final Remarks -->
-                  <td class="px-4 py-3 align-top text-xs text-gray-600 line-clamp-2 max-w-xs break-words bg-white group-hover:bg-gray-50 border-l border-gray-100" [title]="sn.inspectionJson?.final?.condition_notes || sn.inspectionJson?.final?.remarks || sn.inspectionJson?.remarks || ''">
-                    {{ sn.inspectionJson?.final?.condition_notes || sn.inspectionJson?.final?.remarks || sn.inspectionJson?.remarks || '-' }}
-                  </td>
-                </tr>
-              }
-              @if (serials.length === 0) {
-                <tr>
                   <td colspan="2" class="px-6 py-12 text-center">
                     <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
