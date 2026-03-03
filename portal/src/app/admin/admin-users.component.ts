@@ -39,6 +39,8 @@ export class AdminUsersComponent implements OnInit {
   public customers: LocalCustomer[] = [];
   private customerRepo = inject(CustomerLocalRepo);
 
+  public deletingIds = new Set<string>();
+
   constructor() {
     // legacy temp password listener can be removed or kept empty if service still emits
   }
@@ -47,7 +49,9 @@ export class AdminUsersComponent implements OnInit {
     this.usersService.refreshLocalCache();
     this.loadCustomers();
     if (navigator.onLine) {
-      this.usersService.pullAllAndCache().catch(e => console.warn('Background refresh failed', e));
+      this.usersService
+        .pullAllAndCache()
+        .catch((e) => console.warn('Background refresh failed', e));
     }
   }
 
@@ -177,9 +181,9 @@ export class AdminUsersComponent implements OnInit {
 
   public async onSubmitEdit(): Promise<void> {
     this.editFormError = '';
-    
+
     if (!this.editUserId) return;
-    
+
     // Create optimistic copy
     const userToEdit = await this.repo.getById(this.editUserId);
     if (!userToEdit) {
@@ -193,12 +197,14 @@ export class AdminUsersComponent implements OnInit {
         name: this.editFormName || null,
         syncState: 'PENDING_UPDATE',
       };
-      
+
       // 1. Write exclusively to Local Repo
       await this.repo.upsert(updatedUser);
 
       // 2. Enqueue Outbox mutation
-      const payload: Record<string, string | null> = { name: this.editFormName || null };
+      const payload: Record<string, string | null> = {
+        name: this.editFormName || null,
+      };
       if (this.editFormPassword) {
         payload['password'] = this.editFormPassword;
       }
@@ -226,6 +232,41 @@ export class AdminUsersComponent implements OnInit {
     }
   }
 
+  public async onDelete(user: LocalUser): Promise<void> {
+    if (this.deletingIds.has(user.id)) return;
+
+    // Start sleek inline loading
+    this.deletingIds.add(user.id);
+    this.formError = '';
+
+    try {
+      // 1. Enqueue Outbox mutation for DELETE
+      await this.outbox.enqueue({
+        id: crypto.randomUUID(),
+        idempotencyKey: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        entityType: 'USER',
+        entityId: user.id,
+        operation: 'DELETE',
+        payload: {},
+        status: 'PENDING',
+        attemptCount: 0,
+        lastError: null,
+      });
+
+      // 2. Optimistic apply to Local Repo
+      await this.repo.delete(user.id);
+
+      // 3. Eager UI refresh
+      await this.usersService.reloadStreamFromLocal();
+    } catch (e) {
+      console.error(e);
+      this.formError = 'Failed to delete user.';
+    } finally {
+      this.deletingIds.delete(user.id);
+    }
+  }
+
   // Expose hook so app shell can pass temp passwords generated during dispatch
   // This listens for sync dispatch temp passwords if we had a mediator,
   // but since HTTP dispatch is background, we can't easily bubble up tempPassword.
@@ -233,7 +274,7 @@ export class AdminUsersComponent implements OnInit {
   // Ah, the requirements specifically ask: "Return it in the POST response. Display it once in UI as 'Temporary password'."
   // However, because we are using an Offline Write-Through queue (Outbox), the server response doesn't come back immediately.
   // If we are offline, we can't show it. If we are online, it syncs in background.
-  // This is a known caveat of Write-Through outbox pattern. 
-  // Let's implement an event stream or poll if we want to catch the exact result, 
+  // This is a known caveat of Write-Through outbox pattern.
+  // Let's implement an event stream or poll if we want to catch the exact result,
   // but for MVP, I will just display a message when a SYNC provides a password to be safe.
 }

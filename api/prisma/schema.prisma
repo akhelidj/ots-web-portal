@@ -50,7 +50,7 @@ model User {
   mustChangePassword Boolean        @default(true)
   customerId         String?
   refreshTokens      RefreshToken[]
-  customer           Customer?      @relation(fields: [customerId], references: [id])
+  customer           Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
   tenant             Tenant         @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, email])
@@ -141,7 +141,7 @@ model InspectionReport {
   connection            String?
   auditLogs             AuditLog[]
   childReports          ChildReport[]
-  customer              Customer?                       @relation(fields: [customerId], references: [id])
+  customer              Customer?                       @relation(fields: [customerId], references: [id], onDelete: SetNull)
   legacyTemplateVersion TemplateVersion?                @relation(fields: [templateVersionId], references: [id])
   tenant                Tenant                          @relation(fields: [tenantId], references: [id])
   revisions             InspectionReportRevision[]

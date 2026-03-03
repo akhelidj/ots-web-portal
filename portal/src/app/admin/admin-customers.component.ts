@@ -21,6 +21,8 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
   public customers$ = new BehaviorSubject<LocalCustomer[]>([]);
   private changesSub?: Subscription;
 
+  public deletingIds = new Set<string>();
+
   // Create Form
   public formName = '';
   public formCode = '';
@@ -46,7 +48,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
     this.changesSub = this.customerRepo.changes$.subscribe(() => {
       this.reloadStream();
     });
-    
+
     // Initial fetch if online
     if (navigator.onLine) {
       this.refreshFromServer();
@@ -61,7 +63,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
     const data = await this.customerRepo.list();
     this.customers$.next(data);
   }
-  
+
   public async refreshFromServer() {
     try {
       await this.adminCustomers.pullAllAndCache();
@@ -72,7 +74,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
 
   public async onSubmitCreate() {
     this.formError = '';
-    
+
     if (!this.formName.trim()) {
       this.formError = 'Name is required';
       return;
@@ -104,7 +106,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
           code: newCustomer.code,
           email: newCustomer.email,
           phone: newCustomer.phone,
-          isActive: true
+          isActive: true,
         },
         status: 'PENDING',
         attemptCount: 0,
@@ -127,7 +129,9 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
 
   public promptEdit(customer: LocalCustomer) {
     if (customer.syncState === 'CONFLICT') {
-      alert('Cannot edit customer in CONFLICT state. Refresh from server to resolve.');
+      alert(
+        'Cannot edit customer in CONFLICT state. Refresh from server to resolve.',
+      );
       return;
     }
     this.editingCustomer = customer;
@@ -144,7 +148,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
 
   public async confirmEdit() {
     if (!this.editingCustomer) return;
-    
+
     if (!this.editName.trim()) {
       this.editError = 'Name is required';
       return;
@@ -156,7 +160,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
       code: this.editCode || null,
       email: this.editEmail || null,
       phone: this.editPhone || null,
-      syncState: 'PENDING'
+      syncState: 'PENDING',
     };
 
     try {
@@ -174,7 +178,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
           code: updated.code,
           email: updated.email,
           phone: updated.phone,
-          version: updated.version
+          version: updated.version,
         },
         status: 'PENDING',
         attemptCount: 0,
@@ -194,7 +198,9 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
 
   public promptDeactivate(customer: LocalCustomer) {
     if (customer.syncState === 'CONFLICT') {
-      alert('Cannot deactivate customer in CONFLICT state. Refresh from server to resolve.');
+      alert(
+        'Cannot deactivate customer in CONFLICT state. Refresh from server to resolve.',
+      );
       return;
     }
     this.selectedCustomer = customer;
@@ -208,22 +214,28 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
 
   public async confirmDeactivate() {
     if (!this.selectedCustomer) return;
-    
+
     if (!this.deactivationReason.trim()) {
       this.deactivationError = 'Reason is mandatory for deactivation';
       return;
     }
 
-    await this.performToggle(this.selectedCustomer, false, this.deactivationReason);
+    await this.performToggle(
+      this.selectedCustomer,
+      false,
+      this.deactivationReason,
+    );
     this.selectedCustomer = null;
   }
 
   public async onToggleActive(customer: LocalCustomer) {
     if (customer.syncState === 'CONFLICT') {
-      alert('Cannot modify customer in CONFLICT state. Refresh from server to resolve.');
+      alert(
+        'Cannot modify customer in CONFLICT state. Refresh from server to resolve.',
+      );
       return;
     }
-    
+
     if (customer.isActive) {
       this.promptDeactivate(customer);
     } else {
@@ -231,7 +243,11 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async performToggle(customer: LocalCustomer, isActive: boolean, reason?: string) {
+  private async performToggle(
+    customer: LocalCustomer,
+    isActive: boolean,
+    reason?: string,
+  ) {
     try {
       await this.customerRepo.setActive(customer.id, isActive, reason);
 
@@ -245,7 +261,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
         payload: {
           isActive,
           reason,
-          version: customer.version
+          version: customer.version,
         },
         status: 'PENDING',
         attemptCount: 0,
@@ -257,6 +273,43 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error(error);
+    }
+  }
+
+  public async onDelete(customer: LocalCustomer) {
+    if (this.deletingIds.has(customer.id)) return;
+
+    this.deletingIds.add(customer.id);
+
+    try {
+      // 1. Enqueue Outbox mutation for DELETE
+      await this.outbox.enqueue({
+        id: crypto.randomUUID(),
+        idempotencyKey: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        entityType: 'CUSTOMER',
+        entityId: customer.id,
+        operation: 'DELETE',
+        payload: {},
+        status: 'PENDING',
+        attemptCount: 0,
+        lastError: null,
+      });
+
+      // 2. Optimistic apply to Local Repo
+      await this.customerRepo.delete(customer.id);
+
+      // 3. Eager UI refresh
+      await this.reloadStream();
+
+      if (navigator.onLine) {
+        await this.outbox.processQueue();
+      }
+    } catch (error) {
+      console.error(error);
+      this.formError = 'Failed to delete customer.';
+    } finally {
+      this.deletingIds.delete(customer.id);
     }
   }
 }

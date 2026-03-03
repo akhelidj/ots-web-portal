@@ -1,49 +1,120 @@
 <div class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto py-8">
   <div class="mb-8">
-    <h1 class="text-3xl font-bold tracking-tight text-primary">User Management</h1>
-    <p class="mt-2 text-sm text-gray-500">Create, configure, and manage user access roles across the platform.</p>
+    <h1 class="text-3xl font-bold tracking-tight text-primary">
+      User Management
+    </h1>
+    <p class="mt-2 text-sm text-gray-500">
+      Create, configure, and manage user access roles across the platform.
+    </p>
   </div>
 
   <!-- Create User Form -->
-  <div class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100 mb-10">
-    <form (ngSubmit)="onSubmitCreate()" #userForm="ngForm" aria-labelledby="create-user-legend" class="space-y-6">
+  <div
+    class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100 mb-10"
+  >
+    <form
+      (ngSubmit)="onSubmitCreate()"
+      #userForm="ngForm"
+      aria-labelledby="create-user-legend"
+      class="space-y-6"
+    >
       <fieldset>
-        <legend id="create-user-legend" class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-3 w-full mb-6">Create New User</legend>
-        
-        <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4">
+        <legend
+          id="create-user-legend"
+          class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-3 w-full mb-6"
+        >
+          Create New User
+        </legend>
+
+        <div
+          class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
           <div>
-            <label for="email" class="block text-sm font-medium text-gray-700">Email <span class="text-error">*</span></label>
+            <label for="email" class="block text-sm font-medium text-gray-700"
+              >Email <span class="text-error">*</span></label
+            >
             <div class="mt-1">
-              <input type="email" id="email" name="email" [(ngModel)]="formEmail" required email #emailField="ngModel" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
-               [ngClass]="{'border-error focus:ring-error focus:border-error': emailField.invalid && (emailField.dirty || emailField.touched)}" />
+              <input
+                type="email"
+                id="email"
+                name="email"
+                [(ngModel)]="formEmail"
+                required
+                email
+                #emailField="ngModel"
+                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+                [ngClass]="{
+                  'border-error focus:ring-error focus:border-error':
+                    emailField.invalid &&
+                    (emailField.dirty || emailField.touched),
+                }"
+              />
             </div>
-            @if (emailField.invalid && (emailField.dirty || emailField.touched)) {
+            @if (
+              emailField.invalid && (emailField.dirty || emailField.touched)
+            ) {
               <p class="mt-1 text-xs text-error">A valid email is required.</p>
             }
           </div>
 
           <div>
-            <label for="name" class="block text-sm font-medium text-gray-700">Name (Optional)</label>
+            <label for="name" class="block text-sm font-medium text-gray-700"
+              >Name (Optional)</label
+            >
             <div class="mt-1">
-              <input type="text" id="name" name="name" [(ngModel)]="formName" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors" />
+              <input
+                type="text"
+                id="name"
+                name="name"
+                [(ngModel)]="formName"
+                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+              />
             </div>
           </div>
 
           <div>
-            <label for="password" class="block text-sm font-medium text-gray-700">Temporary Password <span class="text-error">*</span></label>
+            <label
+              for="password"
+              class="block text-sm font-medium text-gray-700"
+              >Temporary Password <span class="text-error">*</span></label
+            >
             <div class="mt-1">
-              <input type="text" id="password" name="password" [(ngModel)]="formPassword" required #passwordField="ngModel" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
-               [ngClass]="{'border-error focus:ring-error focus:border-error': passwordField.invalid && (passwordField.dirty || passwordField.touched)}" />
+              <input
+                type="text"
+                id="password"
+                name="password"
+                [(ngModel)]="formPassword"
+                required
+                #passwordField="ngModel"
+                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+                [ngClass]="{
+                  'border-error focus:ring-error focus:border-error':
+                    passwordField.invalid &&
+                    (passwordField.dirty || passwordField.touched),
+                }"
+              />
             </div>
-            @if (passwordField.invalid && (passwordField.dirty || passwordField.touched)) {
-              <p class="mt-1 text-xs text-error">Temporary password is required.</p>
+            @if (
+              passwordField.invalid &&
+              (passwordField.dirty || passwordField.touched)
+            ) {
+              <p class="mt-1 text-xs text-error">
+                Temporary password is required.
+              </p>
             }
           </div>
 
           <div>
-            <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
+            <label for="role" class="block text-sm font-medium text-gray-700"
+              >Role</label
+            >
             <div class="mt-1">
-              <select id="role" name="role" [(ngModel)]="formRole" class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors">
+              <select
+                id="role"
+                name="role"
+                [(ngModel)]="formRole"
+                class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+              >
                 <option value="ADMIN">Admin</option>
                 <option value="RECEIVER">Receiver</option>
                 <option value="INSPECTOR">Inspector</option>
@@ -55,9 +126,19 @@
 
           @if (formRole === 'CUSTOMER') {
             <div>
-              <label for="customerId" class="block text-sm font-medium text-gray-700">Associated Customer</label>
+              <label
+                for="customerId"
+                class="block text-sm font-medium text-gray-700"
+                >Associated Customer</label
+              >
               <div class="mt-1">
-                <select id="customerId" name="customerId" [(ngModel)]="formCustomerId" required class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors">
+                <select
+                  id="customerId"
+                  name="customerId"
+                  [(ngModel)]="formCustomerId"
+                  required
+                  class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+                >
                   <option value="" disabled>Select a customer...</option>
                   @for (c of customers; track c.id) {
                     <option [value]="c.id">{{ c.name }}</option>
@@ -67,116 +148,317 @@
             </div>
           }
         </div>
-        
+
         <div class="mt-8 flex justify-end">
-          <button type="submit" [disabled]="!userForm.form.valid || (formRole === 'CUSTOMER' && !formCustomerId)" class="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button
+            type="submit"
+            [disabled]="
+              !userForm.form.valid ||
+              (formRole === 'CUSTOMER' && !formCustomerId)
+            "
+            class="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Create User
           </button>
         </div>
       </fieldset>
 
       @if (formError) {
-        <div role="alert" class="mt-4 text-sm text-error bg-error-light py-3 px-4 rounded-md border-l-4 border-error">
+        <div
+          role="alert"
+          class="mt-4 text-sm text-error bg-error-light py-3 px-4 rounded-md border-l-4 border-error"
+        >
           {{ formError }}
         </div>
       }
     </form>
   </div>
 
-
   <!-- Edit User Modal -->
   @if (editUserId) {
     <!-- Semi-transparent overlay -->
-    <div class="fixed inset-0 bg-primary/40 transition-opacity z-40 backdrop-blur-sm" aria-hidden="true" (click)="closeEditModal()"></div>
-    <dialog open class="fixed inset-0 z-50 overflow-y-auto w-full max-w-lg p-0 bg-white rounded-xl shadow-2xl m-auto border border-gray-100">
-      <div class="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50">
-         <h3 class="text-lg font-bold text-gray-900">Edit User Details</h3>
-         <button (click)="closeEditModal()" class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-full transition-colors flex items-center justify-center">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-         </button>
+    <div
+      class="fixed inset-0 bg-primary/40 transition-opacity z-40 backdrop-blur-sm"
+      aria-hidden="true"
+      (click)="closeEditModal()"
+    ></div>
+    <dialog
+      open
+      class="fixed inset-0 z-50 overflow-y-auto w-full max-w-lg p-0 bg-white rounded-xl shadow-2xl m-auto border border-gray-100"
+    >
+      <div
+        class="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50"
+      >
+        <h3 class="text-lg font-bold text-gray-900">Edit User Details</h3>
+        <button
+          (click)="closeEditModal()"
+          class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-full transition-colors flex items-center justify-center"
+        >
+          <svg
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
       </div>
       <div class="p-6">
-         <form (ngSubmit)="onSubmitEdit()" #editUserForm="ngForm" class="space-y-6">
-            <div>
-               <label for="editName" class="block text-sm font-medium text-gray-700">Name (Optional)</label>
-               <div class="mt-1">
-                 <input type="text" id="editName" name="editName" [(ngModel)]="editFormName" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors" />
-               </div>
+        <form
+          (ngSubmit)="onSubmitEdit()"
+          #editUserForm="ngForm"
+          class="space-y-6"
+        >
+          <div>
+            <label
+              for="editName"
+              class="block text-sm font-medium text-gray-700"
+              >Name (Optional)</label
+            >
+            <div class="mt-1">
+              <input
+                type="text"
+                id="editName"
+                name="editName"
+                [(ngModel)]="editFormName"
+                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+              />
             </div>
-            
-            <div class="bg-warning-light/30 border border-warning/20 p-4 rounded-lg">
-               <label for="editPassword" class="block text-sm font-medium text-gray-800 flex items-center gap-2 mb-1">
-                 <svg class="w-4 h-4 text-warning-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
-                 Force Reset Password
-               </label>
-               <p class="text-[11px] text-gray-600 mb-3 leading-tight">If a password is provided here, it will immediately overwrite the user's password. They will be forced to change it again on their next login attempt.</p>
-               <div class="mt-1">
-                 <input type="text" id="editPassword" name="editPassword" [(ngModel)]="editFormPassword" placeholder="Leave blank to keep current password..." class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-warning focus:border-warning sm:text-sm transition-colors" />
-               </div>
-            </div>
+          </div>
 
-            @if (editFormError) {
-              <div role="alert" class="mt-4 text-sm text-error bg-error-light py-2 px-3 rounded-md">
-                {{ editFormError }}
-              </div>
-            }
-
-            <div class="flex gap-3 pt-4 border-t border-gray-100">
-               <button type="button" (click)="closeEditModal()" class="w-full bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium py-2 rounded-md text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                  Cancel
-               </button>
-               <button type="submit" [disabled]="!editUserForm.valid" class="w-full bg-primary hover:bg-primary/95 text-white font-medium py-2 rounded-md text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
-                  Save Changes
-               </button>
+          <div
+            class="bg-warning-light/30 border border-warning/20 p-4 rounded-lg"
+          >
+            <label
+              for="editPassword"
+              class="block text-sm font-medium text-gray-800 flex items-center gap-2 mb-1"
+            >
+              <svg
+                class="w-4 h-4 text-warning-dark"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"
+                ></path>
+              </svg>
+              Force Reset Password
+            </label>
+            <p class="text-[11px] text-gray-600 mb-3 leading-tight">
+              If a password is provided here, it will immediately overwrite the
+              user's password. They will be forced to change it again on their
+              next login attempt.
+            </p>
+            <div class="mt-1">
+              <input
+                type="text"
+                id="editPassword"
+                name="editPassword"
+                [(ngModel)]="editFormPassword"
+                placeholder="Leave blank to keep current password..."
+                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-warning focus:border-warning sm:text-sm transition-colors"
+              />
             </div>
-         </form>
+          </div>
+
+          @if (editFormError) {
+            <div
+              role="alert"
+              class="mt-4 text-sm text-error bg-error-light py-2 px-3 rounded-md"
+            >
+              {{ editFormError }}
+            </div>
+          }
+
+          <div class="flex gap-3 pt-4 border-t border-gray-100">
+            <button
+              type="button"
+              (click)="closeEditModal()"
+              class="w-full bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium py-2 rounded-md text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              [disabled]="!editUserForm.valid"
+              class="w-full bg-primary hover:bg-primary/95 text-white font-medium py-2 rounded-md text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
       </div>
     </dialog>
   }
 
   <!-- Users Data Table -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto mb-12">
-    <table aria-label="Internal Users List" class="min-w-full divide-y divide-gray-200">
+  <div
+    class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto mb-12"
+  >
+    <table
+      aria-label="Internal Users List"
+      class="min-w-full divide-y divide-gray-200"
+    >
       <thead class="bg-gray-50">
         <tr>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sync Status</th>
-          <th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+          <th
+            scope="col"
+            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+          >
+            Email
+          </th>
+          <th
+            scope="col"
+            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+          >
+            Name
+          </th>
+          <th
+            scope="col"
+            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+          >
+            Role
+          </th>
+          <th
+            scope="col"
+            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+          >
+            Active
+          </th>
+          <th
+            scope="col"
+            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+          >
+            Sync Status
+          </th>
+          <th
+            scope="col"
+            class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"
+          >
+            Actions
+          </th>
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
         @for (user of users$ | async; track user.id) {
-          <tr class="hover:bg-primary/5 transition-colors">
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ user.email }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.name || '-' }}</td>
+          <tr
+            class="hover:bg-primary/5 transition-all duration-300 transform"
+            [class.opacity-50]="deletingIds.has(user.id)"
+          >
+            <td
+              class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+            >
+              {{ user.email }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {{ user.name || '-' }}
+            </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-md font-medium text-xs bg-gray-100 text-gray-800 border border-gray-200 tracking-wide uppercase">{{ user.role }}</span>
+              <span
+                class="inline-flex items-center px-2.5 py-0.5 rounded-md font-medium text-xs bg-gray-100 text-gray-800 border border-gray-200 tracking-wide uppercase"
+                >{{ user.role }}</span
+              >
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
               @if (user.isActive) {
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark">Yes</span>
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark"
+                  >Yes</span
+                >
               } @else {
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">No</span>
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"
+                  >No</span
+                >
               }
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
               @if (user.syncState === 'PENDING_CREATE') {
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning-dark">Pending Create Sync</span>
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning-dark"
+                  >Pending Create Sync</span
+                >
               } @else if (user.syncState === 'PENDING_UPDATE') {
-                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning-dark">Pending Update Sync</span>
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning-dark"
+                  >Pending Update Sync</span
+                >
               } @else {
-                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark">Synced</span>
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark"
+                  >Synced</span
+                >
               }
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-3 justify-end">
-              <button (click)="openEditModal(user)" class="text-gray-500 hover:text-gray-900 font-semibold transition-colors">
+            <td
+              class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-3 justify-end items-center"
+            >
+              <button
+                (click)="openEditModal(user)"
+                [disabled]="deletingIds.has(user.id)"
+                class="text-gray-500 hover:text-gray-900 font-semibold transition-colors disabled:opacity-50"
+              >
                 Edit
               </button>
-              <button (click)="onToggleActive(user)" class="text-accent hover:text-accent-hover font-semibold transition-colors">
+              <button
+                (click)="onToggleActive(user)"
+                [disabled]="deletingIds.has(user.id)"
+                class="text-accent hover:text-accent-hover font-semibold transition-colors disabled:opacity-50"
+              >
                 {{ user.isActive ? 'Deactivate' : 'Activate' }}
+              </button>
+              <button
+                (click)="onDelete(user)"
+                [disabled]="deletingIds.has(user.id)"
+                class="text-error hover:text-error-hover font-semibold transition-colors disabled:opacity-50 flex items-center justify-center relative p-1 rounded-md hover:bg-error/10"
+                aria-label="Delete User"
+              >
+                @if (deletingIds.has(user.id)) {
+                  <svg
+                    class="animate-spin h-5 w-5 text-error"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                } @else {
+                  <svg
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                }
               </button>
             </td>
           </tr>
@@ -184,5 +466,4 @@
       </tbody>
     </table>
   </div>
-
 </div>

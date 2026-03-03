@@ -9,7 +9,7 @@ import { Subject, Observable } from 'rxjs';
 export class CustomerLocalRepo {
   private dbService = inject(DbService);
   private readonly STORE_NAME = 'customers';
-  
+
   // Emit changes to allow components to listen reactively
   private changesSubject = new Subject<void>();
   public changes$: Observable<void> = this.changesSubject.asObservable();
@@ -55,7 +55,7 @@ export class CustomerLocalRepo {
 
   public async bulkUpsert(customers: LocalCustomer[]): Promise<void> {
     if (!customers.length) return;
-    
+
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.STORE_NAME, 'readwrite');
@@ -76,14 +76,18 @@ export class CustomerLocalRepo {
     });
   }
 
-  public async setActive(id: string, isActive: boolean, reason?: string): Promise<void> {
+  public async setActive(
+    id: string,
+    isActive: boolean,
+    reason?: string,
+  ): Promise<void> {
     const db = await this.dbService.getDb();
     const customer = await this.getById(id);
     if (!customer) return;
 
     customer.isActive = isActive;
     customer.syncState = 'PENDING';
-    
+
     // Optimistic offline timestamp placeholder
     if (!isActive) {
       customer.deactivatedAt = new Date().toISOString();
@@ -108,24 +112,45 @@ export class CustomerLocalRepo {
     });
   }
 
-  public async remapId(oldLocalId: string, newServerCustomer: LocalCustomer): Promise<void> {
+  public async remapId(
+    oldLocalId: string,
+    newServerCustomer: LocalCustomer,
+  ): Promise<void> {
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.STORE_NAME, 'readwrite');
       const store = transaction.objectStore(this.STORE_NAME);
-      
+
       const deleteRequest = store.delete(oldLocalId);
-      
+
       deleteRequest.onsuccess = () => {
-        const putRequest = store.put({ ...newServerCustomer, syncState: 'SYNCED' });
+        const putRequest = store.put({
+          ...newServerCustomer,
+          syncState: 'SYNCED',
+        });
         putRequest.onsuccess = () => {
           resolve();
           this.changesSubject.next();
         };
         putRequest.onerror = () => reject(putRequest.error);
       };
-      
+
       deleteRequest.onerror = () => reject(deleteRequest.error);
+    });
+  }
+
+  public async delete(id: string): Promise<void> {
+    const db = await this.dbService.getDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(this.STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(this.STORE_NAME);
+      const request = store.delete(id);
+
+      request.onsuccess = () => {
+        resolve();
+        this.changesSubject.next();
+      };
+      request.onerror = () => reject(request.error);
     });
   }
 }
