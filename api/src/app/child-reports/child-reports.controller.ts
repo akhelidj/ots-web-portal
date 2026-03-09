@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Body, Param, Query, Request, BadRequestEx
 import { FileInterceptor } from '@nestjs/platform-express';
 import 'multer';
 import { ChildReportsService } from './child-reports.service';
-import { ChildReportStatus, ChildReportType } from '@prisma/client';
+import { ChildReportStatus, SerialDisposition } from '@prisma/client';
 
 export interface UploadedFileDto {
   fieldname: string;
@@ -13,37 +13,32 @@ export interface UploadedFileDto {
   buffer: Buffer;
 }
 
-@Controller('child-reports')
+@Controller()
 export class ChildReportsController {
   constructor(private readonly childReportsService: ChildReportsService) {}
 
-  @Post()
-  async createChildReport(@Request() req: any, @Body() body: Record<string, unknown>) {
-    if (!body['id']) {
-       throw new BadRequestException('Client must provide an id (UUID) for idempotency.');
+  @Post('inspection-reports/:id/child-reports/sync-rework')
+  async syncReworkChildReport(@Request() req: any, @Param('id') id: string) {
+    if (!id) {
+       throw new BadRequestException('Inspection Report ID is required for sync.');
     }
-    return this.childReportsService.createChildReport(
-      req.user.tenantId, 
-      req.user.userId,
-      {
-         id: body['id'] as string,
-         inspectionReportId: body['inspectionReportId'] as string,
-         serialNumberId: body['serialNumberId'] as string,
-         type: body['type'] as ChildReportType,
-         notes: body['notes'] as string
-      }
-    );
+    return this.childReportsService.syncReworkChildReport(req.user.tenantId, id);
   }
 
-  @Get()
-  async getChildReports(@Request() req, @Query('inspectionReportId') reportId: string) {
+  @Get('child-reports')
+  async getChildReports(@Request() req: any, @Query('inspectionReportId') reportId: string) {
     if (!reportId) {
        throw new BadRequestException('inspectionReportId is required');
     }
     return this.childReportsService.getChildReports(req.user.tenantId, reportId);
   }
 
-  @Patch(':id')
+  @Get('child-reports/:id')
+  async getChildReport(@Request() req: any, @Param('id') id: string) {
+    return this.childReportsService.getChildReportById(req.user.tenantId, id);
+  }
+
+  @Patch('child-reports/:id')
   async updateChildReport(@Request() req: any, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     return this.childReportsService.updateChildReport(
       req.user.tenantId, 
@@ -57,7 +52,25 @@ export class ChildReportsController {
     );
   }
 
-  @Post(':id/attachments')
+  @Patch('child-reports/:id/serial-numbers/:snId')
+  async updateChildReportSerialNumber(
+    @Request() req: any, 
+    @Param('id') childReportId: string, 
+    @Param('snId') serialNumberId: string, 
+    @Body() body: Record<string, unknown>
+  ) {
+    return this.childReportsService.updateChildReportSerialNumber(
+      req.user.tenantId,
+      childReportId,
+      serialNumberId,
+      {
+        inspectionData: body['inspectionData'] as Record<string, unknown>,
+        disposition: body['disposition'] as SerialDisposition
+      }
+    );
+  }
+
+  @Post('child-reports/:id/attachments')
   @UseInterceptors(FileInterceptor('file'))
   async uploadAttachment(
     @Request() req: any,

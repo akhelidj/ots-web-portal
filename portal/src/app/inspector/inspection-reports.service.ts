@@ -23,6 +23,21 @@ export class InspectionReportsService {
   private reportsSubj = new BehaviorSubject<LocalInspectionReport[]>([]);
   public readonly reports$ = this.reportsSubj.asObservable();
 
+  private async enqueueChildSync(reportId: string): Promise<void> {
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'CHILD_REPORT',
+      entityId: reportId,
+      operation: 'SYNC_REWORK',
+      payload: {},
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+  }
+
   constructor() {
     this.irRepo.changes$.subscribe(() => {
       this.refreshLocalCache();
@@ -293,6 +308,8 @@ export class InspectionReportsService {
       attemptCount: 0,
       lastError: null,
     });
+
+    await this.enqueueChildSync(reportId);
   }
 
   public async renameSerialNumberOffline(id: string, newSerial: string): Promise<void> {
@@ -326,6 +343,8 @@ export class InspectionReportsService {
       attemptCount: 0,
       lastError: null,
     });
+
+    await this.enqueueChildSync(sn.inspectionReportId);
   }
 
   public async saveSerialNumberInspectionOffline(id: string, inspectionJson: Record<string, unknown>): Promise<void> {
@@ -353,6 +372,8 @@ export class InspectionReportsService {
       attemptCount: 0,
       lastError: null,
     });
+
+    await this.enqueueChildSync(sn.inspectionReportId);
   }
 
   public async deleteSerialNumberOffline(id: string): Promise<void> {

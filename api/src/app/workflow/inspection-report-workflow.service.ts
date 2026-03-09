@@ -283,7 +283,6 @@ export class InspectionReportWorkflowService {
 
       const missingDispositionSerials: string[] = [];
       const missingRequiredFields: Record<string, string[]> = {};
-      const missingChildReportsSerials: string[] = [];
 
       for (const sn of serials) {
           const data: any = sn.inspectionData || {};
@@ -291,12 +290,6 @@ export class InspectionReportWorkflowService {
           
           if (!disposition) {
               missingDispositionSerials.push(sn.serial);
-          } else if (disposition === 'REWORK') {
-              // Check if a ChildReport exists for this serial number
-              const hasChildReport = report.childReports.some(cr => cr.serialNumberId === sn.id);
-              if (!hasChildReport) {
-                  missingChildReportsSerials.push(sn.serial);
-              }
           }
 
           if (report.templateKey === 'DRILL_PIPE_REPORT') {
@@ -310,23 +303,14 @@ export class InspectionReportWorkflowService {
           }
       }
 
-      const hasValidationFailures = missingDispositionSerials.length > 0 || Object.keys(missingRequiredFields).length > 0 || missingChildReportsSerials.length > 0;
+      const hasValidationFailures = missingDispositionSerials.length > 0 || Object.keys(missingRequiredFields).length > 0;
       if (hasValidationFailures) {
           throw new BadRequestException({
              code: 'VALIDATION_FAILED',
              message: 'Validation failed for one or more serial numbers.',
              missingDispositionSerials,
-             missingRequiredFields,
-             missingChildReportsSerials
+             missingRequiredFields
           });
-      }
-    }
-
-    // 4.2 Parent CLOSED validation
-    if (toStatus === InspectionReportStatus.CLOSED) {
-      const openChildren = report.childReports.filter(c => c.status !== ChildReportStatus.CLOSED);
-      if (openChildren.length > 0) {
-        throw new BadRequestException('Cannot close Inspection Report: All child reports must be closed first');
       }
     }
 

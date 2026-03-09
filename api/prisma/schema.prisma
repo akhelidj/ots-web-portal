@@ -159,7 +159,6 @@ model SerialNumber {
   inspectionReportId       String
   version                  Int                       @default(1)
   tenantId                 String
-  childReports             ChildReport[]
   childReportSerialNumbers ChildReportSerialNumber[]
   inspectionReport         InspectionReport          @relation(fields: [inspectionReportId], references: [id])
   tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
@@ -177,18 +176,17 @@ model ChildReport {
   inspectionReportId String
   revisionNumber     Int                        @default(0)
   notes              String?
-  serialNumberId     String
   tenantId           String
   type               ChildReportType            @default(REWORK)
   version            Int                        @default(1)
   attachments        Attachment[]
   inspectionReport   InspectionReport           @relation(fields: [inspectionReportId], references: [id])
-  serialNumber       SerialNumber               @relation(fields: [serialNumberId], references: [id])
   tenant             Tenant                     @relation(fields: [tenantId], references: [id])
   revisions          ChildReportRevision[]
   serialNumbers      ChildReportSerialNumber[]
   transitionLogs     ChildReportTransitionLog[]
 
+  @@unique([tenantId, inspectionReportId, type], name: "unique_child_report_by_type")
   @@index([tenantId])
 }
 
@@ -196,6 +194,8 @@ model ChildReportSerialNumber {
   id             String       @id @default(uuid())
   childReportId  String
   serialNumberId String
+  inspectionData Json?
+  disposition    SerialDisposition?
   childReport    ChildReport  @relation(fields: [childReportId], references: [id])
   serialNumber   SerialNumber @relation(fields: [serialNumberId], references: [id])
 

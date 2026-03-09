@@ -21,7 +21,14 @@ export class ExportService {
     // 1. Fetch Report & Validate Approval
     const report = await this.prisma.inspectionReport.findUnique({
       where: { id: reportId },
-      include: { customer: { select: { name: true } } },
+      include: { 
+        customer: { select: { name: true } },
+        childReports: {
+          include: {
+            serialNumbers: { include: { serialNumber: true }, orderBy: { serialNumber: { serial: 'asc' } } }
+          }
+        }
+      },
     });
 
     if (!report) {
@@ -33,8 +40,14 @@ export class ExportService {
     if (user.role === 'CUSTOMER' && report.customerId !== user.customerId) {
       throw new ForbiddenException('Access denied: report does not belong to customer');
     }
-    if (report.status !== 'APPROVED' && report.status !== 'CLOSED') {
-      throw new ForbiddenException('Export is only allowed for APPROVED or CLOSED reports');
+    
+    const isParentApproved = report.status === 'APPROVED' || report.status === 'CLOSED';
+    
+    const childReport = report.childReports.find(cr => cr.type === 'REWORK');
+    const isChildApproved = childReport && (childReport.status === 'APPROVED' || childReport.status === 'CLOSED');
+
+    if (!isParentApproved && !isChildApproved) {
+      throw new ForbiddenException('Export is only allowed when either the Parent or Child report is APPROVED or CLOSED');
     }
 
     // 2. Resolve Revision
@@ -47,7 +60,6 @@ export class ExportService {
     let snapshot: any;
 
     if (revisionNumber === 0) {
-      // No snapshot was ever created (report approved before snapshot feature was active).
       // Build an equivalent snapshot on-the-fly from live data so export still works.
       const liveReport = await this.prisma.inspectionReport.findUnique({
         where: { id: reportId },
@@ -72,7 +84,6 @@ export class ExportService {
           customerId: liveReport.customerId,
           createdAt: liveReport.createdAt,
           updatedAt: liveReport.updatedAt,
-          // Pipe Specifications
           grade: liveReport.grade,
           range: liveReport.range,
           weight: liveReport.weight,
@@ -80,7 +91,6 @@ export class ExportService {
           nomOD: liveReport.nomOD,
           nomID: liveReport.nomID,
           connection: liveReport.connection,
-          // Job Info
           inspectionAddress: liveReport.inspectionAddress,
           standardUsed: liveReport.standardUsed,
           inspectorComment: liveReport.inspectorComment,
@@ -162,85 +172,154 @@ export class ExportService {
 
     const templateBuffer = template.fileBlob;
 
-    const allSerialNumbers = snapshot.serialNumbers || [];
-    const N = allSerialNumbers.length;
+    const allFiles: { buffer: Buffer; filename: string }[] = [];
+    const poStr = report.poNumber && report.poNumber.trim().length > 0 
+      ? report.poNumber.trim().replace(/\s+/g, '_').toUpperCase() 
+      : 'NOPO';
+    const reportNum = report.reportNumber || 'UNKNOWN';
+    const baseParentFilename = `OTS_${poStr}_${reportNum}_${revisionNumber}`;
+    const baseChildFilename = `OTS_${poStr}_${reportNum}_bis_${revisionNumber}`; // Child naming: _bis
 
-    // 5. Generate Output
+    if (isParentApproved) {
+      const parentSerials = [...(snapshot.serialNumbers || [])];
+      
+      // Order Parent export deterministic: non-REWORK first, REWORK last, original ID/Sequence order preserved
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      parentSerials.sort((a: any, b: any) => {
+        const aDisp = (a.disposition || '').toUpperCase();
+        const bDisp = (b.disposition || '').toUpperCase();
+        const aIsRework = aDisp === 'REWORK' ? 1 : 0;
+        const bIsRework = bDisp === 'REWORK' ? 1 : 0;
+        
+        if (aIsRework !== bIsRework) {
+           return aIsRework - bIsRework;
+        }
+        
+        return (a.serial || '').localeCompare(b.serial || '');
+      });
+
+      const parentFiles = await this.generateExcelFiles(
+        templateBuffer,
+        report.templateKey,
+        snapshot,
+        parentSerials,
+        baseParentFilename
+      );
+      allFiles.push(...parentFiles);
+    }
+
+    if (isChildApproved && childReport) {
+      // Map child serials to the structure expected by applyMapping
+      const childSerials = childReport.serialNumbers.map((crsn: Record<string, unknown>) => {
+        const sn = crsn.serialNumber as { serial: string; updatedAt: Date; id: string };
+        return {
+          id: sn.id,
+          serial: sn.serial,
+          inspectionData: crsn.inspectionData,
+          disposition: crsn.disposition,
+          updatedAt: sn.updatedAt
+        };
+      });
+      
+      const childFiles = await this.generateExcelFiles(
+        templateBuffer,
+        report.templateKey,
+        snapshot, 
+        childSerials,
+        baseChildFilename
+      );
+      allFiles.push(...childFiles);
+    }
+
+    if (allFiles.length === 0) {
+      throw new InternalServerErrorException('No files generated for export');
+    }
+
+    if (allFiles.length === 1) {
+      return {
+        buffer: allFiles[0].buffer,
+        filename: allFiles[0].filename,
+        mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      };
+    }
+
+    // Zip multiple files (either chunks or parent+child combo)
+    const zip = new JSZip();
+    for (const f of allFiles) {
+       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       zip.file(f.filename, f.buffer as any);
+    }
+    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+    return {
+      buffer: zipBuffer as unknown as Buffer,
+      filename: `OTS_${poStr}_${reportNum}_${revisionNumber}.zip`,
+      mimetype: 'application/zip',
+    };
+  }
+
+  private async generateExcelFiles(
+    templateBuffer: Buffer,
+    templateKey: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    snapshot: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    serialNumbers: any[],
+    baseFilename: string
+  ): Promise<{ buffer: Buffer; filename: string }[]> {
+    const files: { buffer: Buffer; filename: string }[] = [];
+    const N = serialNumbers.length;
+    
+    if (N === 0) {
+      return files;
+    }
+
     if (N <= 10) {
-      // Return Single XLSX
       const workbook = new ExcelJS.Workbook();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await workbook.xlsx.load(templateBuffer as any);
       
       try {
-        await this.applyMapping(report.templateKey, workbook, snapshot, allSerialNumbers);
+        await this.applyMapping(templateKey, workbook, snapshot, serialNumbers);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         throw new BadRequestException(err.message || 'Error applying template mapping');
       }
 
       const outBuffer = await workbook.xlsx.writeBuffer();
-      // Filename should be identical to the requested format
-      const poStr = report.poNumber && report.poNumber.trim().length > 0 
-        ? report.poNumber.trim().replace(/\s+/g, '_').toUpperCase() 
-        : 'NOPO';
-      const reportNum = report.reportNumber || 'UNKNOWN';
-      const finalFilename = `OTS_${poStr}_${reportNum}_${revisionNumber}.xlsx`;
-
-      return {
-        buffer: Buffer.from(outBuffer), // Ensure it's a Buffer native object
-        filename: finalFilename,
-        mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      };
+      files.push({
+        buffer: Buffer.from(outBuffer),
+        filename: `${baseFilename}.xlsx`
+      });
     } else {
-      // Return ZIP with multiple XLSX files (Chunks of 10)
-      const zip = new JSZip();
       const chunks = Math.ceil(N / 10);
-
       for (let k = 1; k <= chunks; k++) {
         const startIndex = (k - 1) * 10;
         const endIndex = startIndex + 10;
-        const chunkSerials = allSerialNumbers.slice(startIndex, endIndex);
+        const chunkSerials = serialNumbers.slice(startIndex, endIndex);
 
         const workbook = new ExcelJS.Workbook();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await workbook.xlsx.load(templateBuffer as any); // Always load from original blank template bytes
+        await workbook.xlsx.load(templateBuffer as any);
         
         try {
-          await this.applyMapping(report.templateKey, workbook, snapshot, chunkSerials);
+          await this.applyMapping(templateKey, workbook, snapshot, chunkSerials);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
           throw new BadRequestException(`Error in part ${k}: ${err.message || 'Error applying template mapping'}`);
         }
 
         const partBuffer = await workbook.xlsx.writeBuffer();
-        
-        const poStr = report.poNumber && report.poNumber.trim().length > 0 
-          ? report.poNumber.trim().replace(/\s+/g, '_').toUpperCase() 
-          : 'NOPO';
-        const reportNum = report.reportNumber || 'UNKNOWN';
-        const partFilename = `OTS_${poStr}_${reportNum}_${revisionNumber}_part${k}of${chunks}.xlsx`;
-        
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        zip.file(partFilename, partBuffer as any);
+        files.push({
+          buffer: Buffer.from(partBuffer),
+          filename: `${baseFilename}_part${k}of${chunks}.xlsx`
+        });
       }
-
-      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-      const poStrZip = report.poNumber && report.poNumber.trim().length > 0 
-        ? report.poNumber.trim().replace(/\s+/g, '_').toUpperCase() 
-        : 'NOPO';
-      const reportNumZip = report.reportNumber || 'UNKNOWN';
-      return {
-        buffer: zipBuffer as unknown as Buffer,
-        filename: `OTS_${poStrZip}_${reportNumZip}_${revisionNumber}.zip`,
-        mimetype: 'application/zip',
-      };
     }
+    return files;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async applyMapping(templateKey: string, workbook: ExcelJS.Workbook, snapshot: any, chunk: any[]): Promise<void> {
-    // Currently only supporting DRILL_PIPE_REPORT v1 exactly as specified.
     if (templateKey === 'DRILL_PIPE_REPORT') {
        await mapDrillPipeReportV1(workbook, snapshot, chunk);
        return;

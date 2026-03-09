@@ -1,28 +1,19 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ChildReportStatus, ChildReportType } from '@prisma/client';
+import { ChildReportStatus, ChildReportType, SerialDisposition } from '@prisma/client';
 
 @Injectable()
 export class ChildReportsService {
   constructor(private prisma: PrismaService) {}
 
-  async createChildReport(tenantId: string, userId: string, payload: { id: string, inspectionReportId: string, serialNumberId: string, type: ChildReportType, notes?: string }) {
-    // Deterministic Idempotency
-    const existing = await this.prisma.childReport.findUnique({
-      where: { id: payload.id, tenantId }
-    });
-    if (existing) {
-      return existing; // 200 OK idempotent return
-    }
-
-    // Tenant Scope + Parent Lock Check + Serial Ownership validation
+  async syncReworkChildReport(tenantId: string, inspectionReportId: string) {
     const report = await this.prisma.inspectionReport.findFirst({
-      where: { id: payload.inspectionReportId, tenantId },
+      where: { id: inspectionReportId, tenantId },
       include: {
-        serialNumbers: {
-           where: { id: payload.serialNumberId, tenantId }
-        },
-        childReports: true
+        serialNumbers: true,
+        childReports: {
+          where: { type: ChildReportType.REWORK }
+        }
       }
     });
 
@@ -30,59 +21,144 @@ export class ChildReportsService {
       throw new NotFoundException('Inspection Report not found');
     }
 
-    if (report.status === 'APPROVED' || report.status === 'CLOSED') {
-      throw new BadRequestException('Cannot create Child Report: Inspection Report is locked.');
+    const reworkSerials = report.serialNumbers.filter(sn => {
+      const data = (sn.inspectionData as Record<string, unknown>) || {};
+      const finalSection = data['final'] as Record<string, unknown> | undefined;
+      const disposition = (finalSection?.['disposition'] as string) || (data['disposition'] as string);
+      return disposition === 'REWORK';
+    });
+
+    const existingChild = report.childReports[0];
+
+    if (reworkSerials.length === 0) {
+      if (existingChild) {
+        if (existingChild.status === ChildReportStatus.DRAFT) {
+          await this.prisma.$transaction([
+             this.prisma.childReportSerialNumber.deleteMany({ where: { childReportId: existingChild.id } }),
+             this.prisma.childReport.delete({ where: { id: existingChild.id } })
+          ]);
+          return null;
+        } else {
+          const [, updated] = await this.prisma.$transaction([
+             this.prisma.childReportSerialNumber.deleteMany({ where: { childReportId: existingChild.id } }),
+             this.prisma.childReport.update({
+               where: { id: existingChild.id },
+               data: { version: { increment: 1 } },
+               include: { serialNumbers: true }
+             })
+          ]);
+          return updated;
+        }
+      }
+      return null;
     }
 
-    if (report.serialNumbers.length === 0) {
-      throw new BadRequestException('Serial Number not found or does not belong to this Inspection Report.');
+    let crId: string;
+    if (existingChild) {
+       crId = existingChild.id;
+    } else {
+       let generatedChildReportNumber: string | undefined = undefined;
+       if (report.reportNumber) {
+         generatedChildReportNumber = `${report.reportNumber}_bis`;
+       }
+       const newCr = await this.prisma.childReport.create({
+         data: {
+           tenantId,
+           inspectionReportId,
+           reportNumber: generatedChildReportNumber,
+           type: ChildReportType.REWORK,
+           status: ChildReportStatus.DRAFT,
+           version: 1,
+         }
+       });
+       crId = newCr.id;
     }
 
-    const serialNumber = report.serialNumbers[0];
-    const data = (serialNumber.inspectionData as Record<string, unknown>) || {};
-    const finalSection = data['final'] as Record<string, unknown> | undefined;
-    const disposition = (finalSection?.['disposition'] as string) || (data['disposition'] as string);
+    await this.prisma.$transaction(async (tx) => {
+      // Load existing rows so we can preserve their inspectionData and disposition
+      const existingRows = await tx.childReportSerialNumber.findMany({
+        where: { childReportId: crId }
+      });
+      const existingMap = new Map(existingRows.map(r => [r.serialNumberId, r]));
 
-    if (!disposition || disposition === 'PASS') {
-      throw new BadRequestException('Child Reports can only be created for Serial Numbers with a REWORK, SCRAP, or HOLD disposition.');
-    }
+      const reworkSnIds = new Set(reworkSerials.map(sn => sn.id));
 
-    if (disposition !== payload.type) {
-      throw new BadRequestException(`Disposition mismatch: Cannot create a ${payload.type} Child Report for a Serial Number marked as ${disposition}.`);
-    }
+      // Delete rows whose serial is no longer REWORK
+      const toDelete = existingRows.filter(r => !reworkSnIds.has(r.serialNumberId));
+      if (toDelete.length > 0) {
+        await tx.childReportSerialNumber.deleteMany({
+          where: { id: { in: toDelete.map(r => r.id) } }
+        });
+      }
 
-    // Determine Child Report Number: ParentReportNumber-TypeCount
-    let generatedChildReportNumber: string | undefined = undefined;
-    if (report.reportNumber) {
-        const existingOfType = report.childReports.filter(cr => cr.type === payload.type);
-        const sequenceNum = existingOfType.length + 1;
-        const typeInitial = payload.type.charAt(0); // R for REWORK, S for SCRAP, H for HOLD
-        generatedChildReportNumber = `${report.reportNumber}-${typeInitial}${sequenceNum}`;
-    }
+      // Create only rows that don't already exist (new additions to REWORK set)
+      const toCreate = reworkSerials.filter(sn => !existingMap.has(sn.id));
+      if (toCreate.length > 0) {
+        await tx.childReportSerialNumber.createMany({
+          data: toCreate.map(sn => ({
+            childReportId: crId,
+            serialNumberId: sn.id
+            // inspectionData and disposition intentionally omitted — start blank for new serials
+          }))
+        });
+      }
 
-    // Atomic Create
-    const childReport = await this.prisma.childReport.create({
-      data: {
-        id: payload.id,
-        tenantId,
-        inspectionReportId: payload.inspectionReportId,
-        serialNumberId: payload.serialNumberId,
-        reportNumber: generatedChildReportNumber,
-        type: payload.type,
-        notes: payload.notes,
-        status: ChildReportStatus.DRAFT,
-        version: 1
+      if (existingChild) {
+        await tx.childReport.update({
+          where: { id: crId },
+          data: { version: { increment: 1 } }
+        });
       }
     });
 
-    return childReport;
+    const result = await this.prisma.childReport.findUnique({
+      where: { id: crId },
+      include: {
+         serialNumbers: {
+            include: { serialNumber: true }
+         }
+      }
+    });
+    return this.mapChildReportResponse(result);
+  }
+
+  private mapChildReportResponse(cr: any) {
+    if (!cr) return cr;
+    return {
+      ...cr,
+      serialNumbers: cr.serialNumbers ? cr.serialNumbers.map((sn: any) => ({
+        id: sn.serialNumberId,
+        serial: sn.serialNumber?.serial || '',
+        inspectionData: sn.inspectionData,
+        disposition: sn.disposition
+      })) : []
+    };
   }
 
   async getChildReports(tenantId: string, inspectionReportId: string) {
-    return this.prisma.childReport.findMany({
+    const reports = await this.prisma.childReport.findMany({
       where: { tenantId, inspectionReportId },
+      include: {
+         serialNumbers: {
+            include: { serialNumber: true }
+         }
+      },
       orderBy: { createdAt: 'desc' }
     });
+    return reports.map(cr => this.mapChildReportResponse(cr));
+  }
+
+  async getChildReportById(tenantId: string, id: string) {
+    const cr = await this.prisma.childReport.findFirst({
+      where: { id, tenantId },
+      include: {
+        serialNumbers: {
+          include: { serialNumber: true }
+        }
+      }
+    });
+    if (!cr) throw new NotFoundException('Child Report not found');
+    return this.mapChildReportResponse(cr);
   }
 
   async updateChildReport(tenantId: string, id: string, userId: string, payload: { status?: ChildReportStatus, notes?: string }, version: number) {
@@ -90,33 +166,26 @@ export class ChildReportsService {
       throw new BadRequestException('version is required');
     }
 
-    // Tenant-scoped parent lock check
     const childToUpdate = await this.prisma.childReport.findFirst({
-        where: { id, tenantId },
-        include: { inspectionReport: true }
+        where: { id, tenantId }
     });
 
     if (!childToUpdate) {
         throw new NotFoundException('Child Report not found');
     }
 
-    const reportStatus = childToUpdate.inspectionReport.status;
-    if (reportStatus === 'APPROVED' || reportStatus === 'CLOSED') {
-        throw new BadRequestException('Cannot update Child Report: Parent Inspection Report is locked.');
-    }
-
-    // Atomic Optimistic Concurrency Update
     try {
       const updated = await this.prisma.childReport.update({
-        where: {
-          id,
-          tenantId,
-          version
-        },
+        where: { id, tenantId, version },
         data: {
           status: payload.status !== undefined ? payload.status : undefined,
           notes: payload.notes !== undefined ? payload.notes : undefined,
           version: { increment: 1 }
+        },
+        include: {
+           serialNumbers: {
+              include: { serialNumber: true }
+           }
         }
       });
       return updated;
@@ -127,6 +196,42 @@ export class ChildReportsService {
       }
       throw error;
     }
+  }
+
+  async updateChildReportSerialNumber(tenantId: string, childReportId: string, serialNumberId: string, payload: { inspectionData?: Record<string, unknown>, disposition?: SerialDisposition }) {
+    if (payload.disposition === SerialDisposition.REWORK) {
+      throw new BadRequestException('Child Report disposition cannot be REWORK.');
+    }
+
+    const crsn = await this.prisma.childReportSerialNumber.findUnique({
+      where: {
+        childReportId_serialNumberId: { childReportId, serialNumberId }
+      },
+      include: { childReport: true }
+    });
+
+    if (!crsn || crsn.childReport.tenantId !== tenantId) {
+      throw new NotFoundException('Child Report Serial Number relation not found.');
+    }
+
+    await this.prisma.childReportSerialNumber.update({
+      where: { id: crsn.id },
+      data: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        inspectionData: payload.inspectionData !== undefined ? (payload.inspectionData as any) : undefined,
+        disposition: payload.disposition !== undefined ? payload.disposition : undefined
+      }
+    });
+
+    const result = await this.prisma.childReport.findUnique({
+      where: { id: childReportId },
+      include: {
+         serialNumbers: {
+            include: { serialNumber: true }
+         }
+      }
+    });
+    return this.mapChildReportResponse(result);
   }
 
   async addAttachment(tenantId: string, id: string, file: { originalname: string, buffer: Buffer }) {

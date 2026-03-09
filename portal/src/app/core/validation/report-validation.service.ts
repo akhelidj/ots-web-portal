@@ -58,20 +58,6 @@ export class ReportValidationService {
         } else {
            dispositionCounts[disposition] = 1;
         }
-
-        if (disposition === 'REWORK') {
-          const hasChildReport = childReports.some(cr => cr.serialNumberId === sn.id);
-          if (!hasChildReport) {
-            issues.push({
-              code: 'MISSING_CHILD_REPORT',
-              level: 'BLOCKER',
-              message: `Unresolved or missing Child Report for Serial ${sn.value} (Disposition: REWORK).`,
-              scope: 'CHILD_REPORT',
-              serialId: sn.id,
-              serialLabel: sn.value
-            });
-          }
-        }
       }
 
       if (report.templateKey === 'DRILL_PIPE_REPORT') {

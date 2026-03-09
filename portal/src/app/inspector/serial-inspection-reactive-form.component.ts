@@ -13,6 +13,7 @@ export class SerialInspectionReactiveFormComponent implements OnInit, OnChanges 
   @Input() initialData: Record<string, unknown> = {};
   @Input() schemaKey = 'DRILL_PIPE_REPORT';
   @Input() isReadOnly = false;
+  @Input() excludedDispositions: string[] = [];
   
   @Output() saveData = new EventEmitter<Record<string, unknown>>();
   @Output() formCancel = new EventEmitter<void>();
@@ -122,6 +123,14 @@ export class SerialInspectionReactiveFormComponent implements OnInit, OnChanges 
 
   public onCancel() {
      this.formCancel.emit();
+  }
+
+  public getFieldOptions(field: any): string[] {
+    if (!field.options) return [];
+    if (this.excludedDispositions.length > 0) {
+      return field.options.filter((o: string) => !this.excludedDispositions.includes(o));
+    }
+    return field.options;
   }
 
 }

@@ -435,6 +435,39 @@ export class SyncDispatcherService {
           return true;
         }
 
+        case 'CHILD_REPORT:SYNC_REWORK': {
+          const syncRes = await firstValueFrom(
+            this.http.post<LocalChildReport | null>(
+              `${environment.apiUrl}/inspection-reports/${item.entityId}/child-reports/sync-rework`,
+              {}
+            ),
+          );
+          if (syncRes) {
+            await this.crRepo.upsert({ ...syncRes, syncState: 'SYNCED' });
+          } else {
+            const allLocal = await this.crRepo.listByReportId(item.entityId);
+            const reworkCr = allLocal.find(cr => cr.type === 'REWORK');
+            if (reworkCr) {
+              await this.crRepo.delete(reworkCr.id);
+            }
+          }
+          return true;
+        }
+
+        case 'CHILD_REPORT:SN_UPDATE_INSPECTION': {
+          const updateRes = await firstValueFrom(
+            this.http.patch<LocalChildReport>(
+              `${environment.apiUrl}/child-reports/${item.entityId}/serial-numbers/${item.payload['serialNumberId']}`,
+              {
+                inspectionData: item.payload['inspectionData'],
+                disposition: item.payload['disposition']
+              }
+            )
+          );
+          await this.crRepo.upsert({ ...updateRes, syncState: 'SYNCED' });
+          return true;
+        }
+
         case 'CHILD_REPORT:UPDATE': {
           const updateRes = await firstValueFrom(
             this.http.patch<LocalChildReport>(

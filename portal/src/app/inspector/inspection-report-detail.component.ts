@@ -155,8 +155,6 @@ export class InspectionReportDetailComponent implements OnInit {
     sn: LocalSerialNumber;
     childLinked: LocalChildReport | null;
   }[] = [];
-  public hasMissingChildrenForRework = false;
-  public hasUnresolvedChildren = false;
 
   // KPIs
   public kpiTotal = 0;
@@ -177,8 +175,6 @@ export class InspectionReportDetailComponent implements OnInit {
   public inspectingSn: LocalSerialNumber | null = null;
   public inspectionFormData: Record<string, unknown> = {};
 
-  public creatingChildReportForSn: LocalSerialNumber | null = null;
-  public childReportNotes = '';
   public isExporting = false;
   public isCustomer = false;
   public isReceiver = false;
@@ -368,20 +364,13 @@ export class InspectionReportDetailComponent implements OnInit {
         else if (disp === 'REWORK') {
           rework++;
           const child =
-            childReports.find((cr) => cr.serialNumberId === sn.id) || null;
+            childReports.find((cr) => cr.type === 'REWORK') || null;
           reworkList.push({ sn, childLinked: child });
         } else if (disp === 'SCRAP') scrap++;
         else if (disp === 'HOLD') hold++;
       }
 
       this.reworkSerials = reworkList;
-      this.hasMissingChildrenForRework = reworkList.some((r) => !r.childLinked);
-      this.hasUnresolvedChildren = reworkList.some((r) => {
-        if (!r.childLinked) return true;
-        return !['APPROVED', 'CLOSED', 'COMPLETED'].includes(
-          r.childLinked.status,
-        );
-      });
 
       this.kpiTotal = total;
       this.kpiPassed = pass;
@@ -440,8 +429,6 @@ export class InspectionReportDetailComponent implements OnInit {
       this.kpiHold = 0;
       this.kpiPassRate = 0;
       this.reworkSerials = [];
-      this.hasMissingChildrenForRework = false;
-      this.hasUnresolvedChildren = false;
     }
   }
 
@@ -703,42 +690,6 @@ export class InspectionReportDetailComponent implements OnInit {
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to save details.';
-    }
-  }
-
-  public openChildReportForm(sn: LocalSerialNumber): void {
-    this.creatingChildReportForSn = sn;
-    this.childReportNotes = '';
-    this.formError = '';
-  }
-
-  public cancelChildReportForm(): void {
-    this.creatingChildReportForSn = null;
-    this.childReportNotes = '';
-    this.formError = '';
-  }
-
-  public async submitChildReport(): Promise<void> {
-    if (!this.creatingChildReportForSn) return;
-    const type = this.getDisposition(this.creatingChildReportForSn);
-    if (!type || type === 'PASS') {
-      this.formError =
-        'Cannot create Child Report: Invalid disposition source.';
-      return;
-    }
-
-    try {
-      await this.crService.createOffline({
-        inspectionReportId: this.reportId,
-        serialNumberId: this.creatingChildReportForSn.id,
-        type: type as 'REWORK' | 'SCRAP' | 'HOLD',
-        notes: this.childReportNotes.trim() || undefined,
-      });
-      this.cancelChildReportForm();
-      this.refreshData();
-    } catch (error) {
-      const e = error as Error;
-      this.formError = e.message || 'Failed to create child report.';
     }
   }
 

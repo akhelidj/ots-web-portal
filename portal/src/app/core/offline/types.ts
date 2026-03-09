@@ -117,7 +117,13 @@ export interface LocalChildReport {
   id: string;
   tenantId: string;
   inspectionReportId: string;
-  serialNumberId: string;
+  serialNumbers: Array<{
+    id: string;
+    serial: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    inspectionData?: any;
+    disposition?: string;
+  }>;
   reportNumber?: string | null;
   type: 'REWORK' | 'SCRAP' | 'HOLD';
   status: 'DRAFT' | 'IN_INSPECTION' | 'PENDING_APPROVAL' | 'APPROVED' | 'CLOSED';
