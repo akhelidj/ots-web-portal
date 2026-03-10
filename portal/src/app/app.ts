@@ -1,8 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
-import { environment } from '../environments/environment';
-import { ToastComponent } from './shared/toast/toast.component';
+import { environment } from '@app-env/environment';
+import { ToastComponent } from '@portal/shared/toast/toast.component';
 
 @Component({
   imports: [RouterModule, ToastComponent],

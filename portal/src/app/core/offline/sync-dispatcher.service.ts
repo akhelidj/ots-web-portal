@@ -4,8 +4,8 @@ import { firstValueFrom } from 'rxjs';
 import { OutboxItem, LocalUser } from './types';
 import { UserLocalRepo } from './user-local.repo';
 import { OutboxLocalRepo } from './outbox-local.repo';
-import { AdminUsersService } from '../../admin/admin-users.service';
-import { AdminCustomersService } from '../../admin/admin-customers.service';
+import { AdminUsersService } from '@portal/features/users/services/admin-users.service';
+import { AdminCustomersService } from '@portal/features/customers/services/admin-customers.service';
 import { CustomerLocalRepo } from './customer-local.repo';
 import { InspectionReportLocalRepo } from './inspection-report-local.repo';
 import { SerialNumberLocalRepo } from './serial-number-local.repo';
@@ -15,7 +15,7 @@ import {
   LocalSerialNumber,
   LocalChildReport,
 } from './types';
-import { environment } from '../../../environments/environment';
+import { environment } from '@app-env/environment';
 
 @Injectable({
   providedIn: 'root',

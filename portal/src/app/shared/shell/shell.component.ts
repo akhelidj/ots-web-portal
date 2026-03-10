@@ -2,12 +2,12 @@ import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { ConnectivityService } from '../../core/offline/connectivity.service';
-import { OutboxService } from '../../core/offline/outbox.service';
-import { SessionService } from '../../core/auth/session.service';
-import { SyncOrchestratorService } from '../../core/offline/sync-orchestrator.service';
-import { NavigationService } from '../../core/navigation/navigation.service';
-import { environment } from '../../../environments/environment';
+import { ConnectivityService } from '@portal/core/offline/connectivity.service';
+import { OutboxService } from '@portal/core/offline/outbox.service';
+import { SessionService } from '@portal/core/auth/session.service';
+import { SyncOrchestratorService } from '@portal/core/offline/sync-orchestrator.service';
+import { NavigationService } from '@portal/core/navigation/navigation.service';
+import { environment } from '@app-env/environment';
 import { AuthRequiredPlaceholderComponent } from '../placeholders/auth-required-placeholder.component';
 
 @Component({

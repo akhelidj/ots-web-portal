@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ConnectivityService } from '../../core/offline/connectivity.service';
+import { ConnectivityService } from '@portal/core/offline/connectivity.service';
 
 @Component({
   selector: 'app-auth-required-placeholder',

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { LocalInspectionReport, LocalSerialNumber, LocalChildReport } from '../offline/types';
-import { DRILL_PIPE_V1_SCHEMA } from '../../inspection/form-schema/drill-pipe-v1.schema';
+import { DRILL_PIPE_V1_SCHEMA } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 
 export interface ValidationIssue {
   code: string;

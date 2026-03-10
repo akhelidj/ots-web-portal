@@ -178,7 +178,7 @@ export class ExportService {
       : 'NOPO';
     const reportNum = report.reportNumber || 'UNKNOWN';
     const baseParentFilename = `OTS_${poStr}_${reportNum}_${revisionNumber}`;
-    const baseChildFilename = `OTS_${poStr}_${reportNum}_bis_${revisionNumber}`; // Child naming: _bis
+    const baseChildFilename = `OTS_${poStr}_${reportNum}_rework_${revisionNumber}`; // Child naming: _rework
 
     if (isParentApproved) {
       const parentSerials = [...(snapshot.serialNumbers || [])];

@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { AppRoutes } from '../core/navigation/routes.constants';
+import { AppRoutes } from '@portal/core/navigation/routes.constants';
 
 @Component({
   selector: 'app-access-denied',

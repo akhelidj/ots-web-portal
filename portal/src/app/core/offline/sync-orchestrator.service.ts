@@ -4,9 +4,9 @@ import { filter } from 'rxjs/operators';
 import { ConnectivityService } from './connectivity.service';
 import { SessionService } from '../auth/session.service';
 import { OutboxService } from './outbox.service';
-import { AdminUsersService } from '../../admin/admin-users.service';
-import { AdminCustomersService } from '../../admin/admin-customers.service';
-import { InspectionReportsService } from '../../inspector/inspection-reports.service';
+import { AdminUsersService } from '@portal/features/users/services/admin-users.service';
+import { AdminCustomersService } from '@portal/features/customers/services/admin-customers.service';
+import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 
 export type SyncStatus = 'Offline' | 'Syncing...' | 'Up to date' | 'Sync Error';
 

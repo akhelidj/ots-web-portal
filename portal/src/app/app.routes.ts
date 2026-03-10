@@ -1,24 +1,24 @@
 import { Route } from '@angular/router';
-import { ShellComponent } from './shared/shell/shell.component';
-import { AdminUsersComponent } from './admin/admin-users.component';
-import { AdminCustomersComponent } from './admin/admin-customers.component';
-import { AdminTemplatesComponent } from './admin/admin-templates.component';
-import { SupervisorWorkspaceComponent } from './supervisor/supervisor-workspace.component';
-import { InspectionReportListComponent } from './inspector/inspection-report-list.component';
-import { CreateInspectionReportComponent } from './inspector/create-inspection-report.component';
-import { InspectionReportDetailComponent } from './inspector/inspection-report-detail.component';
-import { ChildReportDetailComponent } from './inspector/child-report-detail.component';
+import { ShellComponent } from '@portal/shared/shell/shell.component';
+import { AdminUsersComponent } from '@portal/features/users/components/admin-users/admin-users.component';
+import { AdminCustomersComponent } from '@portal/features/customers/components/admin-customers/admin-customers.component';
+import { AdminTemplatesComponent } from '@portal/features/templates/components/admin-templates/admin-templates.component';
+import { SupervisorWorkspaceComponent } from '@portal/features/workspaces/supervisor/supervisor-workspace.component';
+import { InspectionReportListComponent } from '@portal/features/inspections/components/inspection-report-list/inspection-report-list.component';
+import { CreateInspectionReportComponent } from '@portal/features/inspections/components/create-inspection-report/create-inspection-report.component';
+import { InspectionReportDetailComponent } from '@portal/features/inspections/components/inspection-report-detail/inspection-report-detail.component';
+import { ChildReportDetailComponent } from '@portal/features/inspections/components/child-report-detail/child-report-detail.component';
 
-import { CustomerWorkspaceComponent } from './customer/customer-workspace.component';
-import { roleGuard } from './core/auth/role.guard';
-import { authGuard } from './core/auth/auth.guard';
-import { mustChangePasswordGuard } from './core/auth/must-change-password.guard';
-import { LoginComponent } from './auth/login.component';
-import { ChangePasswordComponent } from './auth/change-password.component';
-import { LandingComponent } from './landing.component';
-import { AppRoutes } from './core/navigation/routes.constants';
-import { AccessDeniedComponent } from './shared/access-denied.component';
-import { ReceiverWorkspaceComponent } from './receiver/receiver-workspace.component';
+import { CustomerWorkspaceComponent } from '@portal/features/workspaces/customer/customer-workspace.component';
+import { roleGuard } from '@portal/core/auth/role.guard';
+import { authGuard } from '@portal/core/auth/auth.guard';
+import { mustChangePasswordGuard } from '@portal/core/auth/must-change-password.guard';
+import { LoginComponent } from '@portal/features/auth/components/login/login.component';
+import { ChangePasswordComponent } from '@portal/features/auth/components/change-password/change-password.component';
+import { LandingComponent } from '@portal/features/landing/components/landing/landing.component';
+import { AppRoutes } from '@portal/core/navigation/routes.constants';
+import { AccessDeniedComponent } from '@portal/shared/access-denied.component';
+import { ReceiverWorkspaceComponent } from '@portal/features/workspaces/receiver/receiver-workspace.component';
 
 export const appRoutes: Route[] = [
   {

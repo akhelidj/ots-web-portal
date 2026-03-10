@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { trigger, transition, style, animate } from '@angular/animations';
-import { ToastService, ToastMessage } from '../../core/services/toast.service';
+import { ToastService, ToastMessage } from '@portal/core/services/toast.service';
 import { Subscription } from 'rxjs';
 
 @Component({

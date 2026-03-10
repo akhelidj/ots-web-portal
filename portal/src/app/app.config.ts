@@ -6,9 +6,9 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { appRoutes } from './app.routes';
-import { environment } from '../environments/environment';
-import { jwtInterceptor } from './core/auth/jwt.interceptor';
-import { errorInterceptor } from './core/auth/error.interceptor';
+import { environment } from '@app-env/environment';
+import { jwtInterceptor } from '@portal/core/auth/jwt.interceptor';
+import { errorInterceptor } from '@portal/core/auth/error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [

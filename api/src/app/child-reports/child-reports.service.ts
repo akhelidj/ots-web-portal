@@ -59,7 +59,7 @@ export class ChildReportsService {
     } else {
        let generatedChildReportNumber: string | undefined = undefined;
        if (report.reportNumber) {
-         generatedChildReportNumber = `${report.reportNumber}_bis`;
+         generatedChildReportNumber = `${report.reportNumber}_rework`;
        }
        const newCr = await this.prisma.childReport.create({
          data: {
