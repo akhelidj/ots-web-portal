@@ -43,8 +43,7 @@ export class SerialInspectionReactiveFormComponent implements OnInit, OnChanges 
   private initForm() {
     const group: Record<string, unknown> = {};
     
-    // We build a flat form group internally, but with keys like 'box.minTongSpace'
-    // This makes mapping to the schema very fast.
+    // Build form properly mapping fields
     for (const section of this.schema.sections) {
       for (const field of section.fields) {
          const validators = [];
