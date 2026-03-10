@@ -6,6 +6,7 @@ import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { LocalUser, LocalCustomer } from '@portal/core/offline/models/types';
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
+import { APP_ROLES, AppRole } from '@portal/core/constants/app.constants';
 
 @Component({
   selector: 'app-admin-users',
@@ -25,7 +26,7 @@ export class AdminUsersComponent implements OnInit {
   // Form state
   public formEmail = '';
   public formName = '';
-  public formRole = 'RECEIVER';
+  public formRole: AppRole = APP_ROLES.RECEIVER;
   public formPassword = '';
   public formCustomerId = '';
   public formError = '';
@@ -72,7 +73,7 @@ export class AdminUsersComponent implements OnInit {
       return;
     }
 
-    if (this.formRole === 'CUSTOMER' && !this.formCustomerId) {
+    if (this.formRole === APP_ROLES.CUSTOMER && !this.formCustomerId) {
       this.formError = 'Customer selection is required for Customer role.';
       return;
     }
@@ -87,7 +88,7 @@ export class AdminUsersComponent implements OnInit {
       isActive: true,
       mustChangePassword: true,
       updatedAt: new Date().toISOString(),
-      customerId: this.formRole === 'CUSTOMER' ? this.formCustomerId : null,
+      customerId: this.formRole === APP_ROLES.CUSTOMER ? this.formCustomerId : null,
       syncState: 'PENDING_CREATE',
     };
 
@@ -126,7 +127,7 @@ export class AdminUsersComponent implements OnInit {
       this.formEmail = '';
       this.formName = '';
       this.formPassword = '';
-      this.formRole = 'RECEIVER';
+      this.formRole = APP_ROLES.RECEIVER;
       this.formCustomerId = '';
     } catch (e) {
       console.error(e);

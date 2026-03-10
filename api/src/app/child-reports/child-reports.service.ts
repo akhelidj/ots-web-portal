@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ChildReportStatus, ChildReportType, SerialDisposition } from '@prisma/client';
+import { ChildReportStatus, ChildReportType, SerialDisposition, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ChildReportsService {
@@ -25,7 +25,7 @@ export class ChildReportsService {
       const data = (sn.inspectionData as Record<string, unknown>) || {};
       const finalSection = data['final'] as Record<string, unknown> | undefined;
       const disposition = (finalSection?.['disposition'] as string) || (data['disposition'] as string);
-      return disposition === 'REWORK';
+      return disposition === SerialDisposition.REWORK;
     });
 
     const existingChild = report.childReports[0];
@@ -122,14 +122,14 @@ export class ChildReportsService {
     return this.mapChildReportResponse(result);
   }
 
-  private mapChildReportResponse(cr: any) {
+  private mapChildReportResponse(cr: Prisma.ChildReportGetPayload<{ include: { serialNumbers: { include: { serialNumber: true } } } }> | null) {
     if (!cr) return cr;
     return {
       ...cr,
-      serialNumbers: cr.serialNumbers ? cr.serialNumbers.map((sn: any) => ({
+      serialNumbers: cr.serialNumbers ? cr.serialNumbers.map((sn) => ({
         id: sn.serialNumberId,
         serial: sn.serialNumber?.serial || '',
-        inspectionData: sn.inspectionData,
+        inspectionData: sn.inspectionData as Record<string, unknown> | null,
         disposition: sn.disposition
       })) : []
     };
@@ -190,11 +190,10 @@ export class ChildReportsService {
       });
       return updated;
     } catch (err: unknown) {
-      const error = err as any;
-      if (error.code === 'P2025') {
+      if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
         throw new ConflictException('Child Report was updated by another process or does not exist. Please refresh and try again.');
       }
-      throw error;
+      throw err;
     }
   }
 
@@ -243,7 +242,7 @@ export class ChildReportsService {
       throw new NotFoundException('Child Report not found');
     }
 
-    if (childReport.status === 'APPROVED' || childReport.status === 'CLOSED') {
+    if (childReport.status === ChildReportStatus.APPROVED || childReport.status === ChildReportStatus.CLOSED) {
       throw new BadRequestException('Cannot add attachment: Child Report is locked.');
     }
 

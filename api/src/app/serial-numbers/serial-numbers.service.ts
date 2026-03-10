@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { UserRole, InspectionReportStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class SerialNumbersService {
   constructor(private prisma: PrismaService) {}
 
-  async getSerialNumbers(user: any, reportId: string) {
-    const where: any = { tenantId: user.tenantId, id: reportId };
-    if (user.role === 'CUSTOMER') {
+  async getSerialNumbers(user: { tenantId: string, role: UserRole, customerId?: string | null }, reportId: string) {
+    const where: Prisma.InspectionReportWhereInput = { tenantId: user.tenantId, id: reportId };
+    if (user.role === UserRole.CUSTOMER) {
       where.customerId = user.customerId;
     }
     const report = await this.prisma.inspectionReport.findFirst({
@@ -46,7 +47,7 @@ export class SerialNumbersService {
       throw new BadRequestException('Items array must be provided and not empty');
     }
 
-    if (report.status === 'APPROVED' || report.status === 'CLOSED') {
+    if (report.status === InspectionReportStatus.APPROVED || report.status === InspectionReportStatus.CLOSED) {
       throw new BadRequestException('Cannot add serial numbers to an Approved or Closed report.');
     }
 
@@ -138,18 +139,18 @@ export class SerialNumbersService {
     const serialToUpdate = await this.prisma.serialNumber.findFirst({
       where: { id, tenantId },
       include: { inspectionReport: true }
-    });
+    }) as (Prisma.SerialNumberGetPayload<{ include: { inspectionReport: true } }> | null);
 
     if (!serialToUpdate) {
       throw new NotFoundException(`SerialNumber not found`);
     }
 
     const reportStatus = serialToUpdate.inspectionReport.status;
-    if (reportStatus === 'APPROVED' || reportStatus === 'CLOSED') {
+    if (reportStatus === InspectionReportStatus.APPROVED || reportStatus === InspectionReportStatus.CLOSED) {
       throw new BadRequestException('Inspection data is locked.');
     }
 
-    const dataToUpdate: any = {
+    const dataToUpdate: Prisma.SerialNumberUpdateInput = {
       version: serialToUpdate.version + 1,
     };
     
@@ -213,8 +214,8 @@ export class SerialNumbersService {
           },
           data: dataToUpdate,
         });
-      } catch (err: any) {
-        if (err.code === 'P2025') {
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
           throw new ConflictException(`Version mismatch or entity not found on final commit`);
         }
         throw err;
@@ -253,7 +254,7 @@ export class SerialNumbersService {
     }
 
     const reportStatus = serialToDelete.inspectionReport.status;
-    const allowedStatuses = ['DRAFT', 'RECEIVED', 'READY_FOR_CLEANING'];
+    const allowedStatuses: string[] = [InspectionReportStatus.DRAFT, InspectionReportStatus.RECEIVED, InspectionReportStatus.READY_FOR_CLEANING];
 
     if (!allowedStatuses.includes(reportStatus)) {
       throw new BadRequestException('Serial numbers can only be removed before the inspection stage (DRAFT, RECEIVED, READY_FOR_CLEANING).');

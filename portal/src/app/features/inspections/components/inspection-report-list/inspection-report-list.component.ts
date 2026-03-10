@@ -12,6 +12,7 @@ import { ReportValidationService, ValidationResult } from '@portal/core/validati
 import { SerialNumberLocalRepo } from '@portal/core/offline/repos/serial-number-local.repo';
 import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-local.repo';
 import { SessionService } from '@portal/core/auth/services/session.service';
+import { APP_ROLES } from '@portal/core/constants/app.constants';
 
 @Component({
   selector: 'app-inspection-report-list',
@@ -63,10 +64,10 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
 
     const p = this.sessionService.profile();
     if (p) {
-       this.isCustomer = p.role === 'CUSTOMER';
-       this.isReceiver = p.role === 'RECEIVER';
-       this.isAdmin = p.role === 'ADMIN';
-       this.customerScopeId = (p.role === 'CUSTOMER' && p.customerId) ? p.customerId : null;
+       this.isCustomer = p.role === APP_ROLES.CUSTOMER;
+       this.isReceiver = p.role === APP_ROLES.RECEIVER;
+       this.isAdmin = p.role === APP_ROLES.ADMIN;
+       this.customerScopeId = (p.role === APP_ROLES.CUSTOMER && p.customerId) ? p.customerId : null;
     }
 
     this.subs.add(this.customerRepo.changes$.subscribe(() => this.loadCustomers()));

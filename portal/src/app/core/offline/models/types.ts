@@ -1,21 +1,11 @@
-export enum ReportStatus {
-  DRAFT = 'DRAFT',
-  RECEIVED = 'RECEIVED',
-  READY_FOR_CLEANING = 'READY_FOR_CLEANING',
-  READY_FOR_INSPECTION = 'READY_FOR_INSPECTION',
-  IN_INSPECTION = 'IN_INSPECTION',
-  PENDING_APPROVAL = 'PENDING_APPROVAL',
-  APPROVED = 'APPROVED',
-  ON_HOLD = 'ON_HOLD',
-  CLOSED = 'CLOSED'
-}
+import { AppRole, ReportStatus, ChildReportStatus, ChildReportType } from '@portal/core/constants/app.constants';
 
 export interface LocalInspectionReport {
   id: string;
   customerId: string | null;
   poNumber: string;
   reportNumber?: string | null;
-  status: string;
+  status: ReportStatus;
   templateKey: string;
   templateVersion: number;
   templateHash: string;
@@ -36,7 +26,7 @@ export interface LocalInspectionReport {
   connection?: string | null;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
   updatedAt?: string;
-  pendingTransitionToStatus?: string | null;
+  pendingTransitionToStatus?: ReportStatus | null;
   availableTransitions?: string | null;
 }
 
@@ -56,7 +46,7 @@ export interface LocalUser {
   tenantId: string;
   email: string;
   name: string | null;
-  role: string;
+  role: AppRole;
   isActive: boolean;
   mustChangePassword: boolean;
   updatedAt: string;
@@ -105,12 +95,12 @@ export interface MetaRecord {
 export interface LocalTransitionLog {
   id: string;
   inspectionReportId: string;
-  fromStatus: string;
-  toStatus: string;
+  fromStatus: ReportStatus;
+  toStatus: ReportStatus;
   userId: string;
   timestamp: string;
   reason?: string | null;
-  previousActiveStatus?: string | null;
+  previousActiveStatus?: ReportStatus | null;
 }
 
 export interface LocalChildReport {
@@ -125,8 +115,8 @@ export interface LocalChildReport {
     disposition?: string;
   }>;
   reportNumber?: string | null;
-  type: 'REWORK' | 'SCRAP' | 'HOLD';
-  status: 'DRAFT' | 'IN_INSPECTION' | 'PENDING_APPROVAL' | 'APPROVED' | 'CLOSED';
+  type: ChildReportType;
+  status: ChildReportStatus;
   notes?: string | null;
   version: number;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';

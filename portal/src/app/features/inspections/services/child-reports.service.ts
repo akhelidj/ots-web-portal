@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-local.repo';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
+import { ENTITY_TYPES } from '@portal/core/constants/app.constants';
 import { LocalChildReport } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 
@@ -68,7 +69,7 @@ export class ChildReportsService {
         id: crypto.randomUUID(),
         idempotencyKey: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        entityType: 'CHILD_REPORT',
+        entityType: ENTITY_TYPES.CHILD_REPORT,
         entityId: id,
         operation: 'TRANSITION',
         payload: { toStatus, reason, version: cr.version },
@@ -107,7 +108,7 @@ export class ChildReportsService {
         id: crypto.randomUUID(),
         idempotencyKey: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        entityType: 'CHILD_REPORT',
+        entityType: ENTITY_TYPES.CHILD_REPORT,
         entityId: id,
         operation: 'UPDATE',
         payload: { notes, version: cr.version },
@@ -154,7 +155,7 @@ export class ChildReportsService {
         id: crypto.randomUUID(),
         idempotencyKey: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        entityType: 'CHILD_REPORT',
+        entityType: ENTITY_TYPES.CHILD_REPORT,
         entityId: childReportId,
         operation: 'SN_UPDATE_INSPECTION',
         payload: { serialNumberId, inspectionData, disposition },

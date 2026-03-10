@@ -5,6 +5,7 @@ import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
 import { LocalCustomer } from '@portal/core/offline/models/types';
+import { TEMPLATE_KEYS } from '@portal/core/constants/app.constants';
 
 @Component({
   selector: 'app-create-inspection-report',
@@ -32,7 +33,7 @@ export class CreateInspectionReportComponent {
 
   public formCustomer = '';
   public formPoNumber = '';
-  public formTemplateKey = 'DRILL_PIPE_REPORT'; // Hardcoded requirement for now
+  public formTemplateKey = TEMPLATE_KEYS.DRILL_PIPE_REPORT; // Hardcoded requirement for now
   public formError = '';
 
   public async onSubmit() {

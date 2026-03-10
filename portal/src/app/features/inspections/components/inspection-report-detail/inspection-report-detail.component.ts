@@ -18,6 +18,13 @@ import {
   HttpErrorResponse,
 } from '@angular/common/http';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
+import {
+  APP_ROLES,
+  AppRole,
+  ReportStatus,
+  CHILD_REPORT_TYPES,
+  SERIAL_DISPOSITIONS,
+} from '@portal/core/constants/app.constants';
 import { ChildReportsService } from '@portal/features/inspections/services/child-reports.service';
 import { environment } from '@app-env/environment';
 import { SessionService } from '@portal/core/auth/services/session.service';
@@ -35,8 +42,6 @@ import { OutboxLocalRepo } from '@portal/core/offline/repos/outbox-local.repo';
 import {
   getInspectionReportUiState,
   InspectionReportUiState,
-  UserRole,
-  ReportStatus,
 } from '@portal/core/ui-policy/inspection-report-ui-policy';
 import { SyncOrchestratorService } from '@portal/core/offline/services/sync-orchestrator.service';
 import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
@@ -166,7 +171,9 @@ export class InspectionReportDetailComponent implements OnInit {
   public customerAddress = 'N/A';
 
   // Modal State
-  public activeModalStatus: 'PASS' | 'REWORK' | 'SCRAP' | 'HOLD' | null = null;
+  public activeModalStatus:
+    | (typeof SERIAL_DISPOSITIONS)[keyof typeof SERIAL_DISPOSITIONS]
+    | null = null;
   public modalEquipmentList: LocalSerialNumber[] = [];
 
   public inspectingSn: LocalSerialNumber | null = null;
@@ -202,8 +209,8 @@ export class InspectionReportDetailComponent implements OnInit {
     const p = this.session.profile();
     if (p) {
       this.userRole = p.role || '';
-      this.isCustomer = p.role === 'CUSTOMER';
-      this.isReceiver = p.role === 'RECEIVER';
+      this.isCustomer = p.role === APP_ROLES.CUSTOMER;
+      this.isReceiver = p.role === APP_ROLES.RECEIVER;
     }
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
@@ -284,7 +291,7 @@ export class InspectionReportDetailComponent implements OnInit {
       }
 
       this.uiState = getInspectionReportUiState({
-        role: this.userRole as UserRole,
+        role: this.userRole as AppRole,
         reportStatus: r.status as ReportStatus,
         isOffline: !this.isOnline,
         hasValidationIssues: !vResult.isReady,
@@ -354,14 +361,15 @@ export class InspectionReportDetailComponent implements OnInit {
         const rawDisp = this.getDisposition(sn);
         const disp = rawDisp ? rawDisp.toUpperCase() : null;
 
-        if (disp === 'PASS') pass++;
-        else if (disp === 'REWORK') {
+        if (disp === SERIAL_DISPOSITIONS.PASS) pass++;
+        else if (disp === SERIAL_DISPOSITIONS.REWORK) {
           rework++;
           const child =
-            childReports.find((cr) => cr.type === 'REWORK') || null;
+            childReports.find((cr) => cr.type === CHILD_REPORT_TYPES.REWORK) ||
+            null;
           reworkList.push({ sn, childLinked: child });
-        } else if (disp === 'SCRAP') scrap++;
-        else if (disp === 'HOLD') hold++;
+        } else if (disp === SERIAL_DISPOSITIONS.SCRAP) scrap++;
+        else if (disp === SERIAL_DISPOSITIONS.HOLD) hold++;
       }
 
       this.reworkSerials = reworkList;
@@ -774,7 +782,9 @@ export class InspectionReportDetailComponent implements OnInit {
     }
   }
 
-  public openKpiModal(status: 'PASS' | 'REWORK' | 'SCRAP' | 'HOLD'): void {
+  public openKpiModal(
+    status: (typeof SERIAL_DISPOSITIONS)[keyof typeof SERIAL_DISPOSITIONS],
+  ): void {
     this.activeModalStatus = status;
     this.modalEquipmentList = this.serials().filter(
       (sn) => this.getDisposition(sn) === status,

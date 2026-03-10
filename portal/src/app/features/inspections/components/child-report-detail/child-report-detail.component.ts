@@ -10,7 +10,8 @@ import { ChildReportsService } from '@portal/features/inspections/services/child
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 import { SessionService } from '@portal/core/auth/services/session.service';
 import { LocalChildReport, LocalInspectionReport } from '@portal/core/offline/models/types';
-import { getChildReportUiState, ChildReportUiState, UserRole, ChildReportStatus } from '@portal/core/ui-policy/child-report-ui-policy';
+import { getChildReportUiState, ChildReportUiState } from '@portal/core/ui-policy/child-report-ui-policy';
+import { AppRole, ChildReportStatus } from '@portal/core/constants/app.constants';
 import { environment } from '@app-env/environment';
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
 
@@ -114,7 +115,7 @@ export class ChildReportDetailComponent implements OnInit {
       this.serials.set(cr.serialNumbers || []);
 
       this.uiState = getChildReportUiState({
-         role: this.userRole as UserRole,
+         role: this.userRole as AppRole,
          reportStatus: cr.status as ChildReportStatus,
          parentReportStatus: parent?.status || 'UNKNOWN',
          isOffline: !this.isOnline,

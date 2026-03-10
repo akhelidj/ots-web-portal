@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Req, UseGuards, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { SerialNumbersService } from './serial-numbers.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -33,11 +33,9 @@ export class SerialNumbersController {
     @Body() body: { serialNumber?: string, version: number, inspectionData?: any },
   ) {
     if (body.version === undefined || body.version === null) {
-       const { BadRequestException } = require('@nestjs/common');
        throw new BadRequestException('version is required');
     }
     if (body.inspectionData !== undefined && req.user.role === UserRole.RECEIVER) {
-       const { ForbiddenException } = require('@nestjs/common');
        throw new ForbiddenException('RECEIVER role cannot inspect serial numbers');
     }
     const { version, ...data } = body;

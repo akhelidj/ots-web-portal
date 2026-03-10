@@ -1,8 +1,7 @@
-export type UserRole = 'ADMIN' | 'RECEIVER' | 'INSPECTOR' | 'SUPERVISOR' | 'CUSTOMER';
-export type ChildReportStatus = 'DRAFT' | 'IN_INSPECTION' | 'PENDING_APPROVAL' | 'APPROVED' | 'CLOSED';
+import { AppRole, ChildReportStatus, APP_ROLES, CHILD_REPORT_STATUSES, REPORT_STATUSES } from '../constants/app.constants';
 
 export interface ChildReportUiPolicyContext {
-  role: UserRole;
+  role: AppRole;
   reportStatus: ChildReportStatus;
   parentReportStatus: string;
   isOffline: boolean;
@@ -17,11 +16,11 @@ export interface ActionState {
 }
 
 export interface TransitionOption {
-  toStatus: string; // The backend status to transition to
+  toStatus: string; 
   requiresReason: boolean;
   enabled: boolean;
   disabledReason?: string;
-  label: string; // Display label
+  label: string; 
 }
 
 export interface Banner {
@@ -47,26 +46,26 @@ export function getChildReportUiState(ctx: ChildReportUiPolicyContext): ChildRep
       transitionChoices: []
    };
 
-   if (ctx.parentReportStatus === 'CLOSED') {
+   if (ctx.parentReportStatus === REPORT_STATUSES.CLOSED) {
       state.banners.push({ type: 'warning', message: 'Parent Report is Closed. Modifications to Child Report are disabled.' });
-      return state; // No actions allowed
+      return state; 
    }
 
    if (ctx.syncState === 'CONFLICT') {
       state.banners.push({ type: 'error', message: 'Sync Conflict: Record has been modified elsewhere. Please resolve or discard local changes.' });
    }
    
-   if (ctx.reportStatus === 'PENDING_APPROVAL') {
+   if (ctx.reportStatus === CHILD_REPORT_STATUSES.PENDING_APPROVAL) {
       state.banners.push({ type: 'info', message: 'Pending Approval — Inspector edits locked.' });
    }
-   if (ctx.reportStatus === 'APPROVED') {
-      state.banners.push({ type: 'info', message: 'Locked — Approved.' + (ctx.role === 'ADMIN' ? ' Admin edits create a Revision.' : '') });
+   if (ctx.reportStatus === CHILD_REPORT_STATUSES.APPROVED) {
+      state.banners.push({ type: 'info', message: 'Locked — Approved.' + (ctx.role === APP_ROLES.ADMIN ? ' Admin edits create a Revision.' : '') });
    }
 
    // Edit rules
    if (ctx.syncState !== 'CONFLICT') {
-      if (['DRAFT', 'IN_INSPECTION'].includes(ctx.reportStatus)) {
-         if (['INSPECTOR', 'ADMIN'].includes(ctx.role)) {
+      if (( [CHILD_REPORT_STATUSES.DRAFT, CHILD_REPORT_STATUSES.IN_INSPECTION] as readonly string[] ).includes(ctx.reportStatus)) {
+         if (( [APP_ROLES.INSPECTOR, APP_ROLES.ADMIN] as readonly string[] ).includes(ctx.role)) {
             state.fieldModes['inspectionData'] = 'editable';
             state.fieldModes['disposition'] = 'editable';
          }
@@ -74,29 +73,29 @@ export function getChildReportUiState(ctx: ChildReportUiPolicyContext): ChildRep
    }
 
    if (ctx.syncState !== 'CONFLICT') {
-       if (ctx.reportStatus === 'DRAFT') {
-           if (['INSPECTOR', 'ADMIN'].includes(ctx.role)) {
-              state.transitionChoices.push({ toStatus: 'IN_INSPECTION', label: 'Start Inspection', requiresReason: false, enabled: true });
+       if (ctx.reportStatus === CHILD_REPORT_STATUSES.DRAFT) {
+           if (( [APP_ROLES.INSPECTOR, APP_ROLES.ADMIN] as readonly string[] ).includes(ctx.role)) {
+              state.transitionChoices.push({ toStatus: CHILD_REPORT_STATUSES.IN_INSPECTION, label: 'Start Inspection', requiresReason: false, enabled: true });
            }
-       } else if (ctx.reportStatus === 'IN_INSPECTION') {
-           if (['INSPECTOR', 'ADMIN'].includes(ctx.role)) {
-              state.transitionChoices.push({ toStatus: 'PENDING_APPROVAL', label: 'Submit for Approval', requiresReason: false, enabled: true });
+       } else if (ctx.reportStatus === CHILD_REPORT_STATUSES.IN_INSPECTION) {
+           if (( [APP_ROLES.INSPECTOR, APP_ROLES.ADMIN] as readonly string[] ).includes(ctx.role)) {
+              state.transitionChoices.push({ toStatus: CHILD_REPORT_STATUSES.PENDING_APPROVAL, label: 'Submit for Approval', requiresReason: false, enabled: true });
            }
-       } else if (ctx.reportStatus === 'PENDING_APPROVAL') {
-           if (['SUPERVISOR', 'ADMIN'].includes(ctx.role)) {
-              state.transitionChoices.push({ toStatus: 'APPROVED', label: 'Approve', requiresReason: false, enabled: true });
-              state.transitionChoices.push({ toStatus: 'IN_INSPECTION', label: 'Return', requiresReason: true, enabled: true });
+       } else if (ctx.reportStatus === CHILD_REPORT_STATUSES.PENDING_APPROVAL) {
+           if (( [APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN] as readonly string[] ).includes(ctx.role)) {
+              state.transitionChoices.push({ toStatus: CHILD_REPORT_STATUSES.APPROVED, label: 'Approve', requiresReason: false, enabled: true });
+              state.transitionChoices.push({ toStatus: CHILD_REPORT_STATUSES.IN_INSPECTION, label: 'Return', requiresReason: true, enabled: true });
            }
-       } else if (ctx.reportStatus === 'APPROVED') {
-           if (['SUPERVISOR', 'ADMIN'].includes(ctx.role)) {
-              state.transitionChoices.push({ toStatus: 'CLOSED', label: 'Close', requiresReason: false, enabled: true });
+       } else if (ctx.reportStatus === CHILD_REPORT_STATUSES.APPROVED) {
+           if (( [APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN] as readonly string[] ).includes(ctx.role)) {
+              state.transitionChoices.push({ toStatus: CHILD_REPORT_STATUSES.CLOSED, label: 'Close', requiresReason: false, enabled: true });
            }
-           if (['ADMIN'].includes(ctx.role)) {
-              state.transitionChoices.push({ toStatus: 'IN_INSPECTION', label: 'Reopen (Revision)', requiresReason: true, enabled: true });
+           if (( [APP_ROLES.ADMIN] as readonly string[] ).includes(ctx.role)) {
+              state.transitionChoices.push({ toStatus: CHILD_REPORT_STATUSES.IN_INSPECTION, label: 'Reopen (Revision)', requiresReason: true, enabled: true });
            }
-       } else if (ctx.reportStatus === 'CLOSED') {
-           if (['ADMIN'].includes(ctx.role)) {
-              state.transitionChoices.push({ toStatus: 'APPROVED', label: 'Reopen (Approved)', requiresReason: true, enabled: true });
+       } else if (ctx.reportStatus === CHILD_REPORT_STATUSES.CLOSED) {
+           if (( [APP_ROLES.ADMIN] as readonly string[] ).includes(ctx.role)) {
+              state.transitionChoices.push({ toStatus: CHILD_REPORT_STATUSES.APPROVED, label: 'Reopen (Approved)', requiresReason: true, enabled: true });
            }
        }
    }

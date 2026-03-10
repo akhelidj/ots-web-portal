@@ -4,6 +4,7 @@ import * as ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { mapDrillPipeReportV1 } from './mappings/drill-pipe-report.v1.mapping';
 import { PrismaService } from '../prisma/prisma.service';
+import { UserRole, InspectionReportStatus, ChildReportStatus, ChildReportType, SerialDisposition } from '@prisma/client';
 
 @Injectable()
 export class ExportService {
@@ -13,8 +14,7 @@ export class ExportService {
   ) {}
 
   async exportInspectionReport(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    user: any,
+    user: { tenantId: string, role: UserRole, customerId?: string | null },
     reportId: string,
     requestedRevision?: number,
   ): Promise<{ buffer: Buffer; filename: string; mimetype: string }> {
@@ -37,17 +37,17 @@ export class ExportService {
     if (report.tenantId !== user.tenantId) {
       throw new ForbiddenException('Access denied');
     }
-    if (user.role === 'CUSTOMER' && report.customerId !== user.customerId) {
+    if (user.role === UserRole.CUSTOMER && report.customerId !== user.customerId) {
       throw new ForbiddenException('Access denied: report does not belong to customer');
     }
     
-    const isParentApproved = report.status === 'APPROVED' || report.status === 'CLOSED';
+    const isParentApproved = report.status === InspectionReportStatus.APPROVED || report.status === InspectionReportStatus.CLOSED;
     
-    const childReport = report.childReports.find(cr => cr.type === 'REWORK');
-    const isChildApproved = childReport && (childReport.status === 'APPROVED' || childReport.status === 'CLOSED');
+    const childReport = report.childReports.find(cr => cr.type === ChildReportType.REWORK);
+    const isChildApproved = childReport && (childReport.status === ChildReportStatus.APPROVED || childReport.status === ChildReportStatus.CLOSED);
 
     if (!isParentApproved && !isChildApproved) {
-      throw new ForbiddenException('Export is only allowed when either the Parent or Child report is APPROVED or CLOSED');
+      throw new ForbiddenException(`Export is only allowed when either the Parent or Child report is ${InspectionReportStatus.APPROVED} or ${InspectionReportStatus.CLOSED}`);
     }
 
     // 2. Resolve Revision
@@ -188,8 +188,8 @@ export class ExportService {
       parentSerials.sort((a: any, b: any) => {
         const aDisp = (a.disposition || '').toUpperCase();
         const bDisp = (b.disposition || '').toUpperCase();
-        const aIsRework = aDisp === 'REWORK' ? 1 : 0;
-        const bIsRework = bDisp === 'REWORK' ? 1 : 0;
+        const aIsRework = aDisp === SerialDisposition.REWORK ? 1 : 0;
+        const bIsRework = bDisp === SerialDisposition.REWORK ? 1 : 0;
         
         if (aIsRework !== bIsRework) {
            return aIsRework - bIsRework;

@@ -9,6 +9,7 @@ import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog } from '@p
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { TransitionLogLocalRepo } from '@portal/core/offline/repos/transition-log-local.repo';
 import { SessionService } from '@portal/core/auth/services/session.service';
+import { APP_ROLES, ENTITY_TYPES, ReportStatus } from '@portal/core/constants/app.constants';
 
 @Injectable({
   providedIn: 'root'
@@ -28,7 +29,8 @@ export class InspectionReportsService {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'CHILD_REPORT',
+      entityType: ENTITY_TYPES.CHILD_REPORT,
+
       entityId: reportId,
       operation: 'SYNC_REWORK',
       payload: {},
@@ -111,7 +113,7 @@ export class InspectionReportsService {
     try {
       let url = `${environment.apiUrl}/inspection-reports`;
       const profile = this.session.profile();
-      if (profile?.role === 'SUPERVISOR') {
+      if (profile?.role === APP_ROLES.SUPERVISOR) {
         url += '?status=PENDING_APPROVAL';
       }
 
@@ -189,7 +191,7 @@ export class InspectionReportsService {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'INSPECTION_REPORT',
+      entityType: ENTITY_TYPES.INSPECTION_REPORT,
       entityId: tempId,
       operation: 'CREATE',
       payload: { ...payload },
@@ -215,7 +217,7 @@ export class InspectionReportsService {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'INSPECTION_REPORT',
+      entityType: ENTITY_TYPES.INSPECTION_REPORT,
       entityId: id,
       operation: 'UPDATE',
       payload: { ...updates, version: rep.version },
@@ -231,7 +233,7 @@ export class InspectionReportsService {
 
     const updatedRep: LocalInspectionReport = {
       ...rep,
-      pendingTransitionToStatus: toStatus,
+      pendingTransitionToStatus: toStatus as ReportStatus,
       syncState: 'PENDING',
     };
 
@@ -243,8 +245,8 @@ export class InspectionReportsService {
       const tempLog: LocalTransitionLog = {
         id: tempLogId,
         inspectionReportId: id,
-        fromStatus: rep.status,
-        toStatus: toStatus,
+        fromStatus: rep.status as ReportStatus,
+        toStatus: toStatus as ReportStatus,
         reason: reason || '',
         userId: profile.id,
         timestamp: new Date().toISOString()
@@ -256,7 +258,7 @@ export class InspectionReportsService {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'INSPECTION_REPORT',
+      entityType: ENTITY_TYPES.INSPECTION_REPORT,
       entityId: id,
       operation: 'TRANSITION',
       payload: { toStatus, reason, version: rep.version },
@@ -300,7 +302,7 @@ export class InspectionReportsService {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'SERIAL_NUMBER',
+      entityType: ENTITY_TYPES.SERIAL_NUMBER,
       entityId: reportId, // Entity ID is the report for bulk
       operation: 'BULK_CREATE',
       payload: { inspectionReportId: reportId, items: itemsPayload },
@@ -335,7 +337,7 @@ export class InspectionReportsService {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'SERIAL_NUMBER',
+      entityType: ENTITY_TYPES.SERIAL_NUMBER,
       entityId: id,
       operation: 'UPDATE',
       payload: { value: newSerial.trim(), version: sn.version },
@@ -364,7 +366,7 @@ export class InspectionReportsService {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'SERIAL_NUMBER',
+      entityType: ENTITY_TYPES.SERIAL_NUMBER,
       entityId: id,
       operation: 'SN_UPDATE_INSPECTION',
       payload: { inspectionData: inspectionJson, version: sn.version },
@@ -386,7 +388,7 @@ export class InspectionReportsService {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'SERIAL_NUMBER',
+      entityType: ENTITY_TYPES.SERIAL_NUMBER,
       entityId: id,
       operation: 'SN_DELETE',
       payload: { inspectionReportId: sn.inspectionReportId },

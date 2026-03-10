@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole, InspectionReportStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 
@@ -7,12 +7,12 @@ import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 export class InspectionReportsService {
   constructor(private prisma: PrismaService) {}
 
-  async getReports(user: any, status?: string, q?: string, customerId?: string) {
-    const where: any = { tenantId: user.tenantId };
+  async getReports(user: { tenantId: string, role: UserRole, customerId?: string }, status?: InspectionReportStatus, q?: string, customerId?: string) {
+    const where: Prisma.InspectionReportWhereInput = { tenantId: user.tenantId };
     
-    if (user.role === 'CUSTOMER') {
+    if (user.role === UserRole.CUSTOMER) {
       where.customerId = user.customerId;
-    } else if (user.role === 'SUPERVISOR' || user.role === 'ADMIN') {
+    } else if (user.role === UserRole.SUPERVISOR || user.role === UserRole.ADMIN) {
       if (customerId) {
         where.customerId = customerId;
       }
@@ -35,10 +35,10 @@ export class InspectionReportsService {
     });
   }
 
-  async getReportById(user: any, id: string) {
-    const where: any = { tenantId: user.tenantId, id };
+  async getReportById(user: { tenantId: string, role: UserRole, customerId?: string }, id: string) {
+    const where: Prisma.InspectionReportWhereInput = { tenantId: user.tenantId, id };
     
-    if (user.role === 'CUSTOMER') {
+    if (user.role === UserRole.CUSTOMER) {
       where.customerId = user.customerId;
     }
 
@@ -112,12 +112,12 @@ export class InspectionReportsService {
 
     // 4. Create report + Audit Log transaction
     return await this.prisma.$transaction(async (tx) => {
-      const createData: any = {
+      const createData: Prisma.InspectionReportUncheckedCreateInput = {
         tenantId,
         customerId: data.customerId,
         poNumber: data.poNumber,
         reportNumber: generatedReportNumber,
-        status: 'DRAFT',
+        status: InspectionReportStatus.DRAFT,
         templateKey: template.templateKey,
         templateVersion: template.templateVersion,
         templateHash: template.hash,
@@ -147,7 +147,7 @@ export class InspectionReportsService {
     tenantId: string,
     id: string,
     userId: string,
-    data: any,
+    data: Partial<Prisma.InspectionReportUpdateInput>,
     version: number,
   ) {
     const existing = await this.prisma.inspectionReport.findFirst({
@@ -162,12 +162,12 @@ export class InspectionReportsService {
       throw new ConflictException(`Version mismatch. Expected ${existing.version}, got ${version}`);
     }
 
-    if (existing.status === 'APPROVED' || existing.status === 'CLOSED') {
+    if (existing.status === InspectionReportStatus.APPROVED || existing.status === InspectionReportStatus.CLOSED) {
       throw new BadRequestException('Cannot mutate an Approved or Closed report. Admin revision required.');
     }
 
     return await this.prisma.$transaction(async (tx) => {
-      const updateData: any = {
+      const updateData: Prisma.InspectionReportUpdateInput = {
         updatedAt: new Date(),
         version: existing.version + 1,
       };

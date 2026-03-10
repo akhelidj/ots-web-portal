@@ -5,11 +5,19 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import {
   UpdateCustomerDto,
   UpdateCustomerActiveDto,
 } from './dto/update-customer.dto';
+
+export enum CustomerAuditAction {
+  CREATE = 'CUSTOMER_CREATE',
+  UPDATE = 'CUSTOMER_UPDATE',
+  SET_ACTIVE = 'CUSTOMER_SET_ACTIVE',
+  DELETE = 'CUSTOMER_DELETE',
+}
 
 @Injectable()
 export class CustomersService {
@@ -47,7 +55,7 @@ export class CustomersService {
       },
     });
 
-    await this.logAudit(tenantId, userId, customer.id, 'CUSTOMER_CREATE', {
+    await this.logAudit(tenantId, userId, customer.id, CustomerAuditAction.CREATE, {
       ...data,
     });
 
@@ -73,11 +81,14 @@ export class CustomersService {
     }
 
     // Extract changed fields for audit log
-    const { version: _version, ...updateData } = data;
-    const changedFields: Record<string, any> = {};
+    const updateData = { ...data };
+    delete (updateData as Record<string, unknown>).version;
+
+    const changedFields: Record<string, { old: unknown, new: unknown }> = {};
     for (const [key, value] of Object.entries(updateData)) {
-      if (value !== undefined && (customer as any)[key] !== value) {
-        changedFields[key] = { old: (customer as any)[key], new: value };
+      const oldValue = (customer as Record<string, unknown>)[key];
+      if (value !== undefined && oldValue !== value) {
+        changedFields[key] = { old: oldValue, new: value };
       }
     }
 
@@ -97,7 +108,7 @@ export class CustomersService {
       tenantId,
       userId,
       updatedCustomer.id,
-      'CUSTOMER_UPDATE',
+      CustomerAuditAction.UPDATE,
       changedFields,
     );
 
@@ -126,11 +137,11 @@ export class CustomersService {
       throw new BadRequestException('Reason is required when deactivating');
     }
 
-    const changedFields: any = {
+    const changedFields: Record<string, { old: unknown, new: unknown }> = {
       isActive: { old: customer.isActive, new: data.isActive },
     };
 
-    const updatePayload: any = {
+    const updatePayload: Prisma.CustomerUpdateInput = {
       isActive: data.isActive,
       version: { increment: 1 },
     };
@@ -158,7 +169,7 @@ export class CustomersService {
       tenantId,
       userId,
       updatedCustomer.id,
-      'CUSTOMER_SET_ACTIVE',
+      CustomerAuditAction.SET_ACTIVE,
       changedFields,
       data.reason,
     );
@@ -170,16 +181,16 @@ export class CustomersService {
     tenantId: string,
     userId: string,
     entityId: string,
-    action: string,
-    changedFields: any,
+    action: CustomerAuditAction,
+    payload: Record<string, unknown>,
     explicitReason?: string,
   ) {
     let reasonString = explicitReason || '';
-    if (Object.keys(changedFields).length > 0) {
-      const changesStr = JSON.stringify(changedFields);
+    if (payload && Object.keys(payload).length > 0) {
+      const changesStr = JSON.stringify(payload);
       reasonString = reasonString
-        ? `${reasonString} | Changes: ${changesStr}`
-        : `Changes: ${changesStr}`;
+        ? `${reasonString} | Data: ${changesStr}`
+        : `Data: ${changesStr}`;
     }
 
     // fallback if it's somehow completely empty
@@ -214,7 +225,7 @@ export class CustomersService {
       where: { id },
     });
 
-    await this.logAudit(tenantId, userId, id, 'CUSTOMER_DELETE', {
+    await this.logAudit(tenantId, userId, id, CustomerAuditAction.DELETE, {
       name: deletedCustomer.name,
     });
 

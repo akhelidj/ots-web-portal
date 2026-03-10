@@ -16,6 +16,7 @@ import {
   LocalChildReport,
 } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
+import { ENTITY_TYPES } from '@portal/core/constants/app.constants';
 
 @Injectable({
   providedIn: 'root',
@@ -55,7 +56,7 @@ export class SyncDispatcherService {
           const pendingItems = await this.outboxRepo.getPendingItems();
           for (const pending of pendingItems) {
             if (
-              pending.entityType === 'USER' &&
+              pending.entityType === ENTITY_TYPES.USER &&
               pending.entityId === item.entityId
             ) {
               pending.entityId = createRes.id;
@@ -128,14 +129,14 @@ export class SyncDispatcherService {
           for (const pending of pendingItems) {
             let changed = false;
             if (
-              pending.entityType === 'CUSTOMER' &&
+              pending.entityType === ENTITY_TYPES.CUSTOMER &&
               pending.entityId === item.entityId
             ) {
               pending.entityId = createRes.id;
               changed = true;
             }
             if (
-              pending.entityType === 'INSPECTION_REPORT' &&
+              pending.entityType === ENTITY_TYPES.INSPECTION_REPORT &&
               pending.payload['customerId'] === item.entityId
             ) {
               pending.payload['customerId'] = createRes.id;
@@ -425,7 +426,7 @@ export class SyncDispatcherService {
           const pendingItems = await this.outboxRepo.getPendingItems();
           for (const pending of pendingItems) {
             if (
-              pending.entityType === 'CHILD_REPORT' &&
+              pending.entityType === ENTITY_TYPES.CHILD_REPORT &&
               pending.entityId === item.entityId
             ) {
               pending.entityId = createRes.id;
@@ -512,21 +513,21 @@ export class SyncDispatcherService {
     } catch (error) {
       if (error instanceof HttpErrorResponse) {
         if (error.status === 409) {
-          if (item.entityType === 'INSPECTION_REPORT') {
+          if (item.entityType === ENTITY_TYPES.INSPECTION_REPORT) {
             const rep = await this.irRepo.getById(item.entityId);
             if (rep)
               await this.irRepo.upsert({ ...rep, syncState: 'CONFLICT' });
-          } else if (item.entityType === 'SERIAL_NUMBER') {
+          } else if (item.entityType === ENTITY_TYPES.SERIAL_NUMBER) {
             const sn = await this.snRepo.getById(item.entityId);
             if (sn) await this.snRepo.upsert({ ...sn, syncState: 'CONFLICT' });
-          } else if (item.entityType === 'CUSTOMER') {
+          } else if (item.entityType === ENTITY_TYPES.CUSTOMER) {
             const cust = await this.customerRepo.getById(item.entityId);
             if (cust)
               await this.customerRepo.upsert({
                 ...cust,
                 syncState: 'CONFLICT',
               });
-          } else if (item.entityType === 'CHILD_REPORT') {
+          } else if (item.entityType === ENTITY_TYPES.CHILD_REPORT) {
             const cr = await this.crRepo.getById(item.entityId);
             if (cr) await this.crRepo.upsert({ ...cr, syncState: 'CONFLICT' });
           }
@@ -537,7 +538,7 @@ export class SyncDispatcherService {
           conflictErr.status = 409;
           throw conflictErr;
         } else if (error.status === 400 || error.status === 403) {
-          if (item.entityType === 'INSPECTION_REPORT') {
+          if (item.entityType === ENTITY_TYPES.INSPECTION_REPORT) {
             const rep = await this.irRepo.getById(item.entityId);
             if (rep) {
               // Do NOT delete from outbox. We leave it locally but mark it as ERROR
@@ -548,13 +549,13 @@ export class SyncDispatcherService {
                 pendingTransitionToStatus: null,
               });
             }
-          } else if (item.entityType === 'SERIAL_NUMBER') {
+          } else if (item.entityType === ENTITY_TYPES.SERIAL_NUMBER) {
             const sn = await this.snRepo.getById(item.entityId);
             if (sn) {
               // Clear pending local state on terminal failure
               await this.snRepo.upsert({ ...sn, syncState: 'ERROR' });
             }
-          } else if (item.entityType === 'CHILD_REPORT') {
+          } else if (item.entityType === ENTITY_TYPES.CHILD_REPORT) {
             const cr = await this.crRepo.getById(item.entityId);
             if (cr) {
               await this.crRepo.upsert({ ...cr, syncState: 'ERROR' });

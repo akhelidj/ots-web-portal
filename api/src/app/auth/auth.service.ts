@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { User } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -35,7 +35,7 @@ export class AuthService {
   }
 
   async login(user: any) {
-    if (user.role === 'CUSTOMER' && !user.customerId) {
+    if (user.role === UserRole.CUSTOMER && !user.customerId) {
       throw new UnauthorizedException('Customer access denied: Invalid user entity binding.');
     }
 
@@ -84,7 +84,7 @@ export class AuthService {
     // Create new token
     await this.storeRefreshToken(tokenRecord.userId, newRefreshToken);
     
-    if (tokenRecord.user.role === 'CUSTOMER' && !tokenRecord.user.customerId) {
+    if (tokenRecord.user.role === UserRole.CUSTOMER && !tokenRecord.user.customerId) {
       throw new UnauthorizedException('Customer access denied: Invalid user entity binding.');
     }
 
@@ -156,7 +156,7 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
 
-    if (updatedUser.role === 'CUSTOMER' && !updatedUser.customerId) {
+    if (updatedUser.role === UserRole.CUSTOMER && !updatedUser.customerId) {
       throw new UnauthorizedException('Customer access denied: Invalid user entity binding.');
     }
 

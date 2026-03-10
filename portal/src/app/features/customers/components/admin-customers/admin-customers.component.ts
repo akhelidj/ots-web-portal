@@ -6,6 +6,7 @@ import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.rep
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { LocalCustomer } from '@portal/core/offline/models/types';
 import { AdminCustomersService } from '@portal/features/customers/services/admin-customers.service';
+import { ENTITY_TYPES } from '@portal/core/constants/app.constants';
 
 @Component({
   selector: 'app-admin-customers',
@@ -98,7 +99,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
         id: crypto.randomUUID(),
         idempotencyKey: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        entityType: 'CUSTOMER',
+        entityType: ENTITY_TYPES.CUSTOMER,
         entityId: newCustomer.id,
         operation: 'CREATE',
         payload: {
@@ -170,7 +171,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
         id: crypto.randomUUID(),
         idempotencyKey: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        entityType: 'CUSTOMER',
+        entityType: ENTITY_TYPES.CUSTOMER,
         entityId: updated.id,
         operation: 'UPDATE',
         payload: {
@@ -255,7 +256,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
         id: crypto.randomUUID(),
         idempotencyKey: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        entityType: 'CUSTOMER',
+        entityType: ENTITY_TYPES.CUSTOMER,
         entityId: customer.id,
         operation: 'SET_ACTIVE',
         payload: {
@@ -287,7 +288,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
         id: crypto.randomUUID(),
         idempotencyKey: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        entityType: 'CUSTOMER',
+        entityType: ENTITY_TYPES.CUSTOMER,
         entityId: customer.id,
         operation: 'DELETE',
         payload: {},

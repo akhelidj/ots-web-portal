@@ -1,4 +1,5 @@
 import { Route } from '@angular/router';
+import { APP_ROLES } from '@portal/core/constants/app.constants';
 import { ShellComponent } from '@portal/shared/shell/shell.component';
 import { AdminUsersComponent } from '@portal/features/users/components/admin-users/admin-users.component';
 import { AdminCustomersComponent } from '@portal/features/customers/components/admin-customers/admin-customers.component';
@@ -44,7 +45,7 @@ export const appRoutes: Route[] = [
       { 
         path: AppRoutes.ADMIN, 
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN'] },
+        data: { roles: [APP_ROLES.ADMIN] },
         children: [
           { path: '', redirectTo: 'users', pathMatch: 'full' },
           { path: 'reports', component: InspectionReportListComponent },
@@ -59,7 +60,7 @@ export const appRoutes: Route[] = [
       { 
         path: AppRoutes.RECEIVER, 
         canActivate: [roleGuard],
-        data: { roles: ['RECEIVER'] },
+        data: { roles: [APP_ROLES.RECEIVER] },
         children: [
           { path: '', component: ReceiverWorkspaceComponent, pathMatch: 'full' },
           { path: 'reports/create', component: CreateInspectionReportComponent },
@@ -70,7 +71,7 @@ export const appRoutes: Route[] = [
       { 
         path: AppRoutes.INSPECTOR, 
         canActivate: [roleGuard],
-        data: { roles: ['INSPECTOR'] },
+        data: { roles: [APP_ROLES.INSPECTOR] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
           { path: 'reports', component: InspectionReportListComponent },
@@ -82,7 +83,7 @@ export const appRoutes: Route[] = [
       { 
         path: AppRoutes.SUPERVISOR, 
         canActivate: [roleGuard],
-        data: { roles: ['SUPERVISOR'] },
+        data: { roles: [APP_ROLES.SUPERVISOR] },
         children: [
           { path: '', component: SupervisorWorkspaceComponent, pathMatch: 'full' },
           { path: 'reports/create', component: CreateInspectionReportComponent },
@@ -93,7 +94,7 @@ export const appRoutes: Route[] = [
       { 
         path: AppRoutes.CUSTOMER, 
         canActivate: [roleGuard],
-        data: { roles: ['CUSTOMER'] },
+        data: { roles: [APP_ROLES.CUSTOMER] },
         children: [
           { path: '', component: CustomerWorkspaceComponent, pathMatch: 'full' },
           { path: ':id', component: InspectionReportDetailComponent },
