@@ -9,5 +9,5 @@ import { ConnectivityService } from '@portal/core/offline/connectivity.service';
   templateUrl: './auth-required-placeholder.component.html',
 })
 export class AuthRequiredPlaceholderComponent {
-  public isOnline$ = inject(ConnectivityService).isOnline$;
+  public isOnline = inject(ConnectivityService).isOnline;
 }

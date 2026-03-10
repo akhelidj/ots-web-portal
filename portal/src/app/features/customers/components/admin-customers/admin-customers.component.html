@@ -157,7 +157,7 @@
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
-        @for (cust of customers$ | async; track cust.id) {
+        @for (cust of customers(); track cust.id) {
           <tr class="hover:bg-primary/5 transition-all duration-300 transform" [class.opacity-50]="deletingIds.has(cust.id)">
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ cust.name }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ cust.code || '-' }}</td>

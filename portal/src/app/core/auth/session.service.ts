@@ -1,5 +1,4 @@
-import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, map } from 'rxjs';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { ConnectivityService } from '../offline/connectivity.service';
 
 import { DbService } from '../offline/db.service';
@@ -27,31 +26,12 @@ export class SessionService {
   private connectivity = inject(ConnectivityService);
   private dbService = inject(DbService);
 
-  private authStatusSubject = new BehaviorSubject<boolean>(this.hasValidToken());
-  public isAuthenticated$: Observable<boolean> = this.authStatusSubject.asObservable();
-
-  private profileSubject = new BehaviorSubject<UserProfile | null>(this.getStoredProfile());
-  public profile$: Observable<UserProfile | null> = this.profileSubject.asObservable();
+  public readonly isAuthenticated = signal<boolean>(this.hasValidToken());
+  public readonly profile = signal<UserProfile | null>(this.getStoredProfile());
   
-  public mustChangePassword$: Observable<boolean> = this.profile$.pipe(
-    map(profile => !!profile?.mustChangePassword)
-  );
+  public readonly mustChangePassword = computed(() => !!this.profile()?.mustChangePassword);
 
-  public get isAuthenticated(): boolean {
-    return this.hasValidToken();
-  }
-  
-  public get mustChangePassword(): boolean {
-    const profile = this.getStoredProfile();
-    return !!profile?.mustChangePassword;
-  }
-
-  public canWorkOffline$: Observable<boolean> = combineLatest([
-    this.connectivity.isOnline$,
-    this.isAuthenticated$,
-  ]).pipe(
-    map(([isOnline, isAuthenticated]) => !isOnline && isAuthenticated)
-  );
+  public readonly canWorkOffline = computed(() => !this.connectivity.isOnline() && this.isAuthenticated());
 
   constructor() {
     const profile = this.getStoredProfile();
@@ -100,8 +80,8 @@ export class SessionService {
     
     this.dbService.openForTenant(profile.tenantId).catch(e => console.error('Failed to open Db on login', e));
 
-    this.profileSubject.next(profile);
-    this.authStatusSubject.next(true);
+    this.profile.set(profile);
+    this.isAuthenticated.set(true);
   }
 
   public getToken(): string | null {
@@ -119,7 +99,7 @@ export class SessionService {
     
     this.dbService.close();
 
-    this.profileSubject.next(null);
-    this.authStatusSubject.next(false);
+    this.profile.set(null);
+    this.isAuthenticated.set(false);
   }
 }

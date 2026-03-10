@@ -14,8 +14,8 @@ export class AdminTemplatesComponent implements OnInit {
   public templatesService = inject(AdminTemplatesService);
   public connectivity = inject(ConnectivityService);
 
-  public templates$ = this.templatesService.templates$;
-  public isOnline$ = this.connectivity.isOnline$;
+  public templates = this.templatesService.templates;
+  public isOnline = this.connectivity.isOnline;
 
   // Form State
   public showUploadForm = false;

@@ -1,7 +1,7 @@
-import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
+import { Injectable, signal } from '@angular/core';
 
 export interface ToastMessage {
+  id: number;
   message: string;
   type: 'success' | 'error' | 'info' | 'warning';
   title?: string;
@@ -11,22 +11,37 @@ export interface ToastMessage {
   providedIn: 'root'
 })
 export class ToastService {
-  private toastSubject = new Subject<ToastMessage>();
-  public toast$ = this.toastSubject.asObservable();
+  public readonly toasts = signal<ToastMessage[]>([]);
+  private toastId = 0;
 
   showError(message: string, title = 'Error') {
-    this.toastSubject.next({ message, title, type: 'error' });
+    this.addToast({ id: this.toastId++, message, title, type: 'error' });
   }
 
   showSuccess(message: string, title?: string) {
-    this.toastSubject.next({ message, title, type: 'success' });
+    this.addToast({ id: this.toastId++, message, title, type: 'success' });
   }
 
   showInfo(message: string, title?: string) {
-    this.toastSubject.next({ message, title, type: 'info' });
+    this.addToast({ id: this.toastId++, message, title, type: 'info' });
   }
 
   showWarning(message: string, title?: string) {
-    this.toastSubject.next({ message, title, type: 'warning' });
+    this.addToast({ id: this.toastId++, message, title, type: 'warning' });
+  }
+
+  private addToast(toast: ToastMessage) {
+    this.toasts.update(current => {
+      const updated = [toast, ...current];
+      if (updated.length > 3) {
+        updated.pop();
+      }
+      return updated;
+    });
+    setTimeout(() => this.removeToast(toast.id), 5000);
+  }
+
+  removeToast(id: number) {
+    this.toasts.update(current => current.filter(t => t.id !== id));
   }
 }

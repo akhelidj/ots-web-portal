@@ -1,6 +1,6 @@
 <div aria-live="assertive" class="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6 z-[9999]">
   <div class="flex w-full flex-col items-center space-y-4 sm:items-end mt-14 sm:mt-0">
-    @for (toast of toasts; track toast.id) {
+    @for (toast of toastService.toasts(); track toast.id) {
       <div 
         @toastAnimation
         class="pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5"
@@ -48,7 +48,7 @@
               <p class="mt-1 text-sm text-gray-800" [ngClass]="{'text-gray-500': toast.type === 'success' || toast.type === 'info'}">{{ toast.message }}</p>
             </div>
             <div class="ml-4 flex flex-shrink-0">
-              <button type="button" (click)="removeToast(toast.id)" class="inline-flex rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2" 
+              <button type="button" (click)="toastService.removeToast(toast.id)" class="inline-flex rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2" 
                       [ngClass]="{'bg-error-light hover:text-error hover:bg-error-light': toast.type === 'error'}">
                 <span class="sr-only">Close</span>
                 <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

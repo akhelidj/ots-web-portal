@@ -1,8 +1,10 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, Injector } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
-import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ChildReportsService } from '@portal/features/inspections/services/child-reports.service';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
@@ -25,17 +27,15 @@ export class ChildReportDetailComponent implements OnInit {
   private crService = inject(ChildReportsService);
   private irService = inject(InspectionReportsService);
   private session = inject(SessionService);
+  private injector = inject(Injector);
 
   public reportId = '';
-  public crSubj = new BehaviorSubject<LocalChildReport | null>(null);
-  public cr$ = this.crSubj.asObservable();
+  public cr = signal<LocalChildReport | null>(null);
   
-  public parentReportSubj = new BehaviorSubject<LocalInspectionReport | null>(null);
-  public parentReport$ = this.parentReportSubj.asObservable();
+  public parentReport = signal<LocalInspectionReport | null>(null);
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public serialsSubj = new BehaviorSubject<{id: string; serial: string; inspectionData?: any; disposition?: string}[]>([]);
-  public serials$ = this.serialsSubj.asObservable();
+  public serials = signal<{id: string; serial: string; inspectionData?: any; disposition?: string}[]>([]);
 
   public inspectingSnId: string | null = null;
   public inspectingSnValue = '';
@@ -57,13 +57,11 @@ export class ChildReportDetailComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.session.profile$.subscribe(p => {
-      if (!p) return;
+    const p = this.session.profile();
+    if (p) {
       this.userRole = p.role || '';
-      if (this.reportId) {
-         this.refreshData();
-      }
-    });
+    }
+
     
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
@@ -74,7 +72,7 @@ export class ChildReportDetailComponent implements OnInit {
       this.crService.changes$.subscribe(() => {
         if (!this.isRefreshing) this.refreshData();
       });
-      this.irService.reports$.subscribe(() => {
+      toObservable(this.irService.reports, { injector: this.injector }).subscribe(() => {
         if (!this.isRefreshing) this.refreshData();
       });
     }
@@ -91,7 +89,7 @@ export class ChildReportDetailComponent implements OnInit {
     }
 
     const cr = await this.crService['crRepo'].getById(this.reportId) as LocalChildReport | null;
-    this.crSubj.next(cr);
+    this.cr.set(cr);
 
     if (cr) {
       if (!this.isEditingNotes) {
@@ -111,9 +109,9 @@ export class ChildReportDetailComponent implements OnInit {
           console.error('Failed to fetch parent report from server', e);
         }
       }
-      this.parentReportSubj.next(parent);
+      this.parentReport.set(parent);
 
-      this.serialsSubj.next(cr.serialNumbers || []);
+      this.serials.set(cr.serialNumbers || []);
 
       this.uiState = getChildReportUiState({
          role: this.userRole as UserRole,
@@ -144,7 +142,7 @@ export class ChildReportDetailComponent implements OnInit {
     if (!this.selectedTransition) return;
 
     try {
-      if (this.notes !== this.crSubj.value?.notes) {
+      if (this.notes !== this.cr()?.notes) {
         await this.crService.updateNotes(this.reportId, this.notes);
       }
       await this.crService.transition(
@@ -183,7 +181,7 @@ export class ChildReportDetailComponent implements OnInit {
   }
 
   public goBack() {
-    const parentId = this.parentReportSubj.value?.id;
+    const parentId = this.parentReport()?.id;
     if (parentId) {
       this.router.navigate(this.getParentReportLink(parentId));
     } else {
@@ -242,7 +240,7 @@ export class ChildReportDetailComponent implements OnInit {
   }
 
   public openInspectionForm(id: string) {
-    const target = this.serialsSubj.value.find(s => s.id === id);
+    const target = this.serials().find(s => s.id === id);
     if (!target) return;
     this.inspectingSnId = id;
     this.inspectingSnValue = target.serial;
@@ -257,14 +255,14 @@ export class ChildReportDetailComponent implements OnInit {
 
   public async saveInspectionForm(data: Record<string, unknown>) {
     if (!this.inspectingSnId) return;
-    const cr = this.crSubj.value;
+    const cr = this.cr();
     if (!cr) return;
 
-    const target = this.serialsSubj.value.find(s => s.id === this.inspectingSnId);
+    const target = this.serials().find(s => s.id === this.inspectingSnId);
     
     // Extract the new disposition from the emitted form data
     const finalData = data['final'] as Record<string, unknown> | undefined;
-    const newDisposition = (finalData?.['disposition'] || data['disposition'] || target?.disposition) as any;
+    const newDisposition = (finalData?.['disposition'] || data['disposition'] || target?.disposition) as string;
 
     try {
       await this.crService.updateSerialNumberInspection(
@@ -283,21 +281,21 @@ export class ChildReportDetailComponent implements OnInit {
 
   public get hasPrevSn(): boolean {
     if (!this.inspectingSnId) return false;
-    const all = this.serialsSubj.value;
+    const all = this.serials();
     const idx = all.findIndex(s => s.id === this.inspectingSnId);
     return idx > 0;
   }
 
   public get hasNextSn(): boolean {
     if (!this.inspectingSnId) return false;
-    const all = this.serialsSubj.value;
+    const all = this.serials();
     const idx = all.findIndex(s => s.id === this.inspectingSnId);
     return idx >= 0 && idx < all.length - 1;
   }
 
   public goToPrevSn() {
     if (!this.inspectingSnId) return;
-    const all = this.serialsSubj.value;
+    const all = this.serials();
     const idx = all.findIndex(s => s.id === this.inspectingSnId);
     if (idx > 0) {
       this.openInspectionForm(all[idx - 1].id);
@@ -306,7 +304,7 @@ export class ChildReportDetailComponent implements OnInit {
 
   public goToNextSn() {
     if (!this.inspectingSnId) return;
-    const all = this.serialsSubj.value;
+    const all = this.serials();
     const idx = all.findIndex(s => s.id === this.inspectingSnId);
     if (idx >= 0 && idx < all.length - 1) {
       this.openInspectionForm(all[idx + 1].id);

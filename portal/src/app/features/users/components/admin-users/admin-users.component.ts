@@ -18,7 +18,7 @@ export class AdminUsersComponent implements OnInit {
   private repo = inject(UserLocalRepo);
   private outbox = inject(OutboxService);
 
-  public users$ = this.usersService.users$;
+  public users = this.usersService.users;
 
   @ViewChild('userForm') userForm!: NgForm;
 

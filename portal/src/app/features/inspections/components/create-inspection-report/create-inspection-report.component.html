@@ -34,7 +34,7 @@
         <div class="mt-1">
           <select id="customer" name="customer" [(ngModel)]="formCustomer" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors cursor-pointer disabled:opacity-50">
             <option value="" disabled selected>Select a Customer</option>
-            @for (c of customers$ | async; track c.id) {
+            @for (c of customers(); track c.id) {
               <option [value]="c.id">{{c.name}}</option>
             }
           </select>

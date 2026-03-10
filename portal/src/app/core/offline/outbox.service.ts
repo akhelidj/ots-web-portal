@@ -1,5 +1,4 @@
-import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { Injectable, inject, signal } from '@angular/core';
 import { OutboxLocalRepo } from './outbox-local.repo';
 import { SyncDispatcherService } from './sync-dispatcher.service';
 import { SessionService } from '../auth/session.service';
@@ -13,11 +12,8 @@ export class OutboxService {
   private dispatcher = inject(SyncDispatcherService);
   private session = inject(SessionService);
 
-  private pendingCountSubj = new BehaviorSubject<number>(0);
-  public readonly pendingCount$: Observable<number> = this.pendingCountSubj.asObservable();
-
-  private hasConflictSubj = new BehaviorSubject<boolean>(false);
-  public readonly hasConflict$: Observable<boolean> = this.hasConflictSubj.asObservable();
+  public readonly pendingCount = signal<number>(0);
+  public readonly hasConflict = signal<boolean>(false);
 
   private isProcessing = false;
 
@@ -28,10 +24,10 @@ export class OutboxService {
   private async rehydrateCount(): Promise<void> {
     try {
       const count = await this.repo.countPendingItems();
-      this.pendingCountSubj.next(count);
+      this.pendingCount.set(count);
 
       const hasConflict = await this.repo.hasConflictItems();
-      this.hasConflictSubj.next(hasConflict);
+      this.hasConflict.set(hasConflict);
     } catch (e) {
       console.error('Failed to rehydrate pending/conflict count:', e);
     }
@@ -40,8 +36,8 @@ export class OutboxService {
   public async clearConflicts(): Promise<void> {
     await this.repo.clearConflicts();
     await this.rehydrateCount();
-    // After clearing conflicts, there are no conflict items, but we should reset the subject immediately
-    this.hasConflictSubj.next(false);
+    // After clearing conflicts, there are no conflict items, but we should reset the signal immediately
+    this.hasConflict.set(false);
   }
 
   public async enqueue(item: OutboxItem): Promise<void> {
@@ -51,8 +47,7 @@ export class OutboxService {
     await this.repo.upsert(item);
     
     // Update count immediately after successful DB write
-    const currentCount = this.pendingCountSubj.value;
-    this.pendingCountSubj.next(currentCount + 1);
+    this.pendingCount.update(c => c + 1);
 
     if (navigator.onLine) {
       // Trigger sync immediately if online

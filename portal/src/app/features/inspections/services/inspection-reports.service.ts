@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
+import { signal } from '@angular/core';
 import { environment } from '@app-env/environment';
 import { InspectionReportLocalRepo } from '@portal/core/offline/inspection-report-local.repo';
 import { SerialNumberLocalRepo } from '@portal/core/offline/serial-number-local.repo';
@@ -20,8 +21,7 @@ export class InspectionReportsService {
   private outbox = inject(OutboxService);
   private session = inject(SessionService);
 
-  private reportsSubj = new BehaviorSubject<LocalInspectionReport[]>([]);
-  public readonly reports$ = this.reportsSubj.asObservable();
+  public readonly reports = signal<LocalInspectionReport[]>([]);
 
   private async enqueueChildSync(reportId: string): Promise<void> {
     await this.outbox.enqueue({
@@ -46,7 +46,7 @@ export class InspectionReportsService {
 
   public async refreshLocalCache(): Promise<void> {
     const list = await this.irRepo.list();
-    this.reportsSubj.next(list);
+    this.reports.set(list);
   }
 
   public async getSnForReport(reportId: string): Promise<LocalSerialNumber[]> {
@@ -110,7 +110,7 @@ export class InspectionReportsService {
   public async pullAllAndCache(): Promise<void> {
     try {
       let url = `${environment.apiUrl}/inspection-reports`;
-      const profile = await firstValueFrom(this.session.profile$);
+      const profile = this.session.profile();
       if (profile?.role === 'SUPERVISOR') {
         url += '?status=PENDING_APPROVAL';
       }
@@ -237,7 +237,7 @@ export class InspectionReportsService {
 
     await this.irRepo.upsert(updatedRep);
 
-    const profile = await firstValueFrom(this.session.profile$);
+    const profile = this.session.profile();
     if (profile) {
       const tempLogId = 'local-tl-' + crypto.randomUUID();
       const tempLog: LocalTransitionLog = {

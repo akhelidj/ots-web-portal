@@ -19,7 +19,7 @@
         <p class="mt-2 text-sm text-slate-500">Please sign in to access your account.</p>
       </div>
 
-      @if ((connectivity.isOnline$ | async) === false) {
+      @if (!connectivity.isOnline()) {
         <div role="alert" class="mt-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-md">
           <div class="flex">
             <div class="flex-shrink-0">
@@ -37,7 +37,7 @@
 
       <div class="mt-8">
         <form (ngSubmit)="onSubmit()" #loginForm="ngForm" aria-labelledby="login-legend" class="space-y-6">
-          <fieldset [disabled]="isLoading || (connectivity.isOnline$ | async) === false" class="space-y-6 disabled:opacity-75">
+          <fieldset [disabled]="isLoading || !connectivity.isOnline()" class="space-y-6 disabled:opacity-75">
             <legend id="login-legend" class="sr-only">Access your account</legend>
 
             <div>

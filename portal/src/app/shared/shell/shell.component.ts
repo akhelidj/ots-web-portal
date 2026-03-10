@@ -24,14 +24,14 @@ export class ShellComponent {
   private orchestrator = inject(SyncOrchestratorService);
   public navigation = inject(NavigationService);
 
-  public isOnline$ = this.connectivity.isOnline$;
-  public pendingCount$ = this.outbox.pendingCount$;
-  public hasConflict$ = this.outbox.hasConflict$;
-  public isAuthenticated$ = this.session.isAuthenticated$;
-  public profile$ = this.session.profile$;
+  public isOnline = this.connectivity.isOnline;
+  public pendingCount = this.outbox.pendingCount;
+  public hasConflict = this.outbox.hasConflict;
+  public isAuthenticated = this.session.isAuthenticated;
+  public profile = this.session.profile;
   
-  public syncStatus$ = this.orchestrator.syncStatus$;
-  public lastSyncedAt$ = this.orchestrator.lastSyncedAt$;
+  public syncStatus = this.orchestrator.syncStatus;
+  public lastSyncedAt = this.orchestrator.lastSyncedAt;
 
   public isDevMode = !environment.production;
 

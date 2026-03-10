@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { LocalInspectionReport, LocalSerialNumber, LocalChildReport } from '../offline/types';
+import { LocalInspectionReport, LocalSerialNumber } from '../offline/types';
 import { DRILL_PIPE_V1_SCHEMA } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 
 export interface ValidationIssue {
@@ -24,8 +24,7 @@ export interface ValidationResult {
 export class ReportValidationService {
   validate(
     report: LocalInspectionReport,
-    serials: LocalSerialNumber[],
-    childReports: LocalChildReport[]
+    serials: LocalSerialNumber[]
   ): ValidationResult {
     const issues: ValidationIssue[] = [];
     const dispositionCounts: Record<string, number> = { PASS: 0, REWORK: 0, SCRAP: 0, HOLD: 0 };

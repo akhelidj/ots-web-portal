@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
+import { signal } from '@angular/core';
 import { UserLocalRepo } from '@portal/core/offline/user-local.repo';
 import { ConnectivityService } from '@portal/core/offline/connectivity.service';
 import { LocalUser } from '@portal/core/offline/types';
@@ -14,14 +15,11 @@ export class AdminUsersService {
   private http = inject(HttpClient);
   private connectivity = inject(ConnectivityService);
 
-  private usersSubject = new BehaviorSubject<LocalUser[]>([]);
-  public readonly users$: Observable<LocalUser[]> = this.usersSubject.asObservable();
-
-  private tempPasswordSubject = new BehaviorSubject<string | null>(null);
-  public readonly tempPasswordNotified$: Observable<string | null> = this.tempPasswordSubject.asObservable();
+  public readonly users = signal<LocalUser[]>([]);
+  public readonly tempPasswordNotified = signal<string | null>(null);
 
   public notifyTempPassword(password: string): void {
-    this.tempPasswordSubject.next(password);
+    this.tempPasswordNotified.set(password);
   }
 
   constructor() {
@@ -31,7 +29,7 @@ export class AdminUsersService {
   // Legacy direct access for components that need quick refresh
   public async refreshLocalCache(): Promise<void> {
     const localData = await this.repo.list();
-    this.usersSubject.next(localData);
+    this.users.set(localData);
   }
 
   // Centralized pull from server logic
@@ -42,7 +40,7 @@ export class AdminUsersService {
       const serverUsers = await firstValueFrom(this.http.get<LocalUser[]>(`${environment.apiUrl}/users`));
       await this.repo.bulkUpsert(serverUsers);
       const refreshedData = await this.repo.list();
-      this.usersSubject.next(refreshedData);
+      this.users.set(refreshedData);
     } catch (err) {
       console.error('Failed to pull users for cache', err);
       throw err;
@@ -52,6 +50,6 @@ export class AdminUsersService {
   // Used by components to eagerly refresh the stream without hitting the backend (e.g., after an outbox write)
   public async reloadStreamFromLocal(): Promise<void> {
     const data = await this.repo.list();
-    this.usersSubject.next(data);
+    this.users.set(data);
   }
 }

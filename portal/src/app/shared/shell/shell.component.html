@@ -19,35 +19,35 @@
           <div class="hidden md:flex flex-col items-end text-xs text-gray-300">
             <div class="flex items-center gap-2">
               <span class="flex h-2 w-2 relative">
-                @if ((syncStatus$ | async) === 'Up to date') {
+                @if (syncStatus() === 'Up to date') {
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-light opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
-                } @else if ((syncStatus$ | async) === 'Syncing...') {
+                } @else if (syncStatus() === 'Syncing...') {
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning-light opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
-                } @else if ((syncStatus$ | async) === 'Sync Error') {
+                } @else if (syncStatus() === 'Sync Error') {
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
                 } @else {
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-gray-400"></span>
                 }
               </span>
-              <span class="font-medium tracking-wide font-mono" [title]="(syncStatus$ | async) === 'Sync Error' ? 'Local changes could not be synchronized' : ''">
-                {{ syncStatus$ | async }}
-                @if ((pendingCount$ | async) && (pendingCount$ | async)! > 0) {
-                  ({{ pendingCount$ | async }})
+              <span class="font-medium tracking-wide font-mono" [title]="syncStatus() === 'Sync Error' ? 'Local changes could not be synchronized' : ''">
+                {{ syncStatus() }}
+                @if (pendingCount() > 0) {
+                  ({{ pendingCount() }})
                 }
               </span>
-              @if ((syncStatus$ | async) === 'Sync Error') {
+              @if (syncStatus() === 'Sync Error') {
                 <button (click)="clearSyncErrors()" class="bg-error/20 hover:bg-error/90 hover:text-white text-error-light px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider transition-colors ml-2" title="Clear Sync Error">Clear</button>
               }
             </div>
-            @if (lastSyncedAt$ | async; as lastSynced) {
+            @if (lastSyncedAt(); as lastSynced) {
                <span class="opacity-70 mt-0.5">Last synced: {{ formatLastSynced(lastSynced) }}</span>
             }
           </div>
 
           <!-- User Profile -->
-          @if (profile$ | async; as profile) {
+          @if (profile(); as profile) {
             <div class="hidden sm:flex flex-col items-end ml-4 mr-2 text-xs">
               @if (profile.role === 'CUSTOMER') {
                 <span class="font-semibold text-white tracking-wide">{{ profile.name || profile.email }}</span>
@@ -62,10 +62,10 @@
           <!-- Dev Mode & Auth -->
           <div class="flex items-center gap-3 ml-2 pl-4 border-l border-gray-700">
             
-            @if (isAuthenticated$ | async) {
+            @if (isAuthenticated()) {
               <a routerLink="/change-password" class="text-sm font-medium text-gray-300 hover:text-white transition-colors mr-3">Settings</a>
               <button (click)="onSignOut()" class="text-sm font-medium text-gray-300 hover:text-white transition-colors">Sign Out</button>
-            } @else if ((isOnline$ | async) === false) {
+            } @else if (isOnline() === false) {
               <span class="text-warning text-xs font-medium">Offline</span>
             }
           </div>
@@ -75,8 +75,8 @@
   </header>
 
   <!-- Navigation -->
-  @if (isAuthenticated$ | async) {
-    @if (profile$ | async; as profile) {
+  @if (isAuthenticated()) {
+    @if (profile(); as profile) {
       <nav class="bg-white border-b border-gray-200 shadow-sm" aria-label="Main Navigation">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ul class="flex space-x-1 overflow-x-auto py-1">
@@ -100,7 +100,7 @@
   <!-- Main Content Area -->
   <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-opacity duration-300">
     <div id="main-content" tabindex="-1" class="outline-none h-full">
-      @if (isAuthenticated$ | async) {
+      @if (isAuthenticated()) {
         <router-outlet></router-outlet>
       } @else {
         <app-auth-required-placeholder></app-auth-required-placeholder>

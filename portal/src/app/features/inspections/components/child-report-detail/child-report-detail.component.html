@@ -1,4 +1,4 @@
-@if (cr$ | async; as cr) {
+@if (cr(); as cr) {
 <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
   <!-- Header -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -14,7 +14,7 @@
         </h1>
         <p class="text-sm font-medium text-gray-500 mt-1 flex items-center gap-2">
           <span>Child Report of</span>
-          @if (parentReport$ | async; as parent) {
+          @if (parentReport(); as parent) {
              <a [routerLink]="getParentReportLink(parent.id)" class="font-mono bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-primary hover:underline hover:text-primary-light transition-colors">{{ parent.poNumber }}</a>
           }
         </p>
@@ -58,7 +58,7 @@
          <h2 class="text-lg font-semibold text-gray-900">Details & Disposition</h2>
          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">{{ cr.status }}</span>
       </div>
-      @if (serials$ | async; as serials) {
+      @if (serials(); as serials) {
          <div class="mb-6">
            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Target Equipment ({{ serials.length }})</h3>
            <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
@@ -215,7 +215,7 @@
   </div>
 </div>
 
-@if (inspectingSnId && (parentReport$ | async); as parentData) {
+@if (inspectingSnId && parentReport(); as parentData) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all p-4 pb-20 lg:p-8 lg:pb-24">
     <div tabindex="0" class="absolute inset-0" (click)="closeInspectionForm()" (keydown.enter)="closeInspectionForm()"></div>
     

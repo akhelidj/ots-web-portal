@@ -1,8 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 import { CustomerLocalRepo } from '@portal/core/offline/customer-local.repo';
 import { LocalCustomer } from '@portal/core/offline/types';
@@ -19,8 +18,7 @@ export class CreateInspectionReportComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  private customersSubj = new BehaviorSubject<LocalCustomer[]>([]);
-  public customers$ = this.customersSubj.asObservable();
+  public customers = signal<LocalCustomer[]>([]);
 
   constructor() {
     this.loadCustomers();
@@ -29,7 +27,7 @@ export class CreateInspectionReportComponent {
 
   private async loadCustomers() {
     const list = await this.customerRepo.list();
-    this.customersSubj.next(list);
+    this.customers.set(list);
   }
 
   public formCustomer = '';

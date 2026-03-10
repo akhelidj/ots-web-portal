@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
+import { signal } from '@angular/core';
 import { environment } from '@app-env/environment';
 
 export interface AdminTemplateItem {
@@ -19,15 +20,14 @@ export interface AdminTemplateItem {
 export class AdminTemplatesService {
   private http = inject(HttpClient);
   
-  private templatesSubj = new BehaviorSubject<AdminTemplateItem[]>([]);
-  public readonly templates$ = this.templatesSubj.asObservable();
+  public readonly templates = signal<AdminTemplateItem[]>([]);
 
   public async fetchAll(): Promise<void> {
     try {
       const templates = await firstValueFrom(
         this.http.get<AdminTemplateItem[]>(`${environment.apiUrl}/templates`)
       );
-      this.templatesSubj.next(templates);
+      this.templates.set(templates);
     } catch (e) {
       console.error('Failed to fetch templates:', e);
       throw e;

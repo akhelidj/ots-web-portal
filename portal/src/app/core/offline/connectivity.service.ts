@@ -1,14 +1,10 @@
-import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { Injectable, OnDestroy, signal } from '@angular/core';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ConnectivityService implements OnDestroy {
-  private onlineStatus = new BehaviorSubject<boolean>(navigator.onLine);
-
-  /** Observable stream of online/offline status */
-  public readonly isOnline$: Observable<boolean> = this.onlineStatus.asObservable();
+  public readonly isOnline = signal<boolean>(navigator.onLine);
 
   constructor() {
     window.addEventListener('online', this.handleOnline);
@@ -20,16 +16,11 @@ export class ConnectivityService implements OnDestroy {
     window.removeEventListener('offline', this.handleOffline);
   }
 
-  /** Synchronous getter for current connectivity state */
-  public isOnline(): boolean {
-    return this.onlineStatus.value;
-  }
-
   private handleOnline = () => {
-    this.onlineStatus.next(true);
+    this.isOnline.set(true);
   };
 
   private handleOffline = () => {
-    this.onlineStatus.next(false);
+    this.isOnline.set(false);
   };
 }

@@ -9,16 +9,11 @@ export const roleGuard: CanActivateFn = async (route) => {
   const router = inject(Router);
   const roleLandingService = inject(RoleLandingService);
 
-  if (!session.isAuthenticated) {
+  if (!session.isAuthenticated()) {
     return router.parseUrl('/' + AppRoutes.LOGIN);
   }
 
-  // Use a snapshot approach since functional guards execute eagerly and we want the current immediate state.
-  let currentRole: string | undefined;
-  // Given SessionService profile subject emits synchronously the initial getStoredProfile()
-  session.profile$.subscribe(p => {
-    currentRole = p?.role;
-  }).unsubscribe();
+  const currentRole = session.profile()?.role;
 
   if (!currentRole) {
     return router.parseUrl('/' + AppRoutes.ACCESS_DENIED);

@@ -1,0 +1,1 @@
+portal/src/app/features/inspections/components/inspection-report-detail/inspection-report-detail.component.ts(217,7): error TS2304: Cannot find name 'toObservable'.

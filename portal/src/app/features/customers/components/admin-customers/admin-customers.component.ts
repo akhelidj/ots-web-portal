@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription, BehaviorSubject } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { CustomerLocalRepo } from '@portal/core/offline/customer-local.repo';
 import { OutboxService } from '@portal/core/offline/outbox.service';
 import { LocalCustomer } from '@portal/core/offline/types';
@@ -18,7 +18,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
   private outbox = inject(OutboxService);
   private adminCustomers = inject(AdminCustomersService);
 
-  public customers$ = new BehaviorSubject<LocalCustomer[]>([]);
+  public customers = signal<LocalCustomer[]>([]);
   private changesSub?: Subscription;
 
   public deletingIds = new Set<string>();
@@ -61,7 +61,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
 
   private async reloadStream() {
     const data = await this.customerRepo.list();
-    this.customers$.next(data);
+    this.customers.set(data);
   }
 
   public async refreshFromServer() {

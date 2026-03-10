@@ -350,7 +350,7 @@
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
-        @for (user of users$ | async; track user.id) {
+        @for (user of users(); track user.id) {
           <tr
             class="hover:bg-primary/5 transition-all duration-300 transform"
             [class.opacity-50]="deletingIds.has(user.id)"

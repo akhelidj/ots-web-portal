@@ -14,19 +14,18 @@ export class LandingComponent implements OnInit {
   private roleLanding = inject(RoleLandingService);
 
   ngOnInit() {
-    if (!this.session.isAuthenticated) {
+    if (!this.session.isAuthenticated()) {
       this.router.navigate(['/login']);
       return;
     }
 
-    if (this.session.mustChangePassword) {
+    if (this.session.mustChangePassword()) {
       this.router.navigate(['/change-password']);
       return;
     }
 
     // Fallback to RoleLandingService for the proper redirect
-    let currentRole: string | undefined;
-    this.session.profile$.subscribe(p => currentRole = p?.role).unsubscribe();
+    const currentRole = this.session.profile()?.role;
 
     if (currentRole) {
       this.router.navigate(this.roleLanding.getLandingRoute(currentRole));

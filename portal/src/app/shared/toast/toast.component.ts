@@ -1,8 +1,7 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { trigger, transition, style, animate } from '@angular/animations';
-import { ToastService, ToastMessage } from '@portal/core/services/toast.service';
-import { Subscription } from 'rxjs';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
   selector: 'app-toast',
@@ -21,32 +20,6 @@ import { Subscription } from 'rxjs';
     ])
   ]
 })
-export class ToastComponent implements OnInit, OnDestroy {
-  public toasts: (ToastMessage & { id: number })[] = [];
-  private toastId = 0;
-  private sub?: Subscription;
-  private toastService = inject(ToastService);
-
-  ngOnInit() {
-    this.sub = this.toastService.toast$.subscribe(toast => {
-      setTimeout(() => {
-        const newToast = { ...toast, id: this.toastId++ };
-        this.toasts.unshift(newToast);
-
-        if (this.toasts.length > 3) {
-          this.toasts.pop();
-        }
-
-        setTimeout(() => this.removeToast(newToast.id), 5000);
-      });
-    });
-  }
-
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
-  }
-
-  removeToast(id: number) {
-    this.toasts = this.toasts.filter(t => t.id !== id);
-  }
+export class ToastComponent {
+  public toastService = inject(ToastService);
 }

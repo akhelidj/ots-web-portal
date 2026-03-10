@@ -8,7 +8,7 @@
     
     <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Sign-in Required</h2>
     <p class="text-base text-gray-500 mb-8">
-      @if ((isOnline$ | async) === false) {
+      @if (isOnline() === false) {
         Offline mode: authentication is required to access this secure area.
       } @else {
         Please sign in with your credentials to continue to this secure area.

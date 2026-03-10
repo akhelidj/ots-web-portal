@@ -1,7 +1,8 @@
-import { Component, inject, OnInit, Input, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, Input, OnDestroy, ChangeDetectorRef, Injector, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { BehaviorSubject, Subscription, combineLatest, startWith } from 'rxjs';
+import { Subscription, combineLatest, startWith } from 'rxjs';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 import { CustomerLocalRepo } from '@portal/core/offline/customer-local.repo';
 import { SyncOrchestratorService } from '@portal/core/offline/sync-orchestrator.service';
@@ -27,10 +28,10 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   private childReportRepo = inject(ChildReportLocalRepo);
   private sessionService = inject(SessionService);
   private cdr = inject(ChangeDetectorRef);
+  private injector = inject(Injector);
 
-  public reports$ = this.irService.reports$;
-  private customersSubj = new BehaviorSubject<LocalCustomer[]>([]);
-  public customers$ = this.customersSubj.asObservable();
+  public reports = this.irService.reports;
+  public customers = signal<LocalCustomer[]>([]);
   
   public statusFilter = '';
   public customerFilter = '';
@@ -59,19 +60,20 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
     }
     this.irService.refreshLocalCache();
     this.loadCustomers();
-    
-    this.subs.add(this.sessionService.profile$.subscribe(p => {
-       this.isCustomer = p?.role === 'CUSTOMER';
-       this.isReceiver = p?.role === 'RECEIVER';
-       this.isAdmin = p?.role === 'ADMIN';
-       this.customerScopeId = (p?.role === 'CUSTOMER' && p?.customerId) ? p.customerId : null;
-    }));
+
+    const p = this.sessionService.profile();
+    if (p) {
+       this.isCustomer = p.role === 'CUSTOMER';
+       this.isReceiver = p.role === 'RECEIVER';
+       this.isAdmin = p.role === 'ADMIN';
+       this.customerScopeId = (p.role === 'CUSTOMER' && p.customerId) ? p.customerId : null;
+    }
 
     this.subs.add(this.customerRepo.changes$.subscribe(() => this.loadCustomers()));
     
     this.subs.add(
       combineLatest([
-        this.reports$, 
+        toObservable(this.irService.reports, { injector: this.injector }), 
         this.snRepo.changes$.pipe(startWith(null)), 
         this.childReportRepo.changes$.pipe(startWith(null))
       ]).subscribe(([reports]) => {
@@ -90,7 +92,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
 
   private async loadCustomers() {
     const list = await this.customerRepo.list();
-    this.customersSubj.next(list);
+    this.customers.set(list);
   }
 
   private async computeStats(reports: LocalInspectionReport[]) {
@@ -124,7 +126,6 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   private async computeValidations(reports: LocalInspectionReport[]) {
     // Left existing bulk fetch specifically for supervisor/inspector workflows
     const allSerials = await this.snRepo.list();
-    const allChildReports = await this.childReportRepo.list();
     
     const snByReport = allSerials.reduce((acc: Record<string, LocalSerialNumber[]>, sn: LocalSerialNumber) => {
        acc[sn.inspectionReportId] = acc[sn.inspectionReportId] || [];
@@ -132,18 +133,11 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
        return acc;
     }, {});
 
-    const crByReport = allChildReports.reduce((acc: Record<string, typeof allChildReports>, cr: typeof allChildReports[0]) => {
-       acc[cr.inspectionReportId] = acc[cr.inspectionReportId] || [];
-       acc[cr.inspectionReportId].push(cr);
-       return acc;
-    }, {});
-
     const newCache: Record<string, ValidationResult> = {};
     for (const r of reports) {
        newCache[r.id] = this.validationService.validate(
          r, 
-         snByReport[r.id] || [], 
-         crByReport[r.id] || []
+         snByReport[r.id] || []
        );
     }
     this.validationCache = newCache;
@@ -151,7 +145,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
 
   getCustomerName(id: string | null): string {
     if (!id) return 'Unknown';
-    const customer = this.customersSubj.value.find(c => c.id === id);
+    const customer = this.customers().find(c => c.id === id);
     return customer ? customer.name : id;
   }
 

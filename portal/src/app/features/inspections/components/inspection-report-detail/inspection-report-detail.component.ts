@@ -5,12 +5,13 @@ import {
   ChangeDetectorRef,
   signal,
   computed,
+  Injector
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
+
 import {
   HttpClient,
   HttpResponse,
@@ -65,16 +66,13 @@ export class InspectionReportDetailComponent implements OnInit {
   private userRepo = inject(UserLocalRepo);
   private customerRepo = inject(CustomerLocalRepo);
   private cdr = inject(ChangeDetectorRef);
+  private injector = inject(Injector);
 
   public reportId = '';
-  public reportSubj = new BehaviorSubject<LocalInspectionReport | null>(null);
-  public report$ = this.reportSubj.asObservable();
-  public serialsSubj = new BehaviorSubject<LocalSerialNumber[]>([]);
-  public serials$ = this.serialsSubj.asObservable();
-  public transitionLogsSubj = new BehaviorSubject<LocalTransitionLog[]>([]);
-  public transitionLogs$ = this.transitionLogsSubj.asObservable();
-  public childReportsSubj = new BehaviorSubject<LocalChildReport[]>([]);
-  public childReports$ = this.childReportsSubj.asObservable();
+  public report = signal<LocalInspectionReport | null>(null);
+  public serials = signal<LocalSerialNumber[]>([]);
+  public transitionLogs = signal<LocalTransitionLog[]>([]);
+  public childReports = signal<LocalChildReport[]>([]);
 
   public formBulkSerials = '';
   public formReason = '';
@@ -85,10 +83,9 @@ export class InspectionReportDetailComponent implements OnInit {
 
   // Search Filter Signals
   public snSearchQuery = signal('');
-  private serialsSignal = toSignal(this.serials$, { initialValue: [] });
   public filteredSerials = computed(() => {
     const query = this.snSearchQuery().trim().toLowerCase();
-    const serials = this.serialsSignal();
+    const serials = this.serials();
     if (!query) return serials;
     return serials.filter((sn) => sn.value.toLowerCase().includes(query));
   });
@@ -202,20 +199,17 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   async ngOnInit() {
-    this.session.profile$.subscribe((p) => {
-      if (!p) return;
+    const p = this.session.profile();
+    if (p) {
       this.userRole = p.role || '';
       this.isCustomer = p.role === 'CUSTOMER';
       this.isReceiver = p.role === 'RECEIVER';
-      if (this.reportId) {
-        this.refreshData();
-      }
-    });
+    }
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
       this.refreshData();
 
-      this.irService.reports$.subscribe(() => {
+      toObservable(this.irService.reports, { injector: this.injector }).subscribe(() => {
         this.refreshData();
       });
 
@@ -238,21 +232,21 @@ export class InspectionReportDetailComponent implements OnInit {
     const list = await this.irService.irRepo.list();
     const r =
       list.find((x: LocalInspectionReport) => x.id === this.reportId) || null;
-    this.reportSubj.next(r);
+    this.report.set(r);
 
     const snList = await this.irService.getSnForReport(this.reportId);
-    this.serialsSubj.next(snList);
+    this.serials.set(snList);
 
     const logs = await this.irService.getTransitionLogsLocally(this.reportId);
-    this.transitionLogsSubj.next(logs);
+    this.transitionLogs.set(logs);
 
     const childReports = await this.crService.getChildReportsForInspection(
       this.reportId,
     );
-    this.childReportsSubj.next(childReports);
+    this.childReports.set(childReports);
 
     if (r) {
-      const vResult = this.validationService.validate(r, snList, childReports);
+      const vResult = this.validationService.validate(r, snList);
 
       const pending = await this.outboxRepo.getPendingItems();
       const conflicts = await this.outboxRepo.getConflictItems();
@@ -446,7 +440,7 @@ export class InspectionReportDetailComponent implements OnInit {
       return;
     }
 
-    const existingSns = this.serialsSubj.value;
+    const existingSns = this.serials();
     const existingVals = new Set(existingSns.map((s) => s.value.toLowerCase()));
     const duplicates = uniqueLines.filter((l) =>
       existingVals.has(l.toLowerCase()),
@@ -512,7 +506,7 @@ export class InspectionReportDetailComponent implements OnInit {
       return;
     }
 
-    const existingSns = this.serialsSubj.value;
+    const existingSns = this.serials();
     const duplicateExists = existingSns.some(
       (s) => s.id !== sn.id && s.value.toLowerCase() === newValue.toLowerCase(),
     );
@@ -565,7 +559,7 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public goToNextSn(): void {
-    const snList = this.serialsSubj.value;
+    const snList = this.serials();
     const currentSn = this.inspectingSn;
     if (!currentSn || snList.length === 0) return;
     const index = snList.findIndex((s) => s.id === currentSn.id);
@@ -575,7 +569,7 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public goToPrevSn(): void {
-    const snList = this.serialsSubj.value;
+    const snList = this.serials();
     const currentSn = this.inspectingSn;
     if (!currentSn || snList.length === 0) return;
     const index = snList.findIndex((s) => s.id === currentSn.id);
@@ -585,7 +579,7 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public get hasNextSn(): boolean {
-    const snList = this.serialsSubj.value;
+    const snList = this.serials();
     const currentSn = this.inspectingSn;
     if (!currentSn) return false;
     const index = snList.findIndex((s) => s.id === currentSn.id);
@@ -593,7 +587,7 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public get hasPrevSn(): boolean {
-    const snList = this.serialsSubj.value;
+    const snList = this.serials();
     const currentSn = this.inspectingSn;
     if (!currentSn) return false;
     const index = snList.findIndex((s) => s.id === currentSn.id);
@@ -743,7 +737,7 @@ export class InspectionReportDetailComponent implements OnInit {
 
       if (!filename) {
         const ext = blob.type === 'application/zip' ? '.zip' : '.xlsx';
-        const currentReport = this.reportSubj.value;
+        const currentReport = this.report();
         const displayId = currentReport?.reportNumber || this.reportId;
         filename = `inspection-report-${displayId}${ext}`;
       }
@@ -782,7 +776,7 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public openKpiModal(status: 'PASS' | 'REWORK' | 'SCRAP' | 'HOLD'): void {
     this.activeModalStatus = status;
-    this.modalEquipmentList = this.serialsSubj.value.filter(
+    this.modalEquipmentList = this.serials().filter(
       (sn) => this.getDisposition(sn) === status,
     );
   }
