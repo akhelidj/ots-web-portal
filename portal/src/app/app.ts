@@ -2,9 +2,10 @@ import { Component, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { environment } from '../environments/environment';
+import { ToastComponent } from './shared/toast/toast.component';
 
 @Component({
-  imports: [RouterModule],
+  imports: [RouterModule, ToastComponent],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',

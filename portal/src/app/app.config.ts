@@ -8,12 +8,13 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { appRoutes } from './app.routes';
 import { environment } from '../environments/environment';
 import { jwtInterceptor } from './core/auth/jwt.interceptor';
+import { errorInterceptor } from './core/auth/error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(appRoutes),
-    provideHttpClient(withInterceptors([jwtInterceptor])),
+    provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
     provideServiceWorker('ngsw-worker.js', {
       enabled: environment.production,
       registrationStrategy: 'registerWhenStable:30000',
