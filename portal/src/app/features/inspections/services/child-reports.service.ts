@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { ChildReportLocalRepo } from '@portal/core/offline/child-report-local.repo';
-import { OutboxService } from '@portal/core/offline/outbox.service';
-import { LocalChildReport } from '@portal/core/offline/types';
+import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-local.repo';
+import { OutboxService } from '@portal/core/offline/services/outbox.service';
+import { LocalChildReport } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 
 @Injectable({ providedIn: 'root' })

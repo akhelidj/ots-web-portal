@@ -10,14 +10,14 @@ import { InspectionReportDetailComponent } from '@portal/features/inspections/co
 import { ChildReportDetailComponent } from '@portal/features/inspections/components/child-report-detail/child-report-detail.component';
 
 import { CustomerWorkspaceComponent } from '@portal/features/workspaces/customer/customer-workspace.component';
-import { roleGuard } from '@portal/core/auth/role.guard';
-import { authGuard } from '@portal/core/auth/auth.guard';
-import { mustChangePasswordGuard } from '@portal/core/auth/must-change-password.guard';
+import { roleGuard } from '@portal/core/auth/guards/role.guard';
+import { authGuard } from '@portal/core/auth/guards/auth.guard';
+import { mustChangePasswordGuard } from '@portal/core/auth/guards/must-change-password.guard';
 import { LoginComponent } from '@portal/features/auth/components/login/login.component';
 import { ChangePasswordComponent } from '@portal/features/auth/components/change-password/change-password.component';
 import { LandingComponent } from '@portal/features/landing/components/landing/landing.component';
-import { AppRoutes } from '@portal/core/navigation/routes.constants';
-import { AccessDeniedComponent } from '@portal/shared/access-denied.component';
+import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
+import { AccessDeniedComponent } from '@portal/features/errors/components/access-denied/access-denied.component';
 import { ReceiverWorkspaceComponent } from '@portal/features/workspaces/receiver/receiver-workspace.component';
 
 export const appRoutes: Route[] = [

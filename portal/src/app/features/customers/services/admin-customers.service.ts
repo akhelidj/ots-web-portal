@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { CustomerLocalRepo } from '@portal/core/offline/customer-local.repo';
-import { LocalCustomer } from '@portal/core/offline/types';
+import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
+import { LocalCustomer } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 
 @Injectable({

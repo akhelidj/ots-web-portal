@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { SessionService } from '@portal/core/auth/session.service';
-import { RoleLandingService } from '@portal/core/auth/role-landing.service';
+import { SessionService } from '@portal/core/auth/services/session.service';
+import { RoleLandingService } from '@portal/core/auth/services/role-landing.service';
 
 @Component({
   selector: 'app-landing',

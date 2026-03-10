@@ -2,9 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { signal } from '@angular/core';
-import { UserLocalRepo } from '@portal/core/offline/user-local.repo';
-import { ConnectivityService } from '@portal/core/offline/connectivity.service';
-import { LocalUser } from '@portal/core/offline/types';
+import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
+import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
+import { LocalUser } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 
 @Injectable({

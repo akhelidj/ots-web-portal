@@ -2,10 +2,10 @@ import { Component, inject, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { AdminUsersService } from '@portal/features/users/services/admin-users.service';
-import { UserLocalRepo } from '@portal/core/offline/user-local.repo';
-import { OutboxService } from '@portal/core/offline/outbox.service';
-import { LocalUser, LocalCustomer } from '@portal/core/offline/types';
-import { CustomerLocalRepo } from '@portal/core/offline/customer-local.repo';
+import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
+import { OutboxService } from '@portal/core/offline/services/outbox.service';
+import { LocalUser, LocalCustomer } from '@portal/core/offline/models/types';
+import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
 
 @Component({
   selector: 'app-admin-users',

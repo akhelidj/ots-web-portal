@@ -20,27 +20,27 @@ import {
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 import { ChildReportsService } from '@portal/features/inspections/services/child-reports.service';
 import { environment } from '@app-env/environment';
-import { SessionService } from '@portal/core/auth/session.service';
+import { SessionService } from '@portal/core/auth/services/session.service';
 import {
   LocalInspectionReport,
   LocalSerialNumber,
   LocalTransitionLog,
   LocalChildReport,
-} from '@portal/core/offline/types';
+} from '@portal/core/offline/models/types';
 import {
   ReportValidationService,
   ValidationResult,
-} from '@portal/core/validation/report-validation.service';
-import { OutboxLocalRepo } from '@portal/core/offline/outbox-local.repo';
+} from '@portal/core/validation/services/report-validation.service';
+import { OutboxLocalRepo } from '@portal/core/offline/repos/outbox-local.repo';
 import {
   getInspectionReportUiState,
   InspectionReportUiState,
   UserRole,
   ReportStatus,
 } from '@portal/core/ui-policy/inspection-report-ui-policy';
-import { SyncOrchestratorService } from '@portal/core/offline/sync-orchestrator.service';
-import { UserLocalRepo } from '@portal/core/offline/user-local.repo';
-import { CustomerLocalRepo } from '@portal/core/offline/customer-local.repo';
+import { SyncOrchestratorService } from '@portal/core/offline/services/sync-orchestrator.service';
+import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
+import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
 
 @Component({

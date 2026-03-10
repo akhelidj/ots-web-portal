@@ -3,12 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { signal } from '@angular/core';
 import { environment } from '@app-env/environment';
-import { InspectionReportLocalRepo } from '@portal/core/offline/inspection-report-local.repo';
-import { SerialNumberLocalRepo } from '@portal/core/offline/serial-number-local.repo';
-import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog } from '@portal/core/offline/types';
-import { OutboxService } from '@portal/core/offline/outbox.service';
-import { TransitionLogLocalRepo } from '@portal/core/offline/transition-log-local.repo';
-import { SessionService } from '@portal/core/auth/session.service';
+import { InspectionReportLocalRepo } from '@portal/core/offline/repos/inspection-report-local.repo';
+import { SerialNumberLocalRepo } from '@portal/core/offline/repos/serial-number-local.repo';
+import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog } from '@portal/core/offline/models/types';
+import { OutboxService } from '@portal/core/offline/services/outbox.service';
+import { TransitionLogLocalRepo } from '@portal/core/offline/repos/transition-log-local.repo';
+import { SessionService } from '@portal/core/auth/services/session.service';
 
 @Injectable({
   providedIn: 'root'

@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
-import { CustomerLocalRepo } from '@portal/core/offline/customer-local.repo';
-import { LocalCustomer } from '@portal/core/offline/types';
+import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
+import { LocalCustomer } from '@portal/core/offline/models/types';
 
 @Component({
   selector: 'app-create-inspection-report',

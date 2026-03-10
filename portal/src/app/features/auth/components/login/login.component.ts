@@ -5,8 +5,8 @@ import { ViewChild } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { SessionService, UserProfile } from '@portal/core/auth/session.service';
-import { ConnectivityService } from '@portal/core/offline/connectivity.service';import { environment } from '@app-env/environment';
+import { SessionService, UserProfile } from '@portal/core/auth/services/session.service';
+import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';import { environment } from '@app-env/environment';
 
 @Component({
   selector: 'app-login',

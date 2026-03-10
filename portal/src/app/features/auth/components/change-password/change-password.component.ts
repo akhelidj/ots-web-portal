@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { SessionService, UserProfile } from '@portal/core/auth/session.service';
-import { ConnectivityService } from '@portal/core/offline/connectivity.service';
+import { SessionService, UserProfile } from '@portal/core/auth/services/session.service';
+import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 import { environment } from '@app-env/environment';
 
 @Component({

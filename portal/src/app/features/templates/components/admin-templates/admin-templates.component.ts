@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminTemplatesService } from '@portal/features/templates/services/admin-templates.service';
-import { ConnectivityService } from '@portal/core/offline/connectivity.service';
+import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 
 @Component({
   selector: 'app-admin-templates',

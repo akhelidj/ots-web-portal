@@ -4,14 +4,14 @@ import { RouterModule } from '@angular/router';
 import { Subscription, combineLatest, startWith } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
-import { CustomerLocalRepo } from '@portal/core/offline/customer-local.repo';
-import { SyncOrchestratorService } from '@portal/core/offline/sync-orchestrator.service';
+import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
+import { SyncOrchestratorService } from '@portal/core/offline/services/sync-orchestrator.service';
 import { FormsModule } from '@angular/forms';
-import { LocalCustomer, LocalInspectionReport, LocalSerialNumber } from '@portal/core/offline/types';
-import { ReportValidationService, ValidationResult } from '@portal/core/validation/report-validation.service';
-import { SerialNumberLocalRepo } from '@portal/core/offline/serial-number-local.repo';
-import { ChildReportLocalRepo } from '@portal/core/offline/child-report-local.repo';
-import { SessionService } from '@portal/core/auth/session.service';
+import { LocalCustomer, LocalInspectionReport, LocalSerialNumber } from '@portal/core/offline/models/types';
+import { ReportValidationService, ValidationResult } from '@portal/core/validation/services/report-validation.service';
+import { SerialNumberLocalRepo } from '@portal/core/offline/repos/serial-number-local.repo';
+import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-local.repo';
+import { SessionService } from '@portal/core/auth/services/session.service';
 
 @Component({
   selector: 'app-inspection-report-list',
@@ -77,10 +77,14 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
         this.snRepo.changes$.pipe(startWith(null)), 
         this.childReportRepo.changes$.pipe(startWith(null))
       ]).subscribe(([reports]) => {
-        this.computeStats(reports);
-        this.computeCustomerKpis(reports);
+        const scopedReports = this.customerScopeId
+          ? reports.filter(r => r.customerId === this.customerScopeId)
+          : reports;
+
+        this.computeStats(scopedReports);
+        this.computeCustomerKpis(scopedReports);
         if (!this.isCustomer) {
-           this.computeValidations(reports);
+           this.computeValidations(scopedReports);
         }
       })
     );

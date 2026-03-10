@@ -2,18 +2,18 @@ import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { ConnectivityService } from '@portal/core/offline/connectivity.service';
-import { OutboxService } from '@portal/core/offline/outbox.service';
-import { SessionService } from '@portal/core/auth/session.service';
-import { SyncOrchestratorService } from '@portal/core/offline/sync-orchestrator.service';
-import { NavigationService } from '@portal/core/navigation/navigation.service';
+import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
+import { OutboxService } from '@portal/core/offline/services/outbox.service';
+import { SessionService } from '@portal/core/auth/services/session.service';
+import { SyncOrchestratorService } from '@portal/core/offline/services/sync-orchestrator.service';
+import { NavigationService } from '@portal/core/navigation/services/navigation.service';
 import { environment } from '@app-env/environment';
-import { AuthRequiredPlaceholderComponent } from '../placeholders/auth-required-placeholder.component';
+import { AuthRequiredComponent } from '@portal/shared/components/auth-required/auth-required.component';
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, AuthRequiredPlaceholderComponent],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, AuthRequiredComponent],
   templateUrl: './shell.component.html',
 })
 export class ShellComponent {

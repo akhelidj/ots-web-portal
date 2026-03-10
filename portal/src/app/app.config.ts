@@ -7,8 +7,8 @@ import { provideRouter } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { appRoutes } from './app.routes';
 import { environment } from '@app-env/environment';
-import { jwtInterceptor } from '@portal/core/auth/jwt.interceptor';
-import { errorInterceptor } from '@portal/core/auth/error.interceptor';
+import { jwtInterceptor } from '@portal/core/auth/interceptors/jwt.interceptor';
+import { errorInterceptor } from '@portal/core/auth/interceptors/error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [

@@ -2,9 +2,9 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { CustomerLocalRepo } from '@portal/core/offline/customer-local.repo';
-import { OutboxService } from '@portal/core/offline/outbox.service';
-import { LocalCustomer } from '@portal/core/offline/types';
+import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
+import { OutboxService } from '@portal/core/offline/services/outbox.service';
+import { LocalCustomer } from '@portal/core/offline/models/types';
 import { AdminCustomersService } from '@portal/features/customers/services/admin-customers.service';
 
 @Component({
