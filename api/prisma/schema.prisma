@@ -18,6 +18,7 @@ model Tenant {
   inspectionReports InspectionReport[]
   SerialNumber      SerialNumber[]
   users             User[]
+  approvalBatches   InspectionApprovalBatch[]
 }
 
 model RefreshToken {
@@ -52,6 +53,8 @@ model User {
   refreshTokens      RefreshToken[]
   customer           Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
   tenant             Tenant         @relation(fields: [tenantId], references: [id])
+  submittedBatches   InspectionApprovalBatch[] @relation("SubmittedBatches")
+  reviewedBatches    InspectionApprovalBatch[] @relation("ReviewedBatches")
 
   @@unique([tenantId, email])
 }
@@ -147,6 +150,7 @@ model InspectionReport {
   revisions             InspectionReportRevision[]
   transitionLogs        InspectionReportTransitionLog[]
   serialNumbers         SerialNumber[]
+  approvalBatches       InspectionApprovalBatch[]
 }
 
 model SerialNumber {
@@ -156,10 +160,12 @@ model SerialNumber {
   disposition              SerialDisposition?
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
+  approvalStatus           SerialApprovalStatus      @default(NOT_INSPECTED)
   inspectionReportId       String
   version                  Int                       @default(1)
   tenantId                 String
   childReportSerialNumbers ChildReportSerialNumber[]
+  approvalBatchMemberships InspectionApprovalBatchSerialNumber[]
   inspectionReport         InspectionReport          @relation(fields: [inspectionReportId], references: [id])
   tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
 
@@ -276,6 +282,46 @@ model ChildReportRevision {
   @@index([tenantId, childReportId])
 }
 
+model InspectionApprovalBatch {
+  id                 String                     @id @default(uuid())
+  tenantId           String
+  inspectionReportId String
+  submittedByUserId  String
+  submittedAt        DateTime                   @default(now())
+  reviewedByUserId   String?
+  reviewedAt         DateTime?
+  status             InspectionApprovalBatchStatus
+  notes              String?
+  version            Int                        @default(1)
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  tenant             Tenant                     @relation(fields: [tenantId], references: [id])
+  inspectionReport   InspectionReport           @relation(fields: [inspectionReportId], references: [id])
+  submittedByUser    User                       @relation("SubmittedBatches", fields: [submittedByUserId], references: [id])
+  reviewedByUser     User?                      @relation("ReviewedBatches", fields: [reviewedByUserId], references: [id])
+  serialNumbers      InspectionApprovalBatchSerialNumber[]
+
+  @@index([tenantId, inspectionReportId])
+  @@index([tenantId, status])
+}
+
+model InspectionApprovalBatchSerialNumber {
+  id                        String                  @id @default(uuid())
+  tenantId                  String
+  inspectionApprovalBatchId String
+  serialNumberId            String
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+
+  batch                     InspectionApprovalBatch @relation(fields: [inspectionApprovalBatchId], references: [id])
+  serialNumber              SerialNumber            @relation(fields: [serialNumberId], references: [id])
+
+  @@unique([tenantId, inspectionApprovalBatchId, serialNumberId])
+  @@index([inspectionApprovalBatchId])
+  @@index([serialNumberId])
+}
+
 enum UserRole {
   ADMIN
   RECEIVER
@@ -320,4 +366,17 @@ enum ChildReportType {
 enum TemplateStatus {
   ACTIVE
   DEPRECATED
+}
+
+enum SerialApprovalStatus {
+  NOT_INSPECTED
+  INSPECTED_DRAFT
+  SUBMITTED_FOR_APPROVAL
+  APPROVED
+}
+
+enum InspectionApprovalBatchStatus {
+  SUBMITTED
+  APPROVED
+  RETURNED
 }

@@ -61,9 +61,10 @@ export function getInspectionReportUiState(ctx: UiPolicyContext): InspectionRepo
    if (ctx.reportStatus === REPORT_STATUSES.ON_HOLD) {
       state.banners.push({ type: 'warning', message: `On Hold — reason: ${ctx.onHoldReason || 'Unknown'}, previous status: ${ctx.previousStatus || 'Unknown'}` });
    }
-   if (ctx.reportStatus === REPORT_STATUSES.PENDING_APPROVAL) {
+    if (ctx.reportStatus === REPORT_STATUSES.PENDING_APPROVAL) {
+      // Legacy status, should not happen in new batch flow, but kept for UI safety
       state.banners.push({ type: 'info', message: 'Pending Approval — Inspector edits locked.' });
-   }
+    }
    if (ctx.reportStatus === REPORT_STATUSES.APPROVED) {
       state.banners.push({ type: 'info', message: 'Locked — Approved (exportable).' + (ctx.role === APP_ROLES.ADMIN ? ' Admin edits create a Revision.' : '') });
    }
@@ -84,7 +85,7 @@ export function getInspectionReportUiState(ctx: UiPolicyContext): InspectionRepo
    state.actions['ADMIN_EXPORT'] = { visible: false, enabled: false };
 
    // Enable Job Data edits for Inspector/Supervisor unconditionally for the UI button
-   if ([APP_ROLES.INSPECTOR, APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+   if ([APP_ROLES.INSPECTOR, APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
        state.actions['IR_EDIT_SERIAL'] = { visible: true, enabled: true };
    }
    
@@ -132,7 +133,7 @@ export function getInspectionReportUiState(ctx: UiPolicyContext): InspectionRepo
    }
 
    // Target Export visibility via Roles
-   if ([APP_ROLES.CUSTOMER, APP_ROLES.ADMIN, APP_ROLES.SUPERVISOR].includes(ctx.role as any)) {
+   if ([APP_ROLES.CUSTOMER, APP_ROLES.ADMIN, APP_ROLES.SUPERVISOR].some(r => r === ctx.role)) {
       const isApprovedOrClosed = ctx.reportStatus === REPORT_STATUSES.APPROVED || ctx.reportStatus === REPORT_STATUSES.CLOSED;
       const isExportEnabled = isApprovedOrClosed && !ctx.isOffline;
       const disabledReason = !isApprovedOrClosed ? 'Only available when Approved or Closed.' : (ctx.isOffline ? 'Export requires internet connection.' : undefined);
@@ -148,79 +149,78 @@ export function getInspectionReportUiState(ctx: UiPolicyContext): InspectionRepo
    // Transition logic
    if (ctx.syncState !== 'CONFLICT') {
         if (ctx.reportStatus === REPORT_STATUSES.DRAFT) {
-           if ([APP_ROLES.RECEIVER, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.RECEIVER, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.RECEIVED, label: 'Receive', requiresReason: false, enabled: true });
            }
-           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.ON_HOLD, label: 'Hold', requiresReason: true, enabled: true });
            }
-           if ([APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.CLOSED, label: 'Close', requiresReason: false, enabled: true });
            }
         } else if (ctx.reportStatus === REPORT_STATUSES.RECEIVED) {
-           if ([APP_ROLES.RECEIVER, APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.RECEIVER, APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.READY_FOR_CLEANING, label: 'Send to Cleaning', requiresReason: false, enabled: true });
            }
-           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.ON_HOLD, label: 'Hold', requiresReason: true, enabled: true });
            }
-           if ([APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.CLOSED, label: 'Close', requiresReason: false, enabled: true });
            }
         } else if (ctx.reportStatus === REPORT_STATUSES.READY_FOR_CLEANING) {
-           if ([APP_ROLES.RECEIVER, APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.RECEIVER, APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.READY_FOR_INSPECTION, label: 'Send to Inspection', requiresReason: false, enabled: true });
            }
-           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.ON_HOLD, label: 'Hold', requiresReason: true, enabled: true });
            }
-           if ([APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.CLOSED, label: 'Close', requiresReason: false, enabled: true });
            }
         } else if (ctx.reportStatus === REPORT_STATUSES.READY_FOR_INSPECTION) {
-           if ([APP_ROLES.INSPECTOR, APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.INSPECTOR, APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.IN_INSPECTION, label: 'Start Inspection', requiresReason: false, enabled: true });
            }
-           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.ON_HOLD, label: 'Hold', requiresReason: true, enabled: true });
            }
-           if ([APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.CLOSED, label: 'Close', requiresReason: false, enabled: true });
            }
-        } else if (ctx.reportStatus === REPORT_STATUSES.IN_INSPECTION) {
-           if ([APP_ROLES.INSPECTOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
-              state.transitionChoices.push({ toStatus: REPORT_STATUSES.PENDING_APPROVAL, label: 'Submit for Approval', requiresReason: false, enabled: !ctx.hasValidationIssues, disabledReason: ctx.hasValidationIssues ? 'Cannot submit until all validation issues are resolved.' : undefined });
-           }
-           if ([APP_ROLES.INSPECTOR, APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+         } else if (ctx.reportStatus === REPORT_STATUSES.IN_INSPECTION) {
+            // Note: Report-level "Submit for Approval" is removed. Approval is now handled via Serial Number batches.
+           if ([APP_ROLES.INSPECTOR, APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.ON_HOLD, label: 'Hold', requiresReason: true, enabled: true });
            }
-           if ([APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.CLOSED, label: 'Close', requiresReason: false, enabled: true });
            }
-        } else if (ctx.reportStatus === REPORT_STATUSES.PENDING_APPROVAL) {
-           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
-              state.transitionChoices.push({ toStatus: REPORT_STATUSES.APPROVED, label: 'Approve', requiresReason: false, enabled: !ctx.hasValidationIssues, disabledReason: ctx.hasValidationIssues ? 'Validation failed.' : undefined });
-              state.transitionChoices.push({ toStatus: REPORT_STATUSES.IN_INSPECTION, label: 'Return', requiresReason: true, enabled: true });
-              state.transitionChoices.push({ toStatus: REPORT_STATUSES.ON_HOLD, label: 'Hold', requiresReason: true, enabled: true });
-           }
-           if ([APP_ROLES.ADMIN].includes(ctx.role as any)) {
-              state.transitionChoices.push({ toStatus: REPORT_STATUSES.CLOSED, label: 'Close', requiresReason: false, enabled: true });
-           }
+         } else if (ctx.reportStatus === REPORT_STATUSES.PENDING_APPROVAL) {
+            // Legacy transitions for backwards compatibility during rollout
+            if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
+               state.transitionChoices.push({ toStatus: REPORT_STATUSES.APPROVED, label: 'Approve', requiresReason: false, enabled: !ctx.hasValidationIssues, disabledReason: ctx.hasValidationIssues ? 'Validation failed.' : undefined });
+               state.transitionChoices.push({ toStatus: REPORT_STATUSES.IN_INSPECTION, label: 'Return', requiresReason: true, enabled: true });
+               state.transitionChoices.push({ toStatus: REPORT_STATUSES.ON_HOLD, label: 'Hold', requiresReason: true, enabled: true });
+            }
+            if ([APP_ROLES.ADMIN].some(r => r === ctx.role)) {
+               state.transitionChoices.push({ toStatus: REPORT_STATUSES.CLOSED, label: 'Close', requiresReason: false, enabled: true });
+            }
         } else if (ctx.reportStatus === REPORT_STATUSES.APPROVED) {
-           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.ON_HOLD, label: 'Hold', requiresReason: true, enabled: true });
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.CLOSED, label: 'Close', requiresReason: false, enabled: true });
            }
-           if ([APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.IN_INSPECTION, label: 'Reopen (Revision)', requiresReason: true, enabled: true });
            }
         } else if (ctx.reportStatus === REPORT_STATUSES.ON_HOLD) {
-           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.SUPERVISOR, APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: ctx.previousStatus || REPORT_STATUSES.DRAFT, label: 'Release Hold', requiresReason: false, enabled: true });
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.CLOSED, label: 'Close', requiresReason: false, enabled: true });
            }
         } else if (ctx.reportStatus === REPORT_STATUSES.CLOSED) {
-           if ([APP_ROLES.ADMIN].includes(ctx.role as any)) {
+           if ([APP_ROLES.ADMIN].some(r => r === ctx.role)) {
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.APPROVED, label: 'Reopen (Approved)', requiresReason: true, enabled: true });
               state.transitionChoices.push({ toStatus: REPORT_STATUSES.IN_INSPECTION, label: 'Reopen (In Inspection)', requiresReason: true, enabled: true });
            }

@@ -10,10 +10,13 @@ import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.rep
 import { InspectionReportLocalRepo } from '@portal/core/offline/repos/inspection-report-local.repo';
 import { SerialNumberLocalRepo } from '@portal/core/offline/repos/serial-number-local.repo';
 import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-local.repo';
+import { ApprovalBatchLocalRepo } from '@portal/core/offline/repos/approval-batch-local.repo';
+import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-serial-number-local.repo';
 import {
   LocalInspectionReport,
   LocalSerialNumber,
   LocalChildReport,
+  LocalInspectionApprovalBatch,
 } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { ENTITY_TYPES } from '@portal/core/constants/app.constants';
@@ -31,6 +34,8 @@ export class SyncDispatcherService {
   private irRepo = inject(InspectionReportLocalRepo);
   private snRepo = inject(SerialNumberLocalRepo);
   private crRepo = inject(ChildReportLocalRepo);
+  private approvalBatchRepo = inject(ApprovalBatchLocalRepo);
+  private batchSnRepo = inject(BatchSerialNumberLocalRepo);
 
   public async dispatch(item: OutboxItem): Promise<boolean> {
     const operationKey = `${item.entityType}:${item.operation}`;
@@ -530,6 +535,9 @@ export class SyncDispatcherService {
           } else if (item.entityType === ENTITY_TYPES.CHILD_REPORT) {
             const cr = await this.crRepo.getById(item.entityId);
             if (cr) await this.crRepo.upsert({ ...cr, syncState: 'CONFLICT' });
+          } else if (item.entityType === 'APPROVAL_BATCH') {
+            const batch = await this.approvalBatchRepo.getById(item.entityId);
+            if (batch) await this.approvalBatchRepo.upsert({ ...batch, syncState: 'CONFLICT' } as unknown as LocalInspectionApprovalBatch);
           }
 
           const conflictErr = new Error(
@@ -559,6 +567,11 @@ export class SyncDispatcherService {
             const cr = await this.crRepo.getById(item.entityId);
             if (cr) {
               await this.crRepo.upsert({ ...cr, syncState: 'ERROR' });
+            }
+          } else if (item.entityType === 'APPROVAL_BATCH') {
+            const batch = await this.approvalBatchRepo.getById(item.entityId);
+            if (batch) {
+              await this.approvalBatchRepo.upsert({ ...batch, syncState: 'ERROR' } as unknown as LocalInspectionApprovalBatch);
             }
           }
           const appErr = new Error(

@@ -30,6 +30,8 @@ export interface LocalInspectionReport {
   availableTransitions?: string | null;
 }
 
+export type SerialApprovalStatus = 'NOT_INSPECTED' | 'INSPECTED_DRAFT' | 'SUBMITTED_FOR_APPROVAL' | 'APPROVED';
+
 export interface LocalSerialNumber {
   id: string;
   inspectionReportId: string;
@@ -37,8 +39,28 @@ export interface LocalSerialNumber {
   version: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   inspectionJson?: any;
+  approvalStatus?: SerialApprovalStatus;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
   updatedAt?: string;
+}
+
+export interface LocalInspectionApprovalBatch {
+  id: string;
+  tenantId: string;
+  inspectionReportId: string;
+  submittedByUserId: string;
+  submittedAt: string;
+  reviewedByUserId?: string | null;
+  reviewedAt?: string | null;
+  status: 'SUBMITTED' | 'APPROVED' | 'RETURNED';
+  notes?: string | null;
+  version: number;
+}
+
+export interface LocalBatchSerialNumber {
+  id: string;
+  inspectionApprovalBatchId: string;
+  serialNumberId: string;
 }
 
 export interface LocalUser {

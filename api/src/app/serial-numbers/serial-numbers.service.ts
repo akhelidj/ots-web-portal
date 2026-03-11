@@ -29,6 +29,7 @@ export class SerialNumbersService {
         serialNumber: s.serial,
         version: s.version,
         inspectionData: s.inspectionData,
+        approvalStatus: s.approvalStatus,
         updatedAt: s.updatedAt
       };
     });
@@ -125,7 +126,8 @@ export class SerialNumbersService {
             clientRef: r.clientRef,
             id: r.id,
             serialNumber: r.serial,
-            version: r.version
+            version: r.version,
+            approvalStatus: 'NOT_INSPECTED'
         })) };
     });
   }
@@ -147,7 +149,12 @@ export class SerialNumbersService {
 
     const reportStatus = serialToUpdate.inspectionReport.status;
     if (reportStatus === InspectionReportStatus.APPROVED || reportStatus === InspectionReportStatus.CLOSED) {
-      throw new BadRequestException('Inspection data is locked.');
+      throw new BadRequestException('Inspection data is locked by report status.');
+    }
+    
+    // 2. Serial Number Approval Status lock check
+    if ((serialToUpdate as any).approvalStatus === 'SUBMITTED_FOR_APPROVAL' || (serialToUpdate as any).approvalStatus === 'APPROVED') {
+      throw new BadRequestException(`Cannot edit serial numbers that are ${(serialToUpdate as any).approvalStatus}`);
     }
 
     const dataToUpdate: Prisma.SerialNumberUpdateInput = {
@@ -187,6 +194,14 @@ export class SerialNumbersService {
       // But usually PATCH payload is the complete merged state from client for offline first.
       // So replacing it is correct for our outbox implementation.
       dataToUpdate.inspectionData = payload.inspectionData;
+      
+      // Auto-transition to INSPECTED_DRAFT if meaningful data provided and not currently submitted/approved
+      // (Lock check above ensures we aren't submitted or approved)
+      // Actually we should safely check if we were previously NOT_INSPECTED
+      if ((serialToUpdate as any).approvalStatus === 'NOT_INSPECTED') {
+          dataToUpdate.approvalStatus = 'INSPECTED_DRAFT';
+      }
+
       const detail = reason ? ' and updated inspection data' : 'Updated inspection data';
       reason = reason + detail;
       if (!reason) reason = 'Updated inspection data';
@@ -199,6 +214,7 @@ export class SerialNumbersService {
           serialNumber: serialToUpdate.serial,
           version: serialToUpdate.version,
           inspectionData: serialToUpdate.inspectionData,
+          approvalStatus: (serialToUpdate as any).approvalStatus,
           updatedAt: serialToUpdate.updatedAt
       };
     }
@@ -238,6 +254,7 @@ export class SerialNumbersService {
           serialNumber: updated.serial,
           version: updated.version,
           inspectionData: updated.inspectionData,
+          approvalStatus: (updated as any).approvalStatus,
           updatedAt: updated.updatedAt
       };
     });

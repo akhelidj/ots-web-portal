@@ -5,7 +5,7 @@ import { Injectable } from '@angular/core';
 })
 export class DbService {
   private readonly DB_PREFIX = 'ots_';
-  private readonly DB_VERSION = 7;
+  private readonly DB_VERSION = 8;
   private dbInstance: IDBDatabase | null = null;
   private initPromise: Promise<IDBDatabase> | null = null;
   private currentTenantId: string | null = null;
@@ -101,6 +101,18 @@ export class DbService {
           store.createIndex('name', 'name', { unique: false });
           store.createIndex('isActive', 'isActive', { unique: false });
           store.createIndex('syncState', 'syncState', { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains('inspection_approval_batches')) {
+          const store = db.createObjectStore('inspection_approval_batches', { keyPath: 'id' });
+          store.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
+          store.createIndex('status', 'status', { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains('inspection_approval_batch_members')) {
+          const store = db.createObjectStore('inspection_approval_batch_members', { keyPath: 'id' });
+          store.createIndex('inspectionApprovalBatchId', 'inspectionApprovalBatchId', { unique: false });
+          store.createIndex('serialNumberId', 'serialNumberId', { unique: false });
         }
       };
     });

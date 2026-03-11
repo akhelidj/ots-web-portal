@@ -8,6 +8,8 @@ import { SerialNumberLocalRepo } from '@portal/core/offline/repos/serial-number-
 import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog } from '@portal/core/offline/models/types';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { TransitionLogLocalRepo } from '@portal/core/offline/repos/transition-log-local.repo';
+import { ApprovalBatchLocalRepo } from '@portal/core/offline/repos/approval-batch-local.repo';
+import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-serial-number-local.repo';
 import { SessionService } from '@portal/core/auth/services/session.service';
 import { APP_ROLES, ENTITY_TYPES, ReportStatus } from '@portal/core/constants/app.constants';
 
@@ -19,6 +21,8 @@ export class InspectionReportsService {
   public irRepo = inject(InspectionReportLocalRepo);
   private snRepo = inject(SerialNumberLocalRepo);
   private tlRepo = inject(TransitionLogLocalRepo);
+  private approvalBatchRepo = inject(ApprovalBatchLocalRepo);
+  private batchSnRepo = inject(BatchSerialNumberLocalRepo);
   private outbox = inject(OutboxService);
   private session = inject(SessionService);
 
@@ -396,5 +400,99 @@ export class InspectionReportsService {
       attemptCount: 0,
       lastError: null,
     });
+  }
+
+  public async submitApprovalBatchOffline(reportId: string, serialNumberIds: string[]): Promise<void> {
+    const rep = await this.irRepo.getById(reportId);
+    if (!rep) throw new Error('Report not found');
+
+    const batchId = 'local-batch-' + crypto.randomUUID();
+    
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'APPROVAL_BATCH', // We defined it as APPROVAL_BATCH in sync-dispatcher
+      entityId: batchId,
+      operation: 'SUBMIT',
+      payload: { inspectionReportId: reportId, serialNumberIds },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+    
+    for (const snId of serialNumberIds) {
+      const sn = await this.snRepo.getById(snId);
+      if (sn) {
+        await this.snRepo.upsert({ ...sn, approvalStatus: 'SUBMITTED_FOR_APPROVAL', syncState: 'PENDING' });
+      }
+    }
+    
+    await this.refreshLocalCache();
+  }
+
+  public async approveBatchOffline(batchId: string): Promise<void> {
+    const batch = await this.approvalBatchRepo.getById(batchId);
+    if (!batch) throw new Error('Batch not found');
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'APPROVAL_BATCH',
+      entityId: batchId,
+      operation: 'APPROVE',
+      payload: {},
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+
+    batch.status = 'APPROVED';
+    await this.approvalBatchRepo.upsert(batch);
+
+    const batchSns = await this.batchSnRepo.listByBatchId(batchId);
+    for (const bSn of batchSns) {
+      const sn = await this.snRepo.getById(bSn.serialNumberId);
+      if (sn) {
+        sn.approvalStatus = 'APPROVED';
+        sn.syncState = 'PENDING';
+        await this.snRepo.upsert(sn);
+      }
+    }
+    await this.refreshLocalCache();
+  }
+
+  public async returnBatchOffline(batchId: string, notes: string): Promise<void> {
+    const batch = await this.approvalBatchRepo.getById(batchId);
+    if (!batch) throw new Error('Batch not found');
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: 'APPROVAL_BATCH',
+      entityId: batchId,
+      operation: 'RETURN',
+      payload: { notes },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+
+    batch.status = 'RETURNED';
+    batch.notes = notes;
+    await this.approvalBatchRepo.upsert(batch);
+
+    const batchSns = await this.batchSnRepo.listByBatchId(batchId);
+    for (const bSn of batchSns) {
+      const sn = await this.snRepo.getById(bSn.serialNumberId);
+      if (sn) {
+        sn.approvalStatus = 'INSPECTED_DRAFT';
+        sn.syncState = 'PENDING';
+        await this.snRepo.upsert(sn);
+      }
+    }
+    await this.refreshLocalCache();
   }
 }

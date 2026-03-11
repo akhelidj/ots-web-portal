@@ -222,4 +222,327 @@ export class InspectionReportsService {
       return updated;
     });
   }
+
+  async createApprovalBatch(tenantId: string, reportId: string, userId: string, data: { serialNumberIds: string[], notes?: string, reportVersion: number }) {
+    return await this.prisma.$transaction(async (tx) => {
+      // 1. Validate report state
+      const report = await tx.inspectionReport.findFirst({
+        where: { id: reportId, tenantId },
+        include: { serialNumbers: true }
+      });
+
+      if (!report) throw new NotFoundException('Report not found');
+      if (report.version !== data.reportVersion) throw new ConflictException(`Version mismatch. Expected ${report.version}, got ${data.reportVersion}`);
+      if (report.status === 'APPROVED' || report.status === 'CLOSED') {
+        throw new BadRequestException('Report is already approved or closed.');
+      }
+
+      // 2. Validate all provided S/N belong to the report
+      const invalidIds = data.serialNumberIds.filter(id => !report.serialNumbers.some(sn => sn.id === id));
+      if (invalidIds.length > 0) {
+        throw new BadRequestException(`Some Serial Numbers do not belong to this report: ${invalidIds.join(', ')}`);
+      }
+
+      // 3. Find current S/N database states to enforce safeguard 1
+      const serials = await tx.serialNumber.findMany({
+        where: {
+          id: { in: data.serialNumberIds },
+          tenantId,
+          inspectionReportId: reportId
+        }
+      });
+
+      for (const sn of serials) {
+        if (sn.approvalStatus === 'SUBMITTED_FOR_APPROVAL' || sn.approvalStatus === 'APPROVED') {
+          throw new BadRequestException(`Serial number ${sn.serial} cannot be submitted, it is already ${sn.approvalStatus}`);
+        }
+
+        // Technically also verify it's not in an active SUBMITTED batch just in case status is out of sync
+        const activeBatchMember = await tx.inspectionApprovalBatchSerialNumber.findFirst({
+          where: {
+            serialNumberId: sn.id,
+            batch: {
+              status: 'SUBMITTED'
+            }
+          }
+        });
+        if (activeBatchMember) {
+           throw new BadRequestException(`Serial number ${sn.serial} is already linked to an active unapproved batch.`);
+        }
+      }
+
+      // 4. Create the batch
+      const batch = await tx.inspectionApprovalBatch.create({
+        data: {
+          tenantId,
+          inspectionReportId: reportId,
+          submittedByUserId: userId,
+          status: 'SUBMITTED',
+          notes: data.notes || null,
+          serialNumbers: {
+            create: data.serialNumberIds.map(id => ({
+              tenantId,
+              serialNumberId: id
+            }))
+          }
+        },
+        include: { serialNumbers: true }
+      });
+
+      // 5. Update S/N approval states
+      await tx.serialNumber.updateMany({
+        where: { id: { in: data.serialNumberIds }, tenantId },
+        data: { approvalStatus: 'SUBMITTED_FOR_APPROVAL' }
+      });
+
+      // 6. Update report version (optimistic locking)
+      const updatedReport = await tx.inspectionReport.update({
+        where: { id: report.id },
+        data: { version: report.version + 1 }
+      });
+
+      // 7. Audit log
+      await tx.auditLog.create({
+        data: {
+          action: 'BATCH_SUBMIT',
+          entity: 'InspectionApprovalBatch',
+          entityId: batch.id,
+          reason: `Submitted ${data.serialNumberIds.length} S/N for approval`,
+          tenantId,
+          userId,
+          inspectionReportId: report.id,
+        }
+      });
+
+      return { batch, updatedReport };
+    });
+  }
+
+  async approveBatch(tenantId: string, reportId: string, batchId: string, userId: string, data: { batchVersion: number, reportVersion: number, reason?: string }) {
+    return await this.prisma.$transaction(async (tx) => {
+      const batch = await tx.inspectionApprovalBatch.findFirst({
+        where: { id: batchId, tenantId, inspectionReportId: reportId },
+        include: { serialNumbers: { include: { serialNumber: true } } }
+      });
+
+      if (!batch) throw new NotFoundException('Batch not found');
+      if (batch.status !== 'SUBMITTED') throw new BadRequestException(`Cannot approve batch in status ${batch.status}`);
+      if (batch.version !== data.batchVersion) throw new ConflictException(`Batch version mismatch. Expected ${batch.version}, got ${data.batchVersion}`);
+
+      const report = await tx.inspectionReport.findFirst({
+        where: { id: reportId, tenantId },
+        include: { serialNumbers: true }
+      });
+
+      if (!report) throw new NotFoundException('Report not found');
+      if (report.version !== data.reportVersion) throw new ConflictException(`Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`);
+
+      // Verify each member is actually STILL SUBMITTED_FOR_APPROVAL
+      for (const member of batch.serialNumbers) {
+         const sn = await tx.serialNumber.findUnique({ where: { id: member.serialNumberId } });
+         if (!sn || sn.approvalStatus !== 'SUBMITTED_FOR_APPROVAL') {
+             throw new BadRequestException(`Serial ${sn?.serial} is not in SUBMITTED_FOR_APPROVAL state.`);
+         }
+      }
+
+      // Update Batch
+      const updatedBatch = await tx.inspectionApprovalBatch.update({
+        where: { id: batchId },
+        data: {
+          status: 'APPROVED',
+          reviewedByUserId: userId,
+          reviewedAt: new Date(),
+          version: batch.version + 1
+        }
+      });
+
+      // Update S/N states
+      const snIds = batch.serialNumbers.map(m => m.serialNumberId);
+      await tx.serialNumber.updateMany({
+        where: { id: { in: snIds } },
+        data: { approvalStatus: 'APPROVED' }
+      });
+
+      // We must check if ALL S/N for the report are now approved.
+      // Recompute the parent aggregate
+      let nextReportStatus = report.status;
+      const allReportSerials = await tx.serialNumber.findMany({
+        where: { inspectionReportId: reportId, tenantId }
+      });
+
+      const allApproved = allReportSerials.every(sn => sn.approvalStatus === 'APPROVED' || snIds.includes(sn.id));
+      
+      if (allApproved && allReportSerials.length > 0) {
+        nextReportStatus = 'APPROVED';
+      }
+
+      // Update report
+      const updatedReport = await tx.inspectionReport.update({
+        where: { id: report.id },
+        data: {
+          status: nextReportStatus,
+          version: report.version + 1
+        }
+      });
+
+      // Audit Log
+      await tx.auditLog.create({
+        data: {
+          action: 'BATCH_APPROVE',
+          entity: 'InspectionApprovalBatch',
+          entityId: batch.id,
+          reason: data.reason || 'Approved batch',
+          tenantId,
+          userId,
+          inspectionReportId: report.id,
+        }
+      });
+
+      if (nextReportStatus === 'APPROVED' && report.status !== 'APPROVED') {
+         await tx.auditLog.create({
+            data: {
+              action: 'REPORT_APPROVE_AUTO',
+              entity: 'InspectionReport',
+              entityId: report.id,
+              reason: 'All S/N approved',
+              tenantId,
+              userId: 'system',
+              inspectionReportId: report.id,
+            }
+         });
+      }
+
+      return { batch: updatedBatch, updatedReport, allApproved };
+    });
+  }
+
+  async returnBatch(tenantId: string, reportId: string, batchId: string, userId: string, data: { batchVersion: number, reportVersion: number, reason: string }) {
+    if (!data.reason || data.reason.trim() === '') {
+      throw new BadRequestException('Reason is mandatory when returning a batch');
+    }
+
+    return await this.prisma.$transaction(async (tx) => {
+      const batch = await tx.inspectionApprovalBatch.findFirst({
+        where: { id: batchId, tenantId, inspectionReportId: reportId },
+        include: { serialNumbers: true }
+      });
+
+      if (!batch) throw new NotFoundException('Batch not found');
+      if (batch.status !== 'SUBMITTED') throw new BadRequestException(`Cannot return batch in status ${batch.status}`);
+      if (batch.version !== data.batchVersion) throw new ConflictException(`Batch version mismatch. Expected ${batch.version}, got ${data.batchVersion}`);
+
+      const report = await tx.inspectionReport.findFirst({
+        where: { id: reportId, tenantId },
+      });
+
+      if (!report) throw new NotFoundException('Report not found');
+      if (report.version !== data.reportVersion) throw new ConflictException(`Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`);
+
+      // Verify members
+      for (const member of batch.serialNumbers) {
+         const sn = await tx.serialNumber.findUnique({ where: { id: member.serialNumberId } });
+         if (!sn || sn.approvalStatus !== 'SUBMITTED_FOR_APPROVAL') {
+             throw new BadRequestException(`Serial ${sn?.serial} is not in SUBMITTED_FOR_APPROVAL state.`);
+         }
+      }
+
+      // Update Batch
+      const updatedBatch = await tx.inspectionApprovalBatch.update({
+        where: { id: batchId },
+        data: {
+          status: 'RETURNED',
+          reviewedByUserId: userId,
+          reviewedAt: new Date(),
+          version: batch.version + 1
+        }
+      });
+
+      // Revert S/N to INSPECTED_DRAFT
+      const snIds = batch.serialNumbers.map(m => m.serialNumberId);
+      await tx.serialNumber.updateMany({
+        where: { id: { in: snIds } },
+        data: { approvalStatus: 'INSPECTED_DRAFT' }
+      });
+
+      // Report status doesn't change since we're just returning S/N to draft
+
+      // Update report
+      const updatedReport = await tx.inspectionReport.update({
+        where: { id: report.id },
+        data: {
+          version: report.version + 1
+        }
+      });
+
+      // Audit Log
+      await tx.auditLog.create({
+        data: {
+          action: 'BATCH_RETURN',
+          entity: 'InspectionApprovalBatch',
+          entityId: batch.id,
+          reason: data.reason,
+          tenantId,
+          userId,
+          inspectionReportId: report.id,
+        }
+      });
+
+      return { batch: updatedBatch, updatedReport };
+    });
+  }
+
+  async getBatchesForReport(tenantId: string, reportId: string) {
+    return this.prisma.inspectionApprovalBatch.findMany({
+      where: {
+        tenantId,
+        inspectionReportId: reportId
+      },
+      include: {
+        submittedByUser: { select: { id: true, name: true, email: true } },
+        reviewedByUser: { select: { id: true, name: true, email: true } },
+        serialNumbers: {
+          include: {
+            serialNumber: true
+          }
+        }
+      },
+      orderBy: { submittedAt: 'desc' }
+    });
+  }
+
+  async getBatchById(tenantId: string, reportId: string, batchId: string) {
+    const batch = await this.prisma.inspectionApprovalBatch.findFirst({
+      where: {
+        id: batchId,
+        tenantId,
+        inspectionReportId: reportId
+      },
+      include: {
+        submittedByUser: { select: { id: true, name: true, email: true } },
+        reviewedByUser: { select: { id: true, name: true, email: true } },
+        serialNumbers: {
+          include: {
+            serialNumber: true
+          }
+        }
+      }
+    });
+
+    if (!batch) throw new NotFoundException('Batch not found');
+    return batch;
+  }
+
+  async getReportApprovalProgress(tenantId: string, reportId: string) {
+    const serials = await this.prisma.serialNumber.findMany({
+      where: { tenantId, inspectionReportId: reportId }
+    });
+
+    return {
+      total: serials.length,
+      notInspected: serials.filter(s => s.approvalStatus === 'NOT_INSPECTED').length,
+      inspectedDraft: serials.filter(s => s.approvalStatus === 'INSPECTED_DRAFT').length,
+      submitted: serials.filter(s => s.approvalStatus === 'SUBMITTED_FOR_APPROVAL').length,
+      approved: serials.filter(s => s.approvalStatus === 'APPROVED').length,
+    };
+  }
 }

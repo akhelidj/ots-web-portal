@@ -33,6 +33,7 @@ import {
   LocalSerialNumber,
   LocalTransitionLog,
   LocalChildReport,
+  LocalInspectionApprovalBatch,
 } from '@portal/core/offline/models/types';
 import {
   ReportValidationService,
@@ -46,6 +47,8 @@ import {
 import { SyncOrchestratorService } from '@portal/core/offline/services/sync-orchestrator.service';
 import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
+import { ApprovalBatchLocalRepo } from '@portal/core/offline/repos/approval-batch-local.repo';
+import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-serial-number-local.repo';
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
 
 @Component({
@@ -70,6 +73,8 @@ export class InspectionReportDetailComponent implements OnInit {
   private syncOrchestrator = inject(SyncOrchestratorService);
   private userRepo = inject(UserLocalRepo);
   private customerRepo = inject(CustomerLocalRepo);
+  private approvalBatchRepo = inject(ApprovalBatchLocalRepo);
+  private batchSnRepo = inject(BatchSerialNumberLocalRepo);
   private cdr = inject(ChangeDetectorRef);
   private injector = inject(Injector);
 
@@ -78,6 +83,7 @@ export class InspectionReportDetailComponent implements OnInit {
   public serials = signal<LocalSerialNumber[]>([]);
   public transitionLogs = signal<LocalTransitionLog[]>([]);
   public childReports = signal<LocalChildReport[]>([]);
+  public approvalBatches = signal<{ batch: LocalInspectionApprovalBatch; serials: LocalSerialNumber[]; submittedByName?: string }[]>([]);
 
   public formBulkSerials = '';
   public formReason = '';
@@ -85,6 +91,14 @@ export class InspectionReportDetailComponent implements OnInit {
   public editingSnId: string | null = null;
   public editingSnValue = '';
   public isValidationModalOpen = false;
+
+  public selectedForApproval = signal<Set<string>>(new Set());
+  public isSubmittingBatch = false;
+
+  public activeActionBatchId: string | null = null;
+  public returnNotes = '';
+  public isActioningBatch = false;
+  public batchError = '';
 
   // Search Filter Signals
   public snSearchQuery = signal('');
@@ -165,6 +179,17 @@ export class InspectionReportDetailComponent implements OnInit {
   public kpiScrap = 0;
   public kpiHold = 0;
   public kpiPassRate = 0;
+
+  public inspectionProgress = computed(() => {
+    const sns = this.serials();
+    if (!sns || sns.length === 0) return { approved: 0, total: 0, percent: 0 };
+    const approved = sns.filter(sn => sn.approvalStatus === 'APPROVED').length;
+    return {
+      approved,
+      total: sns.length,
+      percent: Math.round((approved / sns.length) * 100)
+    };
+  });
 
   public inspectedByName = 'N/A';
   public approvedByName = 'N/A';
@@ -251,6 +276,26 @@ export class InspectionReportDetailComponent implements OnInit {
       this.reportId,
     );
     this.childReports.set(childReports);
+
+    // Load batches
+    const batches = await this.approvalBatchRepo.listByReportId(this.reportId);
+    const enrichedBatches = [];
+    for (const batch of batches) {
+      const bsnList = await this.batchSnRepo.listByBatchId(batch.id);
+      const snIds = new Set(bsnList.map(b => b.serialNumberId));
+      const batchSerials = snList.filter(sn => snIds.has(sn.id));
+      
+      let submittedByName = 'Unknown';
+      if (batch.submittedByUserId) {
+        const u = await this.userRepo.getById(batch.submittedByUserId);
+        if (u) submittedByName = u.name || u.email;
+      }
+      
+      enrichedBatches.push({ batch, serials: batchSerials, submittedByName });
+    }
+    // Sort batches by submittedAt desc
+    enrichedBatches.sort((a, b) => new Date(b.batch.submittedAt).getTime() - new Date(a.batch.submittedAt).getTime());
+    this.approvalBatches.set(enrichedBatches);
 
     if (r) {
       const vResult = this.validationService.validate(r, snList);
@@ -794,5 +839,97 @@ export class InspectionReportDetailComponent implements OnInit {
   public closeKpiModal(): void {
     this.activeModalStatus = null;
     this.modalEquipmentList = [];
+  }
+
+  public get isAllEligibleSelected(): boolean {
+    const eligible = this.filteredSerials().filter(sn => sn.approvalStatus === 'INSPECTED_DRAFT');
+    if (eligible.length === 0) return false;
+    const selected = this.selectedForApproval();
+    return eligible.every(sn => selected.has(sn.id));
+  }
+
+  public toggleAllEligible(): void {
+    const eligible = this.filteredSerials().filter(sn => sn.approvalStatus === 'INSPECTED_DRAFT');
+    if (eligible.length === 0) return;
+
+    if (this.isAllEligibleSelected) {
+      this.selectedForApproval.set(new Set());
+    } else {
+      const newSet = new Set<string>();
+      eligible.forEach(sn => newSet.add(sn.id));
+      this.selectedForApproval.set(newSet);
+    }
+  }
+
+  public toggleSelection(sn: LocalSerialNumber): void {
+    if (sn.approvalStatus !== 'INSPECTED_DRAFT') return;
+    const current = new Set(this.selectedForApproval());
+    if (current.has(sn.id)) {
+      current.delete(sn.id);
+    } else {
+      current.add(sn.id);
+    }
+    this.selectedForApproval.set(current);
+  }
+
+  public async submitSelectedForApproval(): Promise<void> {
+    const selectedIds = Array.from(this.selectedForApproval());
+    if (selectedIds.length === 0) return;
+
+    this.isSubmittingBatch = true;
+    this.formError = '';
+
+    try {
+      await this.irService.submitApprovalBatchOffline(this.reportId, selectedIds);
+      this.selectedForApproval.set(new Set());
+      this.refreshData();
+    } catch (e) {
+      const err = e as Error;
+      this.formError = err.message || 'Failed to submit batch for approval.';
+    } finally {
+      this.isSubmittingBatch = false;
+    }
+  }
+
+  public openReturnBatchModal(batchId: string): void {
+    this.activeActionBatchId = batchId;
+    this.returnNotes = '';
+    this.batchError = '';
+  }
+
+  public closeReturnBatchModal(): void {
+    this.activeActionBatchId = null;
+    this.returnNotes = '';
+    this.batchError = '';
+  }
+
+  public async approveBatch(batchId: string): Promise<void> {
+    this.isActioningBatch = true;
+    this.batchError = '';
+    try {
+      await this.irService.approveBatchOffline(batchId);
+      await this.refreshData();
+    } catch(e) {
+      const err = e as Error;
+      this.batchError = err.message || 'Failed to approve batch';
+    } finally {
+      this.isActioningBatch = false;
+    }
+  }
+
+  public async returnBatch(): Promise<void> {
+    if (!this.activeActionBatchId) return;
+    this.isActioningBatch = true;
+    this.batchError = '';
+    try {
+      await this.irService.returnBatchOffline(this.activeActionBatchId, this.returnNotes);
+      this.closeReturnBatchModal();
+      await this.refreshData();
+    } catch(e) {
+      const err = e as Error;
+      this.batchError = err.message || 'Failed to return batch';
+    } finally {
+      this.isActioningBatch = false;
+    }
   }
 }
