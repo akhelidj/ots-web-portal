@@ -3,7 +3,7 @@ import { InspectionReportsService } from './inspection-reports.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { UserRole } from '@prisma/client';
+import { UserRole, InspectionReportStatus } from '@prisma/client';
 
 @UseGuards(RolesGuard)
 @Controller('inspection-reports')
@@ -14,7 +14,7 @@ export class InspectionReportsController {
   @Get()
   async getReports(
     @Req() req: any, 
-    @Query('status') status?: string,
+    @Query('status') status?: InspectionReportStatus,
     @Query('q') q?: string,
     @Query('customerId') customerId?: string
   ) {
