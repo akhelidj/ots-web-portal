@@ -191,6 +191,7 @@ model ChildReport {
   revisions          ChildReportRevision[]
   serialNumbers      ChildReportSerialNumber[]
   transitionLogs     ChildReportTransitionLog[]
+  approvalBatches    InspectionApprovalBatch[]
 
   @@unique([tenantId, inspectionReportId, type], name: "unique_child_report_by_type")
   @@index([tenantId])
@@ -202,6 +203,7 @@ model ChildReportSerialNumber {
   serialNumberId String
   inspectionData Json?
   disposition    SerialDisposition?
+  approvalStatus SerialApprovalStatus @default(NOT_INSPECTED)
   childReport    ChildReport  @relation(fields: [childReportId], references: [id])
   serialNumber   SerialNumber @relation(fields: [serialNumberId], references: [id])
 
@@ -288,6 +290,7 @@ model InspectionApprovalBatch {
   inspectionReportId String
   submittedByUserId  String
   submittedAt        DateTime                   @default(now())
+  childReportId      String?
   reviewedByUserId   String?
   reviewedAt         DateTime?
   status             InspectionApprovalBatchStatus
@@ -301,6 +304,7 @@ model InspectionApprovalBatch {
   submittedByUser    User                       @relation("SubmittedBatches", fields: [submittedByUserId], references: [id])
   reviewedByUser     User?                      @relation("ReviewedBatches", fields: [reviewedByUserId], references: [id])
   serialNumbers      InspectionApprovalBatchSerialNumber[]
+  childReport        ChildReport?               @relation(fields: [childReportId], references: [id])
 
   @@index([tenantId, inspectionReportId])
   @@index([tenantId, status])
@@ -311,6 +315,7 @@ model InspectionApprovalBatchSerialNumber {
   tenantId                  String
   inspectionApprovalBatchId String
   serialNumberId            String
+  status                    String?                 // PENDING, APPROVED, or RETURNED
   createdAt                 DateTime                @default(now())
   updatedAt                 DateTime                @updatedAt
 

@@ -23,8 +23,8 @@ export class ChildReportsService {
 
     const reworkSerials = report.serialNumbers.filter(sn => {
       const data = (sn.inspectionData as Record<string, unknown>) || {};
-      const finalSection = data['final'] as Record<string, unknown> | undefined;
-      const disposition = (finalSection?.['disposition'] as string) || (data['disposition'] as string);
+      const bodySection = data['body'] as Record<string, unknown> | undefined;
+      const disposition = bodySection?.['emiResult'] as string;
       return disposition === SerialDisposition.REWORK;
     });
 
@@ -130,7 +130,8 @@ export class ChildReportsService {
         id: sn.serialNumberId,
         serial: sn.serialNumber?.serial || '',
         inspectionData: sn.inspectionData as Record<string, unknown> | null,
-        disposition: sn.disposition
+        disposition: sn.disposition,
+        approvalStatus: sn.approvalStatus
       })) : []
     };
   }
@@ -213,13 +214,27 @@ export class ChildReportsService {
       throw new NotFoundException('Child Report Serial Number relation not found.');
     }
 
+    const dataToUpdate: Prisma.ChildReportSerialNumberUpdateInput = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      inspectionData: payload.inspectionData !== undefined ? (payload.inspectionData as any) : undefined,
+    };
+
+    if (payload.inspectionData) {
+      const bodySection = payload.inspectionData['body'] as Record<string, unknown> | undefined;
+      const disp = bodySection?.['emiResult'] as string;
+      if (disp) {
+        dataToUpdate.disposition = disp as any;
+      }
+    }
+
+    // Auto-transition to INSPECTED_DRAFT
+    if (crsn.approvalStatus === 'NOT_INSPECTED' && payload.inspectionData) {
+      dataToUpdate.approvalStatus = 'INSPECTED_DRAFT';
+    }
+
     await this.prisma.childReportSerialNumber.update({
       where: { id: crsn.id },
-      data: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        inspectionData: payload.inspectionData !== undefined ? (payload.inspectionData as any) : undefined,
-        disposition: payload.disposition !== undefined ? payload.disposition : undefined
-      }
+      data: dataToUpdate
     });
 
     const result = await this.prisma.childReport.findUnique({

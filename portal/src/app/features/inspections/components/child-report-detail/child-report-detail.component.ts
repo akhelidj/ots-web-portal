@@ -9,7 +9,7 @@ import { HttpClient } from '@angular/common/http';
 import { ChildReportsService } from '@portal/features/inspections/services/child-reports.service';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 import { SessionService } from '@portal/core/auth/services/session.service';
-import { LocalChildReport, LocalInspectionReport } from '@portal/core/offline/models/types';
+import { LocalChildReport, LocalInspectionReport, LocalInspectionApprovalBatch, SerialApprovalStatus } from '@portal/core/offline/models/types';
 import { getChildReportUiState, ChildReportUiState } from '@portal/core/ui-policy/child-report-ui-policy';
 import { AppRole, ChildReportStatus } from '@portal/core/constants/app.constants';
 import { environment } from '@app-env/environment';
@@ -35,8 +35,8 @@ export class ChildReportDetailComponent implements OnInit {
   
   public parentReport = signal<LocalInspectionReport | null>(null);
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public serials = signal<{id: string; serial: string; inspectionData?: any; disposition?: string}[]>([]);
+  public serials = signal<{id: string; serial: string; inspectionData?: any; disposition?: string; approvalStatus?: string}[]>([]);
+  public batches = signal<LocalInspectionApprovalBatch[]>([]);
 
   public inspectingSnId: string | null = null;
   public inspectingSnValue = '';
@@ -112,7 +112,14 @@ export class ChildReportDetailComponent implements OnInit {
       }
       this.parentReport.set(parent);
 
-      this.serials.set(cr.serialNumbers || []);
+      this.serials.set((cr.serialNumbers || []).sort((a, b) => a.serial.localeCompare(b.serial, undefined, { numeric: true, sensitivity: 'base' })));
+
+      // Pull batches for this child report (linked via reportId)
+      if (this.isOnline) {
+        await this.irService.pullBatchesForReport(cr.inspectionReportId);
+      }
+      const allBatches = await this.irService['approvalBatchRepo'].listByReportId(cr.inspectionReportId);
+      this.batches.set(allBatches.filter(b => b.childReportId === this.reportId));
 
       this.uiState = getChildReportUiState({
          role: this.userRole as AppRole,
@@ -130,6 +137,90 @@ export class ChildReportDetailComponent implements OnInit {
   } finally {
     this.isRefreshing = false;
   }
+  }
+
+  public selectedSnIds = signal<Set<string>>(new Set());
+
+  public toggleSelection(id: string) {
+    const current = new Set(this.selectedSnIds());
+    if (current.has(id)) {
+      current.delete(id);
+    } else {
+      current.add(id);
+    }
+    this.selectedSnIds.set(current);
+  }
+
+  public selectAll() {
+    const all = this.serials();
+    const current = this.selectedSnIds();
+    if (current.size === all.length) {
+      this.selectedSnIds.set(new Set());
+    } else {
+      this.selectedSnIds.set(new Set(all.map(s => s.id)));
+    }
+  }
+
+  public clearSelection() {
+    this.selectedSnIds.set(new Set());
+  }
+
+  public async submitSelectedForApproval() {
+    const ids = Array.from(this.selectedSnIds());
+    if (ids.length === 0) return;
+
+    try {
+      await this.irService.submitApprovalBatch(this.cr()?.inspectionReportId || '', ids, this.reportId);
+      this.clearSelection();
+      await this.refreshData();
+    } catch (e) {
+      this.formError = (e as Error).message || 'Failed to submit for approval';
+    }
+  }
+
+  public async approveSelected() {
+    const ids = Array.from(this.selectedSnIds());
+    if (ids.length === 0) return;
+
+    try {
+      // Find batches that contain these SNs
+      const activeBatches = this.batches().filter(b => b.status === 'SUBMITTED');
+      for (const batch of activeBatches) {
+        const batchSns = await this.irService['batchSnRepo'].listByBatchId(batch.id);
+        const snIdsInBatch = batchSns.map(m => m.serialNumberId).filter(id => ids.includes(id));
+        
+        if (snIdsInBatch.length > 0) {
+          await this.irService.approveBatch(batch.id, snIdsInBatch);
+        }
+      }
+      this.clearSelection();
+      await this.refreshData();
+    } catch (e) {
+      this.formError = (e as Error).message || 'Failed to approve items';
+    }
+  }
+
+  public async returnSelected(reason: string) {
+    const ids = Array.from(this.selectedSnIds());
+    if (ids.length === 0 || !reason) return;
+
+    try {
+      const activeBatches = this.batches().filter(b => b.status === 'SUBMITTED');
+      for (const batch of activeBatches) {
+        const batchSns = await this.irService['batchSnRepo'].listByBatchId(batch.id);
+        const snIdsInBatch = batchSns.map(m => m.serialNumberId).filter(id => ids.includes(id));
+        
+        if (snIdsInBatch.length > 0) {
+          await this.irService.returnBatch(batch.id, reason, snIdsInBatch);
+        }
+      }
+      this.clearSelection();
+      this.selectedTransition = null;
+      this.formReason = '';
+      await this.refreshData();
+    } catch (e) {
+      this.formError = (e as Error).message || 'Failed to return items';
+    }
   }
 
   public openReasonSelect(transition: { toStatus: string; requiresReason: boolean }): void {
@@ -262,8 +353,8 @@ export class ChildReportDetailComponent implements OnInit {
     const target = this.serials().find(s => s.id === this.inspectingSnId);
     
     // Extract the new disposition from the emitted form data
-    const finalData = data['final'] as Record<string, unknown> | undefined;
-    const newDisposition = (finalData?.['disposition'] || data['disposition'] || target?.disposition) as string;
+    const bodyData = data['body'] as Record<string, unknown> | undefined;
+    const newDisposition = (bodyData?.['emiResult'] || target?.disposition) as string;
 
     try {
       await this.crService.updateSerialNumberInspection(

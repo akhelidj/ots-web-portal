@@ -246,6 +246,17 @@ export class SyncDispatcherService {
           return true;
         }
 
+        case 'INSPECTION_REPORT:UPDATE_STATUS': {
+          const updateRes = await firstValueFrom(
+            this.http.patch<LocalInspectionReport>(
+              `${environment.apiUrl}/inspection-reports/${item.entityId}`,
+              item.payload,
+            ),
+          );
+          await this.irRepo.upsert({ ...updateRes, syncState: 'SYNCED' });
+          return true;
+        }
+
         case 'INSPECTION_REPORT:TRANSITION': {
           const transitionRes = await firstValueFrom(
             this.http.post<LocalInspectionReport>(

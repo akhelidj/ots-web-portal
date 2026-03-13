@@ -48,6 +48,7 @@ export interface LocalInspectionApprovalBatch {
   id: string;
   tenantId: string;
   inspectionReportId: string;
+  childReportId?: string | null;
   submittedByUserId: string;
   submittedAt: string;
   reviewedByUserId?: string | null;
@@ -62,6 +63,7 @@ export interface LocalBatchSerialNumber {
   id: string;
   inspectionApprovalBatchId: string;
   serialNumberId: string;
+  status?: 'PENDING' | 'APPROVED' | 'RETURNED';
 }
 
 export interface LocalUser {
@@ -136,6 +138,7 @@ export interface LocalChildReport {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     inspectionData?: any;
     disposition?: string;
+    approvalStatus?: SerialApprovalStatus;
   }>;
   reportNumber?: string | null;
   type: ChildReportType;

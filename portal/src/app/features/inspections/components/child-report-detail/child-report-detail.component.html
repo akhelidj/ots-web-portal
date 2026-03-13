@@ -60,20 +60,36 @@
       </div>
       @if (serials(); as serials) {
          <div class="mb-6">
-           <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Target Equipment ({{ serials.length }})</h3>
+           <div class="flex justify-between items-center mb-3">
+             <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Target Equipment ({{ serials.length }})</h3>
+             @if (userRole === 'INSPECTOR' || userRole === 'ADMIN' || userRole === 'SUPERVISOR') {
+               <div class="flex items-center gap-2">
+                 <input type="checkbox" [checked]="selectedSnIds().size === serials.length && serials.length > 0" (change)="selectAll()" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4">
+                 <span class="text-xs text-gray-500 font-medium">Select All</span>
+               </div>
+             }
+           </div>
            <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
              @for (sn of serials; track sn.id) {
                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between hover:border-gray-300 transition-colors group">
-                 <div class="flex flex-col gap-1">
-                   <span class="font-mono font-bold text-gray-900 text-sm">{{ sn.serial }}</span>
-                   <div class="flex items-center gap-2">
-                     <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border shadow-sm" [ngClass]="{
-                        'bg-success-light text-success-dark border-success/30': sn.disposition === 'PASS',
-                        'bg-warning-light text-warning-dark border-warning/30': sn.disposition === 'REWORK',
-                        'bg-error-light text-error-dark border-error/30': sn.disposition === 'SCRAP',
-                        'bg-primary/10 text-primary border-primary/20': sn.disposition === 'HOLD',
-                        'bg-gray-100 text-gray-500 border-gray-200': !sn.disposition
-                     }">{{ sn.disposition || 'Pending' }}</span>
+                 <div class="flex items-center gap-3">
+                   @if (userRole === 'INSPECTOR' || userRole === 'ADMIN' || userRole === 'SUPERVISOR') {
+                     <input type="checkbox" [checked]="selectedSnIds().has(sn.id)" (change)="toggleSelection(sn.id)" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4">
+                   }
+                   <div class="flex flex-col gap-1">
+                     <span class="font-mono font-bold text-gray-900 text-sm">{{ sn.serial }}</span>
+                     <div class="flex items-center gap-2">
+                       <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border shadow-sm" [ngClass]="{
+                          'bg-success-light text-success-dark border-success/30': sn.disposition === 'PASS',
+                          'bg-warning-light text-warning-dark border-warning/30': sn.disposition === 'REWORK',
+                          'bg-error-light text-error-dark border-error/30': sn.disposition === 'SCRAP',
+                          'bg-primary/10 text-primary border-primary/20': sn.disposition === 'HOLD',
+                          'bg-gray-100 text-gray-500 border-gray-200': !sn.disposition
+                       }">{{ sn.disposition || 'Pending' }}</span>
+                       @if (sn.approvalStatus) {
+                         <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-gray-200 bg-white text-gray-400">{{ sn.approvalStatus }}</span>
+                       }
+                     </div>
                    </div>
                  </div>
                  @if (uiState?.fieldModes?.['inspectionData'] === 'editable' || uiState?.fieldModes?.['disposition'] === 'editable') {
@@ -214,7 +230,45 @@
     </div>
   </div>
 </div>
-
+ 
+ <!-- Batch Action Bar -->
+ @if (selectedSnIds().size > 0) {
+   <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-[slideUp_0.3s_ease-out]">
+     <div class="bg-gray-900 text-white px-6 py-4 rounded-2xl shadow-2xl border border-gray-700 flex items-center gap-6 backdrop-blur-md bg-opacity-90">
+       <div class="flex items-center gap-3 pr-6 border-r border-gray-700">
+         <span class="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-sm font-bold shadow-lg shadow-primary/20">
+           {{ selectedSnIds().size }}
+         </span>
+         <span class="font-medium text-sm text-gray-300">items selected</span>
+       </div>
+       
+       <div class="flex items-center gap-3">
+         @if (userRole === 'INSPECTOR' || userRole === 'ADMIN') {
+           <button (click)="submitSelectedForApproval()" class="bg-white text-gray-900 hover:bg-gray-100 px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2">
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+             Submit for Approval
+           </button>
+         }
+         
+         @if (userRole === 'SUPERVISOR' || userRole === 'ADMIN') {
+           <button (click)="approveSelected()" class="bg-success text-white hover:bg-success/90 px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2">
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+             Batch Approve
+           </button>
+           <button (click)="openReasonSelect({toStatus: 'RETURNED', requiresReason: true})" class="bg-error text-white hover:bg-error/90 px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2">
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+             Batch Return
+           </button>
+         }
+         
+         <button (click)="clearSelection()" class="text-gray-400 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
+           Dismiss
+         </button>
+       </div>
+     </div>
+   </div>
+ }
+ 
 @if (inspectingSnId && parentReport(); as parentData) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all p-4 pb-20 lg:p-8 lg:pb-24">
     <div tabindex="0" class="absolute inset-0" (click)="closeInspectionForm()" (keydown.enter)="closeInspectionForm()"></div>

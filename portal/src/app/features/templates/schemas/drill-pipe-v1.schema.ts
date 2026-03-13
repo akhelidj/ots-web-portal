@@ -62,7 +62,7 @@ export const DRILL_PIPE_V1_SCHEMA: FormSchema = {
       fields: [
         { key: 'body.wallRemaining', label: 'Wall Remaining', inputType: 'text', required: true },
         { key: 'body.odDecrease', label: 'OD Decrease', inputType: 'text', required: true },
-        { key: 'body.emiResult', label: 'EMI Result', inputType: 'text', required: true },
+        { key: 'body.emiResult', label: 'EMI Result', inputType: 'select', required: true, options: ['PASS', 'REWORK', 'SCRAP', 'HOLD'] },
         { key: 'body.slipArea', label: 'Slip Area', inputType: 'text', required: true },
         { key: 'body.corrosionIn', label: 'Corrosion Inside', inputType: 'boolean', required: true },
         { key: 'body.corrosionOut', label: 'Corrosion Outside', inputType: 'boolean', required: true },
@@ -77,8 +77,7 @@ export const DRILL_PIPE_V1_SCHEMA: FormSchema = {
         { key: 'final.isNew', label: 'Is New', inputType: 'boolean', required: true },
         { key: 'final.isPremium', label: 'Is Premium', inputType: 'boolean', required: true },
         { key: 'final.isC2', label: 'Is C2', inputType: 'boolean', required: true },
-        { key: 'final.isScrap', label: 'Is Scrap', inputType: 'boolean', required: true },
-        { key: 'final.disposition', label: 'Disposition', inputType: 'select', required: true, options: ['PASS', 'REWORK', 'SCRAP', 'HOLD'] }
+        { key: 'final.isScrap', label: 'Is Scrap', inputType: 'boolean', required: true }
       ]
     },
     {

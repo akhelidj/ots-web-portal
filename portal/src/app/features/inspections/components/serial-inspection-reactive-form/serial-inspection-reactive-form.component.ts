@@ -51,7 +51,8 @@ export class SerialInspectionReactiveFormComponent implements OnInit, OnChanges 
              validators.push(Validators.required);
          }
          
-         group[field.key] = [this.getNestedValue(this.initialData, field.key) ?? '', validators];
+         const internalKey = this.toInternalKey(field.key);
+         group[internalKey] = [this.getNestedValue(this.initialData, field.key) ?? '', validators];
       }
     }
     
@@ -66,10 +67,23 @@ export class SerialInspectionReactiveFormComponent implements OnInit, OnChanges 
     const patchValues: Record<string, unknown> = {};
     for (const section of this.schema.sections) {
        for (const field of section.fields) {
-          patchValues[field.key] = this.getNestedValue(this.initialData, field.key) ?? '';
+          patchValues[this.toInternalKey(field.key)] = this.getNestedValue(this.initialData, field.key) ?? '';
        }
     }
     this.formGroup.patchValue(patchValues);
+  }
+
+  private toInternalKey(key: string): string {
+    return key.replace(/\./g, '_');
+  }
+
+  private toDataKey(internalKey: string): string {
+    // In our specific schema, body.emiResult -> body_emiResult
+    // We can't just replace all underscores if data keys have underscores
+    // But our schema keys are section.field (single dot)
+    // So we can find the matching field in schema
+    const field = this.schema.sections.flatMap(s => s.fields).find(f => this.toInternalKey(f.key) === internalKey);
+    return field ? field.key : internalKey;
   }
 
   private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
@@ -114,7 +128,7 @@ export class SerialInspectionReactiveFormComponent implements OnInit, OnChanges 
     const finalResult: Record<string, unknown> = {};
 
     for (const key of Object.keys(rawValues)) {
-        this.setNestedValue(finalResult, key, rawValues[key]);
+        this.setNestedValue(finalResult, this.toDataKey(key), rawValues[key]);
     }
 
     this.saveData.emit(finalResult);
@@ -124,12 +138,16 @@ export class SerialInspectionReactiveFormComponent implements OnInit, OnChanges 
      this.formCancel.emit();
   }
 
-  public getFieldOptions(field: any): string[] {
+  public getFieldOptions(field: { options?: string[] }): string[] {
     if (!field.options) return [];
     if (this.excludedDispositions.length > 0) {
       return field.options.filter((o: string) => !this.excludedDispositions.includes(o));
     }
     return field.options;
+  }
+
+  public getInternalKey(key: string): string {
+    return this.toInternalKey(key);
   }
 
 }

@@ -563,14 +563,32 @@
           </svg>
           Rework Status
         </h2>
-        <span class="bg-warning-light text-warning-dark text-xs py-0.5 px-2.5 rounded-full font-bold border border-warning/20">{{ reworkSerials.length }} Serials</span>
+        <div class="flex items-center gap-3">
+          <span class="bg-warning-light text-warning-dark text-xs py-0.5 px-2.5 rounded-full font-bold border border-warning/20">{{ reworkSerials.length }} Serials</span>
+          <button (click)="onSyncReworkReport()" 
+                  [disabled]="isSyncingRework() || !isOnline"
+                  class="bg-white hover:bg-gray-50 text-warning-dark border border-warning/30 px-3 py-1 rounded shadow-sm text-xs font-bold transition-all flex items-center gap-2 disabled:opacity-50">
+            @if (isSyncingRework()) {
+              <svg class="animate-spin h-3 w-3 text-warning-dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Syncing...
+            } @else {
+              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Sync Rework Report
+            }
+          </button>
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="min-w-full text-left border-collapse text-sm">
           <thead class="bg-white border-b border-gray-100">
             <tr>
               <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Serial Number</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Disposition</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">EMI Result</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Child Report</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
               <th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
@@ -596,7 +614,7 @@
                   } @else {
                     <td class="px-6 py-4 text-xs text-gray-400 italic">None</td>
                     <td class="px-6 py-4">
-                      <span class="bg-warning-light text-warning-dark border-warning/30 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-sm">Pending Auto-Sync</span>
+                      <span class="bg-warning-light text-warning-dark border-warning/30 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-sm">Needs Sync</span>
                     </td>
                     <td class="px-6 py-4 text-right">
                     </td>
@@ -679,7 +697,7 @@
                   <span>Serial Number</span>
                 </div>
               </th>
-              <th scope="col" class="px-4 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-[12rem] bg-gray-50 z-30 md:z-40 border-r border-gray-200 md:shadow-[1px_0_0_0_#eee] min-w-[120px]">Disp. / Act.</th>
+              <th scope="col" class="px-4 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-[12rem] bg-gray-50 z-30 md:z-40 border-r border-gray-200 md:shadow-[1px_0_0_0_#eee] min-w-[120px]">EMI Res. / Act.</th>
               
               <!-- BOX Columns -->
               <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Tong Spc.</th>
@@ -1014,16 +1032,16 @@
                     @for (sn of batchItem.serials; track sn.id) {
                       <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded px-2 py-1 transition-all"
                            [ngClass]="{'border-primary bg-primary/5': isBatchSnSelected(sn.id)}">
-                        @if (sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL && (userRole() === APP_ROLES.SUPERVISOR || userRole() === APP_ROLES.ADMIN)) {
+                        @if (sn.batchStatus === 'PENDING' && (userRole() === APP_ROLES.SUPERVISOR || userRole() === APP_ROLES.ADMIN)) {
                           <input type="checkbox" 
                                  [checked]="isBatchSnSelected(sn.id)" 
                                  (change)="toggleBatchSnSelection(sn.id)"
                                  class="h-3.5 w-3.5 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
                         }
                         <span class="font-mono text-xs text-gray-700">{{ sn.value }}</span>
-                        @if (sn.approvalStatus === SERIAL_STATUSES.APPROVED) {
+                        @if (sn.batchStatus === 'APPROVED') {
                           <svg class="h-3 w-3 text-success" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
-                        } @else if (sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT) {
+                        } @else if (sn.batchStatus === 'RETURNED') {
                           <span class="text-[10px] text-red-500 font-bold">RETURNED</span>
                         }
                       </div>

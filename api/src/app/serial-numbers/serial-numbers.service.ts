@@ -197,13 +197,13 @@ export class SerialNumbersService {
       dataToUpdate.inspectionData = payload.inspectionData;
 
       // Sync top-level disposition column
-      if (payload.inspectionData) {
-        const final = payload.inspectionData['final'] || {};
-        const disp = final['disposition'] || payload.inspectionData['disposition'];
-        if (disp) {
-          dataToUpdate.disposition = disp as any;
-        }
+    if (payload.inspectionData) {
+      const bodySection = payload.inspectionData['body'] as Record<string, unknown> | undefined;
+      const disp = bodySection?.['emiResult'] as string;
+      if (disp) {
+        dataToUpdate.disposition = disp as any;
       }
+    }
       
       // Auto-transition to INSPECTED_DRAFT if meaningful data provided and not currently submitted/approved
       // (Lock check above ensures we aren't submitted or approved)

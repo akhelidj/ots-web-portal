@@ -190,6 +190,10 @@ export class InspectionReportsService {
       if (data.connection !== undefined) updateData.connection = data.connection;
       if (data.poNumber !== undefined) updateData.poNumber = data.poNumber;
       
+      if (data.status !== undefined) {
+         updateData.status = data.status;
+      }
+      
       const updateResult = await tx.inspectionReport.updateMany({
         where: { 
             id,
@@ -218,90 +222,86 @@ export class InspectionReportsService {
           inspectionReportId: id,
         },
       });
-
       return updated;
     });
   }
 
-  async createApprovalBatch(tenantId: string, reportId: string, userId: string, data: { serialNumberIds: string[], notes?: string, reportVersion: number }) {
+  async submitForApproval(tenantId: string, reportId: string, userId: string, data: { serialNumberIds: string[], reportVersion: number, childReportId?: string }) {
     return await this.prisma.$transaction(async (tx) => {
-      // 1. Validate report state
+      // 1. Validate Report
       const report = await tx.inspectionReport.findFirst({
         where: { id: reportId, tenantId },
-        include: { serialNumbers: true }
       });
 
       if (!report) throw new NotFoundException('Report not found');
-      if (report.version !== data.reportVersion) throw new ConflictException(`Version mismatch. Expected ${report.version}, got ${data.reportVersion}`);
-      if (report.status === 'APPROVED' || report.status === 'CLOSED') {
-        throw new BadRequestException('Report is already approved or closed.');
-      }
+      if (report.version !== data.reportVersion) throw new ConflictException(`Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`);
 
-      // 2. Validate all provided S/N belong to the report
-      const invalidIds = data.serialNumberIds.filter(id => !report.serialNumbers.some(sn => sn.id === id));
-      if (invalidIds.length > 0) {
-        throw new BadRequestException(`Some Serial Numbers do not belong to this report: ${invalidIds.join(', ')}`);
-      }
-
-      // 3. Find current S/N database states to enforce safeguard 1
-      const serials = await tx.serialNumber.findMany({
-        where: {
-          id: { in: data.serialNumberIds },
-          tenantId,
-          inspectionReportId: reportId
-        }
-      });
-
-      for (const sn of serials) {
-        if (sn.approvalStatus === 'SUBMITTED_FOR_APPROVAL' || sn.approvalStatus === 'APPROVED') {
-          throw new BadRequestException(`Serial number ${sn.serial} cannot be submitted, it is already ${sn.approvalStatus}`);
-        }
-
-        // Technically also verify it's not in an active SUBMITTED batch just in case status is out of sync
-        const activeBatchMember = await tx.inspectionApprovalBatchSerialNumber.findFirst({
-          where: {
-            serialNumberId: sn.id,
-            batch: {
-              status: 'SUBMITTED'
-            }
-          }
+      // 2. Validate Serial Numbers
+      if (data.childReportId) {
+        const crSns = await tx.childReportSerialNumber.findMany({
+          where: { childReportId: data.childReportId, serialNumberId: { in: data.serialNumberIds } }
         });
-        if (activeBatchMember) {
-           throw new BadRequestException(`Serial number ${sn.serial} is already linked to an active unapproved batch.`);
+        if (crSns.length !== data.serialNumberIds.length) {
+          throw new BadRequestException('One or more serial numbers are not part of this child report');
+        }
+        for (const sn of crSns) {
+          if (sn.approvalStatus !== SerialApprovalStatus.INSPECTED_DRAFT) {
+            throw new BadRequestException(`Serial number ${sn.serialNumberId} is in status ${sn.approvalStatus} and cannot be submitted`);
+          }
+        }
+      } else {
+        const sns = await tx.serialNumber.findMany({
+          where: { inspectionReportId: reportId, tenantId, id: { in: data.serialNumberIds } }
+        });
+        if (sns.length !== data.serialNumberIds.length) {
+          throw new BadRequestException('One or more serial numbers are not part of this report');
+        }
+        for (const sn of sns) {
+          if (sn.approvalStatus !== SerialApprovalStatus.INSPECTED_DRAFT) {
+            throw new BadRequestException(`Serial number ${sn.serial} is in status ${sn.approvalStatus} and cannot be submitted`);
+          }
         }
       }
 
-      // 4. Create the batch
+      // 3. Create Batch
       const batch = await tx.inspectionApprovalBatch.create({
         data: {
           tenantId,
           inspectionReportId: reportId,
+          childReportId: data.childReportId,
           submittedByUserId: userId,
-          status: 'SUBMITTED',
-          notes: data.notes || null,
+          status: InspectionApprovalBatchStatus.SUBMITTED,
+          version: 1,
           serialNumbers: {
-            create: data.serialNumberIds.map(id => ({
+            create: data.serialNumberIds.map(snId => ({
               tenantId,
-              serialNumberId: id
+              serialNumberId: snId,
+              status: 'PENDING'
             }))
           }
-        },
-        include: { serialNumbers: true }
+        }
       });
 
-      // 5. Update S/N approval states
-      await tx.serialNumber.updateMany({
-        where: { id: { in: data.serialNumberIds }, tenantId },
-        data: { approvalStatus: 'SUBMITTED_FOR_APPROVAL' }
-      });
+      // 4. Update Serial Statuses
+      if (data.childReportId) {
+        await tx.childReportSerialNumber.updateMany({
+          where: { childReportId: data.childReportId, serialNumberId: { in: data.serialNumberIds } },
+          data: { approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+        });
+      } else {
+        await tx.serialNumber.updateMany({
+          where: { id: { in: data.serialNumberIds } },
+          data: { approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+        });
+      }
 
-      // 6. Update report version (optimistic locking)
+      // 5. Update report version
       const updatedReport = await tx.inspectionReport.update({
         where: { id: report.id },
         data: { version: report.version + 1 }
       });
 
-      // 7. Audit log
+      // 6. Audit log
       await tx.auditLog.create({
         data: {
           action: 'BATCH_SUBMIT',
@@ -351,51 +351,73 @@ export class InspectionReportsService {
 
       // Verify members - filter out those not in SUBMITTED_FOR_APPROVAL
       const filteredTargetIds: string[] = [];
-      for (const snId of targetSnIds) {
-         const sn = await tx.serialNumber.findUnique({ where: { id: snId } });
-         if (sn && sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
-             filteredTargetIds.push(snId);
-         }
+      if (batch.childReportId) {
+        const crSns = await tx.childReportSerialNumber.findMany({
+          where: { childReportId: batch.childReportId, serialNumberId: { in: targetSnIds } }
+        });
+        for (const sn of crSns) {
+          if (sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+            filteredTargetIds.push(sn.serialNumberId);
+          }
+        }
+      } else {
+        const sns = await tx.serialNumber.findMany({
+          where: { id: { in: targetSnIds } }
+        });
+        for (const sn of sns) {
+          if (sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+            filteredTargetIds.push(sn.id);
+          }
+        }
       }
 
-      if (filteredTargetIds.length === 0) {
-        // If everything requested is already processed, we just check batch status and return
-        // No error here helps "Approve Remaining" logic
-      } else {
+      if (filteredTargetIds.length > 0) {
         // Update SN states
-        await tx.serialNumber.updateMany({
-          where: { id: { in: filteredTargetIds } },
-          data: { approvalStatus: SerialApprovalStatus.APPROVED }
+        if (batch.childReportId) {
+          await tx.childReportSerialNumber.updateMany({
+            where: { childReportId: batch.childReportId, serialNumberId: { in: filteredTargetIds } },
+            data: { approvalStatus: SerialApprovalStatus.APPROVED }
+          });
+        } else {
+          await tx.serialNumber.updateMany({
+            where: { id: { in: filteredTargetIds } },
+            data: { approvalStatus: SerialApprovalStatus.APPROVED }
+          });
+        }
+
+        // Update Junction Table Status
+        await tx.inspectionApprovalBatchSerialNumber.updateMany({
+           where: {
+              inspectionApprovalBatchId: batchId,
+              serialNumberId: { in: filteredTargetIds }
+           },
+           data: { status: 'APPROVED' }
         });
       }
 
       // Check if ALL SNs in this batch are now processed (no longer SUBMITTED_FOR_APPROVAL)
-      const remainingInBatch = await tx.serialNumber.count({
-        where: {
-          id: { in: allBatchSnIds },
-          approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL
-        }
-      });
+      let remainingInBatch = 0;
+      let approvedCount = 0;
+
+      if (batch.childReportId) {
+        remainingInBatch = await tx.childReportSerialNumber.count({
+          where: { childReportId: batch.childReportId, serialNumberId: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+        });
+        approvedCount = await tx.childReportSerialNumber.count({
+          where: { childReportId: batch.childReportId, serialNumberId: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.APPROVED }
+        });
+      } else {
+        remainingInBatch = await tx.serialNumber.count({
+          where: { id: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+        });
+        approvedCount = await tx.serialNumber.count({
+          where: { id: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.APPROVED }
+        });
+      }
 
       let updatedBatchStatus: InspectionApprovalBatchStatus = batch.status;
       if (remainingInBatch === 0) {
-        // Find if any were returned or if all were approved
-        const approvedCount = await tx.serialNumber.count({
-          where: { id: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.APPROVED }
-        });
-        
-        if (approvedCount === allBatchSnIds.length) {
-          updatedBatchStatus = InspectionApprovalBatchStatus.APPROVED;
-        } else {
-          // If some were approved and some were returned, it's effectively RETURNED (it contains corrections)
-          // or we could keep it SUBMITTED until explicitly closed? No, let's mark it as mixed or simply RETURNED if not all approved.
-          // The user requirement says "approve whole batch OR individual".
-          // If they approve individual, we keep it SUBMITTED until the last one.
-          updatedBatchStatus = InspectionApprovalBatchStatus.APPROVED; 
-          // Actually, if they approve the last one, the batch is DONE.
-          // If some were returned previously, and now we approve the rest, the batch is "processed".
-          // Let's use APPROVED if the last action was approval and everything is out of SUBMITTED.
-        }
+        updatedBatchStatus = InspectionApprovalBatchStatus.APPROVED;
       }
 
       // Update Batch
@@ -409,26 +431,15 @@ export class InspectionReportsService {
         }
       });
 
-      // Recompute the report summary status
-      const allReportSerials = await tx.serialNumber.findMany({
-        where: { inspectionReportId: reportId, tenantId }
-      });
-
-      const allReportApproved = allReportSerials.every(sn => sn.approvalStatus === SerialApprovalStatus.APPROVED);
-      let nextReportStatus = report.status;
-      
-      if (allReportApproved && allReportSerials.length > 0) {
-        nextReportStatus = InspectionReportStatus.APPROVED;
-      }
-
       // Update report
       const updatedReport = await tx.inspectionReport.update({
         where: { id: report.id },
         data: {
-          status: nextReportStatus,
           version: report.version + 1
         }
       });
+
+      const updatedChildReport = batch.childReportId ? await tx.childReport.findUnique({ where: { id: batch.childReportId } }) : null;
 
       // Audit Log
       await tx.auditLog.create({
@@ -443,21 +454,7 @@ export class InspectionReportsService {
         }
       });
 
-      if (nextReportStatus === 'APPROVED' && report.status !== 'APPROVED') {
-         await tx.auditLog.create({
-            data: {
-              action: 'REPORT_APPROVE_AUTO',
-              entity: 'InspectionReport',
-              entityId: report.id,
-              reason: 'All S/N approved',
-              tenantId,
-              userId: 'system',
-              inspectionReportId: report.id,
-            }
-         });
-      }
-
-      return { batch: updatedBatch, updatedReport, allApproved: allReportApproved };
+      return { batch: updatedBatch, updatedReport, childReport: updatedChildReport };
     });
   }
 
@@ -498,29 +495,60 @@ export class InspectionReportsService {
 
       // Verify members - filter out those not in SUBMITTED_FOR_APPROVAL
       const filteredTargetIds: string[] = [];
-      for (const snId of targetSnIds) {
-         const sn = await tx.serialNumber.findUnique({ where: { id: snId } });
-         if (sn && sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
-             filteredTargetIds.push(snId);
-         }
+      if (batch.childReportId) {
+        const crSns = await tx.childReportSerialNumber.findMany({
+          where: { childReportId: batch.childReportId, serialNumberId: { in: targetSnIds } }
+        });
+        for (const sn of crSns) {
+          if (sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+            filteredTargetIds.push(sn.serialNumberId);
+          }
+        }
+      } else {
+        const sns = await tx.serialNumber.findMany({
+          where: { id: { in: targetSnIds } }
+        });
+        for (const sn of sns) {
+          if (sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+            filteredTargetIds.push(sn.id);
+          }
+        }
       }
 
       if (filteredTargetIds.length > 0) {
         // Revert SNs to INSPECTED_DRAFT
-        await tx.serialNumber.updateMany({
-          where: { id: { in: filteredTargetIds } },
-          data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT }
+        if (batch.childReportId) {
+          await tx.childReportSerialNumber.updateMany({
+            where: { childReportId: batch.childReportId, serialNumberId: { in: filteredTargetIds } },
+            data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT }
+          });
+        } else {
+          await tx.serialNumber.updateMany({
+            where: { id: { in: filteredTargetIds } },
+            data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT }
+          });
+        }
+
+        // Update Junction Table Status
+        await tx.inspectionApprovalBatchSerialNumber.updateMany({
+           where: {
+              inspectionApprovalBatchId: batchId,
+              serialNumberId: { in: filteredTargetIds }
+           },
+           data: { status: 'RETURNED' }
         });
       }
-
       // Check if ALL SNs in this batch are now processed
-      const remainingInBatch = await tx.serialNumber.count({
-        where: {
-          id: { in: allBatchSnIds },
-          approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL
-        }
-      });
-
+      let remainingInBatch = 0;
+      if (batch.childReportId) {
+        remainingInBatch = await tx.childReportSerialNumber.count({
+          where: { childReportId: batch.childReportId, serialNumberId: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+        });
+      } else {
+        remainingInBatch = await tx.serialNumber.count({
+          where: { id: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+        });
+      }
       let updatedBatchStatus: InspectionApprovalBatchStatus = batch.status;
       if (remainingInBatch === 0) {
         // If everything is processed, we mark it as RETURNED if any were returned.

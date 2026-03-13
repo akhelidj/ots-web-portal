@@ -62,7 +62,7 @@ export class InspectionReportsController {
     @Param('id') id: string,
     @Body() body: CreateApprovalBatchDto
   ) {
-    return this.reportsService.createApprovalBatch(req.user.tenantId, id, req.user.id, body);
+    return this.reportsService.submitForApproval(req.user.tenantId, id, req.user.id, body);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)

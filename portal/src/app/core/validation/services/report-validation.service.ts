@@ -40,13 +40,13 @@ export class ReportValidationService {
 
     for (const sn of serials) {
       const data = sn.inspectionJson || {};
-      const disposition = (this.getNestedValue(data, 'final.disposition') as string) || (data['disposition'] as string);
+      const disposition = this.getNestedValue(data, 'body.emiResult') as string;
 
       if (!disposition) {
         issues.push({
           code: 'MISSING_DISPOSITION',
           level: 'BLOCKER',
-          message: `Missing disposition on Serial ${sn.value}.`,
+          message: `Missing EMI Result on Serial ${sn.value}.`,
           scope: 'SERIAL',
           serialId: sn.id,
           serialLabel: sn.value

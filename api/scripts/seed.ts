@@ -6,6 +6,8 @@ import {
   SerialDisposition,
   SerialApprovalStatus,
   InspectionReportStatus,
+  ChildReportStatus,
+  ChildReportType,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
@@ -177,7 +179,7 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
     console.log(`Customer created: ${customer.name}`);
   }
 
-  const email = 'GSwann@noblecorp.com';
+  const email = 'gswann@noblecorp.com';
   let user = await prisma.user.findFirst({
     where: { email, tenantId: tenant.id },
   });
@@ -230,72 +232,147 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
         reportNumber: 'NOBLECORP-130326-151748',
       },
     });
+    console.log(`Created report ${report.reportNumber}`);
+  } else {
+    // Force report status to IN_INSPECTION as requested
+    await prisma.inspectionReport.update({
+      where: { id: report.id },
+      data: { status: InspectionReportStatus.IN_INSPECTION },
+    });
+    console.log(`Report ${report.reportNumber} already exists. Ensuring status is IN_INSPECTION and checking serial numbers...`);
+  }
 
-    const sns: any[] = [];
-    for (let i = 1; i <= 15; i++) {
-      const isScrap = Math.random() < 0.2; // 20% chance to be SCRAP
-      const disposition = isScrap
-        ? SerialDisposition.SCRAP
-        : SerialDisposition.PASS;
 
-      sns.push({
-        serial: `NCO-SN-${i.toString().padStart(3, '0')}`,
-        inspectionReportId: report.id,
-        tenantId: tenant.id,
-        disposition: disposition,
-        approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT,
-        inspectionData: {
-          box: {
-            minOD: '6 1/3"',
-            condition: 'OK',
-            hardBanding: 'OK - FLUSHED',
-            minTongSpace: '8 1/4"',
-            minBoxThreads: '5"',
-            minEccShoulder: '5/8"',
-            bevelDiameterMax: '1/6"',
-            bevelDiameterMin: '6"',
-            maxCounterBoreLength: '3/4"',
-            maxCounterBoreDiameter: '5 5/16"',
-          },
-          pin: {
-            maxID: '2 3/4"',
-            minOD: '6 1/2"',
-            condition: 'SD',
-            minTongSpace: '7 3/8"',
-            minEccShoulder: '5/8"',
-            bevelDiameterMax: '1/16"',
-            bevelDiameterMin: '6"',
-            lengthPinConnMax: '3/8"',
-            lengthPinConnMin: '4"',
-            maxLengthPinBase: '4"',
-          },
-          body: {
-            ipc: false,
-            slipArea: 'ok',
-            emiResult: 'PASS',
-            bentJoints: true,
-            odDecrease: 'OK',
-            corrosionIn: true,
-            corrosionOut: true,
-            wallRemaining: '0.362"',
-          },
-          final: {
-            isC2: false,
-            isNew: false,
-            isScrap: isScrap,
-            isPremium: false,
-            disposition: disposition,
-          },
-          remarks: '',
-        },
-      });
+  const genericBox = {
+    minOD: '6 1/3"',
+    condition: 'OK',
+    hardBanding: 'OK - FLUSHED',
+    minTongSpace: '8 1/4"',
+    minBoxThreads: '5"',
+    minEccShoulder: '5/8"',
+    bevelDiameterMax: '1/16"', // Fixed minor typo from previous turn
+    bevelDiameterMin: '6"',
+    maxCounterBoreLength: '3/4"',
+    maxCounterBoreDiameter: '5 5/16"',
+  };
+  const genericPin = {
+    maxID: '2 3/4"',
+    minOD: '6 1/2"',
+    condition: 'SD',
+    minTongSpace: '7 3/8"',
+    minEccShoulder: '5/8"',
+    bevelDiameterMax: '1/16"',
+    bevelDiameterMin: '6"',
+    lengthPinConnMax: '3/8"',
+    lengthPinConnMin: '4"',
+    maxLengthPinBase: '4"',
+  };
+
+  for (let i = 1; i <= 15; i++) {
+    const serial = `NCO-SN-${i.toString().padStart(3, '0')}`;
+    const isScrap = i === 13;
+    const isRework = i === 5 || i === 10;
+    const disposition = isScrap ? SerialDisposition.SCRAP : isRework ? SerialDisposition.REWORK : SerialDisposition.PASS;
+    
+    const inspectionData = {
+      box: genericBox,
+      pin: genericPin,
+      body: {
+        ipc: false,
+        slipArea: 'ok',
+        emiResult: disposition,
+        bentJoints: false,
+        odDecrease: 'OK',
+        corrosionIn: false,
+        corrosionOut: false,
+        wallRemaining: '0.362"',
+      },
+      final: {
+        isC2: false,
+        isNew: false,
+        isScrap: isScrap,
+        isPremium: !isScrap && !isRework,
+      },
+      remarks: '',
+    };
+
+    let snId: string;
+    const existing = await prisma.serialNumber.findFirst({
+        where: { tenantId: tenant.id, inspectionReportId: report.id, serial }
+    });
+
+    if (existing) {
+        await prisma.serialNumber.update({
+            where: { id: existing.id },
+            data: {
+                disposition: disposition,
+                approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT,
+                inspectionData
+            }
+        });
+        snId = existing.id;
+    } else {
+        const createdSn = await prisma.serialNumber.create({
+            data: {
+                serial,
+                inspectionReportId: report.id,
+                tenantId: tenant.id,
+                disposition: disposition,
+                approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT,
+                inspectionData
+            }
+        });
+        snId = createdSn.id;
     }
 
-    await prisma.serialNumber.createMany({
-      data: sns,
-    });
-    console.log(`Created report ${report.reportNumber} with 15 serial numbers`);
+    // Handle Child Report for Rework
+    if (isRework) {
+      let childReport = await prisma.childReport.findFirst({
+        where: { inspectionReportId: report.id, type: ChildReportType.REWORK, tenantId: tenant.id }
+      });
+
+      if (!childReport) {
+        childReport = await prisma.childReport.create({
+          data: {
+            tenantId: tenant.id,
+            inspectionReportId: report.id,
+            type: ChildReportType.REWORK,
+            status: ChildReportStatus.DRAFT,
+            reportNumber: `${report.reportNumber}_rework`,
+          }
+        });
+        console.log(`Created REWORK child report for ${report.reportNumber}`);
+      }
+
+      // Ensure the serial number is in the child report
+      const existingCrsn = await prisma.childReportSerialNumber.findFirst({
+        where: { childReportId: childReport.id, serialNumberId: snId }
+      });
+
+      if (!existingCrsn) {
+        await prisma.childReportSerialNumber.create({
+          data: {
+            childReportId: childReport.id,
+            serialNumberId: snId,
+            disposition: SerialDisposition.REWORK,
+            approvalStatus: SerialApprovalStatus.NOT_INSPECTED,
+          }
+        });
+      }
+    }
   }
+
+  // Cleanup SCRAP child reports if they exist
+  await prisma.childReport.deleteMany({
+    where: { 
+        inspectionReportId: report.id, 
+        type: ChildReportType.SCRAP,
+        tenantId: tenant.id,
+    }
+  });
+
+  console.log(`All 15 serial numbers for report ${report.reportNumber} are now synced to INSPECTED_DRAFT status.`);
+  console.log(`Child report logic executed (REWORK child report ensured).`);
 }
 
 async function main() {

@@ -89,7 +89,7 @@ export class InspectionReportDetailComponent implements OnInit {
   public serials = signal<LocalSerialNumber[]>([]);
   public transitionLogs = signal<LocalTransitionLog[]>([]);
   public childReports = signal<LocalChildReport[]>([]);
-  public approvalBatches = signal<{ batch: LocalInspectionApprovalBatch; serials: LocalSerialNumber[]; submittedByName?: string }[]>([]);
+  public approvalBatches = signal<{ batch: LocalInspectionApprovalBatch; serials: (LocalSerialNumber & { batchStatus?: string })[]; submittedByName?: string }[]>([]);
 
   public formBulkSerials = '';
   public formReason = '';
@@ -99,6 +99,7 @@ export class InspectionReportDetailComponent implements OnInit {
   public isValidationModalOpen = false;
   public activeHistorySn = signal<LocalSerialNumber | null>(null);
   public isPublishingReport = signal(false);
+  public isSyncingRework = signal(false);
 
   public selectedForApproval = signal<Set<string>>(new Set());
   public selectedInBatch = signal<Set<string>>(new Set());
@@ -279,14 +280,10 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public getDisposition(sn: LocalSerialNumber): string | null {
     if (!sn.inspectionJson) return null;
-    const finalSection = sn.inspectionJson['final'] as
+    const bodySection = sn.inspectionJson['body'] as
       | Record<string, unknown>
       | undefined;
-    return (
-      (finalSection?.['disposition'] as string) ||
-      (sn.inspectionJson['disposition'] as string) ||
-      null
-    );
+    return (bodySection?.['emiResult'] as string) || null;
   }
 
   async ngOnInit() {
@@ -336,8 +333,11 @@ export class InspectionReportDetailComponent implements OnInit {
     const enrichedBatches = [];
     for (const batch of batches) {
       const bsnList = await this.batchSnRepo.listByBatchId(batch.id);
-      const snIds = new Set(bsnList.map(b => b.serialNumberId));
-      const batchSerials = snList.filter(sn => snIds.has(sn.id));
+      const snMap = new Map(bsnList.map(b => [b.serialNumberId, b.status || 'PENDING']));
+      const batchSerials = snList.filter(sn => snMap.has(sn.id)).map(sn => ({
+        ...sn,
+        batchStatus: snMap.get(sn.id)
+      }));
       
       let submittedByName = 'Unknown';
       if (batch.submittedByUserId) {
@@ -595,6 +595,22 @@ export class InspectionReportDetailComponent implements OnInit {
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to transition report.';
+    }
+  }
+
+  public async onSyncReworkReport() {
+    this.isSyncingRework.set(true);
+    try {
+      await this.irService.enqueueChildSync(this.reportId);
+      // Wait a bit for outbox to process or at least show intent
+      setTimeout(() => {
+        this.isSyncingRework.set(false);
+        this.refreshData();
+      }, 1000);
+    } catch (error) {
+      const e = error as Error;
+      this.formError = e.message || 'Failed to sync rework report.';
+      this.isSyncingRework.set(false);
     }
   }
 
@@ -1006,7 +1022,7 @@ export class InspectionReportDetailComponent implements OnInit {
   public getBatchEligibleCount(batchId: string): number {
     const batch = this.approvalBatches().find(b => b.batch.id === batchId);
     if (!batch) return 0;
-    return batch.serials.filter(s => s.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL).length;
+    return batch.serials.filter(s => s.batchStatus === 'PENDING').length;
   }
 
   public async returnBatch(): Promise<void> {

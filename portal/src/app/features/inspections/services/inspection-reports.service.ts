@@ -28,7 +28,7 @@ export class InspectionReportsService {
 
   public readonly reports = signal<LocalInspectionReport[]>([]);
 
-  private async enqueueChildSync(reportId: string): Promise<void> {
+  public async enqueueChildSync(reportId: string): Promise<void> {
     await this.outbox.enqueue({
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
@@ -141,7 +141,8 @@ export class InspectionReportsService {
            const associations = b.serialNumbers.map((sn: any) => ({
              id: sn.id,
              inspectionApprovalBatchId: b.id,
-             serialNumberId: sn.serialNumberId
+             serialNumberId: sn.serialNumberId,
+             status: sn.status || 'PENDING'
            }));
            await this.batchSnRepo.bulkUpsert(associations);
         }
@@ -405,8 +406,6 @@ export class InspectionReportsService {
       attemptCount: 0,
       lastError: null,
     });
-
-    await this.enqueueChildSync(sn.inspectionReportId);
   }
 
   public async saveSerialNumberInspectionOffline(id: string, inspectionJson: Record<string, unknown>): Promise<void> {
@@ -434,8 +433,6 @@ export class InspectionReportsService {
       attemptCount: 0,
       lastError: null,
     });
-
-    await this.enqueueChildSync(sn.inspectionReportId);
   }
 
   public async deleteSerialNumberOffline(id: string): Promise<void> {
@@ -458,7 +455,7 @@ export class InspectionReportsService {
     });
   }
 
-  public async submitApprovalBatch(reportId: string, serialNumberIds: string[]): Promise<void> {
+  public async submitApprovalBatch(reportId: string, serialNumberIds: string[], childReportId?: string): Promise<void> {
     if (navigator.onLine) {
       const rep = await this.irRepo.getById(reportId);
       if (!rep) throw new Error('Report not found');
@@ -467,7 +464,8 @@ export class InspectionReportsService {
         const response = await firstValueFrom(
           this.http.post<any>(`${environment.apiUrl}/inspection-reports/${reportId}/approval-batches`, {
             serialNumberIds,
-            reportVersion: rep.version
+            reportVersion: rep.version,
+            childReportId
           })
         );
         // Refresh local cache with server state
@@ -478,10 +476,10 @@ export class InspectionReportsService {
         console.error('Direct batch submission failed, falling back to offline', err);
       }
     }
-    return this.submitApprovalBatchOffline(reportId, serialNumberIds);
+    return this.submitApprovalBatchOffline(reportId, serialNumberIds, childReportId);
   }
 
-  public async submitApprovalBatchOffline(reportId: string, serialNumberIds: string[]): Promise<void> {
+  public async submitApprovalBatchOffline(reportId: string, serialNumberIds: string[], childReportId?: string): Promise<void> {
 
     const rep = await this.irRepo.getById(reportId);
     if (!rep) throw new Error('Report not found');
@@ -506,6 +504,7 @@ export class InspectionReportsService {
       id: 'local-bsn-' + crypto.randomUUID(),
       inspectionApprovalBatchId: batchId,
       serialNumberId: snId,
+      status: 'PENDING'
     }));
     
     await this.batchSnRepo.bulkUpsert(bSns);
@@ -517,7 +516,7 @@ export class InspectionReportsService {
       entityType: 'APPROVAL_BATCH', // We defined it as APPROVAL_BATCH in sync-dispatcher
       entityId: batchId,
       operation: 'SUBMIT',
-      payload: { inspectionReportId: reportId, serialNumberIds, reportVersion: rep.version },
+      payload: { inspectionReportId: reportId, serialNumberIds, reportVersion: rep.version, childReportId },
       status: 'PENDING',
       attemptCount: 0,
       lastError: null,
@@ -610,6 +609,12 @@ export class InspectionReportsService {
           sn.approvalStatus = SERIAL_STATUSES.APPROVED;
           sn.syncState = 'PENDING';
           await this.snRepo.upsert(sn);
+        }
+        
+        const link = batchSns.find(b => b.serialNumberId === snId);
+        if (link) {
+          link.status = 'APPROVED';
+          await this.batchSnRepo.bulkUpsert([link]);
         }
       }
     }
@@ -713,6 +718,12 @@ export class InspectionReportsService {
           sn.approvalStatus = SERIAL_STATUSES.INSPECTED_DRAFT;
           sn.syncState = 'PENDING';
           await this.snRepo.upsert(sn);
+        }
+
+        const link = batchSns.find(b => b.serialNumberId === snId);
+        if (link) {
+          link.status = 'RETURNED';
+          await this.batchSnRepo.bulkUpsert([link]);
         }
       }
     }
