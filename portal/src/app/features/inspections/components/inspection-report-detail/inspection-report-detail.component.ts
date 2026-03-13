@@ -97,6 +97,8 @@ export class InspectionReportDetailComponent implements OnInit {
   public editingSnId: string | null = null;
   public editingSnValue = '';
   public isValidationModalOpen = false;
+  public activeHistorySn = signal<LocalSerialNumber | null>(null);
+  public isPublishingReport = signal(false);
 
   public selectedForApproval = signal<Set<string>>(new Set());
   public selectedInBatch = signal<Set<string>>(new Set());
@@ -121,8 +123,10 @@ export class InspectionReportDetailComponent implements OnInit {
   public filteredSerials = computed(() => {
     const query = this.snSearchQuery().trim().toLowerCase();
     const serials = this.serials();
-    if (!query) return serials;
-    return serials.filter((sn) => sn.value.toLowerCase().includes(query));
+    const baseList = !query ? serials : serials.filter((sn) => sn.value.toLowerCase().includes(query));
+    
+    // Sort by value (serial number) alphanumeric
+    return baseList.sort((a, b) => a.value.localeCompare(b.value, undefined, { numeric: true, sensitivity: 'base' }));
   });
 
   // Meta Fields
@@ -237,8 +241,36 @@ export class InspectionReportDetailComponent implements OnInit {
   public isReceiver = computed(() => this.userRole().toUpperCase() === APP_ROLES.RECEIVER);
   public isSupervisor = computed(() => this.userRole().toUpperCase() === APP_ROLES.SUPERVISOR);
   public isAdmin = computed(() => this.userRole().toUpperCase() === APP_ROLES.ADMIN);
+  public isLocked = computed(() => {
+    const report = this.report();
+    if (!report) return false;
+    return report.status === REPORT_STATUSES.APPROVED || report.status === REPORT_STATUSES.CLOSED;
+  });
 
   public isTransitionExpanded = true;
+
+  public canPublishReport = computed(() => {
+    const role = this.userRole().toUpperCase();
+    const isSuperOrAdmin = role === APP_ROLES.SUPERVISOR || role === APP_ROLES.ADMIN;
+    const progress = this.inspectionProgress();
+    const isFullyApproved = progress.total > 0 && progress.approved === progress.total;
+    const currentStatus = this.report()?.status;
+    return isSuperOrAdmin && isFullyApproved && currentStatus !== REPORT_STATUSES.APPROVED && currentStatus !== REPORT_STATUSES.CLOSED;
+  });
+
+  public historyNotes = computed(() => {
+    const sn = this.activeHistorySn();
+    if (!sn) return [];
+    
+    return this.approvalBatches()
+      .filter(b => b.batch.notes && b.serials.some(s => s.id === sn.id))
+      .map(b => ({
+         notes: b.batch.notes,
+         date: b.batch.submittedAt,
+         user: b.submittedByName
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  });
 
   public get isOnline(): boolean {
     return navigator.onLine;
@@ -1002,5 +1034,41 @@ export class InspectionReportDetailComponent implements OnInit {
     } finally {
       this.isActioningBatch = false;
     }
+  }
+
+  public async onPublishReport(): Promise<void> {
+    if (!this.canPublishReport() || this.isPublishingReport()) return;
+
+    if (!confirm('Are you sure you want to publish this report? This will mark it as APPROVED and lock most edits.')) {
+      return;
+    }
+
+    this.isPublishingReport.set(true);
+    this.formError = '';
+    try {
+      await this.irService.publishReport(this.reportId);
+      this.refreshData();
+    } catch (e) {
+      const err = e as Error;
+      this.formError = err.message || 'Failed to publish report.';
+    } finally {
+      this.isPublishingReport.set(false);
+    }
+  }
+
+  public openHistory(sn: LocalSerialNumber): void {
+    this.activeHistorySn.set(sn);
+  }
+
+  public closeHistory(): void {
+    this.activeHistorySn.set(null);
+  }
+
+  public hasHistory(sn: LocalSerialNumber): boolean {
+    return this.approvalBatches().some(b => 
+      b.batch.status === BATCH_STATUSES.RETURNED && 
+      b.batch.notes && 
+      b.serials.some(s => s.id === sn.id)
+    );
   }
 }

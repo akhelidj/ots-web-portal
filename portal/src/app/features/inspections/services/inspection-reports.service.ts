@@ -11,7 +11,7 @@ import { TransitionLogLocalRepo } from '@portal/core/offline/repos/transition-lo
 import { ApprovalBatchLocalRepo } from '@portal/core/offline/repos/approval-batch-local.repo';
 import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-serial-number-local.repo';
 import { SessionService } from '@portal/core/auth/services/session.service';
-import { BATCH_STATUSES, ENTITY_TYPES, ReportStatus, SERIAL_STATUSES } from '@portal/core/constants/app.constants';
+import { BATCH_STATUSES, ENTITY_TYPES, ReportStatus, REPORT_STATUSES, SERIAL_STATUSES } from '@portal/core/constants/app.constants';
 
 @Injectable({
   providedIn: 'root'
@@ -584,12 +584,17 @@ export class InspectionReportsService {
     });
 
     const batchSns = await this.batchSnRepo.listByBatchId(batchId);
-    let targetSnIds: string[] = [];
-    
+    const targetSnIds: string[] = [];
     if (serialNumberIds && serialNumberIds.length > 0) {
-      targetSnIds = serialNumberIds;
+      // Filter provided IDs to only include those that are actually pending
+      for (const id of serialNumberIds) {
+        const sn = await this.snRepo.getById(id);
+        if (sn && sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
+          targetSnIds.push(id);
+        }
+      }
     } else {
-      // Filter for items that are actually pending
+      // Filter batch members for items that are actually pending
       for (const m of batchSns) {
         const sn = await this.snRepo.getById(m.serialNumberId);
         if (sn && sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
@@ -598,12 +603,14 @@ export class InspectionReportsService {
       }
     }
 
-    for (const snId of targetSnIds) {
-      const sn = await this.snRepo.getById(snId);
-      if (sn) {
-        sn.approvalStatus = SERIAL_STATUSES.APPROVED;
-        sn.syncState = 'PENDING';
-        await this.snRepo.upsert(sn);
+    if (targetSnIds.length > 0) {
+      for (const snId of targetSnIds) {
+        const sn = await this.snRepo.getById(snId);
+        if (sn) {
+          sn.approvalStatus = SERIAL_STATUSES.APPROVED;
+          sn.syncState = 'PENDING';
+          await this.snRepo.upsert(sn);
+        }
       }
     }
 
@@ -680,12 +687,17 @@ export class InspectionReportsService {
     });
 
     const batchSns = await this.batchSnRepo.listByBatchId(batchId);
-    let targetSnIds: string[] = [];
-
+    const targetSnIds: string[] = [];
     if (serialNumberIds && serialNumberIds.length > 0) {
-      targetSnIds = serialNumberIds;
+      // Filter provided IDs to only include those that are actually pending
+      for (const id of serialNumberIds) {
+        const sn = await this.snRepo.getById(id);
+        if (sn && sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
+          targetSnIds.push(id);
+        }
+      }
     } else {
-      // Filter for items that are actually pending
+      // Filter batch members for items that are actually pending
       for (const m of batchSns) {
         const sn = await this.snRepo.getById(m.serialNumberId);
         if (sn && sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
@@ -694,12 +706,14 @@ export class InspectionReportsService {
       }
     }
 
-    for (const snId of targetSnIds) {
-      const sn = await this.snRepo.getById(snId);
-      if (sn) {
-        sn.approvalStatus = SERIAL_STATUSES.INSPECTED_DRAFT;
-        sn.syncState = 'PENDING';
-        await this.snRepo.upsert(sn);
+    if (targetSnIds.length > 0) {
+      for (const snId of targetSnIds) {
+        const sn = await this.snRepo.getById(snId);
+        if (sn) {
+          sn.approvalStatus = SERIAL_STATUSES.INSPECTED_DRAFT;
+          sn.syncState = 'PENDING';
+          await this.snRepo.upsert(sn);
+        }
       }
     }
 
@@ -723,20 +737,46 @@ export class InspectionReportsService {
     await this.refreshLocalCache();
   }
 
+  public async publishReport(reportId: string): Promise<void> {
+    const rep = await this.irRepo.getById(reportId);
+    if (!rep) throw new Error('Report not found');
+
+    await this.outbox.enqueue({
+      id: crypto.randomUUID(),
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      entityType: ENTITY_TYPES.INSPECTION_REPORT,
+      entityId: reportId,
+      operation: 'UPDATE_STATUS',
+      payload: { 
+        status: REPORT_STATUSES.APPROVED,
+        version: rep.version
+      },
+      status: 'PENDING',
+      attemptCount: 0,
+      lastError: null,
+    });
+
+    rep.status = REPORT_STATUSES.APPROVED;
+    rep.syncState = 'PENDING';
+    rep.updatedAt = new Date().toISOString();
+    await this.irRepo.upsert(rep);
+
+    await this.refreshLocalCache();
+  }
+
   private async checkAndAutoApproveReport(reportId: string): Promise<void> {
     const sns = await this.snRepo.listByReportId(reportId);
     if (sns.length === 0) return;
 
-    const allApproved = sns.every(sn => sn.approvalStatus === 'APPROVED');
+    const allApproved = sns.every(sn => sn.approvalStatus === SERIAL_STATUSES.APPROVED);
     if (allApproved) {
       const rep = await this.irRepo.getById(reportId);
-      if (rep && rep.status !== 'APPROVED') {
-        await this.irRepo.upsert({
-          ...rep,
-          status: 'APPROVED',
-          syncState: 'PENDING',
-          updatedAt: new Date().toISOString()
-        });
+      if (rep && rep.status !== REPORT_STATUSES.APPROVED) {
+        // We still allow manual publish via button, but we could auto-trigger here if desired.
+        // For now, only local update to help UI states.
+        rep.status = REPORT_STATUSES.APPROVED;
+        await this.irRepo.upsert(rep);
       }
     }
   }

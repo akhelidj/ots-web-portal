@@ -349,19 +349,25 @@ export class InspectionReportsService {
         }
       }
 
-      // Verify each target sn is actually STILL SUBMITTED_FOR_APPROVAL
+      // Verify members - filter out those not in SUBMITTED_FOR_APPROVAL
+      const filteredTargetIds: string[] = [];
       for (const snId of targetSnIds) {
          const sn = await tx.serialNumber.findUnique({ where: { id: snId } });
-         if (!sn || sn.approvalStatus !== SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
-             throw new BadRequestException(`Serial ${sn?.serial || snId} is not in SUBMITTED_FOR_APPROVAL state.`);
+         if (sn && sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+             filteredTargetIds.push(snId);
          }
       }
 
-      // Update SN states
-      await tx.serialNumber.updateMany({
-        where: { id: { in: targetSnIds } },
-        data: { approvalStatus: SerialApprovalStatus.APPROVED }
-      });
+      if (filteredTargetIds.length === 0) {
+        // If everything requested is already processed, we just check batch status and return
+        // No error here helps "Approve Remaining" logic
+      } else {
+        // Update SN states
+        await tx.serialNumber.updateMany({
+          where: { id: { in: filteredTargetIds } },
+          data: { approvalStatus: SerialApprovalStatus.APPROVED }
+        });
+      }
 
       // Check if ALL SNs in this batch are now processed (no longer SUBMITTED_FOR_APPROVAL)
       const remainingInBatch = await tx.serialNumber.count({
@@ -490,19 +496,22 @@ export class InspectionReportsService {
         }
       }
 
-      // Verify members
+      // Verify members - filter out those not in SUBMITTED_FOR_APPROVAL
+      const filteredTargetIds: string[] = [];
       for (const snId of targetSnIds) {
          const sn = await tx.serialNumber.findUnique({ where: { id: snId } });
-         if (!sn || sn.approvalStatus !== SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
-             throw new BadRequestException(`Serial ${sn?.serial || snId} is not in SUBMITTED_FOR_APPROVAL state.`);
+         if (sn && sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+             filteredTargetIds.push(snId);
          }
       }
 
-      // Revert SNs to INSPECTED_DRAFT
-      await tx.serialNumber.updateMany({
-        where: { id: { in: targetSnIds } },
-        data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT }
-      });
+      if (filteredTargetIds.length > 0) {
+        // Revert SNs to INSPECTED_DRAFT
+        await tx.serialNumber.updateMany({
+          where: { id: { in: filteredTargetIds } },
+          data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT }
+        });
+      }
 
       // Check if ALL SNs in this batch are now processed
       const remainingInBatch = await tx.serialNumber.count({

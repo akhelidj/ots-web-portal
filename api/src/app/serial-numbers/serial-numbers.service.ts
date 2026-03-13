@@ -29,6 +29,7 @@ export class SerialNumbersService {
         serialNumber: s.serial,
         version: s.version,
         inspectionData: s.inspectionData,
+        disposition: s.disposition,
         approvalStatus: s.approvalStatus,
         updatedAt: s.updatedAt
       };
@@ -194,6 +195,15 @@ export class SerialNumbersService {
       // But usually PATCH payload is the complete merged state from client for offline first.
       // So replacing it is correct for our outbox implementation.
       dataToUpdate.inspectionData = payload.inspectionData;
+
+      // Sync top-level disposition column
+      if (payload.inspectionData) {
+        const final = payload.inspectionData['final'] || {};
+        const disp = final['disposition'] || payload.inspectionData['disposition'];
+        if (disp) {
+          dataToUpdate.disposition = disp as any;
+        }
+      }
       
       // Auto-transition to INSPECTED_DRAFT if meaningful data provided and not currently submitted/approved
       // (Lock check above ensures we aren't submitted or approved)
@@ -254,6 +264,7 @@ export class SerialNumbersService {
           serialNumber: updated.serial,
           version: updated.version,
           inspectionData: updated.inspectionData,
+          disposition: updated.disposition,
           approvalStatus: (updated as any).approvalStatus,
           updatedAt: updated.updatedAt
       };
