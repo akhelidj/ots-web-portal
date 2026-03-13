@@ -62,9 +62,10 @@ export const appRoutes: Route[] = [
         canActivate: [roleGuard],
         data: { roles: [APP_ROLES.RECEIVER] },
         children: [
-          { path: '', component: ReceiverWorkspaceComponent, pathMatch: 'full' },
+          { path: '', redirectTo: 'reports', pathMatch: 'full' },
+          { path: 'reports', component: ReceiverWorkspaceComponent },
           { path: 'reports/create', component: CreateInspectionReportComponent },
-          { path: ':id', component: InspectionReportDetailComponent },
+          { path: 'reports/:id', component: InspectionReportDetailComponent },
           { path: 'reports/:id/child', component: ChildReportDetailComponent }
         ]
       },
@@ -85,9 +86,10 @@ export const appRoutes: Route[] = [
         canActivate: [roleGuard],
         data: { roles: [APP_ROLES.SUPERVISOR] },
         children: [
-          { path: '', component: SupervisorWorkspaceComponent, pathMatch: 'full' },
+          { path: '', redirectTo: 'reports', pathMatch: 'full' },
+          { path: 'reports', component: SupervisorWorkspaceComponent },
           { path: 'reports/create', component: CreateInspectionReportComponent },
-          { path: ':id', component: InspectionReportDetailComponent },
+          { path: 'reports/:id', component: InspectionReportDetailComponent },
           { path: 'reports/:id/child', component: ChildReportDetailComponent }
         ]
       },
@@ -96,8 +98,9 @@ export const appRoutes: Route[] = [
         canActivate: [roleGuard],
         data: { roles: [APP_ROLES.CUSTOMER] },
         children: [
-          { path: '', component: CustomerWorkspaceComponent, pathMatch: 'full' },
-          { path: ':id', component: InspectionReportDetailComponent },
+          { path: '', redirectTo: 'reports', pathMatch: 'full' },
+          { path: 'reports', component: CustomerWorkspaceComponent },
+          { path: 'reports/:id', component: InspectionReportDetailComponent },
           { path: 'reports/:id/child', component: ChildReportDetailComponent }
         ]
       },

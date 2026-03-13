@@ -7,9 +7,7 @@ import { REPORT_STATUSES } from '@portal/core/constants/app.constants';
   selector: 'app-supervisor-workspace',
   standalone: true,
   imports: [CommonModule, InspectionReportListComponent],
-  template: `
-    <app-inspection-report-list [initialStatusFilter]="REPORT_STATUSES.IN_INSPECTION"></app-inspection-report-list>
-  `
+  templateUrl: './supervisor-workspace.component.html',
 })
 export class SupervisorWorkspaceComponent {
   protected REPORT_STATUSES = REPORT_STATUSES;

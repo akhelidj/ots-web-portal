@@ -1,48 +1,93 @@
-<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:p-4 focus:bg-white focus:text-primary z-50">Skip to content</a>
+<a
+  href="#main-content"
+  class="sr-only focus:not-sr-only focus:absolute focus:p-4 focus:bg-white focus:text-primary z-50"
+  >Skip to content</a
+>
 
-<div class="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-800 transition-colors duration-300">
-  
+<div
+  class="min-h-screen bg-stone-100 flex flex-col font-sans text-neutral-800 transition-colors duration-300"
+>
   <!-- Header App Bar -->
-  <header class="bg-primary text-white shadow-md z-50 sticky top-0">
+  <header
+    class="bg-primary text-white shadow-md z-50 sticky top-0 border-b border-primary-light/50"
+  >
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16 items-center">
         <!-- Logo / Title -->
         <div class="flex-shrink-0 flex items-center gap-3">
-          <img src="/assets/ots-mark.png" alt="Oilfield Tubular Services" width="44" height="44" class="h-11 w-11 rounded bg-white/95 p-1 shadow-sm" loading="lazy" decoding="async">
-          <h1 class="text-xl font-semibold tracking-tight">Portal</h1>
+          <img
+            src="/assets/ots-mark.png"
+            alt="Oilfield Tubular Services"
+            width="44"
+            height="44"
+            class="h-11 w-11 rounded bg-white/95 p-1 shadow-sm"
+            loading="lazy"
+            decoding="async"
+          />
+          <h1 class="text-lg sm:text-xl text-white font-semibold tracking-[0.04em]">
+            Trackline
+          </h1>
         </div>
 
         <!-- Sync & Status Area -->
         <div class="flex items-center gap-4 text-sm">
-          
           <!-- Sync Indicator -->
-          <div class="hidden md:flex flex-col items-end text-xs text-gray-300">
+          <div
+            class="hidden md:flex flex-col items-end text-xs text-neutral-300"
+          >
             <div class="flex items-center gap-2">
               <span class="flex h-2 w-2 relative">
                 @if (syncStatus() === 'Up to date') {
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-light opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-light opacity-75"
+                  ></span>
+                  <span
+                    class="relative inline-flex rounded-full h-2 w-2 bg-success"
+                  ></span>
                 } @else if (syncStatus() === 'Syncing...') {
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning-light opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning-light opacity-75"
+                  ></span>
+                  <span
+                    class="relative inline-flex rounded-full h-2 w-2 bg-warning"
+                  ></span>
                 } @else if (syncStatus() === 'Sync Error') {
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
+                  <span
+                    class="relative inline-flex rounded-full h-2 w-2 bg-error"
+                  ></span>
                 } @else {
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-gray-400"></span>
+                  <span
+                    class="relative inline-flex rounded-full h-2 w-2 bg-neutral-400"
+                  ></span>
                 }
               </span>
-              <span class="font-medium tracking-wide font-mono" [title]="syncStatus() === 'Sync Error' ? 'Local changes could not be synchronized' : ''">
+              <span
+                class="font-medium tracking-wide"
+                [title]="
+                  syncStatus() === 'Sync Error'
+                    ? 'Local changes could not be synchronized'
+                    : ''
+                "
+              >
                 {{ syncStatus() }}
                 @if (pendingCount() > 0) {
                   ({{ pendingCount() }})
                 }
               </span>
               @if (syncStatus() === 'Sync Error') {
-                <button (click)="clearSyncErrors()" class="bg-error/20 hover:bg-error/90 hover:text-white text-error-light px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider transition-colors ml-2" title="Clear Sync Error">Clear</button>
+                <button
+                  (click)="clearSyncErrors()"
+                  class="bg-error/20 hover:bg-error/90 hover:text-white text-error-light px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider transition-colors ml-2"
+                  title="Clear Sync Error"
+                >
+                  Clear
+                </button>
               }
             </div>
             @if (lastSyncedAt(); as lastSynced) {
-               <span class="opacity-70 mt-0.5">Last synced: {{ formatLastSynced(lastSynced) }}</span>
+              <span class="opacity-70 mt-0.5"
+                >Last synced: {{ formatLastSynced(lastSynced) }}</span
+              >
             }
           </div>
 
@@ -50,21 +95,42 @@
           @if (profile(); as profile) {
             <div class="hidden sm:flex flex-col items-end ml-4 mr-2 text-xs">
               @if (profile.role === 'CUSTOMER') {
-                <span class="font-semibold text-white tracking-wide">{{ profile.name || profile.email }}</span>
-                <span class="text-gray-300">{{ profile.customer?.name || 'Customer' }}</span>
+                <span class="font-semibold text-white tracking-wide">{{
+                  profile.name || profile.email
+                }}</span>
+                <span class="text-neutral-300">{{
+                  profile.customer?.name || 'Customer'
+                }}</span>
               } @else {
-                <span class="font-semibold text-white tracking-wide">{{ profile.name || profile.email }} <span class="text-gray-400 font-medium ml-0.5">({{ profile.role }})</span></span>
-                <span class="text-gray-300">{{ profile.tenant?.name || 'Internal' }}</span>
+                <span class="font-semibold text-white tracking-wide"
+                  >{{ profile.name || profile.email }}
+                  <span class="text-neutral-400 font-medium ml-0.5"
+                    >({{ profile.role }})</span
+                  ></span
+                >
+                <span class="text-neutral-300">{{
+                  profile.tenant?.name || 'Internal'
+                }}</span>
               }
             </div>
           }
 
           <!-- Dev Mode & Auth -->
-          <div class="flex items-center gap-3 ml-2 pl-4 border-l border-gray-700">
-            
+          <div
+            class="flex items-center gap-3 ml-2 pl-4 border-l border-primary-light/60"
+          >
             @if (isAuthenticated()) {
-              <a routerLink="/change-password" class="text-sm font-medium text-gray-300 hover:text-white transition-colors mr-3">Settings</a>
-              <button (click)="onSignOut()" class="text-sm font-medium text-gray-300 hover:text-white transition-colors">Sign Out</button>
+              <a
+                routerLink="/change-password"
+                class="text-sm font-medium text-neutral-300 hover:text-white transition-colors mr-3"
+                >Settings</a
+              >
+              <button
+                (click)="onSignOut()"
+                class="text-sm font-medium text-neutral-300 hover:text-white transition-colors"
+              >
+                Sign Out
+              </button>
             } @else if (isOnline() === false) {
               <span class="text-warning text-xs font-medium">Offline</span>
             }
@@ -77,16 +143,24 @@
   <!-- Navigation -->
   @if (isAuthenticated()) {
     @if (profile(); as profile) {
-      <nav class="bg-white border-b border-gray-200 shadow-sm" aria-label="Main Navigation">
+      <nav
+        class="bg-white border-b border-neutral-200 shadow-sm"
+        aria-label="Main Navigation"
+      >
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ul class="flex space-x-1 overflow-x-auto py-1">
-            @for (item of navigation.buildNavigation(profile.role); track item.label) {
+            @for (
+              item of navigation.buildNavigation(profile.role);
+              track item.label
+            ) {
               <li>
-                <a [routerLink]="item.route" 
-                   routerLinkActive="bg-accent/10 text-accent font-semibold border-b-2 border-accent" 
-                   [routerLinkActiveOptions]="{exact: true}"
-                   class="inline-block px-4 py-3 rounded-t-md text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 transition-all whitespace-nowrap"
-                   ariaCurrentWhenActive="page">
+                <a
+                  [routerLink]="item.route"
+                  routerLinkActive="bg-neutral-100 text-primary font-semibold border-b-2 border-primary"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                  class="inline-block px-4 py-3 rounded-t-md text-sm font-medium text-neutral-600 hover:text-primary hover:bg-neutral-50 transition-all whitespace-nowrap"
+                  ariaCurrentWhenActive="page"
+                >
                   {{ item.label }}
                 </a>
               </li>
@@ -98,7 +172,9 @@
   }
 
   <!-- Main Content Area -->
-  <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-opacity duration-300">
+  <main
+    class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 transition-opacity duration-300"
+  >
     <div id="main-content" tabindex="-1" class="outline-none h-full">
       @if (isAuthenticated()) {
         <router-outlet></router-outlet>
@@ -109,15 +185,18 @@
   </main>
 
   <!-- Footer -->
-  <footer class="bg-white border-t border-gray-200 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center text-sm text-gray-500">
-      <p>&copy; 2026 OTS Dashboard</p>
+  <footer class="bg-white border-t border-neutral-200 mt-auto">
+    <div
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex justify-between items-center text-sm text-neutral-500"
+    >
+      <p>&copy; 2026 OTS Trackline</p>
       <div class="flex gap-4">
         <span>Offline-First Architecture</span>
-        <span class="w-1.5 h-1.5 rounded-full bg-gray-300 self-center"></span>
-        <span>Minimal Variant</span>
+        <span
+          class="w-1.5 h-1.5 rounded-full bg-neutral-300 self-center"
+        ></span>
+        <span>Operational Workspace</span>
       </div>
     </div>
   </footer>
-
 </div>

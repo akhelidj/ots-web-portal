@@ -21,22 +21,22 @@ module.exports = {
         success: {
           DEFAULT: '#4CAF50',
           light: '#E8F5E9',
-          dark: '#388E3C'
+          dark: '#388E3C',
         },
         error: {
           DEFAULT: '#F44336',
           light: '#FFEBEE',
-          dark: '#D32F2F'
+          dark: '#D32F2F',
         },
         warning: {
           DEFAULT: '#FFC107',
           light: '#FFF8E1',
-          dark: '#F57F17'
-        }
+          dark: '#F57F17',
+        },
       },
       fontFamily: {
-        sans: ['Inter', 'Roboto', 'sans-serif'],
-      }
+        sans: ['"IBM Plex Sans"', '"Source Sans 3"', 'sans-serif'],
+      },
     },
   },
   plugins: [],

@@ -1,0 +1,13 @@
+<div class="space-y-4">
+  <div class="page-section p-4 sm:p-5">
+    <p class="text-xs uppercase tracking-[0.08em] text-neutral-500">
+      Supervisor Workspace
+    </p>
+    <p class="text-sm text-neutral-600 mt-1">
+      Decision-focused queue for reports currently in active inspection.
+    </p>
+  </div>
+  <app-inspection-report-list
+    [initialStatusFilter]="REPORT_STATUSES.IN_INSPECTION"
+  ></app-inspection-report-list>
+</div>

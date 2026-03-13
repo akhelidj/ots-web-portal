@@ -1,27 +1,66 @@
-<div class="px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto py-8">
-  <div class="flex items-center gap-4 mb-8">
-    <a routerLink=".." class="text-gray-400 hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-full hover:bg-gray-100">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-      </svg>
-    </a>
-    <div>
-      <h1 class="text-3xl font-bold tracking-tight text-primary">Create Inspection Report</h1>
-      <p class="mt-1 text-sm text-gray-500">Initialize a new blank inspection report offline or online.</p>
+<div class="max-w-3xl mx-auto py-4 sm:py-6 space-y-6">
+  <div class="page-section p-5 sm:p-6">
+    <div class="flex items-center gap-4">
+      <a
+        routerLink=".."
+        class="text-neutral-500 hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-full hover:bg-neutral-100"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
+        </svg>
+      </a>
+      <div>
+        <h1
+          class="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900"
+        >
+          Create Inspection Report
+        </h1>
+        <p class="mt-1 text-sm text-neutral-500">
+          Initialize a new report and place it in the intake queue for
+          inspection workflow.
+        </p>
+      </div>
     </div>
   </div>
 
-  <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+  <div class="page-section p-5 sm:p-7">
+    <div class="mb-6 pb-4 border-b border-neutral-200">
+      <h2 class="section-title">Report Setup</h2>
+      <p class="section-caption mt-1">
+        Required fields are marked and follow existing workflow rules.
+      </p>
+    </div>
     @if (formError) {
-      <div class="mb-6 bg-error-light border-l-4 border-error p-4 rounded-r-md">
+      <div class="mb-6 bg-error-light border border-error/30 p-4 rounded-md">
         <div class="flex">
           <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-error" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            <svg
+              class="h-5 w-5 text-error"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              />
             </svg>
           </div>
           <div class="ml-3">
-            <h3 class="text-sm font-medium text-error-dark">Error</h3>
+            <h3 class="text-sm font-medium text-error-dark">
+              Unable to create report
+            </h3>
             <p class="text-sm text-error mt-1">{{ formError }}</p>
           </div>
         </div>
@@ -30,36 +69,66 @@
 
     <form (ngSubmit)="onSubmit()" class="space-y-6">
       <div>
-        <label for="customer" class="block text-sm font-medium text-gray-700">Customer <span class="text-error">*</span></label>
+        <label for="customer" class="field-label"
+          >Customer <span class="text-error">*</span></label
+        >
         <div class="mt-1">
-          <select id="customer" name="customer" [(ngModel)]="formCustomer" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors cursor-pointer disabled:opacity-50">
+          <select
+            id="customer"
+            name="customer"
+            [(ngModel)]="formCustomer"
+            required
+            class="field-control disabled:opacity-50 cursor-pointer"
+          >
             <option value="" disabled selected>Select a Customer</option>
             @for (c of customers(); track c.id) {
-              <option [value]="c.id">{{c.name}}</option>
+              <option [value]="c.id">{{ c.name }}</option>
             }
           </select>
         </div>
       </div>
 
       <div>
-        <label for="poNumber" class="block text-sm font-medium text-gray-700">PO Number <span class="text-error">*</span></label>
+        <label for="poNumber" class="field-label"
+          >PO Number <span class="text-error">*</span></label
+        >
         <div class="mt-1">
-          <input id="poNumber" name="poNumber" type="text" [(ngModel)]="formPoNumber" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors">
+          <input
+            id="poNumber"
+            name="poNumber"
+            type="text"
+            [(ngModel)]="formPoNumber"
+            required
+            class="field-control"
+          />
         </div>
       </div>
 
       <div>
-        <label for="templateKey" class="block text-sm font-medium text-gray-700">Template Binding Display</label>
+        <label for="templateKey" class="field-label"
+          >Template Binding Display</label
+        >
         <div class="mt-1">
-          <input id="templateKey" name="templateKey" type="text" [(ngModel)]="formTemplateKey" readonly class="appearance-none block w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed sm:text-sm font-mono">
+          <input
+            id="templateKey"
+            name="templateKey"
+            type="text"
+            [(ngModel)]="formTemplateKey"
+            readonly
+            class="field-control bg-neutral-100 text-neutral-500 cursor-not-allowed font-mono"
+          />
         </div>
       </div>
 
-      <div class="pt-4 flex items-center justify-end gap-3 border-t border-gray-100">
-        <a routerLink=".." class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
-          Cancel
-        </a>
-        <button type="submit" [disabled]="!formCustomer || !formPoNumber || !formTemplateKey" class="inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+      <div
+        class="pt-5 flex items-center justify-end gap-3 border-t border-neutral-200"
+      >
+        <a routerLink=".." class="btn btn-secondary"> Cancel </a>
+        <button
+          type="submit"
+          [disabled]="!formCustomer || !formPoNumber || !formTemplateKey"
+          class="btn btn-primary"
+        >
           Create &amp; Enqueue
         </button>
       </div>

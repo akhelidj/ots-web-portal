@@ -1,17 +1,17 @@
-<div class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto py-8">
-  <div class="mb-8">
-    <h1 class="text-3xl font-bold tracking-tight text-primary">
+<div class="max-w-7xl mx-auto py-4 sm:py-6 space-y-6">
+  <div class="page-section p-5 sm:p-6">
+    <h1
+      class="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900"
+    >
       User Management
     </h1>
-    <p class="mt-2 text-sm text-gray-500">
+    <p class="mt-2 text-sm text-neutral-500">
       Create, configure, and manage user access roles across the platform.
     </p>
   </div>
 
   <!-- Create User Form -->
-  <div
-    class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100 mb-10"
-  >
+  <div class="page-section p-6 md:p-8">
     <form
       (ngSubmit)="onSubmitCreate()"
       #userForm="ngForm"
@@ -21,7 +21,7 @@
       <fieldset>
         <legend
           id="create-user-legend"
-          class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-3 w-full mb-6"
+          class="text-lg font-semibold text-neutral-900 border-b border-neutral-200 pb-3 w-full mb-6"
         >
           Create New User
         </legend>
@@ -30,7 +30,9 @@
           class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           <div>
-            <label for="email" class="block text-sm font-medium text-gray-700"
+            <label
+              for="email"
+              class="field-label !text-[11px] !normal-case !tracking-normal"
               >Email <span class="text-error">*</span></label
             >
             <div class="mt-1">
@@ -42,7 +44,7 @@
                 required
                 email
                 #emailField="ngModel"
-                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+                class="field-control"
                 [ngClass]="{
                   'border-error focus:ring-error focus:border-error':
                     emailField.invalid &&
@@ -58,7 +60,9 @@
           </div>
 
           <div>
-            <label for="name" class="block text-sm font-medium text-gray-700"
+            <label
+              for="name"
+              class="field-label !text-[11px] !normal-case !tracking-normal"
               >Name (Optional)</label
             >
             <div class="mt-1">
@@ -67,7 +71,7 @@
                 id="name"
                 name="name"
                 [(ngModel)]="formName"
-                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+                class="field-control"
               />
             </div>
           </div>
@@ -75,7 +79,7 @@
           <div>
             <label
               for="password"
-              class="block text-sm font-medium text-gray-700"
+              class="field-label !text-[11px] !normal-case !tracking-normal"
               >Temporary Password <span class="text-error">*</span></label
             >
             <div class="mt-1">
@@ -86,7 +90,7 @@
                 [(ngModel)]="formPassword"
                 required
                 #passwordField="ngModel"
-                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+                class="field-control"
                 [ngClass]="{
                   'border-error focus:ring-error focus:border-error':
                     passwordField.invalid &&
@@ -105,7 +109,9 @@
           </div>
 
           <div>
-            <label for="role" class="block text-sm font-medium text-gray-700"
+            <label
+              for="role"
+              class="field-label !text-[11px] !normal-case !tracking-normal"
               >Role</label
             >
             <div class="mt-1">
@@ -113,7 +119,7 @@
                 id="role"
                 name="role"
                 [(ngModel)]="formRole"
-                class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+                class="field-control"
               >
                 <option value="ADMIN">Admin</option>
                 <option value="RECEIVER">Receiver</option>
@@ -128,7 +134,7 @@
             <div>
               <label
                 for="customerId"
-                class="block text-sm font-medium text-gray-700"
+                class="field-label !text-[11px] !normal-case !tracking-normal"
                 >Associated Customer</label
               >
               <div class="mt-1">
@@ -137,7 +143,7 @@
                   name="customerId"
                   [(ngModel)]="formCustomerId"
                   required
-                  class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+                  class="field-control"
                 >
                   <option value="" disabled>Select a customer...</option>
                   @for (c of customers; track c.id) {
@@ -156,7 +162,7 @@
               !userForm.form.valid ||
               (formRole === 'CUSTOMER' && !formCustomerId)
             "
-            class="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn btn-primary"
           >
             Create User
           </button>
@@ -302,54 +308,52 @@
   }
 
   <!-- Users Data Table -->
-  <div
-    class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto mb-12"
-  >
+  <div class="queue-table-wrap">
     <table
       aria-label="Internal Users List"
       class="min-w-full divide-y divide-gray-200"
     >
-      <thead class="bg-gray-50">
+      <thead class="bg-neutral-50">
         <tr>
           <th
             scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            class="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
           >
             Email
           </th>
           <th
             scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            class="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
           >
             Name
           </th>
           <th
             scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            class="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
           >
             Role
           </th>
           <th
             scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            class="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
           >
             Active
           </th>
           <th
             scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            class="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
           >
             Sync Status
           </th>
           <th
             scope="col"
-            class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            class="px-6 py-3 text-right text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
           >
             Actions
           </th>
         </tr>
       </thead>
-      <tbody class="bg-white divide-y divide-gray-200">
+      <tbody class="bg-white divide-y divide-neutral-200">
         @for (user of users(); track user.id) {
           <tr
             class="hover:bg-primary/5 transition-all duration-300 transform"

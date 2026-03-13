@@ -288,7 +288,7 @@ export class InspectionReportDetailComponent implements OnInit {
 
   async ngOnInit() {
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
-    if (this.reportId) {
+    if (this.reportId && this.reportId !== 'reports') {
       this.refreshData();
 
       toObservable(this.irService.reports, { injector: this.injector }).subscribe(() => {
