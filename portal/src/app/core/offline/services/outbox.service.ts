@@ -73,7 +73,11 @@ export class OutboxService {
         skipEntities.add(c.entityId);
       }
 
-      for (const item of pendingItems) {
+      for (const initialItem of pendingItems) {
+        // Re-fetch from DB to ensure we have the latest remapped entityId/payload
+        const item = await this.repo.getById(initialItem.id);
+        if (!item || item.status !== 'PENDING') continue;
+
         const dependsOnConflicted = skipEntities.has(item.entityId) || 
                                    (item.payload && item.payload['inspectionReportId'] && skipEntities.has(item.payload['inspectionReportId'] as string));
         

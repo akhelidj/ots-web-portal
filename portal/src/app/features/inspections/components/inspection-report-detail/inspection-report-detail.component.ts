@@ -99,6 +99,7 @@ export class InspectionReportDetailComponent implements OnInit {
   public isValidationModalOpen = false;
 
   public selectedForApproval = signal<Set<string>>(new Set());
+  public selectedInBatch = signal<Set<string>>(new Set());
   public isSubmittingBatch = false;
 
   public activeActionBatchId: string | null = null;
@@ -196,10 +197,15 @@ export class InspectionReportDetailComponent implements OnInit {
   public kpiPassRate = 0;
 
   public isInspectorCapable = computed(() => {
-    const role = this.userRole();
+    const role = this.userRole().toUpperCase();
     return role === APP_ROLES.INSPECTOR || 
            role === APP_ROLES.SUPERVISOR || 
            role === APP_ROLES.ADMIN;
+  });
+
+  public canSubmitBatch = computed(() => {
+    const role = this.userRole().toUpperCase();
+    return role === APP_ROLES.INSPECTOR || role === APP_ROLES.ADMIN;
   });
 
   public inspectionProgress = computed(() => {
@@ -227,8 +233,10 @@ export class InspectionReportDetailComponent implements OnInit {
   public inspectionFormData: Record<string, unknown> = {};
 
   public isExporting = false;
-  public isCustomer = computed(() => this.userRole() === APP_ROLES.CUSTOMER);
-  public isReceiver = computed(() => this.userRole() === APP_ROLES.RECEIVER);
+  public isCustomer = computed(() => this.userRole().toUpperCase() === APP_ROLES.CUSTOMER);
+  public isReceiver = computed(() => this.userRole().toUpperCase() === APP_ROLES.RECEIVER);
+  public isSupervisor = computed(() => this.userRole().toUpperCase() === APP_ROLES.SUPERVISOR);
+  public isAdmin = computed(() => this.userRole().toUpperCase() === APP_ROLES.ADMIN);
 
   public isTransitionExpanded = true;
 
@@ -384,11 +392,13 @@ export class InspectionReportDetailComponent implements OnInit {
           (a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
         );
-        // Inspected By: First user who transitioned to IN_INSPECTION or PENDING_APPROVAL
-        const inspectLog = sortedAsc.find(
-          (l) =>
-            l.toStatus === REPORT_STATUSES.IN_INSPECTION || l.toStatus === REPORT_STATUSES.PENDING_APPROVAL,
-        );
+        // Inspected By: Last user who transitioned to IN_INSPECTION or PENDING_APPROVAL
+        const inspectLog = [...sortedAsc]
+          .reverse()
+          .find(
+            (l) =>
+              l.toStatus === REPORT_STATUSES.IN_INSPECTION || l.toStatus === REPORT_STATUSES.PENDING_APPROVAL,
+          );
         if (inspectLog && inspectLog.userId) {
           const u = await this.userRepo.getById(inspectLog.userId);
           this.inspectedByName = u?.name || u?.email || 'N/A';
@@ -887,6 +897,7 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public async submitSelectedForApproval(): Promise<void> {
+    if (!this.canSubmitBatch()) return;
     const selectedIds = Array.from(this.selectedForApproval());
     if (selectedIds.length === 0) return;
 
@@ -894,7 +905,8 @@ export class InspectionReportDetailComponent implements OnInit {
     this.formError = '';
 
     try {
-      await this.irService.submitApprovalBatchOffline(this.reportId, selectedIds);
+      await this.irService.submitApprovalBatch(this.reportId, selectedIds);
+
       this.selectedForApproval.set(new Set());
       this.refreshData();
     } catch (e) {
@@ -907,6 +919,7 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public openReturnBatchModal(batchId: string): void {
     this.activeActionBatchId = batchId;
+    // We NO LONGER reset selection here so pre-selected items carry over
     this.returnNotes = '';
     this.batchError = '';
   }
@@ -917,11 +930,38 @@ export class InspectionReportDetailComponent implements OnInit {
     this.batchError = '';
   }
 
+  public toggleBatchSnSelection(snId: string) {
+    const current = new Set(this.selectedInBatch());
+    if (current.has(snId)) {
+      current.delete(snId);
+    } else {
+      current.add(snId);
+    }
+    this.selectedInBatch.set(current);
+  }
+
+  public isBatchSnSelected(snId: string): boolean {
+    return this.selectedInBatch().has(snId);
+  }
+
   public async approveBatch(batchId: string): Promise<void> {
+    const selected = Array.from(this.selectedInBatch());
+    
+    // Safety check: ensure selection belongs to this batch
+    const batch = this.approvalBatches().find(b => b.batch.id === batchId);
+    if (!batch) return;
+
+    const batchSnIds = batch.serials.map(s => s.id);
+    const filteredSelection = selected.filter(id => batchSnIds.includes(id));
+    
+    // If no selection, we default to all ELIGIBLE serials (those still pending)
+    const ids = filteredSelection.length > 0 ? filteredSelection : undefined;
+
     this.isActioningBatch = true;
     this.batchError = '';
     try {
-      await this.irService.approveBatchOffline(batchId);
+      await this.irService.approveBatch(batchId, ids);
+      this.selectedInBatch.set(new Set());
       await this.refreshData();
     } catch(e) {
       const err = e as Error;
@@ -931,17 +971,34 @@ export class InspectionReportDetailComponent implements OnInit {
     }
   }
 
+  public getBatchEligibleCount(batchId: string): number {
+    const batch = this.approvalBatches().find(b => b.batch.id === batchId);
+    if (!batch) return 0;
+    return batch.serials.filter(s => s.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL).length;
+  }
+
   public async returnBatch(): Promise<void> {
     if (!this.activeActionBatchId) return;
+    const selected = Array.from(this.selectedInBatch());
+    
+    // Safety check: ensure selection belongs to this batch
+    const batch = this.approvalBatches().find(b => b.batch.id === this.activeActionBatchId);
+    const batchSnIds = batch?.serials.map(s => s.id) || [];
+    const filteredSelection = selected.filter(id => batchSnIds.includes(id));
+
+    const ids = filteredSelection.length > 0 ? filteredSelection : undefined;
+
     this.isActioningBatch = true;
     this.batchError = '';
     try {
-      await this.irService.returnBatchOffline(this.activeActionBatchId, this.returnNotes);
+      await this.irService.returnBatch(this.activeActionBatchId, this.returnNotes, ids);
+      this.selectedInBatch.set(new Set());
       this.closeReturnBatchModal();
       await this.refreshData();
     } catch(e) {
       const err = e as Error;
       this.batchError = err.message || 'Failed to return batch';
+      this.isActioningBatch = false; // Reset if error so user can retry
     } finally {
       this.isActioningBatch = false;
     }

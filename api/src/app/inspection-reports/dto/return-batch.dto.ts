@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsString, Min } from 'class-validator';
+import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
 
 export class ReturnBatchDto {
   @IsInt()
@@ -12,4 +12,9 @@ export class ReturnBatchDto {
   @IsString()
   @IsNotEmpty()
   reason: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  serialNumberIds?: string[];
 }

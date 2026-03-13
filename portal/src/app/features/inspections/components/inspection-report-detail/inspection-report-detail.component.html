@@ -127,11 +127,14 @@
             <span class="font-medium text-gray-900 text-sm">{{ inspectedByName }}</span>
           </div>
           <div>
-            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Approved By</span>
             <span class="font-medium text-gray-900 text-sm">{{ approvedByName }}</span>
           </div>
           <div>
+            @if(isCustomer()){
+            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Inspection Progress</span>
+            } @else {
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Approval Progress</span>
+            }
             <div class="flex items-center gap-2 mt-1">
                <div class="flex-1 bg-gray-200 rounded-full h-2">
                  <div class="bg-success h-2 rounded-full transition-all duration-500" [style.width.%]="inspectionProgress().percent"></div>
@@ -604,7 +607,7 @@
         
         @if (userRole() !== APP_ROLES.CUSTOMER) {
           <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto sm:ml-auto">
-            @if (selectedForApproval().size > 0) {
+            @if (selectedForApproval().size > 0 && canSubmitBatch()) {
               <button (click)="submitSelectedForApproval()" class="bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50" [disabled]="isSubmittingBatch">
                 @if (isSubmittingBatch) {
                   <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -640,22 +643,22 @@
       </div>
       <div class="overflow-x-auto overflow-y-auto flex-grow">
         <table class="min-w-full text-left border-collapse">
-          <thead class="bg-gray-50 sticky top-0 shadow-sm z-20 border-b border-gray-200">
+          <thead class="bg-gray-50 sticky top-0 shadow-sm z-[25] border-b border-gray-200">
             <!-- Top Header Row -->
             <tr>
-              <th scope="col" colspan="2" class="px-5 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-0 top-0 bg-gray-50 z-30 md:z-40 md:shadow-[1px_0_0_0_#eee] border-r border-gray-200">Info / Actions</th>
+              <th scope="col" colspan="2" class="px-5 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-0 bg-gray-50 z-30 md:z-40 md:shadow-[1px_0_0_0_#eee] border-r border-gray-200">Info / Actions</th>
               @if (userRole() !== APP_ROLES.CUSTOMER) {
-                <th scope="col" rowspan="2" class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 sticky top-0 bg-gray-50 z-30 border-r border-gray-200">Sync</th>
+                <th scope="col" rowspan="2" class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 bg-gray-50 z-30 border-r border-gray-200">Sync</th>
               }
-              <th scope="col" colspan="9" class="px-3 py-2 text-center text-[10px] font-bold text-blue-700 uppercase tracking-wider sticky top-0 bg-blue-50 z-30 border-r border-gray-200 border-b border-blue-200/50">Box Connection</th>
-              <th scope="col" colspan="8" class="px-3 py-2 text-center text-[10px] font-bold text-indigo-700 uppercase tracking-wider sticky top-0 bg-indigo-50 z-30 border-r border-gray-200 border-b border-indigo-200/50">Pin Connection</th>
-              <th scope="col" colspan="8" class="px-3 py-2 text-center text-[10px] font-bold text-purple-700 uppercase tracking-wider sticky top-0 bg-purple-50 z-30 border-r border-gray-200 border-b border-purple-200/50">Body</th>
-              <th scope="col" colspan="4" class="px-3 py-2 text-center text-[10px] font-bold text-gray-700 uppercase tracking-wider sticky top-0 bg-gray-100 z-30 border-r border-gray-200 border-b border-gray-200/50">Joint Class</th>
-              <th scope="col" rowspan="2" class="px-4 py-3 text-center text-[10px] font-bold text-gray-700 uppercase tracking-wider sticky top-0 bg-gray-100 z-30 min-w-[200px] border-l border-gray-200 border-b border-gray-200/50">Remarks</th>
+              <th scope="col" colspan="9" class="px-3 py-2 text-center text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 z-30 border-r border-gray-200 border-b border-blue-200/50">Box Connection</th>
+              <th scope="col" colspan="8" class="px-3 py-2 text-center text-[10px] font-bold text-indigo-700 uppercase tracking-wider bg-indigo-50 z-30 border-r border-gray-200 border-b border-indigo-200/50">Pin Connection</th>
+              <th scope="col" colspan="8" class="px-3 py-2 text-center text-[10px] font-bold text-purple-700 uppercase tracking-wider bg-purple-50 z-30 border-r border-gray-200 border-b border-purple-200/50">Body</th>
+              <th scope="col" colspan="4" class="px-3 py-2 text-center text-[10px] font-bold text-gray-700 uppercase tracking-wider bg-gray-100 z-30 border-r border-gray-200 border-b border-gray-200/50">Joint Class</th>
+              <th scope="col" rowspan="2" class="px-4 py-3 text-center text-[10px] font-bold text-gray-700 uppercase tracking-wider bg-gray-100 z-30 min-w-[200px] border-l border-gray-200 border-b border-gray-200/50">Remarks</th>
             </tr>
             <!-- Sub Header Row -->
             <tr>
-              <th scope="col" class="px-5 py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-0 top-8 bg-gray-50 z-30 md:z-40 md:shadow-[1px_0_0_0_#eee] w-48 min-w-[12rem] max-w-[12rem] border-r border-gray-200">
+              <th scope="col" class="px-5 py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-0 bg-gray-50 z-30 md:z-40 md:shadow-[1px_0_0_0_#eee] w-48 min-w-[12rem] max-w-[12rem] border-r border-gray-200">
                 <div class="flex items-center gap-2">
                   @if (userRole() !== APP_ROLES.CUSTOMER) {
                     <input type="checkbox" [checked]="isAllEligibleSelected" (change)="toggleAllEligible()" title="Select eligible for approval" class="rounded border-gray-300 text-accent focus:ring-accent w-3.5 h-3.5 mt-0.5 cursor-pointer">
@@ -663,45 +666,45 @@
                   <span>Serial Number</span>
                 </div>
               </th>
-              <th scope="col" class="px-4 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-[12rem] top-8 bg-gray-50 z-30 md:z-40 border-r border-gray-200 md:shadow-[1px_0_0_0_#eee] min-w-[120px]">Disp. / Act.</th>
+              <th scope="col" class="px-4 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-[12rem] bg-gray-50 z-30 md:z-40 border-r border-gray-200 md:shadow-[1px_0_0_0_#eee] min-w-[120px]">Disp. / Act.</th>
               
               <!-- BOX Columns -->
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Tong Spc.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Min OD</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Box Thd.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Ecc Shoulder">Ecc Sh.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Counter Bore Dia.">CBor D.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Counter Bore Len.">CBor L.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Bevel Diameter (Min/Max)">Bvl D.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Cond.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider sticky top-8 bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200" title="Hard Banding">Hard B.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Tong Spc.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Min OD</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Box Thd.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Ecc Shoulder">Ecc Sh.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Counter Bore Dia.">CBor D.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Counter Bore Len.">CBor L.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Bevel Diameter (Min/Max)">Bvl D.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Cond.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200" title="Hard Banding">Hard B.</th>
               
               <!-- PIN Columns -->
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Tong Spc.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Min OD</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Max ID</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Ecc Shoulder">Ecc Sh.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Pin Conn (Min/Max)">P. Conn</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Max Pin Base">P. Base</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Bevel Diameter (Min/Max)">Bvl D.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider sticky top-8 bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Cond.</th>
-
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Tong Spc.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Min OD</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Max ID</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Ecc Shoulder">Ecc Sh.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Pin Conn (Min/Max)">P. Conn</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Max Pin Base">P. Base</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Bevel Diameter (Min/Max)">Bvl D.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Cond.</th>
+              
               <!-- BODY Columns -->
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Wall Remaining">Wall R.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">OD Decr.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">EMI Res.</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Slip Area</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Corr. In</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Corr. Out</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">IPC</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider sticky top-8 bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Bent Jts</th>
-
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2" title="Wall Remaining">Wall R.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">OD Decr.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">EMI Res.</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Slip Area</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Corr. In</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Corr. Out</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">IPC</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Bent Jts</th>
+              
               <!-- JOINT CLASS sub-columns: New | Premium | C2 | Scrap -->
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">New</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Premium</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">C2</th>
-              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider sticky top-8 bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Scrap</th>
-
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">New</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">Premium</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2">C2</th>
+              <th scope="col" class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200">Scrap</th>
+              
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 bg-white">
@@ -860,10 +863,10 @@
                   </td>
 
                   <!-- JOINT CLASS Data -->
-                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20">{{ sn.inspectionJson?.jointClass?.isNew ? 'X' : '-' }}</td>
-                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20">{{ sn.inspectionJson?.jointClass?.isPremium ? 'X' : '-' }}</td>
-                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20">{{ sn.inspectionJson?.jointClass?.isC2 ? 'X' : '-' }}</td>
-                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20 border-r border-gray-100">{{ sn.inspectionJson?.jointClass?.isScrap ? 'X' : '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20">{{ sn.inspectionJson?.final?.isNew ? 'X' : '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20">{{ sn.inspectionJson?.final?.isPremium ? 'X' : '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20">{{ sn.inspectionJson?.final?.isC2 ? 'X' : '-' }}</td>
+                  <td class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20 border-r border-gray-100">{{ sn.inspectionJson?.final?.isScrap ? 'X' : '-' }}</td>
 
                   <!-- Remarks -->
                   <td class="px-4 py-3 align-top text-[10px] text-gray-600 group-hover:bg-gray-50/20 break-words max-w-[200px]" [title]="sn.inspectionJson?.remarks || ''">
@@ -969,8 +972,12 @@
                   }">{{ batchItem.batch.status === BATCH_STATUSES.SUBMITTED ? 'PENDING REVIEW' : batchItem.batch.status }}</span>
                   
                   @if ((userRole() === APP_ROLES.SUPERVISOR || userRole() === APP_ROLES.ADMIN) && batchItem.batch.status === BATCH_STATUSES.SUBMITTED) {
-                    <button (click)="openReturnBatchModal(batchItem.batch.id)" class="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-100 hover:bg-red-200 border border-red-200 rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500" [disabled]="isActioningBatch">Return...</button>
-                    <button (click)="approveBatch(batchItem.batch.id)" class="px-3 py-1.5 text-xs font-bold text-white bg-success hover:bg-success-dark rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-success" [disabled]="isActioningBatch">Approve ({{ batchItem.serials.length }})</button>
+                    <button (click)="openReturnBatchModal(batchItem.batch.id)" class="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-100 hover:bg-red-200 border border-red-200 rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500" [disabled]="isActioningBatch">
+                      Return {{ (selectedInBatch().size > 0 && getBatchEligibleCount(batchItem.batch.id) > 0) ? selectedInBatch().size + ' Selected' : 'Whole Batch (' + getBatchEligibleCount(batchItem.batch.id) + ')' }}...
+                    </button>
+                    <button (click)="approveBatch(batchItem.batch.id)" class="px-3 py-1.5 text-xs font-bold text-white bg-success hover:bg-success-dark rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-success" [disabled]="isActioningBatch || getBatchEligibleCount(batchItem.batch.id) === 0">
+                      Approve {{ (selectedInBatch().size > 0 && getBatchEligibleCount(batchItem.batch.id) > 0) ? selectedInBatch().size + ' Selected' : '(' + getBatchEligibleCount(batchItem.batch.id) + ')' }}
+                    </button>
                   }
                 </div>
               </div>
@@ -985,12 +992,26 @@
                      </div>
                    </div>
                  }
-                 <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Included Serial Numbers (<span class="text-primary">{{ batchItem.serials.length }}</span>)</div>
-                 <div class="flex flex-wrap gap-1.5">
-                   @for (sn of batchItem.serials; track sn.id) {
-                     <span class="font-mono text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded px-2 py-0.5">{{ sn.value }}</span>
-                   }
-                 </div>
+                  <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Included Serial Numbers (<span class="text-primary">{{ batchItem.serials.length }}</span>)</div>
+                  <div class="flex flex-wrap gap-2">
+                    @for (sn of batchItem.serials; track sn.id) {
+                      <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded px-2 py-1 transition-all"
+                           [ngClass]="{'border-primary bg-primary/5': isBatchSnSelected(sn.id)}">
+                        @if (sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL && (userRole() === APP_ROLES.SUPERVISOR || userRole() === APP_ROLES.ADMIN)) {
+                          <input type="checkbox" 
+                                 [checked]="isBatchSnSelected(sn.id)" 
+                                 (change)="toggleBatchSnSelection(sn.id)"
+                                 class="h-3.5 w-3.5 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                        }
+                        <span class="font-mono text-xs text-gray-700">{{ sn.value }}</span>
+                        @if (sn.approvalStatus === SERIAL_STATUSES.APPROVED) {
+                          <svg class="h-3 w-3 text-success" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                        } @else if (sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT) {
+                          <span class="text-[10px] text-red-500 font-bold">RETURNED</span>
+                        }
+                      </div>
+                    }
+                  </div>
               </div>
             </div>
           }
@@ -1108,6 +1129,51 @@
        </div>
        <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end rounded-b-xl shrink-0">
           <button (click)="isValidationModalOpen = false" class="px-5 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">Close</button>
+       </div>
+    </div>
+  </div>
+}
+
+@if (activeActionBatchId && !batchError) {
+  <div class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all p-4">
+    <div tabindex="0" class="absolute inset-0" (click)="closeReturnBatchModal()" (keydown.enter)="closeReturnBatchModal()"></div>
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg flex flex-col border border-gray-200 z-10 animate-[sliceIn_0.2s_ease-out]">
+       <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-red-50 rounded-t-xl shrink-0">
+         <h3 class="text-lg font-bold text-red-700 flex items-center gap-2">
+           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
+           </svg>
+           Return Items to Inspector
+         </h3>
+         <button (click)="closeReturnBatchModal()" class="text-gray-400 hover:text-gray-900 hover:bg-gray-100 p-1.5 rounded-full transition-colors flex items-center justify-center shrink-0">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+         </button>
+       </div>
+       <div class="p-6 bg-white shrink-0">
+          <p class="text-sm text-gray-600 mb-4">
+            You are returning 
+            <span class="font-bold text-gray-900">
+              {{ (selectedInBatch().size > 0 && activeActionBatchId) ? selectedInBatch().size + ' selected item(s)' : 'all remaining pending items' }}
+            </span> 
+            for correction. Please provide a reason below.
+          </p>
+          
+          <label for="return-notes-input" class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Reason for Return</label>
+          <textarea id="return-notes-input" [(ngModel)]="returnNotes" rows="4" class="w-full border border-gray-300 p-3 rounded-md focus:ring-red-500 focus:border-red-500 text-sm shadow-sm transition-colors" placeholder="Explain what needs to be corrected..."></textarea>
+          
+          @if (batchError) {
+            <p class="mt-2 text-xs text-red-600 font-medium">{{ batchError }}</p>
+          }
+       </div>
+       <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-xl shrink-0">
+          <button (click)="closeReturnBatchModal()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-50 transition-colors">Cancel</button>
+          <button (click)="returnBatch()" [disabled]="isActioningBatch || !returnNotes.trim()" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors disabled:opacity-50">
+            @if (isActioningBatch) {
+              Returning...
+            } @else {
+              Confirm Return
+            }
+          </button>
        </div>
     </div>
   </div>

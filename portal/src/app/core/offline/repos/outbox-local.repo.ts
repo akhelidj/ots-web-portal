@@ -9,7 +9,18 @@ export class OutboxLocalRepo {
   private dbService = inject(DbService);
   private readonly STORE_NAME = 'outbox';
 
+  public async getById(id: string): Promise<OutboxItem | null> {
+    const db = await this.dbService.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readonly');
+      const request = tx.objectStore(this.STORE_NAME).get(id);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   public async getPendingItems(): Promise<OutboxItem[]> {
+
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.STORE_NAME, 'readonly');

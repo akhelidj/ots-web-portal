@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class ApproveBatchDto {
   @IsInt()
@@ -12,4 +12,9 @@ export class ApproveBatchDto {
   @IsString()
   @IsOptional()
   reason?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  serialNumberIds?: string[];
 }

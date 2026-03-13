@@ -5,13 +5,13 @@ import { signal } from '@angular/core';
 import { environment } from '@app-env/environment';
 import { InspectionReportLocalRepo } from '@portal/core/offline/repos/inspection-report-local.repo';
 import { SerialNumberLocalRepo } from '@portal/core/offline/repos/serial-number-local.repo';
-import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog } from '@portal/core/offline/models/types';
+import { LocalInspectionReport, LocalSerialNumber, LocalTransitionLog, LocalInspectionApprovalBatch, LocalBatchSerialNumber } from '@portal/core/offline/models/types';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { TransitionLogLocalRepo } from '@portal/core/offline/repos/transition-log-local.repo';
 import { ApprovalBatchLocalRepo } from '@portal/core/offline/repos/approval-batch-local.repo';
 import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-serial-number-local.repo';
 import { SessionService } from '@portal/core/auth/services/session.service';
-import { APP_ROLES, ENTITY_TYPES, ReportStatus } from '@portal/core/constants/app.constants';
+import { BATCH_STATUSES, ENTITY_TYPES, ReportStatus, SERIAL_STATUSES } from '@portal/core/constants/app.constants';
 
 @Injectable({
   providedIn: 'root'
@@ -118,7 +118,7 @@ export class InspectionReportsService {
         this.http.get<any[]>(`${environment.apiUrl}/inspection-reports/${reportId}/approval-batches`)
       );
 
-      const localBatchList = await this.approvalBatchRepo.listByReportId(reportId);
+
 
       for (const b of batches) {
         // Upsert Batch
@@ -155,11 +155,8 @@ export class InspectionReportsService {
 
   public async pullAllAndCache(): Promise<void> {
     try {
-      let url = `${environment.apiUrl}/inspection-reports`;
-      const profile = this.session.profile();
-      if (profile?.role === APP_ROLES.SUPERVISOR) {
-        url += '?status=PENDING_APPROVAL';
-      }
+      const url = `${environment.apiUrl}/inspection-reports`;
+      // Removed role-based status filtering for Supervisors to ensure all reports are visible
 
       const reports = await firstValueFrom(
         this.http.get<LocalInspectionReport[]>(url)
@@ -195,7 +192,26 @@ export class InspectionReportsService {
             const local = localSnMap.get(s.id);
             if (!local || local.syncState === 'SYNCED') {
                const { serialNumber, inspectionData, ...restS } = s;
-               const ls = { ...restS, value: serialNumber, inspectionJson: inspectionData, inspectionReportId: rep.id, syncState: 'SYNCED' };
+               
+               // Safeguard: Preserve local disposition/final section if server data is partial
+               let mergedInspectionJson = inspectionData as Record<string, any>;
+               if (local?.inspectionJson && inspectionData) {
+                  const localDisp = local.inspectionJson['disposition'] || local.inspectionJson['final']?.['disposition'];
+                  const serverDisp = (inspectionData as Record<string, any>)['disposition'] || (inspectionData as Record<string, any>)['final']?.['disposition'];
+                  
+                  if (localDisp && !serverDisp) {
+                    // Merge local disposition back into the server payload if missing
+                    mergedInspectionJson = {
+                      ...(inspectionData as Record<string, any>),
+                      ['final']: {
+                        ...((inspectionData as Record<string, any>)['final'] || {}),
+                        ['disposition']: localDisp
+                      }
+                    };
+                  }
+               }
+
+               const ls = { ...restS, value: serialNumber, inspectionJson: mergedInspectionJson, inspectionReportId: rep.id, syncState: 'SYNCED' };
                toUpsertSn.push(ls as unknown as LocalSerialNumber);
             }
           }
@@ -442,12 +458,58 @@ export class InspectionReportsService {
     });
   }
 
+  public async submitApprovalBatch(reportId: string, serialNumberIds: string[]): Promise<void> {
+    if (navigator.onLine) {
+      const rep = await this.irRepo.getById(reportId);
+      if (!rep) throw new Error('Report not found');
+
+      try {
+        const response = await firstValueFrom(
+          this.http.post<any>(`${environment.apiUrl}/inspection-reports/${reportId}/approval-batches`, {
+            serialNumberIds,
+            reportVersion: rep.version
+          })
+        );
+        // Refresh local cache with server state
+        await this.pullBatchesForReport(reportId);
+        await this.pullAllAndCache();
+        return;
+      } catch (err) {
+        console.error('Direct batch submission failed, falling back to offline', err);
+      }
+    }
+    return this.submitApprovalBatchOffline(reportId, serialNumberIds);
+  }
+
   public async submitApprovalBatchOffline(reportId: string, serialNumberIds: string[]): Promise<void> {
+
     const rep = await this.irRepo.getById(reportId);
     if (!rep) throw new Error('Report not found');
 
     const batchId = 'local-batch-' + crypto.randomUUID();
+    const profile = this.session.profile();
+
+    const newBatch: LocalInspectionApprovalBatch = {
+      id: batchId,
+      tenantId: profile?.tenantId || '',
+      inspectionReportId: reportId,
+      submittedByUserId: profile?.id || '',
+      submittedAt: new Date().toISOString(),
+      status: 'SUBMITTED',
+      version: 1,
+      syncState: 'PENDING'
+    };
+
+    await this.approvalBatchRepo.upsert(newBatch);
+
+    const bSns: LocalBatchSerialNumber[] = serialNumberIds.map(snId => ({
+      id: 'local-bsn-' + crypto.randomUUID(),
+      inspectionApprovalBatchId: batchId,
+      serialNumberId: snId,
+    }));
     
+    await this.batchSnRepo.bulkUpsert(bSns);
+
     await this.outbox.enqueue({
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
@@ -455,7 +517,7 @@ export class InspectionReportsService {
       entityType: 'APPROVAL_BATCH', // We defined it as APPROVAL_BATCH in sync-dispatcher
       entityId: batchId,
       operation: 'SUBMIT',
-      payload: { inspectionReportId: reportId, serialNumberIds },
+      payload: { inspectionReportId: reportId, serialNumberIds, reportVersion: rep.version },
       status: 'PENDING',
       attemptCount: 0,
       lastError: null,
@@ -471,9 +533,38 @@ export class InspectionReportsService {
     await this.refreshLocalCache();
   }
 
-  public async approveBatchOffline(batchId: string): Promise<void> {
+  public async approveBatch(batchId: string, serialNumberIds?: string[]): Promise<void> {
+    if (navigator.onLine) {
+      const batch = await this.approvalBatchRepo.getById(batchId);
+      if (batch && !batch.id.startsWith('local-')) {
+        const rep = await this.irRepo.getById(batch.inspectionReportId);
+        if (rep) {
+          try {
+            await firstValueFrom(
+              this.http.post<any>(`${environment.apiUrl}/inspection-reports/${batch.inspectionReportId}/approval-batches/${batchId}/approve`, {
+                batchVersion: batch.version,
+                reportVersion: rep.version,
+                serialNumberIds
+              })
+            );
+            await this.pullBatchesForReport(batch.inspectionReportId);
+            await this.pullAllAndCache();
+            return;
+          } catch (err) {
+            console.error('Direct batch approval failed, falling back to offline', err);
+          }
+        }
+      }
+    }
+    return this.approveBatchOffline(batchId, serialNumberIds);
+  }
+
+  public async approveBatchOffline(batchId: string, serialNumberIds?: string[]): Promise<void> {
     const batch = await this.approvalBatchRepo.getById(batchId);
     if (!batch) throw new Error('Batch not found');
+
+    const rep = await this.irRepo.getById(batch.inspectionReportId);
+    if (!rep) throw new Error('Report not found');
 
     await this.outbox.enqueue({
       id: crypto.randomUUID(),
@@ -482,30 +573,93 @@ export class InspectionReportsService {
       entityType: 'APPROVAL_BATCH',
       entityId: batchId,
       operation: 'APPROVE',
-      payload: {},
+      payload: { 
+        batchVersion: batch.version,
+        reportVersion: rep.version,
+        serialNumberIds
+      },
       status: 'PENDING',
       attemptCount: 0,
       lastError: null,
     });
 
-    batch.status = 'APPROVED';
-    await this.approvalBatchRepo.upsert(batch);
-
     const batchSns = await this.batchSnRepo.listByBatchId(batchId);
-    for (const bSn of batchSns) {
-      const sn = await this.snRepo.getById(bSn.serialNumberId);
+    let targetSnIds: string[] = [];
+    
+    if (serialNumberIds && serialNumberIds.length > 0) {
+      targetSnIds = serialNumberIds;
+    } else {
+      // Filter for items that are actually pending
+      for (const m of batchSns) {
+        const sn = await this.snRepo.getById(m.serialNumberId);
+        if (sn && sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
+          targetSnIds.push(m.serialNumberId);
+        }
+      }
+    }
+
+    for (const snId of targetSnIds) {
+      const sn = await this.snRepo.getById(snId);
       if (sn) {
-        sn.approvalStatus = 'APPROVED';
+        sn.approvalStatus = SERIAL_STATUSES.APPROVED;
         sn.syncState = 'PENDING';
         await this.snRepo.upsert(sn);
       }
     }
+
+    // Update batch status only if all members are processed
+    const allMembers = await this.batchSnRepo.listByBatchId(batchId);
+    let allProcessed = true;
+    for (const m of allMembers) {
+      const sn = await this.snRepo.getById(m.serialNumberId);
+      if (sn && sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
+        allProcessed = false;
+        break;
+      }
+    }
+
+    if (allProcessed) {
+      batch.status = BATCH_STATUSES.APPROVED;
+      await this.approvalBatchRepo.upsert(batch);
+    }
+
     await this.refreshLocalCache();
+    await this.checkAndAutoApproveReport(batch.inspectionReportId);
   }
 
-  public async returnBatchOffline(batchId: string, notes: string): Promise<void> {
+  public async returnBatch(batchId: string, reason: string, serialNumberIds?: string[]): Promise<void> {
+    if (navigator.onLine) {
+      const batch = await this.approvalBatchRepo.getById(batchId);
+      if (batch && !batch.id.startsWith('local-')) {
+        const rep = await this.irRepo.getById(batch.inspectionReportId);
+        if (rep) {
+          try {
+            await firstValueFrom(
+              this.http.post<any>(`${environment.apiUrl}/inspection-reports/${batch.inspectionReportId}/approval-batches/${batchId}/return`, {
+                reason,
+                batchVersion: batch.version,
+                reportVersion: rep.version,
+                serialNumberIds
+              })
+            );
+            await this.pullBatchesForReport(batch.inspectionReportId);
+            await this.pullAllAndCache();
+            return;
+          } catch (err) {
+            console.error('Direct batch return failed, falling back to offline', err);
+          }
+        }
+      }
+    }
+    return this.returnBatchOffline(batchId, reason, serialNumberIds);
+  }
+
+  public async returnBatchOffline(batchId: string, reason: string, serialNumberIds?: string[]): Promise<void> {
     const batch = await this.approvalBatchRepo.getById(batchId);
     if (!batch) throw new Error('Batch not found');
+
+    const rep = await this.irRepo.getById(batch.inspectionReportId);
+    if (!rep) throw new Error('Report not found');
 
     await this.outbox.enqueue({
       id: crypto.randomUUID(),
@@ -514,25 +668,76 @@ export class InspectionReportsService {
       entityType: 'APPROVAL_BATCH',
       entityId: batchId,
       operation: 'RETURN',
-      payload: { notes },
+      payload: { 
+        reason,
+        batchVersion: batch.version,
+        reportVersion: rep.version,
+        serialNumberIds
+      },
       status: 'PENDING',
       attemptCount: 0,
       lastError: null,
     });
 
-    batch.status = 'RETURNED';
-    batch.notes = notes;
-    await this.approvalBatchRepo.upsert(batch);
-
     const batchSns = await this.batchSnRepo.listByBatchId(batchId);
-    for (const bSn of batchSns) {
-      const sn = await this.snRepo.getById(bSn.serialNumberId);
+    let targetSnIds: string[] = [];
+
+    if (serialNumberIds && serialNumberIds.length > 0) {
+      targetSnIds = serialNumberIds;
+    } else {
+      // Filter for items that are actually pending
+      for (const m of batchSns) {
+        const sn = await this.snRepo.getById(m.serialNumberId);
+        if (sn && sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
+          targetSnIds.push(m.serialNumberId);
+        }
+      }
+    }
+
+    for (const snId of targetSnIds) {
+      const sn = await this.snRepo.getById(snId);
       if (sn) {
-        sn.approvalStatus = 'INSPECTED_DRAFT';
+        sn.approvalStatus = SERIAL_STATUSES.INSPECTED_DRAFT;
         sn.syncState = 'PENDING';
         await this.snRepo.upsert(sn);
       }
     }
+
+    // Update batch status only if all members are processed
+    const allMembers = await this.batchSnRepo.listByBatchId(batchId);
+    let allProcessed = true;
+    for (const m of allMembers) {
+      const sn = await this.snRepo.getById(m.serialNumberId);
+      if (sn && sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
+        allProcessed = false;
+        break;
+      }
+    }
+
+    if (allProcessed) {
+      batch.status = BATCH_STATUSES.RETURNED;
+      batch.notes = reason;
+      await this.approvalBatchRepo.upsert(batch);
+    }
+
     await this.refreshLocalCache();
+  }
+
+  private async checkAndAutoApproveReport(reportId: string): Promise<void> {
+    const sns = await this.snRepo.listByReportId(reportId);
+    if (sns.length === 0) return;
+
+    const allApproved = sns.every(sn => sn.approvalStatus === 'APPROVED');
+    if (allApproved) {
+      const rep = await this.irRepo.getById(reportId);
+      if (rep && rep.status !== 'APPROVED') {
+        await this.irRepo.upsert({
+          ...rep,
+          status: 'APPROVED',
+          syncState: 'PENDING',
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
   }
 }

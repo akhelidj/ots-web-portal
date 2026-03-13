@@ -55,6 +55,7 @@ export interface LocalInspectionApprovalBatch {
   status: 'SUBMITTED' | 'APPROVED' | 'RETURNED';
   notes?: string | null;
   version: number;
+  syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
 }
 
 export interface LocalBatchSerialNumber {

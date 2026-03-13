@@ -17,6 +17,7 @@ import {
   LocalSerialNumber,
   LocalChildReport,
   LocalInspectionApprovalBatch,
+  LocalBatchSerialNumber,
 } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { ENTITY_TYPES } from '@portal/core/constants/app.constants';
@@ -499,6 +500,147 @@ export class SyncDispatcherService {
               ...transitionRes,
               syncState: 'SYNCED',
             });
+          }
+          return true;
+        }
+
+        case 'APPROVAL_BATCH:SUBMIT': {
+          const reportId = item.payload['inspectionReportId'] as string;
+          const serialNumberIds = item.payload['serialNumberIds'] as string[];
+          const reportVersion = item.payload['reportVersion'] as number;
+          
+          const createRes = await firstValueFrom(
+            this.http.post<any>(
+              `${environment.apiUrl}/inspection-reports/${reportId}/approval-batches`,
+              { serialNumberIds, reportVersion }
+            )
+          );
+
+          // Clear local temporary batch and its associations
+          await this.approvalBatchRepo.delete(item.entityId);
+          await this.batchSnRepo.deleteByBatchId(item.entityId);
+
+          const b = createRes.batch;
+          await this.approvalBatchRepo.upsert({
+              id: b.id,
+              tenantId: b.tenantId,
+              inspectionReportId: b.inspectionReportId,
+              submittedByUserId: b.submittedByUserId,
+              submittedAt: b.submittedAt,
+              reviewedByUserId: b.reviewedByUserId,
+              reviewedAt: b.reviewedAt,
+              status: b.status,
+              notes: b.notes,  
+              version: b.version,
+              syncState: 'SYNCED'
+          });
+
+          if (b.serialNumbers) {
+             const associations: LocalBatchSerialNumber[] = b.serialNumbers.map((sn: any) => ({
+                 id: sn.id,
+                 inspectionApprovalBatchId: b.id,
+                 serialNumberId: sn.serialNumberId
+             }));
+             await this.batchSnRepo.bulkUpsert(associations);
+          }
+
+          const pendingItems = await this.outboxRepo.getPendingItems();
+          for (const pending of pendingItems) {
+              if (pending.entityType === 'APPROVAL_BATCH' && pending.entityId === item.entityId) {
+                  pending.entityId = b.id;
+                  await this.outboxRepo.upsert(pending);
+              }
+          }
+
+          for (const snId of serialNumberIds) {
+            const sn = await this.snRepo.getById(snId);
+            if (sn) {
+              await this.snRepo.upsert({ ...sn, syncState: 'SYNCED' });
+            }
+          }
+          return true;
+        }
+
+        case 'APPROVAL_BATCH:APPROVE': {
+          const batch = await this.approvalBatchRepo.getById(item.entityId);
+          if (!batch) return true;
+          
+          const res = await firstValueFrom(
+            this.http.post<any>(
+              `${environment.apiUrl}/inspection-reports/${batch.inspectionReportId}/approval-batches/${item.entityId}/approve`,
+              { 
+                batchVersion: item.payload['batchVersion'],
+                reportVersion: item.payload['reportVersion'],
+                serialNumberIds: item.payload['serialNumberIds']
+              }
+            )
+          );
+
+          if (res && res.updatedReport) {
+             const localRep = await this.irRepo.getById(batch.inspectionReportId);
+             if (localRep) {
+               await this.irRepo.upsert({ ...localRep, status: res.updatedReport.status, version: res.updatedReport.version, syncState: 'SYNCED' });
+             }
+          }
+
+          if (res && res.batch) {
+            await this.approvalBatchRepo.upsert({ ...batch, status: res.batch.status, version: res.batch.version, syncState: 'SYNCED' });
+          } else {
+            // Fallback for older API versions or if batch not returned
+            await this.approvalBatchRepo.upsert({ ...batch, syncState: 'SYNCED' });
+          }
+          
+          const targetSnIds = item.payload['serialNumberIds'] as string[] | undefined;
+          const batchSns = await this.batchSnRepo.listByBatchId(item.entityId);
+          const finalSnIds = targetSnIds || batchSns.map(b => b.serialNumberId);
+
+          for (const snId of finalSnIds) {
+            const sn = await this.snRepo.getById(snId);
+            if (sn) {
+              await this.snRepo.upsert({ ...sn, syncState: 'SYNCED' });
+            }
+          }
+          return true;
+        }
+
+        case 'APPROVAL_BATCH:RETURN': {
+          const batch = await this.approvalBatchRepo.getById(item.entityId);
+          if (!batch) return true;
+
+          const res = await firstValueFrom(
+            this.http.post<any>(
+              `${environment.apiUrl}/inspection-reports/${batch.inspectionReportId}/approval-batches/${item.entityId}/return`,
+              { 
+                reason: item.payload['reason'] || item.payload['notes'], // Fix payload key
+                batchVersion: item.payload['batchVersion'],
+                reportVersion: item.payload['reportVersion'],
+                serialNumberIds: item.payload['serialNumberIds']
+              }
+            )
+          );
+
+          if (res && res.updatedReport) {
+            const localRep = await this.irRepo.getById(batch.inspectionReportId);
+            if (localRep) {
+              await this.irRepo.upsert({ ...localRep, status: res.updatedReport.status, version: res.updatedReport.version, syncState: 'SYNCED' });
+            }
+          }
+
+          if (res && res.batch) {
+            await this.approvalBatchRepo.upsert({ ...batch, status: res.batch.status, version: res.batch.version, notes: res.batch.notes, syncState: 'SYNCED' });
+          } else {
+            await this.approvalBatchRepo.upsert({ ...batch, syncState: 'SYNCED' });
+          }
+
+          const targetSnIds = item.payload['serialNumberIds'] as string[] | undefined;
+          const batchSns = await this.batchSnRepo.listByBatchId(item.entityId);
+          const finalSnIds = targetSnIds || batchSns.map(b => b.serialNumberId);
+
+          for (const snId of finalSnIds) {
+            const sn = await this.snRepo.getById(snId);
+            if (sn) {
+              await this.snRepo.upsert({ ...sn, syncState: 'SYNCED' });
+            }
           }
           return true;
         }

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { Prisma, UserRole, InspectionReportStatus } from '@prisma/client';
+import { Prisma, UserRole, InspectionReportStatus, SerialApprovalStatus, InspectionApprovalBatchStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 
@@ -318,62 +318,101 @@ export class InspectionReportsService {
     });
   }
 
-  async approveBatch(tenantId: string, reportId: string, batchId: string, userId: string, data: { batchVersion: number, reportVersion: number, reason?: string }) {
+  async approveBatch(tenantId: string, reportId: string, batchId: string, userId: string, data: { batchVersion: number, reportVersion: number, reason?: string, serialNumberIds?: string[] }) {
     return await this.prisma.$transaction(async (tx) => {
       const batch = await tx.inspectionApprovalBatch.findFirst({
         where: { id: batchId, tenantId, inspectionReportId: reportId },
-        include: { serialNumbers: { include: { serialNumber: true } } }
+        include: { serialNumbers: true }
       });
 
       if (!batch) throw new NotFoundException('Batch not found');
-      if (batch.status !== 'SUBMITTED') throw new BadRequestException(`Cannot approve batch in status ${batch.status}`);
+      if (batch.status !== InspectionApprovalBatchStatus.SUBMITTED) {
+        throw new BadRequestException(`Cannot approve batch in status ${batch.status}`);
+      }
       if (batch.version !== data.batchVersion) throw new ConflictException(`Batch version mismatch. Expected ${batch.version}, got ${data.batchVersion}`);
 
       const report = await tx.inspectionReport.findFirst({
         where: { id: reportId, tenantId },
-        include: { serialNumbers: true }
       });
 
       if (!report) throw new NotFoundException('Report not found');
       if (report.version !== data.reportVersion) throw new ConflictException(`Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`);
 
-      // Verify each member is actually STILL SUBMITTED_FOR_APPROVAL
-      for (const member of batch.serialNumbers) {
-         const sn = await tx.serialNumber.findUnique({ where: { id: member.serialNumberId } });
-         if (!sn || sn.approvalStatus !== 'SUBMITTED_FOR_APPROVAL') {
-             throw new BadRequestException(`Serial ${sn?.serial} is not in SUBMITTED_FOR_APPROVAL state.`);
+      // Filter SNs to approve
+      const allBatchSnIds = batch.serialNumbers.map(m => m.serialNumberId);
+      const targetSnIds = data.serialNumberIds || allBatchSnIds;
+
+      // Validate targetSnIds are members of the batch
+      for (const id of targetSnIds) {
+        if (!allBatchSnIds.includes(id)) {
+          throw new BadRequestException(`Serial number ${id} is not part of batch ${batchId}`);
+        }
+      }
+
+      // Verify each target sn is actually STILL SUBMITTED_FOR_APPROVAL
+      for (const snId of targetSnIds) {
+         const sn = await tx.serialNumber.findUnique({ where: { id: snId } });
+         if (!sn || sn.approvalStatus !== SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+             throw new BadRequestException(`Serial ${sn?.serial || snId} is not in SUBMITTED_FOR_APPROVAL state.`);
          }
+      }
+
+      // Update SN states
+      await tx.serialNumber.updateMany({
+        where: { id: { in: targetSnIds } },
+        data: { approvalStatus: SerialApprovalStatus.APPROVED }
+      });
+
+      // Check if ALL SNs in this batch are now processed (no longer SUBMITTED_FOR_APPROVAL)
+      const remainingInBatch = await tx.serialNumber.count({
+        where: {
+          id: { in: allBatchSnIds },
+          approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL
+        }
+      });
+
+      let updatedBatchStatus: InspectionApprovalBatchStatus = batch.status;
+      if (remainingInBatch === 0) {
+        // Find if any were returned or if all were approved
+        const approvedCount = await tx.serialNumber.count({
+          where: { id: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.APPROVED }
+        });
+        
+        if (approvedCount === allBatchSnIds.length) {
+          updatedBatchStatus = InspectionApprovalBatchStatus.APPROVED;
+        } else {
+          // If some were approved and some were returned, it's effectively RETURNED (it contains corrections)
+          // or we could keep it SUBMITTED until explicitly closed? No, let's mark it as mixed or simply RETURNED if not all approved.
+          // The user requirement says "approve whole batch OR individual".
+          // If they approve individual, we keep it SUBMITTED until the last one.
+          updatedBatchStatus = InspectionApprovalBatchStatus.APPROVED; 
+          // Actually, if they approve the last one, the batch is DONE.
+          // If some were returned previously, and now we approve the rest, the batch is "processed".
+          // Let's use APPROVED if the last action was approval and everything is out of SUBMITTED.
+        }
       }
 
       // Update Batch
       const updatedBatch = await tx.inspectionApprovalBatch.update({
         where: { id: batchId },
         data: {
-          status: 'APPROVED',
+          status: updatedBatchStatus,
           reviewedByUserId: userId,
           reviewedAt: new Date(),
           version: batch.version + 1
         }
       });
 
-      // Update S/N states
-      const snIds = batch.serialNumbers.map(m => m.serialNumberId);
-      await tx.serialNumber.updateMany({
-        where: { id: { in: snIds } },
-        data: { approvalStatus: 'APPROVED' }
-      });
-
-      // We must check if ALL S/N for the report are now approved.
-      // Recompute the parent aggregate
-      let nextReportStatus = report.status;
+      // Recompute the report summary status
       const allReportSerials = await tx.serialNumber.findMany({
         where: { inspectionReportId: reportId, tenantId }
       });
 
-      const allApproved = allReportSerials.every(sn => sn.approvalStatus === 'APPROVED' || snIds.includes(sn.id));
+      const allReportApproved = allReportSerials.every(sn => sn.approvalStatus === SerialApprovalStatus.APPROVED);
+      let nextReportStatus = report.status;
       
-      if (allApproved && allReportSerials.length > 0) {
-        nextReportStatus = 'APPROVED';
+      if (allReportApproved && allReportSerials.length > 0) {
+        nextReportStatus = InspectionReportStatus.APPROVED;
       }
 
       // Update report
@@ -391,7 +430,7 @@ export class InspectionReportsService {
           action: 'BATCH_APPROVE',
           entity: 'InspectionApprovalBatch',
           entityId: batch.id,
-          reason: data.reason || 'Approved batch',
+          reason: (data.reason || 'Approved items') + (data.serialNumberIds ? ` (${data.serialNumberIds.length} S/N)` : ''),
           tenantId,
           userId,
           inspectionReportId: report.id,
@@ -412,11 +451,11 @@ export class InspectionReportsService {
          });
       }
 
-      return { batch: updatedBatch, updatedReport, allApproved };
+      return { batch: updatedBatch, updatedReport, allApproved: allReportApproved };
     });
   }
 
-  async returnBatch(tenantId: string, reportId: string, batchId: string, userId: string, data: { batchVersion: number, reportVersion: number, reason: string }) {
+  async returnBatch(tenantId: string, reportId: string, batchId: string, userId: string, data: { batchVersion: number, reportVersion: number, reason: string, serialNumberIds?: string[] }) {
     if (!data.reason || data.reason.trim() === '') {
       throw new BadRequestException('Reason is mandatory when returning a batch');
     }
@@ -428,7 +467,9 @@ export class InspectionReportsService {
       });
 
       if (!batch) throw new NotFoundException('Batch not found');
-      if (batch.status !== 'SUBMITTED') throw new BadRequestException(`Cannot return batch in status ${batch.status}`);
+      if (batch.status !== InspectionApprovalBatchStatus.SUBMITTED) {
+        throw new BadRequestException(`Cannot return batch in status ${batch.status}`);
+      }
       if (batch.version !== data.batchVersion) throw new ConflictException(`Batch version mismatch. Expected ${batch.version}, got ${data.batchVersion}`);
 
       const report = await tx.inspectionReport.findFirst({
@@ -438,33 +479,57 @@ export class InspectionReportsService {
       if (!report) throw new NotFoundException('Report not found');
       if (report.version !== data.reportVersion) throw new ConflictException(`Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`);
 
+      // Filter SNs to return
+      const allBatchSnIds = batch.serialNumbers.map(m => m.serialNumberId);
+      const targetSnIds = data.serialNumberIds || allBatchSnIds;
+
+      // Validate
+      for (const id of targetSnIds) {
+        if (!allBatchSnIds.includes(id)) {
+          throw new BadRequestException(`Serial number ${id} is not part of batch ${batchId}`);
+        }
+      }
+
       // Verify members
-      for (const member of batch.serialNumbers) {
-         const sn = await tx.serialNumber.findUnique({ where: { id: member.serialNumberId } });
-         if (!sn || sn.approvalStatus !== 'SUBMITTED_FOR_APPROVAL') {
-             throw new BadRequestException(`Serial ${sn?.serial} is not in SUBMITTED_FOR_APPROVAL state.`);
+      for (const snId of targetSnIds) {
+         const sn = await tx.serialNumber.findUnique({ where: { id: snId } });
+         if (!sn || sn.approvalStatus !== SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+             throw new BadRequestException(`Serial ${sn?.serial || snId} is not in SUBMITTED_FOR_APPROVAL state.`);
          }
+      }
+
+      // Revert SNs to INSPECTED_DRAFT
+      await tx.serialNumber.updateMany({
+        where: { id: { in: targetSnIds } },
+        data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT }
+      });
+
+      // Check if ALL SNs in this batch are now processed
+      const remainingInBatch = await tx.serialNumber.count({
+        where: {
+          id: { in: allBatchSnIds },
+          approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL
+        }
+      });
+
+      let updatedBatchStatus: InspectionApprovalBatchStatus = batch.status;
+      if (remainingInBatch === 0) {
+        // If everything is processed, we mark it as RETURNED if any were returned.
+        // If we choose RETURNED, it signals to the user that this batch needs attention or is finished with corrections.
+        updatedBatchStatus = InspectionApprovalBatchStatus.RETURNED;
       }
 
       // Update Batch
       const updatedBatch = await tx.inspectionApprovalBatch.update({
         where: { id: batchId },
         data: {
-          status: 'RETURNED',
+          status: updatedBatchStatus,
           reviewedByUserId: userId,
           reviewedAt: new Date(),
-          version: batch.version + 1
+          version: batch.version + 1,
+          notes: data.reason // Overwrite notes with the latest return reason if applicable
         }
       });
-
-      // Revert S/N to INSPECTED_DRAFT
-      const snIds = batch.serialNumbers.map(m => m.serialNumberId);
-      await tx.serialNumber.updateMany({
-        where: { id: { in: snIds } },
-        data: { approvalStatus: 'INSPECTED_DRAFT' }
-      });
-
-      // Report status doesn't change since we're just returning S/N to draft
 
       // Update report
       const updatedReport = await tx.inspectionReport.update({
@@ -480,7 +545,7 @@ export class InspectionReportsService {
           action: 'BATCH_RETURN',
           entity: 'InspectionApprovalBatch',
           entityId: batch.id,
-          reason: data.reason,
+          reason: data.reason + (data.serialNumberIds ? ` (${data.serialNumberIds.length} S/N)` : ''),
           tenantId,
           userId,
           inspectionReportId: report.id,
