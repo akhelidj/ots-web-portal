@@ -9,6 +9,7 @@
     "build:portal": "nx build portal --configuration=production",
     "lint": "nx run-many -t lint",
     "graph": "nx graph",
+    "db:reset": "npx dotenv -e api/.env -- npx prisma db push --force-reset --schema api/prisma/schema.prisma",
     "db:migrate": "npx dotenv -e api/.env -- npx prisma migrate dev --schema api/prisma/schema.prisma",
     "db:studio": "npx dotenv -e api/.env -- npx prisma studio --schema api/prisma/schema.prisma",
     "db:generate": "npx prisma generate --schema api/prisma/schema.prisma",

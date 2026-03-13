@@ -1,8 +1,8 @@
-@if (report(); as report) {
+@if (report(); as reportData) {
 <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
   <!-- Header -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
-       [ngClass]="isCustomer ? 'sticky top-16 z-50 bg-white border-b border-gray-200 shadow-sm px-4 py-3 -mx-4 sm:-mx-6 lg:-mx-8 sm:px-6 lg:px-8' : ''">
+       [ngClass]="isCustomer() ? 'sticky top-16 z-50 bg-white border-b border-gray-200 shadow-sm px-4 py-3 -mx-4 sm:-mx-6 lg:-mx-8 sm:px-6 lg:px-8' : ''">
     <div class="flex items-center gap-4">
       <a routerLink=".." class="text-gray-400 hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-full hover:bg-gray-100">
         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -10,20 +10,20 @@
         </svg>
       </a>
       <div>
-        <h1 class="text-3xl font-bold tracking-tight text-primary">Report: {{ report.poNumber }}</h1>
+        <h1 class="text-3xl font-bold tracking-tight text-primary">Report: {{ reportData.poNumber }}</h1>
       </div>
     </div>
     <div class="flex items-center gap-3">
-      @if (userRole !== 'CUSTOMER') {
+      @if (userRole() !== APP_ROLES.CUSTOMER) {
         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest" [ngClass]="{
-          'bg-error-light text-error-dark': report.syncState === 'CONFLICT' || report.syncState === 'ERROR',
-          'bg-warning-light text-warning-dark': report.syncState === 'PENDING',
-          'bg-success-light text-success-dark': report.syncState === 'SYNCED'
+          'bg-error-light text-error-dark': reportData.syncState === 'CONFLICT' || reportData.syncState === 'ERROR',
+          'bg-warning-light text-warning-dark': reportData.syncState === 'PENDING',
+          'bg-success-light text-success-dark': reportData.syncState === 'SYNCED'
         }">
-          {{ report.syncState }}
+          {{ reportData.syncState }}
         </span>
       }
-      @if (isCustomer && (uiState?.actions?.['CUSTOMER_EXPORT']?.visible)) {
+      @if (isCustomer() && (uiState?.actions?.['CUSTOMER_EXPORT']?.visible)) {
         <button (click)="exportReport()" class="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white px-4 py-2 text-sm font-semibold rounded-lg shadow transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
           [disabled]="isExporting || !uiState?.actions?.['CUSTOMER_EXPORT']?.enabled || !isOnline"
           [title]="!isOnline ? 'Export requires internet connection' : (uiState?.actions?.['CUSTOMER_EXPORT']?.disabledReason || 'Download Export')">
@@ -87,8 +87,8 @@
         <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
            <h2 class="text-lg font-semibold text-gray-900">Executive Summary</h2>
            <div class="flex items-center gap-3">
-             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">{{ report.status }}</span>
-             @if (!isEditingMeta && isInspectorCapable && uiState?.actions?.['IR_EDIT_META']?.visible) {
+             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">{{ reportData.status }}</span>
+             @if (!isEditingMeta && isInspectorCapable() && uiState?.actions?.['IR_EDIT_META']?.visible) {
                <button (click)="isEditingMeta = true" class="px-3 py-1 text-xs font-bold text-primary bg-white border border-primary/30 rounded shadow-sm hover:bg-primary/5 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                  Update Inspection Report Data
@@ -100,26 +100,26 @@
         <div class="grid grid-cols-2 gap-y-5 gap-x-4 mb-4">
           <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Report #</span>
-            <span class="font-medium text-gray-900 text-sm font-mono tracking-widest text-accent">{{ report.reportNumber || (report.id.substring(0,8) | uppercase) }}</span>
+            <span class="font-medium text-gray-900 text-sm font-mono tracking-widest text-accent">{{ reportData.reportNumber || (reportData.id.substring(0,8) | uppercase) }}</span>
           </div>
           <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Date</span>
-            <span class="font-medium text-gray-900 text-sm">{{ report.updatedAt ? (report.updatedAt | date:'medium') : 'N/A' }}</span>
+            <span class="font-medium text-gray-900 text-sm">{{ reportData.updatedAt ? (reportData.updatedAt | date:'medium') : 'N/A' }}</span>
           </div>
           <div class="col-span-2">
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Address of Inspection</span>
-            <span class="font-medium text-gray-900 text-sm">{{ report.inspectionAddress || customerAddress || 'N/A' }}</span>
+            <span class="font-medium text-gray-900 text-sm">{{ reportData.inspectionAddress || customerAddress || 'N/A' }}</span>
           </div>
           <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">PO #</span>
-            <span class="font-medium text-gray-900 text-sm font-mono">{{ report.poNumber }}</span>
+            <span class="font-medium text-gray-900 text-sm font-mono">{{ reportData.poNumber }}</span>
           </div>
           <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Standard Used</span>
-            @if (report.standardUsed) {
-              <span class="font-medium text-gray-900 text-sm font-mono">{{ report.standardUsed }}</span>
+            @if (reportData.standardUsed) {
+              <span class="font-medium text-gray-900 text-sm font-mono">{{ reportData.standardUsed }}</span>
             } @else {
-              <span class="font-medium text-gray-900 text-sm font-mono">{{ report.templateKey }} <span class="text-xs text-gray-500">v{{ report.templateVersion }}</span></span>
+              <span class="font-medium text-gray-900 text-sm font-mono">{{ reportData.templateKey }} <span class="text-xs text-gray-500">v{{ reportData.templateVersion }}</span></span>
             }
           </div>
           <div>
@@ -150,8 +150,8 @@
                <textarea [(ngModel)]="formInspectorComment" rows="3" class="w-full border border-gray-300 p-3 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm transition-colors mb-3" placeholder="Add an overall comment for the inspection..."></textarea>
             } @else {
                <div class="p-4 border border-gray-200 bg-white rounded-lg min-h-[60px] text-sm text-gray-700 whitespace-pre-wrap shadow-inner mb-4">
-                  @if (report.inspectorComment) {
-                     {{ report.inspectorComment }}
+                  @if (reportData.inspectorComment) {
+                     {{ reportData.inspectorComment }}
                   } @else {
                      <span class="text-gray-400 italic">No overall comment provided.</span>
                   }
@@ -284,7 +284,7 @@
                </div>
 
                <div class="flex gap-2 justify-end mt-4">
-                  <button (click)="isEditingMeta = false; formInspectorComment = report.inspectorComment || ''; formInspectionAddress = report.inspectionAddress || ''; formStandardUsed = report.standardUsed || ''" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors">Cancel</button>
+                  <button (click)="isEditingMeta = false; formInspectorComment = reportData.inspectorComment || ''; formInspectionAddress = reportData.inspectionAddress || ''; formStandardUsed = reportData.standardUsed || ''" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors">Cancel</button>
                   <button (click)="saveMeta()" class="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded shadow-sm hover:bg-primary/95 transition-colors">Save Details</button>
                </div>
             } @else {
@@ -294,37 +294,37 @@
                   </div>
                   <div>
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Grade</span>
-                    <span class="font-medium text-gray-900 text-sm">{{ report.grade || '-' }}</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ reportData.grade || '-' }}</span>
                   </div>
                   <div>
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Range</span>
-                    <span class="font-medium text-gray-900 text-sm">{{ report.range || '-' }}</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ reportData.range || '-' }}</span>
                   </div>
                   <div>
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Weight</span>
-                    <span class="font-medium text-gray-900 text-sm">{{ report.weight || '-' }}</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ reportData.weight || '-' }}</span>
                   </div>
                   <div>
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Nom. W.T</span>
-                    <span class="font-medium text-gray-900 text-sm">{{ report.nomWT || '-' }}</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ reportData.nomWT || '-' }}</span>
                   </div>
                   <div>
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Nom OD</span>
-                    <span class="font-medium text-gray-900 text-sm">{{ report.nomOD || '-' }}</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ reportData.nomOD || '-' }}</span>
                   </div>
                   <div>
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Nom ID</span>
-                    <span class="font-medium text-gray-900 text-sm">{{ report.nomID || '-' }}</span>
+                    <span class="font-medium text-gray-900 text-sm">{{ reportData.nomID || '-' }}</span>
                   </div>
                   <div>
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Connection</span>
-                    <span class="font-medium text-gray-900 text-sm px-1 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs select-all">{{ report.connection || '-' }}</span>
+                    <span class="font-medium text-gray-900 text-sm px-1 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs select-all">{{ reportData.connection || '-' }}</span>
                   </div>
                   <div class="col-span-2 md:col-span-4 mt-2 border-t border-gray-100 pt-3">
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Inspection Methods</span>
-                    @if ($any(report.inspectionMethod) && $any(report.inspectionMethod).length > 0) {
+                    @if ($any(reportData.inspectionMethod) && $any(reportData.inspectionMethod).length > 0) {
                         <div class="flex flex-wrap gap-2">
-                           @for (m of $any(report.inspectionMethod); track $index) {
+                           @for (m of $any(reportData.inspectionMethod); track $index) {
                               <span class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold border border-blue-200/50 shadow-sm">
                                  <svg class="h-3 w-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                  {{ m.name || m }}
@@ -338,9 +338,9 @@
 
                   <div class="col-span-2 md:col-span-4 mt-2">
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Equipment Used</span>
-                    @if ($any(report.equipmentUsed) && $any(report.equipmentUsed).length > 0) {
+                    @if ($any(reportData.equipmentUsed) && $any(reportData.equipmentUsed).length > 0) {
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-1">
-                           @for (eq of $any(report.equipmentUsed); track $index) {
+                           @for (eq of $any(reportData.equipmentUsed); track $index) {
                               <div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100 shadow-sm">
                                  <svg class="h-3 w-3 text-accent shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                  <span class="font-medium text-gray-900 text-sm truncate" [title]="eq.name">{{ eq.name }}</span>
@@ -378,7 +378,7 @@
     </div>
   </div>
 
-  @if (!isCustomer) {
+  @if (!isCustomer()) {
   <!-- Transition Section (non-customer only) -->
   <div class="fixed bottom-0 left-0 right-0 z-[60] bg-white border-t border-gray-200 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)] w-full">
     <div class="p-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col w-full">
@@ -447,12 +447,12 @@
             }
         
         <div class="mt-auto pt-2 pb-4">
-          @if (report.pendingTransitionToStatus) {
+          @if (reportData.pendingTransitionToStatus) {
             <div class="p-4 bg-warning-light text-warning-dark text-sm rounded-lg border border-warning/30 flex items-center gap-3">
                <svg class="h-5 w-5 animate-pulse text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                </svg>
-               <span>Transition to <span class="font-bold bg-white/50 px-1.5 py-0.5 rounded shadow-sm text-warning-dark border border-warning/20">{{ report.pendingTransitionToStatus }}</span> pending sync.</span>
+               <span>Transition to <span class="font-bold bg-white/50 px-1.5 py-0.5 rounded shadow-sm text-warning-dark border border-warning/20">{{ reportData.pendingTransitionToStatus }}</span> pending sync.</span>
             </div>
           } @else {
               <div class="flex flex-wrap items-center gap-3">
@@ -569,13 +569,13 @@
                   </td>
                   @if (item.childLinked) {
                     <td class="px-6 py-4 font-mono text-xs text-gray-600">
-                       <a [routerLink]="['/', userRole | lowercase, 'reports', item.childLinked.id, 'child']" class="text-primary hover:text-primary-light hover:underline transition-colors">{{ report.reportNumber || (report.id.substring(0,8) | uppercase) }} — Rework</a>
+                       <a [routerLink]="['/', userRole().toLowerCase(), 'reports', item.childLinked.id, 'child']" class="text-primary hover:text-primary-light hover:underline transition-colors">{{ reportData.reportNumber || (reportData.id.substring(0,8) | uppercase) }} — Rework</a>
                     </td>
                     <td class="px-6 py-4">
                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border border-transparent" [ngClass]="{'bg-success-light text-success-dark': item.childLinked.status === 'APPROVED' || item.childLinked.status === 'CLOSED', 'bg-primary/10 text-primary': item.childLinked.status !== 'APPROVED' && item.childLinked.status !== 'CLOSED'}">{{ item.childLinked.status }}</span>
                     </td>
                     <td class="px-6 py-4 text-right">
-                       <a [routerLink]="['/', userRole | lowercase, 'reports', item.childLinked.id, 'child']" class="text-primary hover:text-primary-light hover:underline text-xs font-bold transition-colors">Open Child Report</a>
+                       <a [routerLink]="['/', userRole().toLowerCase(), 'reports', item.childLinked.id, 'child']" class="text-primary hover:text-primary-light hover:underline text-xs font-bold transition-colors">Open Child Report</a>
                     </td>
                   } @else {
                     <td class="px-6 py-4 text-xs text-gray-400 italic">None</td>
@@ -602,7 +602,7 @@
           <span class="bg-primary/10 text-primary text-xs py-0.5 px-2.5 rounded-full whitespace-nowrap">{{ filteredSerials().length }}</span>
         </h2>
         
-        @if (userRole !== 'CUSTOMER') {
+        @if (userRole() !== APP_ROLES.CUSTOMER) {
           <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto sm:ml-auto">
             @if (selectedForApproval().size > 0) {
               <button (click)="submitSelectedForApproval()" class="bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50" [disabled]="isSubmittingBatch">
@@ -644,7 +644,7 @@
             <!-- Top Header Row -->
             <tr>
               <th scope="col" colspan="2" class="px-5 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-0 top-0 bg-gray-50 z-30 md:z-40 md:shadow-[1px_0_0_0_#eee] border-r border-gray-200">Info / Actions</th>
-              @if (userRole !== 'CUSTOMER') {
+              @if (userRole() !== APP_ROLES.CUSTOMER) {
                 <th scope="col" rowspan="2" class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 sticky top-0 bg-gray-50 z-30 border-r border-gray-200">Sync</th>
               }
               <th scope="col" colspan="9" class="px-3 py-2 text-center text-[10px] font-bold text-blue-700 uppercase tracking-wider sticky top-0 bg-blue-50 z-30 border-r border-gray-200 border-b border-blue-200/50">Box Connection</th>
@@ -657,7 +657,7 @@
             <tr>
               <th scope="col" class="px-5 py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-0 top-8 bg-gray-50 z-30 md:z-40 md:shadow-[1px_0_0_0_#eee] w-48 min-w-[12rem] max-w-[12rem] border-r border-gray-200">
                 <div class="flex items-center gap-2">
-                  @if (userRole !== 'CUSTOMER') {
+                  @if (userRole() !== APP_ROLES.CUSTOMER) {
                     <input type="checkbox" [checked]="isAllEligibleSelected" (change)="toggleAllEligible()" title="Select eligible for approval" class="rounded border-gray-300 text-accent focus:ring-accent w-3.5 h-3.5 mt-0.5 cursor-pointer">
                   }
                   <span>Serial Number</span>
@@ -720,13 +720,13 @@
                       </div>
                     } @else {
                       <div class="flex items-start gap-3 h-full">
-                        @if (userRole !== 'CUSTOMER') {
+                        @if (userRole() !== APP_ROLES.CUSTOMER) {
                           <div class="pt-0.5 flex-shrink-0">
-                            @if (sn.approvalStatus === 'INSPECTED_DRAFT') {
+                            @if (sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT) {
                               <input type="checkbox" [checked]="selectedForApproval().has(sn.id)" (change)="toggleSelection(sn)" class="rounded border-gray-300 text-accent focus:ring-accent w-3.5 h-3.5 cursor-pointer shadow-sm">
-                            } @else if (sn.approvalStatus === 'SUBMITTED_FOR_APPROVAL') {
+                            } @else if (sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
                               <svg class="w-4 h-4 text-warning" fill="currentColor" viewBox="0 0 20 20" title="Submitted for Approval"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
-                            } @else if (sn.approvalStatus === 'APPROVED') {
+                            } @else if (sn.approvalStatus === SERIAL_STATUSES.APPROVED) {
                               <svg class="w-4 h-4 text-success" fill="currentColor" viewBox="0 0 20 20" title="Approved"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
                             } @else {
                               <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Not Inspected"><circle cx="12" cy="12" r="9" stroke-width="2"></circle></svg>
@@ -757,10 +757,10 @@
                     <div class="flex flex-col items-center gap-2">
                        @if (getDisposition(sn); as disp) {
                           <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border flex items-center justify-center gap-1 w-full shadow-sm" [ngClass]="{
-                            'bg-success-light text-success-dark border-success/30': disp === 'PASS',
-                            'bg-warning-light text-warning-dark border-warning/30': disp === 'REWORK',
-                            'bg-error-light text-error-dark border-error/30': disp === 'SCRAP',
-                            'bg-primary/10 text-primary border-primary/20': disp === 'HOLD'
+                            'bg-success-light text-success-dark border-success/30': disp === SERIAL_DISPOSITIONS.PASS,
+                            'bg-warning-light text-warning-dark border-warning/30': disp === SERIAL_DISPOSITIONS.REWORK,
+                            'bg-error-light text-error-dark border-error/30': disp === SERIAL_DISPOSITIONS.SCRAP,
+                            'bg-primary/10 text-primary border-primary/20': disp === SERIAL_DISPOSITIONS.HOLD
                           }">
                             {{ disp }}
                           </span>
@@ -769,7 +769,7 @@
                        }
                        
                        <div class="flex items-center justify-center gap-1 w-full bg-gray-50 border border-gray-200 rounded p-0.5">
-                          @if ((uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.visible || uiState?.actions?.['SN_SET_DISPOSITION']?.visible) && sn.approvalStatus !== 'SUBMITTED_FOR_APPROVAL' && sn.approvalStatus !== 'APPROVED') {
+                          @if ((uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.visible || uiState?.actions?.['SN_SET_DISPOSITION']?.visible) && sn.approvalStatus !== SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL && sn.approvalStatus !== SERIAL_STATUSES.APPROVED) {
                              <button (click)="openInspectionForm(sn)" class="text-accent hover:text-accent-hover hover:underline text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5" title="Inspect">
                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                                Insp.
@@ -780,22 +780,22 @@
                                View
                              </button>
                           }
-                          @if (uiState?.actions?.['IR_EDIT_SERIAL']?.visible && sn.approvalStatus !== 'SUBMITTED_FOR_APPROVAL' && sn.approvalStatus !== 'APPROVED') {
+                          @if (uiState?.actions?.['IR_EDIT_SERIAL']?.visible && sn.approvalStatus !== SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL && sn.approvalStatus !== SERIAL_STATUSES.APPROVED) {
                              <button (click)="onEditSn(sn)" class="text-gray-500 hover:text-gray-800 text-[10px] font-semibold transition-colors px-1" title="Rename"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
                           }
-                          @if (uiState?.actions?.['IR_REMOVE_SERIAL']?.visible && sn.approvalStatus !== 'SUBMITTED_FOR_APPROVAL' && sn.approvalStatus !== 'APPROVED') {
+                          @if (uiState?.actions?.['IR_REMOVE_SERIAL']?.visible && sn.approvalStatus !== SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL && sn.approvalStatus !== SERIAL_STATUSES.APPROVED) {
                              <button (click)="onDeleteSn(sn)" class="text-error hover:text-error-dark text-[10px] font-semibold transition-colors px-1 border-l border-gray-200 ml-0.5 pl-1.5" title="Remove"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                           }
                        </div>
                     </div>
                   </td>
 
-                  @if (userRole !== 'CUSTOMER') {
+                  @if (userRole() !== APP_ROLES.CUSTOMER) {
                     <td class="px-2 py-3 align-top text-center border-r border-gray-100">
                       <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border" [ngClass]="{
-                        'bg-error-light text-error-dark border-error/20': sn.syncState === 'CONFLICT' || sn.syncState === 'ERROR',
-                        'bg-warning-light text-warning-dark border-warning/20': sn.syncState === 'PENDING',
-                        'bg-success-light text-success-dark border-success/20': sn.syncState === 'SYNCED'
+                        'bg-error-light text-error-dark border-error/20': sn.syncState === SYNC_STATES.CONFLICT || sn.syncState === SYNC_STATES.ERROR,
+                        'bg-warning-light text-warning-dark border-warning/20': sn.syncState === SYNC_STATES.PENDING,
+                        'bg-success-light text-success-dark border-success/20': sn.syncState === SYNC_STATES.SYNCED
                       }">{{ sn.syncState }}</span>
                     </td>
                   }
@@ -872,7 +872,7 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td [colSpan]="userRole !== 'CUSTOMER' ? 33 : 32" class="px-6 py-12 text-center bg-gray-50/50">
+                  <td [colSpan]="userRole() !== APP_ROLES.CUSTOMER ? 33 : 32" class="px-6 py-12 text-center bg-gray-50/50">
                     <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                     </svg>
@@ -937,7 +937,7 @@
       <div class="flex-grow overflow-y-auto p-6 bg-gray-50/30">
         <app-serial-inspection-reactive-form
            [initialData]="inspectionFormData"
-           [schemaKey]="report.templateKey"
+           [schemaKey]="reportData.templateKey"
            [isReadOnly]="(uiState?.fieldModes?.['inspectionData'] !== 'editable' && uiState?.fieldModes?.['disposition'] !== 'editable') || inspectingSn.approvalStatus === 'SUBMITTED_FOR_APPROVAL' || inspectingSn.approvalStatus === 'APPROVED'"
            (saveData)="saveInspectionForm($event)"
            (formCancel)="closeInspectionForm()">
@@ -947,7 +947,7 @@
   </div>
 }
 
-  @if (userRole !== 'CUSTOMER') {
+  @if (userRole() !== APP_ROLES.CUSTOMER) {
     @if (approvalBatches().length > 0) {
       <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-7xl mx-auto">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
@@ -963,12 +963,12 @@
                 </div>
                 <div class="flex items-center gap-3">
                   <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border pointer-events-none" [ngClass]="{
-                    'bg-amber-100 text-amber-800 border-amber-200': batchItem.batch.status === 'SUBMITTED',
-                    'bg-green-100 text-green-800 border-green-200': batchItem.batch.status === 'APPROVED',
-                    'bg-red-100 text-red-800 border-red-200': batchItem.batch.status === 'RETURNED'
-                  }">{{ batchItem.batch.status === 'SUBMITTED' ? 'PENDING REVIEW' : batchItem.batch.status }}</span>
+                    'bg-amber-100 text-amber-800 border-amber-200': batchItem.batch.status === BATCH_STATUSES.SUBMITTED,
+                    'bg-green-100 text-green-800 border-green-200': batchItem.batch.status === BATCH_STATUSES.APPROVED,
+                    'bg-red-100 text-red-800 border-red-200': batchItem.batch.status === BATCH_STATUSES.RETURNED
+                  }">{{ batchItem.batch.status === BATCH_STATUSES.SUBMITTED ? 'PENDING REVIEW' : batchItem.batch.status }}</span>
                   
-                  @if (userRole === 'SUPERVISOR' && batchItem.batch.status === 'SUBMITTED') {
+                  @if ((userRole() === APP_ROLES.SUPERVISOR || userRole() === APP_ROLES.ADMIN) && batchItem.batch.status === BATCH_STATUSES.SUBMITTED) {
                     <button (click)="openReturnBatchModal(batchItem.batch.id)" class="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-100 hover:bg-red-200 border border-red-200 rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500" [disabled]="isActioningBatch">Return...</button>
                     <button (click)="approveBatch(batchItem.batch.id)" class="px-3 py-1.5 text-xs font-bold text-white bg-success hover:bg-success-dark rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-success" [disabled]="isActioningBatch">Approve ({{ batchItem.serials.length }})</button>
                   }
@@ -1024,7 +1024,7 @@
               }
               @if (logs.length === 0) {
                 <tr>
-                  <td colspan="4" class="px-6 py-8 text-center text-gray-500 text-sm">No transition history log available for this report.</td>
+                  <td colspan="4" class="px-6 py-8 text-center text-gray-500 text-sm">No transition history log available for this reportData.</td>
                 </tr>
               }
             }
@@ -1046,10 +1046,10 @@
          <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
            Equipment: 
            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border" [ngClass]="{
-             'bg-success-light text-success-dark border-success/30': activeModalStatus === 'PASS',
-             'bg-warning-light text-warning-dark border-warning/30': activeModalStatus === 'REWORK',
-             'bg-error-light text-error-dark border-error/30': activeModalStatus === 'SCRAP',
-             'bg-primary/10 text-primary border-primary/20': activeModalStatus === 'HOLD'
+             'bg-success-light text-success-dark border-success/30': activeModalStatus === SERIAL_DISPOSITIONS.PASS,
+             'bg-warning-light text-warning-dark border-warning/30': activeModalStatus === SERIAL_DISPOSITIONS.REWORK,
+             'bg-error-light text-error-dark border-error/30': activeModalStatus === SERIAL_DISPOSITIONS.SCRAP,
+             'bg-primary/10 text-primary border-primary/20': activeModalStatus === SERIAL_DISPOSITIONS.HOLD
            }">{{ activeModalStatus }}</span>
          </h3>
          <button (click)="closeKpiModal()" class="text-gray-400 hover:text-gray-900 hover:bg-gray-100 p-1.5 rounded-full transition-colors">

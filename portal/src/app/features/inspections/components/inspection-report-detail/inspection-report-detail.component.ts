@@ -22,8 +22,14 @@ import {
   APP_ROLES,
   AppRole,
   ReportStatus,
+  REPORT_STATUSES,
   CHILD_REPORT_TYPES,
   SERIAL_DISPOSITIONS,
+  BATCH_STATUSES,
+  SERIAL_STATUSES,
+  SYNC_STATES,
+  SyncState,
+  ENTITY_TYPES,
 } from '@portal/core/constants/app.constants';
 import { ChildReportsService } from '@portal/features/inspections/services/child-reports.service';
 import { environment } from '@app-env/environment';
@@ -98,6 +104,15 @@ export class InspectionReportDetailComponent implements OnInit {
   public activeActionBatchId: string | null = null;
   public returnNotes = '';
   public isActioningBatch = false;
+
+  // Expose constants to template
+  public readonly APP_ROLES = APP_ROLES;
+  public readonly REPORT_STATUSES = REPORT_STATUSES;
+  public readonly SERIAL_DISPOSITIONS = SERIAL_DISPOSITIONS;
+  public readonly CHILD_REPORT_TYPES = CHILD_REPORT_TYPES;
+  public readonly BATCH_STATUSES = BATCH_STATUSES;
+  public readonly SERIAL_STATUSES = SERIAL_STATUSES;
+  public readonly SYNC_STATES = SYNC_STATES;
   public batchError = '';
 
   // Search Filter Signals
@@ -152,7 +167,7 @@ export class InspectionReportDetailComponent implements OnInit {
   ];
 
   public uiState: InspectionReportUiState | null = null;
-  public userRole = '';
+  public userRole = computed(() => (this.session.profile()?.role?.toUpperCase() as AppRole) || '');
   public allowedTransitions: {
     toStatus: string;
     requiresReason: boolean;
@@ -180,10 +195,17 @@ export class InspectionReportDetailComponent implements OnInit {
   public kpiHold = 0;
   public kpiPassRate = 0;
 
+  public isInspectorCapable = computed(() => {
+    const role = this.userRole();
+    return role === APP_ROLES.INSPECTOR || 
+           role === APP_ROLES.SUPERVISOR || 
+           role === APP_ROLES.ADMIN;
+  });
+
   public inspectionProgress = computed(() => {
     const sns = this.serials();
     if (!sns || sns.length === 0) return { approved: 0, total: 0, percent: 0 };
-    const approved = sns.filter(sn => sn.approvalStatus === 'APPROVED').length;
+    const approved = sns.filter(sn => sn.approvalStatus === SERIAL_STATUSES.APPROVED).length;
     return {
       approved,
       total: sns.length,
@@ -205,8 +227,8 @@ export class InspectionReportDetailComponent implements OnInit {
   public inspectionFormData: Record<string, unknown> = {};
 
   public isExporting = false;
-  public isCustomer = false;
-  public isReceiver = false;
+  public isCustomer = computed(() => this.userRole() === APP_ROLES.CUSTOMER);
+  public isReceiver = computed(() => this.userRole() === APP_ROLES.RECEIVER);
 
   public isTransitionExpanded = true;
 
@@ -214,9 +236,6 @@ export class InspectionReportDetailComponent implements OnInit {
     return navigator.onLine;
   }
 
-  public get isInspectorCapable(): boolean {
-    return ['INSPECTOR', 'SUPERVISOR', 'ADMIN'].includes(this.userRole);
-  }
 
   public getDisposition(sn: LocalSerialNumber): string | null {
     if (!sn.inspectionJson) return null;
@@ -231,12 +250,6 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   async ngOnInit() {
-    const p = this.session.profile();
-    if (p) {
-      this.userRole = p.role || '';
-      this.isCustomer = p.role === APP_ROLES.CUSTOMER;
-      this.isReceiver = p.role === APP_ROLES.RECEIVER;
-    }
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
       this.refreshData();
@@ -255,6 +268,7 @@ export class InspectionReportDetailComponent implements OnInit {
       ) {
         await this.irService.refreshAvailableTransitions(this.reportId);
         await this.irService.refreshTransitionLogs(this.reportId);
+        await this.irService.pullBatchesForReport(this.reportId);
         await this.crService.pullForInspectionFromServer(this.reportId);
       }
     }
@@ -304,7 +318,7 @@ export class InspectionReportDetailComponent implements OnInit {
       const conflicts = await this.outboxRepo.getConflictItems();
       const transitionOutbox = [...pending, ...conflicts].filter(
         (i) =>
-          i.entityType === 'INSPECTION_REPORT' &&
+          i.entityType === ENTITY_TYPES.INSPECTION_REPORT &&
           i.entityId === this.reportId &&
           i.operation === 'TRANSITION' &&
           i.lastError,
@@ -323,12 +337,12 @@ export class InspectionReportDetailComponent implements OnInit {
 
       let previousStatus: string | null = null;
       let onHoldReason: string | null = null;
-      if (r.status === 'ON_HOLD' && logs.length > 0) {
+      if (r.status === REPORT_STATUSES.ON_HOLD && logs.length > 0) {
         const sortedLogs = [...logs].sort(
           (a, b) =>
             new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         );
-        const toHold = sortedLogs.find((l) => l.toStatus === 'ON_HOLD');
+        const toHold = sortedLogs.find((l) => l.toStatus === REPORT_STATUSES.ON_HOLD);
         if (toHold) {
           previousStatus = toHold.fromStatus;
           onHoldReason = toHold.reason || null;
@@ -336,11 +350,11 @@ export class InspectionReportDetailComponent implements OnInit {
       }
 
       this.uiState = getInspectionReportUiState({
-        role: this.userRole as AppRole,
+        role: this.userRole() as AppRole,
         reportStatus: r.status as ReportStatus,
         isOffline: !this.isOnline,
         hasValidationIssues: !vResult.isReady,
-        syncState: r.syncState as 'SYNCED' | 'PENDING' | 'CONFLICT',
+        syncState: r.syncState as SyncState,
         previousStatus: previousStatus,
         onHoldReason: onHoldReason,
         version: r.version,
@@ -373,7 +387,7 @@ export class InspectionReportDetailComponent implements OnInit {
         // Inspected By: First user who transitioned to IN_INSPECTION or PENDING_APPROVAL
         const inspectLog = sortedAsc.find(
           (l) =>
-            l.toStatus === 'IN_INSPECTION' || l.toStatus === 'PENDING_APPROVAL',
+            l.toStatus === REPORT_STATUSES.IN_INSPECTION || l.toStatus === REPORT_STATUSES.PENDING_APPROVAL,
         );
         if (inspectLog && inspectLog.userId) {
           const u = await this.userRepo.getById(inspectLog.userId);
@@ -383,7 +397,7 @@ export class InspectionReportDetailComponent implements OnInit {
         // Approved By: Last user who transitioned to APPROVED
         const approveLog = [...sortedAsc]
           .reverse()
-          .find((l) => l.toStatus === 'APPROVED' || l.toStatus === 'CLOSED');
+          .find((l) => l.toStatus === REPORT_STATUSES.APPROVED || l.toStatus === REPORT_STATUSES.CLOSED);
         if (approveLog && approveLog.userId) {
           const u = await this.userRepo.getById(approveLog.userId);
           this.approvedByName = u?.name || u?.email || 'N/A';
@@ -842,14 +856,14 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public get isAllEligibleSelected(): boolean {
-    const eligible = this.filteredSerials().filter(sn => sn.approvalStatus === 'INSPECTED_DRAFT');
+    const eligible = this.filteredSerials().filter(sn => sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT);
     if (eligible.length === 0) return false;
     const selected = this.selectedForApproval();
     return eligible.every(sn => selected.has(sn.id));
   }
 
   public toggleAllEligible(): void {
-    const eligible = this.filteredSerials().filter(sn => sn.approvalStatus === 'INSPECTED_DRAFT');
+    const eligible = this.filteredSerials().filter(sn => sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT);
     if (eligible.length === 0) return;
 
     if (this.isAllEligibleSelected) {
@@ -862,7 +876,7 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public toggleSelection(sn: LocalSerialNumber): void {
-    if (sn.approvalStatus !== 'INSPECTED_DRAFT') return;
+    if (sn.approvalStatus !== SERIAL_STATUSES.INSPECTED_DRAFT) return;
     const current = new Set(this.selectedForApproval());
     if (current.has(sn.id)) {
       current.delete(sn.id);

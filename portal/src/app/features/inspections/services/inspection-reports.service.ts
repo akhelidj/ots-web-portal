@@ -112,6 +112,46 @@ export class InspectionReportsService {
        console.error(`Failed to refresh transition logs for report ${reportId}`, e);
     }
   }
+  public async pullBatchesForReport(reportId: string): Promise<void> {
+    try {
+      const batches = await firstValueFrom(
+        this.http.get<any[]>(`${environment.apiUrl}/inspection-reports/${reportId}/approval-batches`)
+      );
+
+      const localBatchList = await this.approvalBatchRepo.listByReportId(reportId);
+
+      for (const b of batches) {
+        // Upsert Batch
+        const batchData = {
+          id: b.id,
+          tenantId: b.tenantId,
+          inspectionReportId: reportId,
+          submittedByUserId: b.submittedByUserId,
+          submittedAt: b.submittedAt,
+          reviewedByUserId: b.reviewedByUserId,
+          reviewedAt: b.reviewedAt,
+          status: b.status, // 'SUBMITTED', 'APPROVED', 'RETURNED'
+          notes: b.notes,
+          version: b.version
+        };
+        await this.approvalBatchRepo.upsert(batchData);
+
+        // Upsert serial associations
+        if (b.serialNumbers && Array.isArray(b.serialNumbers)) {
+           const associations = b.serialNumbers.map((sn: any) => ({
+             id: sn.id,
+             inspectionApprovalBatchId: b.id,
+             serialNumberId: sn.serialNumberId
+           }));
+           await this.batchSnRepo.bulkUpsert(associations);
+        }
+      }
+      
+      await this.refreshLocalCache();
+    } catch (e) {
+      console.error(`Failed to pull batches for report ${reportId}`, e);
+    }
+  }
 
   public async pullAllAndCache(): Promise<void> {
     try {

@@ -5,7 +5,7 @@ export interface UiPolicyContext {
   reportStatus: ReportStatus;
   isOffline: boolean;
   hasValidationIssues?: boolean;
-  syncState?: 'SYNCED' | 'PENDING' | 'CONFLICT';
+  syncState?: 'SYNCED' | 'PENDING' | 'CONFLICT' | 'ERROR';
   previousStatus?: string | null;
   onHoldReason?: string | null;
   version?: number;

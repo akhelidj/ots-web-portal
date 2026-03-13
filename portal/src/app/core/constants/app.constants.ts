@@ -65,5 +65,32 @@ export const SERIAL_DISPOSITIONS = {
 
 export type SerialDisposition = typeof SERIAL_DISPOSITIONS[keyof typeof SERIAL_DISPOSITIONS];
 
+export const BATCH_STATUSES = {
+  SUBMITTED: 'SUBMITTED',
+  APPROVED: 'APPROVED',
+  RETURNED: 'RETURNED',
+} as const;
+
+export type BatchStatus = typeof BATCH_STATUSES[keyof typeof BATCH_STATUSES];
+ 
+export const SERIAL_STATUSES = {
+  NOT_INSPECTED: 'NOT_INSPECTED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  INSPECTED_DRAFT: 'INSPECTED_DRAFT',
+  SUBMITTED_FOR_APPROVAL: 'SUBMITTED_FOR_APPROVAL',
+  APPROVED: 'APPROVED',
+} as const;
+
+export type SerialStatus = typeof SERIAL_STATUSES[keyof typeof SERIAL_STATUSES];
+
+export const SYNC_STATES = {
+  SYNCED: 'SYNCED',
+  PENDING: 'PENDING',
+  CONFLICT: 'CONFLICT',
+  ERROR: 'ERROR',
+} as const;
+
+export type SyncState = typeof SYNC_STATES[keyof typeof SYNC_STATES];
+
 
 
