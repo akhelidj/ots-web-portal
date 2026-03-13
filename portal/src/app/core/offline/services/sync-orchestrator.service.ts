@@ -1,4 +1,11 @@
-import { Injectable, inject, signal, effect, untracked } from '@angular/core';
+import {
+  Injectable,
+  inject,
+  signal,
+  effect,
+  untracked,
+  computed,
+} from '@angular/core';
 
 import { ConnectivityService } from './connectivity.service';
 import { SessionService } from '@portal/core/auth/services/session.service';
@@ -7,7 +14,7 @@ import { AdminUsersService } from '@portal/features/users/services/admin-users.s
 import { AdminCustomersService } from '@portal/features/customers/services/admin-customers.service';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 
-export type SyncStatus = 'Offline' | 'Syncing...' | 'Up to date' | 'Sync Error';
+export type AppSyncState = 'online' | 'offline' | 'syncing' | 'sync-error';
 
 @Injectable({
   providedIn: 'root',
@@ -20,8 +27,21 @@ export class SyncOrchestratorService {
   private adminCustomers = inject(AdminCustomersService);
   private inspectionReports = inject(InspectionReportsService);
 
-  public readonly syncStatus = signal<SyncStatus>('Offline');
+  public readonly syncState = signal<AppSyncState>('offline');
   public readonly lastSyncedAt = signal<string | null>(null);
+  public readonly lastSyncError = signal<string | null>(null);
+  public readonly syncStatus = computed(() => {
+    switch (this.syncState()) {
+      case 'syncing':
+        return 'Syncing';
+      case 'sync-error':
+        return 'Sync error';
+      case 'online':
+        return 'Online';
+      default:
+        return 'Offline';
+    }
+  });
 
   private isSyncing = false;
 
@@ -30,67 +50,58 @@ export class SyncOrchestratorService {
   }
 
   private initOrchestration(): void {
-    // 1. Sync on state change to Online + Authenticated
     effect(() => {
       const isOnline = this.connectivity.isOnline();
       const isAuthenticated = this.session.isAuthenticated();
-      
+      const hasConflict = this.outbox.hasConflict();
+
       untracked(() => {
+        if (this.isSyncing) {
+          return;
+        }
+
         if (!isOnline) {
-          this.syncStatus.set('Offline');
+          this.syncState.set('offline');
           return;
         }
-        
+
         if (isOnline && !isAuthenticated) {
-          this.syncStatus.set('Offline');
+          this.syncState.set('offline');
           return;
         }
 
-        if (isOnline && isAuthenticated) {
-          this.runSyncSequence();
+        if (hasConflict || this.lastSyncError()) {
+          this.syncState.set('sync-error');
+          return;
         }
-      });
-    });
 
-    // 2. Listen to Outbox conflicts to lock status
-    effect(() => {
-      if (this.outbox.hasConflict()) {
-        untracked(() => {
-          this.syncStatus.set('Sync Error');
-        });
-      }
+        this.syncState.set('online');
+      });
     });
   }
 
   public async runSyncSequence(): Promise<void> {
     if (this.isSyncing) return;
-    
-    const initiallyHasConflict = this.outbox.hasConflict();
-    if (initiallyHasConflict) {
-      this.syncStatus.set('Sync Error');
-      // Do not return here, continue to pull operations
+
+    await this.connectivity.refreshReachability();
+
+    if (!this.connectivity.isOnline() || !this.session.isAuthenticated()) {
+      this.syncState.set('offline');
+      return;
     }
-    
+
     this.isSyncing = true;
-    this.syncStatus.set('Syncing...');
+    this.syncState.set('syncing');
+    this.lastSyncError.set(null);
 
     try {
-      // Step 1: Flush pending writes
       await this.outbox.processQueue();
 
-      // Check if conflict arose during processQueue
-      const conflictDetected = this.outbox.hasConflict();
-      if (conflictDetected) {
-        this.syncStatus.set('Sync Error');
-        // Do not return here, we still want to pull fresh items
-      }
-
-      // Step 2: Hydrate/refresh from server
       const profile = this.session.profile();
       const isTenantAdmin = profile?.role === 'ADMIN';
 
       const syncTasks: Promise<void>[] = [
-        this.inspectionReports.pullAllAndCache()
+        this.inspectionReports.pullAllAndCache(),
       ];
 
       if (isTenantAdmin) {
@@ -102,15 +113,27 @@ export class SyncOrchestratorService {
 
       const now = new Date().toISOString();
       this.lastSyncedAt.set(now);
-      if (!conflictDetected) {
-        this.syncStatus.set('Up to date');
+      if (this.outbox.hasConflict()) {
+        this.lastSyncError.set('One or more queued changes need attention.');
+        this.syncState.set('sync-error');
+      } else {
+        this.syncState.set('online');
       }
-    } catch (e) {
+    } catch (e: unknown) {
+      const error = e as Error;
       console.error('Error during orchestrator sync sequence:', e);
-      // Fallback state if server unreachable or errors out
-      this.syncStatus.set('Offline'); 
+      this.lastSyncError.set(
+        error.message || 'Failed to synchronize local changes.',
+      );
+
+      const reachable = await this.connectivity.refreshReachability();
+      this.syncState.set(reachable ? 'sync-error' : 'offline');
     } finally {
       this.isSyncing = false;
     }
+  }
+
+  public async syncNow(): Promise<void> {
+    await this.runSyncSequence();
   }
 }

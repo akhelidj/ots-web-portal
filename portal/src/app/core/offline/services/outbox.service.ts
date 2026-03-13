@@ -43,23 +43,20 @@ export class OutboxService {
   public async enqueue(item: OutboxItem): Promise<void> {
     item.status = 'PENDING';
     item.attemptCount = 0;
-    
-    await this.repo.upsert(item);
-    
-    // Update count immediately after successful DB write
-    this.pendingCount.update(c => c + 1);
 
-    if (navigator.onLine) {
-      // Trigger sync immediately if online
-      this.processQueue().catch(err => console.error('Immediate sync failed:', err));
-    }
+    await this.repo.upsert(item);
+
+    // Update count immediately after successful DB write
+    this.pendingCount.update((c) => c + 1);
   }
 
   public async processQueue(): Promise<void> {
     if (this.isProcessing) return;
 
-    if (!this.session.isAuthenticated) {
-      console.warn('Sync aborted: User is not authenticated or token is expired.');
+    if (!this.session.isAuthenticated()) {
+      console.warn(
+        'Sync aborted: User is not authenticated or token is expired.',
+      );
       return;
     }
 
@@ -78,15 +75,18 @@ export class OutboxService {
         const item = await this.repo.getById(initialItem.id);
         if (!item || item.status !== 'PENDING') continue;
 
-        const dependsOnConflicted = skipEntities.has(item.entityId) || 
-                                   (item.payload && item.payload['inspectionReportId'] && skipEntities.has(item.payload['inspectionReportId'] as string));
-        
+        const dependsOnConflicted =
+          skipEntities.has(item.entityId) ||
+          (item.payload &&
+            item.payload['inspectionReportId'] &&
+            skipEntities.has(item.payload['inspectionReportId'] as string));
+
         if (dependsOnConflicted) {
-           item.status = 'CONFLICT';
-           item.lastError = 'Dependency is in CONFLICT';
-           await this.repo.upsert(item);
-           await this.rehydrateCount();
-           continue;
+          item.status = 'CONFLICT';
+          item.lastError = 'Dependency is in CONFLICT';
+          await this.repo.upsert(item);
+          await this.rehydrateCount();
+          continue;
         }
 
         item.attemptCount += 1;
@@ -97,7 +97,8 @@ export class OutboxService {
             item.lastError = null;
           } else {
             item.status = 'PENDING';
-            item.lastError = 'Dispatcher returned false without throwing conflict.';
+            item.lastError =
+              'Dispatcher returned false without throwing conflict.';
           }
         } catch (e: unknown) {
           const err = e as { name?: string; status?: number; message?: string };

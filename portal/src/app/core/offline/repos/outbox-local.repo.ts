@@ -20,17 +20,19 @@ export class OutboxLocalRepo {
   }
 
   public async getPendingItems(): Promise<OutboxItem[]> {
-
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.STORE_NAME, 'readonly');
       const index = tx.objectStore(this.STORE_NAME).index('status');
       const request = index.getAll('PENDING');
-      
+
       request.onsuccess = () => {
         const items = request.result as OutboxItem[];
         // Sort sequentially by createdAt
-        items.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        items.sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        );
         resolve(items);
       };
       request.onerror = () => reject(request.error);
@@ -79,7 +81,11 @@ export class OutboxLocalRepo {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
         if (cursor) {
           const item = cursor.value as OutboxItem;
-          if (item.status === 'CONFLICT' || item.status === 'FAILED' || item.lastError) {
+          if (
+            item.status === 'CONFLICT' ||
+            item.status === 'FAILED' ||
+            item.lastError
+          ) {
             cursor.delete();
           }
           cursor.continue();
@@ -98,6 +104,45 @@ export class OutboxLocalRepo {
       const index = tx.objectStore(this.STORE_NAME).index('status');
       const request = index.count('CONFLICT');
       request.onsuccess = () => resolve((request.result || 0) > 0);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  public async hasPendingOperation(
+    entityType: string,
+    entityId: string,
+    operation: string,
+  ): Promise<boolean> {
+    const db = await this.dbService.getDb();
+
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readonly');
+      const request = tx.objectStore(this.STORE_NAME).openCursor();
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+        if (!cursor) {
+          resolve(false);
+          return;
+        }
+
+        const item = cursor.value as OutboxItem;
+        const matchesEntity =
+          item.entityType === entityType &&
+          item.entityId === entityId &&
+          item.operation === operation;
+        const isQueuedState =
+          item.status === 'PENDING' || item.status === 'CONFLICT';
+
+        if (matchesEntity && isQueuedState) {
+          resolve(true);
+          return;
+        }
+
+        cursor.continue();
+      };
+
       request.onerror = () => reject(request.error);
     });
   }

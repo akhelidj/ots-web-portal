@@ -24,7 +24,9 @@
             loading="lazy"
             decoding="async"
           />
-          <h1 class="text-lg sm:text-xl text-white font-semibold tracking-[0.04em]">
+          <h1
+            class="text-lg sm:text-xl text-white font-semibold tracking-[0.04em]"
+          >
             Trackline
           </h1>
         </div>
@@ -37,21 +39,21 @@
           >
             <div class="flex items-center gap-2">
               <span class="flex h-2 w-2 relative">
-                @if (syncStatus() === 'Up to date') {
+                @if (syncState() === 'online') {
                   <span
                     class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-light opacity-75"
                   ></span>
                   <span
                     class="relative inline-flex rounded-full h-2 w-2 bg-success"
                   ></span>
-                } @else if (syncStatus() === 'Syncing...') {
+                } @else if (syncState() === 'syncing') {
                   <span
                     class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning-light opacity-75"
                   ></span>
                   <span
                     class="relative inline-flex rounded-full h-2 w-2 bg-warning"
                   ></span>
-                } @else if (syncStatus() === 'Sync Error') {
+                } @else if (syncState() === 'sync-error') {
                   <span
                     class="relative inline-flex rounded-full h-2 w-2 bg-error"
                   ></span>
@@ -64,8 +66,9 @@
               <span
                 class="font-medium tracking-wide"
                 [title]="
-                  syncStatus() === 'Sync Error'
-                    ? 'Local changes could not be synchronized'
+                  syncState() === 'sync-error'
+                    ? lastSyncError() ||
+                      'Local changes could not be synchronized'
                     : ''
                 "
               >
@@ -74,7 +77,7 @@
                   ({{ pendingCount() }})
                 }
               </span>
-              @if (syncStatus() === 'Sync Error') {
+              @if (syncState() === 'sync-error' && hasConflict()) {
                 <button
                   (click)="clearSyncErrors()"
                   class="bg-error/20 hover:bg-error/90 hover:text-white text-error-light px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider transition-colors ml-2"
@@ -83,6 +86,15 @@
                   Clear
                 </button>
               }
+              <button
+                (click)="onSyncNow()"
+                [disabled]="
+                  !isAuthenticated() || !isOnline() || syncState() === 'syncing'
+                "
+                class="ml-2 rounded border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Sync
+              </button>
             </div>
             @if (lastSyncedAt(); as lastSynced) {
               <span class="opacity-70 mt-0.5"
@@ -191,7 +203,7 @@
     >
       <p>&copy; 2026 OTS Trackline</p>
       <div class="flex gap-4">
-        <span>Offline-First Architecture</span>
+        <span>Offline-Ready PWA</span>
         <span
           class="w-1.5 h-1.5 rounded-full bg-neutral-300 self-center"
         ></span>

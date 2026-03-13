@@ -13,7 +13,13 @@ import { AuthRequiredComponent } from '@portal/shared/components/auth-required/a
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, AuthRequiredComponent],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    AuthRequiredComponent,
+  ],
   templateUrl: './shell.component.html',
 })
 export class ShellComponent {
@@ -29,9 +35,11 @@ export class ShellComponent {
   public hasConflict = this.outbox.hasConflict;
   public isAuthenticated = this.session.isAuthenticated;
   public profile = this.session.profile;
-  
+
   public syncStatus = this.orchestrator.syncStatus;
+  public syncState = this.orchestrator.syncState;
   public lastSyncedAt = this.orchestrator.lastSyncedAt;
+  public lastSyncError = this.orchestrator.lastSyncError;
 
   public isDevMode = !environment.production;
 
@@ -42,7 +50,11 @@ export class ShellComponent {
 
   public async clearSyncErrors() {
     await this.outbox.clearConflicts();
-    this.orchestrator.runSyncSequence();
+    await this.orchestrator.syncNow();
+  }
+
+  public async onSyncNow() {
+    await this.orchestrator.syncNow();
   }
 
   public async simulateOfflineMutation() {
@@ -60,10 +72,10 @@ export class ShellComponent {
       attemptCount: 0,
       lastError: null,
     });
-    
+
     // Auto-trigger sync orchestrator if online so we see it resolve
     if (this.connectivity.isOnline()) {
-      await this.outbox.processQueue();
+      await this.orchestrator.syncNow();
     }
   }
 
@@ -71,15 +83,17 @@ export class ShellComponent {
     if (!isoStr) return '';
     const date = new Date(isoStr);
     const today = new Date();
-    
+
     // Check if it's today
-    if (date.getDate() === today.getDate() && 
-        date.getMonth() === today.getMonth() && 
-        date.getFullYear() === today.getFullYear()) {
+    if (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    ) {
       return `Today, ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
     }
-    
+
     // Otherwise
-    return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}, ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+    return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
   }
 }

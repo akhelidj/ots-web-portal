@@ -3,10 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
-import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { LocalCustomer } from '@portal/core/offline/models/types';
 import { AdminCustomersService } from '@portal/features/customers/services/admin-customers.service';
-import { ENTITY_TYPES } from '@portal/core/constants/app.constants';
 
 @Component({
   selector: 'app-admin-customers',
@@ -16,7 +14,6 @@ import { ENTITY_TYPES } from '@portal/core/constants/app.constants';
 })
 export class AdminCustomersComponent implements OnInit, OnDestroy {
   private customerRepo = inject(CustomerLocalRepo);
-  private outbox = inject(OutboxService);
   private adminCustomers = inject(AdminCustomersService);
 
   public customers = signal<LocalCustomer[]>([]);
@@ -50,10 +47,9 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
       this.reloadStream();
     });
 
-    // Initial fetch if online
-    if (navigator.onLine) {
-      this.refreshFromServer();
-    }
+    this.adminCustomers.pullAllAndCache().catch((e) => {
+      console.warn('Silent failure on background refresh', e);
+    });
   }
 
   ngOnDestroy() {
@@ -65,14 +61,6 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
     this.customers.set(data);
   }
 
-  public async refreshFromServer() {
-    try {
-      await this.adminCustomers.pullAllAndCache();
-    } catch (e) {
-      console.warn('Silent failure on background refresh', e);
-    }
-  }
-
   public async onSubmitCreate() {
     this.formError = '';
 
@@ -81,47 +69,18 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const newCustomer: LocalCustomer = {
-      id: 'local-' + crypto.randomUUID(),
-      name: this.formName,
-      code: this.formCode || null,
-      email: this.formEmail || null,
-      phone: this.formPhone || null,
-      isActive: true,
-      version: 1,
-      syncState: 'PENDING',
-    };
-
     try {
-      await this.customerRepo.upsert(newCustomer);
-
-      await this.outbox.enqueue({
-        id: crypto.randomUUID(),
-        idempotencyKey: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        entityType: ENTITY_TYPES.CUSTOMER,
-        entityId: newCustomer.id,
-        operation: 'CREATE',
-        payload: {
-          name: newCustomer.name,
-          code: newCustomer.code,
-          email: newCustomer.email,
-          phone: newCustomer.phone,
-          isActive: true,
-        },
-        status: 'PENDING',
-        attemptCount: 0,
-        lastError: null,
+      await this.adminCustomers.createCustomer({
+        name: this.formName,
+        code: this.formCode || null,
+        email: this.formEmail || null,
+        phone: this.formPhone || null,
       });
 
       this.formName = '';
       this.formCode = '';
       this.formEmail = '';
       this.formPhone = '';
-
-      if (navigator.onLine) {
-        await this.outbox.processQueue();
-      }
     } catch (error) {
       const e = error as Error;
       this.formError = 'Failed to create customer locally: ' + e.message;
@@ -165,32 +124,14 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
     };
 
     try {
-      await this.customerRepo.upsert(updated);
-
-      await this.outbox.enqueue({
-        id: crypto.randomUUID(),
-        idempotencyKey: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        entityType: ENTITY_TYPES.CUSTOMER,
-        entityId: updated.id,
-        operation: 'UPDATE',
-        payload: {
-          name: updated.name,
-          code: updated.code,
-          email: updated.email,
-          phone: updated.phone,
-          version: updated.version,
-        },
-        status: 'PENDING',
-        attemptCount: 0,
-        lastError: null,
+      await this.adminCustomers.updateCustomer(this.editingCustomer, {
+        name: updated.name,
+        code: updated.code || null,
+        email: updated.email || null,
+        phone: updated.phone || null,
       });
 
       this.editingCustomer = null;
-
-      if (navigator.onLine) {
-        await this.outbox.processQueue();
-      }
     } catch (error) {
       const e = error as Error;
       this.editError = 'Failed to update customer: ' + e.message;
@@ -250,28 +191,7 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
     reason?: string,
   ) {
     try {
-      await this.customerRepo.setActive(customer.id, isActive, reason);
-
-      await this.outbox.enqueue({
-        id: crypto.randomUUID(),
-        idempotencyKey: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        entityType: ENTITY_TYPES.CUSTOMER,
-        entityId: customer.id,
-        operation: 'SET_ACTIVE',
-        payload: {
-          isActive,
-          reason,
-          version: customer.version,
-        },
-        status: 'PENDING',
-        attemptCount: 0,
-        lastError: null,
-      });
-
-      if (navigator.onLine) {
-        await this.outbox.processQueue();
-      }
+      await this.adminCustomers.setCustomerActive(customer, isActive, reason);
     } catch (error) {
       console.error(error);
     }
@@ -283,29 +203,8 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
     this.deletingIds.add(customer.id);
 
     try {
-      // 1. Enqueue Outbox mutation for DELETE
-      await this.outbox.enqueue({
-        id: crypto.randomUUID(),
-        idempotencyKey: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        entityType: ENTITY_TYPES.CUSTOMER,
-        entityId: customer.id,
-        operation: 'DELETE',
-        payload: {},
-        status: 'PENDING',
-        attemptCount: 0,
-        lastError: null,
-      });
-
-      // 2. Optimistic apply to Local Repo
-      await this.customerRepo.delete(customer.id);
-
-      // 3. Eager UI refresh
+      await this.adminCustomers.deleteCustomer(customer);
       await this.reloadStream();
-
-      if (navigator.onLine) {
-        await this.outbox.processQueue();
-      }
     } catch (error) {
       console.error(error);
       this.formError = 'Failed to delete customer.';

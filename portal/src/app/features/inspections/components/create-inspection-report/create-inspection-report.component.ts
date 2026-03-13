@@ -11,7 +11,7 @@ import { TEMPLATE_KEYS } from '@portal/core/constants/app.constants';
   selector: 'app-create-inspection-report',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
-  templateUrl: './create-inspection-report.component.html'
+  templateUrl: './create-inspection-report.component.html',
 })
 export class CreateInspectionReportComponent {
   private irService = inject(InspectionReportsService);
@@ -38,17 +38,17 @@ export class CreateInspectionReportComponent {
 
   public async onSubmit() {
     this.formError = '';
-    
+
     if (!this.formCustomer || !this.formPoNumber || !this.formTemplateKey) {
       this.formError = 'Customer, PO Number and Template Key are required.';
       return;
     }
 
     try {
-      await this.irService.createOffline({
+      await this.irService.createReport({
         customerId: this.formCustomer,
         poNumber: this.formPoNumber,
-        templateKey: this.formTemplateKey
+        templateKey: this.formTemplateKey,
       });
       const segment = this.router.url.split('/');
       segment.pop();

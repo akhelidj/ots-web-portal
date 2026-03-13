@@ -5,7 +5,7 @@ import {
   ChangeDetectorRef,
   signal,
   computed,
-  Injector
+  Injector,
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -51,6 +51,7 @@ import {
   InspectionReportUiState,
 } from '@portal/core/ui-policy/inspection-report-ui-policy';
 import { SyncOrchestratorService } from '@portal/core/offline/services/sync-orchestrator.service';
+import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
 import { ApprovalBatchLocalRepo } from '@portal/core/offline/repos/approval-batch-local.repo';
@@ -77,6 +78,7 @@ export class InspectionReportDetailComponent implements OnInit {
   private validationService = inject(ReportValidationService);
   private outboxRepo = inject(OutboxLocalRepo);
   private syncOrchestrator = inject(SyncOrchestratorService);
+  private connectivity = inject(ConnectivityService);
   private userRepo = inject(UserLocalRepo);
   private customerRepo = inject(CustomerLocalRepo);
   private approvalBatchRepo = inject(ApprovalBatchLocalRepo);
@@ -89,7 +91,13 @@ export class InspectionReportDetailComponent implements OnInit {
   public serials = signal<LocalSerialNumber[]>([]);
   public transitionLogs = signal<LocalTransitionLog[]>([]);
   public childReports = signal<LocalChildReport[]>([]);
-  public approvalBatches = signal<{ batch: LocalInspectionApprovalBatch; serials: (LocalSerialNumber & { batchStatus?: string })[]; submittedByName?: string }[]>([]);
+  public approvalBatches = signal<
+    {
+      batch: LocalInspectionApprovalBatch;
+      serials: (LocalSerialNumber & { batchStatus?: string })[];
+      submittedByName?: string;
+    }[]
+  >([]);
 
   public formBulkSerials = '';
   public formReason = '';
@@ -124,10 +132,17 @@ export class InspectionReportDetailComponent implements OnInit {
   public filteredSerials = computed(() => {
     const query = this.snSearchQuery().trim().toLowerCase();
     const serials = this.serials();
-    const baseList = !query ? serials : serials.filter((sn) => sn.value.toLowerCase().includes(query));
-    
+    const baseList = !query
+      ? serials
+      : serials.filter((sn) => sn.value.toLowerCase().includes(query));
+
     // Sort by value (serial number) alphanumeric
-    return baseList.sort((a, b) => a.value.localeCompare(b.value, undefined, { numeric: true, sensitivity: 'base' }));
+    return baseList.sort((a, b) =>
+      a.value.localeCompare(b.value, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      }),
+    );
   });
 
   // Meta Fields
@@ -173,7 +188,9 @@ export class InspectionReportDetailComponent implements OnInit {
   ];
 
   public uiState: InspectionReportUiState | null = null;
-  public userRole = computed(() => (this.session.profile()?.role?.toUpperCase() as AppRole) || '');
+  public userRole = computed(
+    () => (this.session.profile()?.role?.toUpperCase() as AppRole) || '',
+  );
   public allowedTransitions: {
     toStatus: string;
     requiresReason: boolean;
@@ -203,9 +220,11 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public isInspectorCapable = computed(() => {
     const role = this.userRole().toUpperCase();
-    return role === APP_ROLES.INSPECTOR || 
-           role === APP_ROLES.SUPERVISOR || 
-           role === APP_ROLES.ADMIN;
+    return (
+      role === APP_ROLES.INSPECTOR ||
+      role === APP_ROLES.SUPERVISOR ||
+      role === APP_ROLES.ADMIN
+    );
   });
 
   public canSubmitBatch = computed(() => {
@@ -216,11 +235,13 @@ export class InspectionReportDetailComponent implements OnInit {
   public inspectionProgress = computed(() => {
     const sns = this.serials();
     if (!sns || sns.length === 0) return { approved: 0, total: 0, percent: 0 };
-    const approved = sns.filter(sn => sn.approvalStatus === SERIAL_STATUSES.APPROVED).length;
+    const approved = sns.filter(
+      (sn) => sn.approvalStatus === SERIAL_STATUSES.APPROVED,
+    ).length;
     return {
       approved,
       total: sns.length,
-      percent: Math.round((approved / sns.length) * 100)
+      percent: Math.round((approved / sns.length) * 100),
     };
   });
 
@@ -238,45 +259,62 @@ export class InspectionReportDetailComponent implements OnInit {
   public inspectionFormData: Record<string, unknown> = {};
 
   public isExporting = false;
-  public isCustomer = computed(() => this.userRole().toUpperCase() === APP_ROLES.CUSTOMER);
-  public isReceiver = computed(() => this.userRole().toUpperCase() === APP_ROLES.RECEIVER);
-  public isSupervisor = computed(() => this.userRole().toUpperCase() === APP_ROLES.SUPERVISOR);
-  public isAdmin = computed(() => this.userRole().toUpperCase() === APP_ROLES.ADMIN);
+  public isCustomer = computed(
+    () => this.userRole().toUpperCase() === APP_ROLES.CUSTOMER,
+  );
+  public isReceiver = computed(
+    () => this.userRole().toUpperCase() === APP_ROLES.RECEIVER,
+  );
+  public isSupervisor = computed(
+    () => this.userRole().toUpperCase() === APP_ROLES.SUPERVISOR,
+  );
+  public isAdmin = computed(
+    () => this.userRole().toUpperCase() === APP_ROLES.ADMIN,
+  );
   public isLocked = computed(() => {
     const report = this.report();
     if (!report) return false;
-    return report.status === REPORT_STATUSES.APPROVED || report.status === REPORT_STATUSES.CLOSED;
+    return (
+      report.status === REPORT_STATUSES.APPROVED ||
+      report.status === REPORT_STATUSES.CLOSED
+    );
   });
 
   public isTransitionExpanded = true;
 
   public canPublishReport = computed(() => {
     const role = this.userRole().toUpperCase();
-    const isSuperOrAdmin = role === APP_ROLES.SUPERVISOR || role === APP_ROLES.ADMIN;
+    const isSuperOrAdmin =
+      role === APP_ROLES.SUPERVISOR || role === APP_ROLES.ADMIN;
     const progress = this.inspectionProgress();
-    const isFullyApproved = progress.total > 0 && progress.approved === progress.total;
+    const isFullyApproved =
+      progress.total > 0 && progress.approved === progress.total;
     const currentStatus = this.report()?.status;
-    return isSuperOrAdmin && isFullyApproved && currentStatus !== REPORT_STATUSES.APPROVED && currentStatus !== REPORT_STATUSES.CLOSED;
+    return (
+      isSuperOrAdmin &&
+      isFullyApproved &&
+      currentStatus !== REPORT_STATUSES.APPROVED &&
+      currentStatus !== REPORT_STATUSES.CLOSED
+    );
   });
 
   public historyNotes = computed(() => {
     const sn = this.activeHistorySn();
     if (!sn) return [];
-    
+
     return this.approvalBatches()
-      .filter(b => b.batch.notes && b.serials.some(s => s.id === sn.id))
-      .map(b => ({
-         notes: b.batch.notes,
-         date: b.batch.submittedAt,
-         user: b.submittedByName
+      .filter((b) => b.batch.notes && b.serials.some((s) => s.id === sn.id))
+      .map((b) => ({
+        notes: b.batch.notes,
+        date: b.batch.submittedAt,
+        user: b.submittedByName,
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   });
 
   public get isOnline(): boolean {
-    return navigator.onLine;
+    return this.connectivity.isOnline();
   }
-
 
   public getDisposition(sn: LocalSerialNumber): string | null {
     if (!sn.inspectionJson) return null;
@@ -291,7 +329,9 @@ export class InspectionReportDetailComponent implements OnInit {
     if (this.reportId && this.reportId !== 'reports') {
       this.refreshData();
 
-      toObservable(this.irService.reports, { injector: this.injector }).subscribe(() => {
+      toObservable(this.irService.reports, {
+        injector: this.injector,
+      }).subscribe(() => {
         this.refreshData();
       });
 
@@ -333,22 +373,30 @@ export class InspectionReportDetailComponent implements OnInit {
     const enrichedBatches = [];
     for (const batch of batches) {
       const bsnList = await this.batchSnRepo.listByBatchId(batch.id);
-      const snMap = new Map(bsnList.map(b => [b.serialNumberId, b.status || 'PENDING']));
-      const batchSerials = snList.filter(sn => snMap.has(sn.id)).map(sn => ({
-        ...sn,
-        batchStatus: snMap.get(sn.id)
-      }));
-      
+      const snMap = new Map(
+        bsnList.map((b) => [b.serialNumberId, b.status || 'PENDING']),
+      );
+      const batchSerials = snList
+        .filter((sn) => snMap.has(sn.id))
+        .map((sn) => ({
+          ...sn,
+          batchStatus: snMap.get(sn.id),
+        }));
+
       let submittedByName = 'Unknown';
       if (batch.submittedByUserId) {
         const u = await this.userRepo.getById(batch.submittedByUserId);
         if (u) submittedByName = u.name || u.email;
       }
-      
+
       enrichedBatches.push({ batch, serials: batchSerials, submittedByName });
     }
     // Sort batches by submittedAt desc
-    enrichedBatches.sort((a, b) => new Date(b.batch.submittedAt).getTime() - new Date(a.batch.submittedAt).getTime());
+    enrichedBatches.sort(
+      (a, b) =>
+        new Date(b.batch.submittedAt).getTime() -
+        new Date(a.batch.submittedAt).getTime(),
+    );
     this.approvalBatches.set(enrichedBatches);
 
     if (r) {
@@ -382,7 +430,9 @@ export class InspectionReportDetailComponent implements OnInit {
           (a, b) =>
             new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         );
-        const toHold = sortedLogs.find((l) => l.toStatus === REPORT_STATUSES.ON_HOLD);
+        const toHold = sortedLogs.find(
+          (l) => l.toStatus === REPORT_STATUSES.ON_HOLD,
+        );
         if (toHold) {
           previousStatus = toHold.fromStatus;
           onHoldReason = toHold.reason || null;
@@ -429,7 +479,8 @@ export class InspectionReportDetailComponent implements OnInit {
           .reverse()
           .find(
             (l) =>
-              l.toStatus === REPORT_STATUSES.IN_INSPECTION || l.toStatus === REPORT_STATUSES.PENDING_APPROVAL,
+              l.toStatus === REPORT_STATUSES.IN_INSPECTION ||
+              l.toStatus === REPORT_STATUSES.PENDING_APPROVAL,
           );
         if (inspectLog && inspectLog.userId) {
           const u = await this.userRepo.getById(inspectLog.userId);
@@ -439,7 +490,11 @@ export class InspectionReportDetailComponent implements OnInit {
         // Approved By: Last user who transitioned to APPROVED
         const approveLog = [...sortedAsc]
           .reverse()
-          .find((l) => l.toStatus === REPORT_STATUSES.APPROVED || l.toStatus === REPORT_STATUSES.CLOSED);
+          .find(
+            (l) =>
+              l.toStatus === REPORT_STATUSES.APPROVED ||
+              l.toStatus === REPORT_STATUSES.CLOSED,
+          );
         if (approveLog && approveLog.userId) {
           const u = await this.userRepo.getById(approveLog.userId);
           this.approvedByName = u?.name || u?.email || 'N/A';
@@ -561,7 +616,7 @@ export class InspectionReportDetailComponent implements OnInit {
     }
 
     try {
-      await this.irService.addSerialNumberOffline(this.reportId, uniqueLines);
+      await this.irService.addSerialNumbers(this.reportId, uniqueLines);
       this.formBulkSerials = '';
       this.refreshData();
     } catch (error) {
@@ -584,7 +639,7 @@ export class InspectionReportDetailComponent implements OnInit {
     if (!this.selectedTransition) return;
 
     try {
-      await this.irService.transitionOffline(
+      await this.irService.transitionReport(
         this.reportId,
         this.selectedTransition.toStatus,
         this.formReason,
@@ -602,11 +657,9 @@ export class InspectionReportDetailComponent implements OnInit {
     this.isSyncingRework.set(true);
     try {
       await this.irService.enqueueChildSync(this.reportId);
-      // Wait a bit for outbox to process or at least show intent
-      setTimeout(() => {
-        this.isSyncingRework.set(false);
-        this.refreshData();
-      }, 1000);
+      await this.syncOrchestrator.syncNow();
+      this.refreshData();
+      this.isSyncingRework.set(false);
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to sync rework report.';
@@ -641,7 +694,7 @@ export class InspectionReportDetailComponent implements OnInit {
     }
 
     try {
-      await this.irService.renameSerialNumberOffline(sn.id, newValue);
+      await this.irService.renameSerialNumber(sn.id, newValue);
       this.cancelEditSn();
       this.refreshData();
     } catch (error) {
@@ -659,7 +712,7 @@ export class InspectionReportDetailComponent implements OnInit {
       return;
 
     try {
-      await this.irService.deleteSerialNumberOffline(sn.id);
+      await this.irService.deleteSerialNumber(sn.id);
       this.refreshData();
     } catch (error) {
       const e = error as Error;
@@ -725,19 +778,13 @@ export class InspectionReportDetailComponent implements OnInit {
     if (!this.inspectingSn) return;
 
     try {
-      await this.irService.saveSerialNumberInspectionOffline(
+      await this.irService.saveSerialNumberInspection(
         this.inspectingSn.id,
         inspectionData as Record<string, unknown>,
       );
 
       this.refreshData();
       this.closeInspectionForm();
-
-      if (this.isOnline) {
-        this.syncOrchestrator
-          .runSyncSequence()
-          .catch((err) => console.error('Auto-sync failed', err));
-      }
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to save inspection data.';
@@ -790,7 +837,7 @@ export class InspectionReportDetailComponent implements OnInit {
         .filter((m) => m.name.trim() !== '')
         .map((m) => ({ name: m.name }));
 
-      await this.irService.updateReportOffline(this.reportId, {
+      await this.irService.saveReportUpdates(this.reportId, {
         inspectorComment: this.formInspectorComment,
         inspectionAddress: this.formInspectionAddress,
         standardUsed: this.formStandardUsed,
@@ -813,7 +860,7 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public async exportReport(): Promise<void> {
-    if (!navigator.onLine) {
+    if (!this.isOnline) {
       this.formError = 'Export requires internet connection.';
       return;
     }
@@ -914,21 +961,25 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public get isAllEligibleSelected(): boolean {
-    const eligible = this.filteredSerials().filter(sn => sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT);
+    const eligible = this.filteredSerials().filter(
+      (sn) => sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT,
+    );
     if (eligible.length === 0) return false;
     const selected = this.selectedForApproval();
-    return eligible.every(sn => selected.has(sn.id));
+    return eligible.every((sn) => selected.has(sn.id));
   }
 
   public toggleAllEligible(): void {
-    const eligible = this.filteredSerials().filter(sn => sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT);
+    const eligible = this.filteredSerials().filter(
+      (sn) => sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT,
+    );
     if (eligible.length === 0) return;
 
     if (this.isAllEligibleSelected) {
       this.selectedForApproval.set(new Set());
     } else {
       const newSet = new Set<string>();
-      eligible.forEach(sn => newSet.add(sn.id));
+      eligible.forEach((sn) => newSet.add(sn.id));
       this.selectedForApproval.set(newSet);
     }
   }
@@ -994,14 +1045,14 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public async approveBatch(batchId: string): Promise<void> {
     const selected = Array.from(this.selectedInBatch());
-    
+
     // Safety check: ensure selection belongs to this batch
-    const batch = this.approvalBatches().find(b => b.batch.id === batchId);
+    const batch = this.approvalBatches().find((b) => b.batch.id === batchId);
     if (!batch) return;
 
-    const batchSnIds = batch.serials.map(s => s.id);
-    const filteredSelection = selected.filter(id => batchSnIds.includes(id));
-    
+    const batchSnIds = batch.serials.map((s) => s.id);
+    const filteredSelection = selected.filter((id) => batchSnIds.includes(id));
+
     // If no selection, we default to all ELIGIBLE serials (those still pending)
     const ids = filteredSelection.length > 0 ? filteredSelection : undefined;
 
@@ -1011,7 +1062,7 @@ export class InspectionReportDetailComponent implements OnInit {
       await this.irService.approveBatch(batchId, ids);
       this.selectedInBatch.set(new Set());
       await this.refreshData();
-    } catch(e) {
+    } catch (e) {
       const err = e as Error;
       this.batchError = err.message || 'Failed to approve batch';
     } finally {
@@ -1020,30 +1071,36 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public getBatchEligibleCount(batchId: string): number {
-    const batch = this.approvalBatches().find(b => b.batch.id === batchId);
+    const batch = this.approvalBatches().find((b) => b.batch.id === batchId);
     if (!batch) return 0;
-    return batch.serials.filter(s => s.batchStatus === 'PENDING').length;
+    return batch.serials.filter((s) => s.batchStatus === 'PENDING').length;
   }
 
   public async returnBatch(): Promise<void> {
     if (!this.activeActionBatchId) return;
     const selected = Array.from(this.selectedInBatch());
-    
+
     // Safety check: ensure selection belongs to this batch
-    const batch = this.approvalBatches().find(b => b.batch.id === this.activeActionBatchId);
-    const batchSnIds = batch?.serials.map(s => s.id) || [];
-    const filteredSelection = selected.filter(id => batchSnIds.includes(id));
+    const batch = this.approvalBatches().find(
+      (b) => b.batch.id === this.activeActionBatchId,
+    );
+    const batchSnIds = batch?.serials.map((s) => s.id) || [];
+    const filteredSelection = selected.filter((id) => batchSnIds.includes(id));
 
     const ids = filteredSelection.length > 0 ? filteredSelection : undefined;
 
     this.isActioningBatch = true;
     this.batchError = '';
     try {
-      await this.irService.returnBatch(this.activeActionBatchId, this.returnNotes, ids);
+      await this.irService.returnBatch(
+        this.activeActionBatchId,
+        this.returnNotes,
+        ids,
+      );
       this.selectedInBatch.set(new Set());
       this.closeReturnBatchModal();
       await this.refreshData();
-    } catch(e) {
+    } catch (e) {
       const err = e as Error;
       this.batchError = err.message || 'Failed to return batch';
       this.isActioningBatch = false; // Reset if error so user can retry
@@ -1055,7 +1112,11 @@ export class InspectionReportDetailComponent implements OnInit {
   public async onPublishReport(): Promise<void> {
     if (!this.canPublishReport() || this.isPublishingReport()) return;
 
-    if (!confirm('Are you sure you want to publish this report? This will mark it as APPROVED and lock most edits.')) {
+    if (
+      !confirm(
+        'Are you sure you want to publish this report? This will mark it as APPROVED and lock most edits.',
+      )
+    ) {
       return;
     }
 
@@ -1081,10 +1142,11 @@ export class InspectionReportDetailComponent implements OnInit {
   }
 
   public hasHistory(sn: LocalSerialNumber): boolean {
-    return this.approvalBatches().some(b => 
-      b.batch.status === BATCH_STATUSES.RETURNED && 
-      b.batch.notes && 
-      b.serials.some(s => s.id === sn.id)
+    return this.approvalBatches().some(
+      (b) =>
+        b.batch.status === BATCH_STATUSES.RETURNED &&
+        b.batch.notes &&
+        b.serials.some((s) => s.id === sn.id),
     );
   }
 }

@@ -1,9 +1,35 @@
 {
   "name": "OTS Portal",
-  "short_name": "OTS Portal",
-  "theme_color": "#1976d2",
-  "background_color": "#fafafa",
+  "short_name": "OTS",
+  "description": "Offline-ready OTS operational workspace.",
+  "theme_color": "#0f4c5c",
+  "background_color": "#f5f3ee",
   "display": "standalone",
   "scope": "/",
-  "start_url": "/"
+  "start_url": "/",
+  "id": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }
