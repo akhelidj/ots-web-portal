@@ -5,8 +5,12 @@ import { ViewChild } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { SessionService, UserProfile } from '@portal/core/auth/services/session.service';
-import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';import { environment } from '@app-env/environment';
+import {
+  SessionService,
+  UserProfile,
+} from '@portal/core/auth/services/session.service';
+import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
+import { environment } from '@app-env/environment';
 
 @Component({
   selector: 'app-login',
@@ -42,7 +46,7 @@ export class LoginComponent {
     }
 
     if (this.loginForm && this.loginForm.invalid) {
-      Object.values(this.loginForm.controls).forEach(control => {
+      Object.values(this.loginForm.controls).forEach((control) => {
         control.markAsTouched();
       });
       return;
@@ -56,12 +60,22 @@ export class LoginComponent {
     this.isLoading = true;
 
     try {
-      const response = await firstValueFrom(this.http.post<{ user: UserProfile, accessToken: string, refreshToken: string }>(`${environment.apiUrl}/auth/login`, {
-        email: this.email.toLowerCase().trim(),
-        password: this.password,
-      }));
+      const response = await firstValueFrom(
+        this.http.post<{
+          user: UserProfile;
+          accessToken: string;
+          refreshToken: string;
+        }>(`${environment.apiUrl}/auth/login`, {
+          email: this.email.toLowerCase().trim(),
+          password: this.password,
+        }),
+      );
 
-      this.session.setSession(response.accessToken, response.refreshToken, response.user);
+      this.session.setSession(
+        response.accessToken,
+        response.refreshToken,
+        response.user,
+      );
 
       if (response.user.mustChangePassword) {
         this.router.navigate(['/change-password']);
@@ -69,21 +83,9 @@ export class LoginComponent {
         this.router.navigate(['/admin']);
       }
     } catch (err: unknown) {
-      const error = err as { error?: { message?: string | string[], error?: string }, message?: string };
-      console.error('Login error:', error);
-      let errorMsg = 'Login failed. Please check your credentials.';
-      if (error && error.error) {
-        if (Array.isArray(error.error.message)) {
-          errorMsg = error.error.message.join(', ');
-        } else if (typeof error.error.message === 'string') {
-          errorMsg = error.error.message;
-        } else if (typeof error.error.error === 'string') {
-          errorMsg = error.error.error;
-        }
-      } else if (error && error.message) {
-        errorMsg = error.message;
-      }
-      this.formError = errorMsg;
+      const error = err as Error;
+      console.error('Login error:', err);
+      this.formError = error.message;
     } finally {
       this.isLoading = false;
       this.cdr.detectChanges();
