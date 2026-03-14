@@ -8,11 +8,15 @@ import { LocalUser } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { APP_ROLES, ENTITY_TYPES } from '@portal/core/constants/app.constants';
+import {
+  DataHydrationContext,
+  DataHydrationSource,
+} from '@portal/core/offline/services/data-hydration.token';
 
 @Injectable({
   providedIn: 'root',
 })
-export class AdminUsersService {
+export class AdminUsersService implements DataHydrationSource {
   private repo = inject(UserLocalRepo);
   private http = inject(HttpClient);
   private connectivity = inject(ConnectivityService);
@@ -20,9 +24,14 @@ export class AdminUsersService {
 
   public readonly users = signal<LocalUser[]>([]);
   public readonly tempPasswordNotified = signal<string | null>(null);
+  public readonly resourceKey = 'admin-users';
 
   public notifyTempPassword(password: string): void {
     this.tempPasswordNotified.set(password);
+  }
+
+  public canHydrate(context: DataHydrationContext): boolean {
+    return context.profile?.role === APP_ROLES.ADMIN;
   }
 
   constructor() {

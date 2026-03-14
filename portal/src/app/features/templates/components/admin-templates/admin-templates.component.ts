@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, computed } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminTemplatesService } from '@portal/features/templates/services/admin-templates.service';
@@ -9,9 +9,9 @@ import { UserPreferencesService } from '@portal/core/services/user-preferences.s
   selector: 'app-admin-templates',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './admin-templates.component.html'
+  templateUrl: './admin-templates.component.html',
 })
-export class AdminTemplatesComponent implements OnInit {
+export class AdminTemplatesComponent {
   public templatesService = inject(AdminTemplatesService);
   public connectivity = inject(ConnectivityService);
   public prefs = inject(UserPreferencesService);
@@ -27,10 +27,6 @@ export class AdminTemplatesComponent implements OnInit {
   public formFile: File | null = null;
   public isSubmitting = false;
   public formError = '';
-
-  async ngOnInit() {
-    this.refreshTemplates();
-  }
 
   public async refreshTemplates() {
     this.formError = '';
@@ -52,39 +48,53 @@ export class AdminTemplatesComponent implements OnInit {
 
   public async submitUpload() {
     this.formError = '';
-    if (!this.formTemplateKey.trim() || !this.formChangeNote.trim() || !this.formFile) {
-      this.formError = 'Please provide a template key, change note, and select an Excel file.';
+    if (
+      !this.formTemplateKey.trim() ||
+      !this.formChangeNote.trim() ||
+      !this.formFile
+    ) {
+      this.formError =
+        'Please provide a template key, change note, and select an Excel file.';
       return;
     }
-    
+
     this.isSubmitting = true;
     try {
       await this.templatesService.createTemplate(
         this.formTemplateKey.trim().toUpperCase(),
         this.formChangeNote.trim(),
-        this.formFile
+        this.formFile,
       );
-      
+
       this.showUploadForm = false;
       this.formTemplateKey = '';
       this.formChangeNote = '';
       this.formFile = null;
     } catch (error: unknown) {
       const e = error as { error?: { message?: string }; message?: string };
-      this.formError = e?.error?.message || e?.message || 'Failed to upload template. TemplateKey/Version combo might already exist.';
+      this.formError =
+        e?.error?.message ||
+        e?.message ||
+        'Failed to upload template. TemplateKey/Version combo might already exist.';
     } finally {
       this.isSubmitting = false;
     }
   }
 
   public async deprecateTemplate(id: string) {
-    if (!confirm('Are you sure you want to deprecate this template version? New reports cannot be opened with a deprecated template.')) return;
-    
+    if (
+      !confirm(
+        'Are you sure you want to deprecate this template version? New reports cannot be opened with a deprecated template.',
+      )
+    )
+      return;
+
     try {
       await this.templatesService.deprecateTemplate(id);
     } catch (error: unknown) {
       const e = error as { error?: { message?: string }; message?: string };
-      this.formError = e?.error?.message || e?.message || 'Failed to deprecate template.';
+      this.formError =
+        e?.error?.message || e?.message || 'Failed to deprecate template.';
     }
   }
 }

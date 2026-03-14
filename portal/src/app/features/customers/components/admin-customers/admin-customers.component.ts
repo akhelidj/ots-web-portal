@@ -1,4 +1,11 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  inject,
+  signal,
+  computed,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -48,10 +55,6 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
     this.reloadStream();
     this.changesSub = this.customerRepo.changes$.subscribe(() => {
       this.reloadStream();
-    });
-
-    this.adminCustomers.pullAllAndCache().catch((e) => {
-      console.warn('Silent failure on background refresh', e);
     });
   }
 

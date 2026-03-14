@@ -6,16 +6,25 @@ import { LocalCustomer } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
-import { ENTITY_TYPES } from '@portal/core/constants/app.constants';
+import { APP_ROLES, ENTITY_TYPES } from '@portal/core/constants/app.constants';
+import {
+  DataHydrationContext,
+  DataHydrationSource,
+} from '@portal/core/offline/services/data-hydration.token';
 
 @Injectable({
   providedIn: 'root',
 })
-export class AdminCustomersService {
+export class AdminCustomersService implements DataHydrationSource {
   private http = inject(HttpClient);
   private localRepo = inject(CustomerLocalRepo);
   private connectivity = inject(ConnectivityService);
   private outbox = inject(OutboxService);
+  public readonly resourceKey = 'admin-customers';
+
+  public canHydrate(context: DataHydrationContext): boolean {
+    return context.profile?.role === APP_ROLES.ADMIN;
+  }
 
   async pullAllAndCache(): Promise<void> {
     if (!this.connectivity.isOnline()) {

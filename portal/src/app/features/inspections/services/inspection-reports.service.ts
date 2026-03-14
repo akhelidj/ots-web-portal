@@ -26,11 +26,15 @@ import {
 } from '@portal/core/constants/app.constants';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 import { OutboxLocalRepo } from '@portal/core/offline/repos/outbox-local.repo';
+import {
+  DataHydrationContext,
+  DataHydrationSource,
+} from '@portal/core/offline/services/data-hydration.token';
 
 @Injectable({
   providedIn: 'root',
 })
-export class InspectionReportsService {
+export class InspectionReportsService implements DataHydrationSource {
   private http = inject(HttpClient);
   public irRepo = inject(InspectionReportLocalRepo);
   private snRepo = inject(SerialNumberLocalRepo);
@@ -43,9 +47,14 @@ export class InspectionReportsService {
   private connectivity = inject(ConnectivityService);
 
   public readonly reports = signal<LocalInspectionReport[]>([]);
+  public readonly resourceKey = 'inspection-reports';
 
   private get canUseNetwork(): boolean {
     return this.connectivity.isOnline();
+  }
+
+  public canHydrate(context: DataHydrationContext): boolean {
+    return context.isAuthenticated;
   }
 
   public async enqueueChildSync(reportId: string): Promise<void> {

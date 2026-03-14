@@ -3,6 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { signal } from '@angular/core';
 import { environment } from '@app-env/environment';
+import { APP_ROLES } from '@portal/core/constants/app.constants';
+import {
+  DataHydrationContext,
+  DataHydrationSource,
+} from '@portal/core/offline/services/data-hydration.token';
 
 export interface AdminTemplateItem {
   id: string;
@@ -15,17 +20,22 @@ export interface AdminTemplateItem {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
-export class AdminTemplatesService {
+export class AdminTemplatesService implements DataHydrationSource {
   private http = inject(HttpClient);
-  
-  public readonly templates = signal<AdminTemplateItem[]>([]);
 
-  public async fetchAll(): Promise<void> {
+  public readonly templates = signal<AdminTemplateItem[]>([]);
+  public readonly resourceKey = 'admin-templates';
+
+  public canHydrate(context: DataHydrationContext): boolean {
+    return context.profile?.role === APP_ROLES.ADMIN;
+  }
+
+  public async pullAllAndCache(): Promise<void> {
     try {
       const templates = await firstValueFrom(
-        this.http.get<AdminTemplateItem[]>(`${environment.apiUrl}/templates`)
+        this.http.get<AdminTemplateItem[]>(`${environment.apiUrl}/templates`),
       );
       this.templates.set(templates);
     } catch (e) {
@@ -34,21 +44,29 @@ export class AdminTemplatesService {
     }
   }
 
-  public async createTemplate(templateKey: string, changeNote: string, file: File): Promise<void> {
+  public async fetchAll(): Promise<void> {
+    await this.pullAllAndCache();
+  }
+
+  public async createTemplate(
+    templateKey: string,
+    changeNote: string,
+    file: File,
+  ): Promise<void> {
     const formData = new FormData();
     formData.append('templateKey', templateKey);
     formData.append('changeNote', changeNote);
     formData.append('file', file);
 
     await firstValueFrom(
-      this.http.post(`${environment.apiUrl}/templates`, formData)
+      this.http.post(`${environment.apiUrl}/templates`, formData),
     );
     await this.fetchAll();
   }
 
   public async deprecateTemplate(id: string): Promise<void> {
     await firstValueFrom(
-      this.http.patch(`${environment.apiUrl}/templates/${id}/deprecate`, {})
+      this.http.patch(`${environment.apiUrl}/templates/${id}/deprecate`, {}),
     );
     await this.fetchAll();
   }

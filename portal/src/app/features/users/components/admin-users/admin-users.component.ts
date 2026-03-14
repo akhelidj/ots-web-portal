@@ -48,9 +48,6 @@ export class AdminUsersComponent implements OnInit {
   ngOnInit() {
     this.usersService.refreshLocalCache();
     this.loadCustomers();
-    this.usersService
-      .pullAllAndCache()
-      .catch((e) => console.warn('Background refresh failed', e));
   }
 
   private async loadCustomers() {

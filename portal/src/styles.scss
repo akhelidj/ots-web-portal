@@ -39,6 +39,15 @@
 }
 
 @layer components {
+  .shell-layout {
+    @apply h-screen min-h-0;
+  }
+
+  .shell-main-scroll {
+    min-height: 0 !important;
+    overscroll-behavior-y: contain;
+  }
+
   .page-section {
     @apply bg-white border border-neutral-200 rounded-xl shadow-sm;
   }

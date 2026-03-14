@@ -5,11 +5,11 @@
 >
 
 <div
-  class="h-screen flex flex-col overflow-hidden bg-stone-100 font-sans text-neutral-800 transition-colors duration-300"
+  class="h-screen flex flex-col overflow-hidden bg-stone-100 font-sans text-neutral-800 transition-colors duration-300 shell-layout"
 >
   <!-- Header App Bar -->
   <header
-    class="flex-shrink-0 bg-primary text-white shadow-md z-50 border-b border-primary-light/50"
+    class="sticky top-0 flex-shrink-0 bg-primary text-white shadow-md z-50 border-b border-primary-light/50"
   >
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16 items-center">
@@ -156,7 +156,7 @@
   @if (isAuthenticated() && profile()?.role === 'ADMIN') {
     @if (profile(); as profile) {
       <nav
-        class="flex-shrink-0 bg-white border-b border-neutral-200 shadow-sm z-40"
+        class="sticky top-16 flex-shrink-0 bg-white border-b border-neutral-200 shadow-sm z-40"
         aria-label="Main Navigation"
       >
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -186,9 +186,12 @@
   <!-- Main Content Area -->
   <main
     id="main-content"
-    class="flex-grow overflow-y-auto custom-scrollbar transition-opacity duration-300"
+    class="min-h-0 flex-grow overflow-y-auto custom-scrollbar transition-opacity duration-300 shell-main-scroll"
   >
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-40 outline-none" tabindex="-1">
+    <div
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-40 outline-none"
+      tabindex="-1"
+    >
       @if (isAuthenticated()) {
         <router-outlet></router-outlet>
       } @else {
