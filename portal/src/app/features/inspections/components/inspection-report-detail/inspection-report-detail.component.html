@@ -64,7 +64,7 @@
           <div class="grid grid-cols-2 gap-y-5 gap-x-4 mb-4">
             <div>
               <span class="detail-label">Report #</span>
-              <span class="detail-value-code text-accent tracking-widest">{{
+              <span class="detail-value-code tracking-widest">{{
                 reportData.reportNumber ||
                   (reportData.id.substring(0, 8) | uppercase)
               }}</span>
@@ -107,6 +107,7 @@
               <span class="detail-value">{{ inspectedByName }}</span>
             </div>
             <div>
+              <span class="detail-label">Approved By</span>
               <span class="detail-value">{{ approvedByName }}</span>
             </div>
             <div>
