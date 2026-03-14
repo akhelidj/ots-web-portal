@@ -1,4 +1,9 @@
-import { AppRole, ReportStatus, ChildReportStatus, ChildReportType } from '@portal/core/constants/app.constants';
+import {
+  AppRole,
+  ReportStatus,
+  ChildReportStatus,
+  ChildReportType,
+} from '@portal/core/constants/app.constants';
 
 export interface LocalInspectionReport {
   id: string;
@@ -28,7 +33,11 @@ export interface LocalInspectionReport {
   availableTransitions?: string | null;
 }
 
-export type SerialApprovalStatus = 'NOT_INSPECTED' | 'INSPECTED_DRAFT' | 'SUBMITTED_FOR_APPROVAL' | 'APPROVED';
+export type SerialApprovalStatus =
+  | 'NOT_INSPECTED'
+  | 'INSPECTED_DRAFT'
+  | 'SUBMITTED_FOR_APPROVAL'
+  | 'APPROVED';
 
 export interface LocalSerialNumber {
   id: string;
@@ -129,6 +138,13 @@ export interface LocalChildReport {
   id: string;
   tenantId: string;
   inspectionReportId: string;
+  attachments?: Array<{
+    id: string;
+    filename: string;
+    url: string;
+    createdAt: string;
+  }>;
+  attachmentCount?: number;
   serialNumbers: Array<{
     id: string;
     serial: string;

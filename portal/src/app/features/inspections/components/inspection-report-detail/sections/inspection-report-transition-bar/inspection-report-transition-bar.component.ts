@@ -41,9 +41,12 @@ export class InspectionReportTransitionActionComponent {
   @Input() canExport = false;
   @Input() exportDisabledReason = '';
   @Input() isExporting = false;
+  @Input() canPublish = false;
+  @Input() isPublishing = false;
 
   @Output() expandedChange = new EventEmitter<boolean>();
   @Output() export = new EventEmitter<void>();
+  @Output() publish = new EventEmitter<void>();
   @Output() showValidationDetails = new EventEmitter<void>();
   @Output() selectTransition = new EventEmitter<SelectedTransition>();
   @Output() formReasonChange = new EventEmitter<string>();

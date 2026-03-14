@@ -1,5 +1,17 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { Prisma, UserRole, InspectionReportStatus, SerialApprovalStatus, InspectionApprovalBatchStatus } from '@prisma/client';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  Prisma,
+  UserRole,
+  InspectionReportStatus,
+  ChildReportStatus,
+  SerialApprovalStatus,
+  InspectionApprovalBatchStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 
@@ -7,12 +19,22 @@ import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 export class InspectionReportsService {
   constructor(private prisma: PrismaService) {}
 
-  async getReports(user: { tenantId: string, role: UserRole, customerId?: string }, status?: InspectionReportStatus, q?: string, customerId?: string) {
-    const where: Prisma.InspectionReportWhereInput = { tenantId: user.tenantId };
-    
+  async getReports(
+    user: { tenantId: string; role: UserRole; customerId?: string },
+    status?: InspectionReportStatus,
+    q?: string,
+    customerId?: string,
+  ) {
+    const where: Prisma.InspectionReportWhereInput = {
+      tenantId: user.tenantId,
+    };
+
     if (user.role === UserRole.CUSTOMER) {
       where.customerId = user.customerId;
-    } else if (user.role === UserRole.SUPERVISOR || user.role === UserRole.ADMIN) {
+    } else if (
+      user.role === UserRole.SUPERVISOR ||
+      user.role === UserRole.ADMIN
+    ) {
       if (customerId) {
         where.customerId = customerId;
       }
@@ -25,7 +47,7 @@ export class InspectionReportsService {
     if (q && q.trim().length >= 2) {
       where.poNumber = {
         contains: q.trim(),
-        mode: 'insensitive'
+        mode: 'insensitive',
       };
     }
 
@@ -35,9 +57,15 @@ export class InspectionReportsService {
     });
   }
 
-  async getReportById(user: { tenantId: string, role: UserRole, customerId?: string }, id: string) {
-    const where: Prisma.InspectionReportWhereInput = { tenantId: user.tenantId, id };
-    
+  async getReportById(
+    user: { tenantId: string; role: UserRole; customerId?: string },
+    id: string,
+  ) {
+    const where: Prisma.InspectionReportWhereInput = {
+      tenantId: user.tenantId,
+      id,
+    };
+
     if (user.role === UserRole.CUSTOMER) {
       where.customerId = user.customerId;
     }
@@ -51,36 +79,46 @@ export class InspectionReportsService {
     return report;
   }
 
-  async createReport(tenantId: string, userId: string, data: CreateInspectionReportDto) {
+  async createReport(
+    tenantId: string,
+    userId: string,
+    data: CreateInspectionReportDto,
+  ) {
     console.log('CREATE REPORT DATA:', data);
-    
+
     // 1. Validate customer belongs to tenant
     if (!data.customerId || data.customerId.trim() === '') {
-      throw new BadRequestException('Customer ID is required to generate a report number.');
+      throw new BadRequestException(
+        'Customer ID is required to generate a report number.',
+      );
     }
 
     const customer = await this.prisma.customer.findFirst({
       where: {
-          id: data.customerId,
-          tenantId,
+        id: data.customerId,
+        tenantId,
       },
     });
 
     if (!customer) {
       throw new NotFoundException('Customer not found in this tenant');
     }
-    
+
     let customerPrefix = '';
     if (customer.code && customer.code.trim().length > 0) {
-        customerPrefix = customer.code.trim().toUpperCase();
+      customerPrefix = customer.code.trim().toUpperCase();
     } else {
-        // Fallback to initials
-        const parts = customer.name.trim().split(/\s+/);
-        if (parts.length === 1) {
-            customerPrefix = parts[0].substring(0, 3).toUpperCase();
-        } else {
-            customerPrefix = parts.map(w => w[0]).join('').substring(0, 4).toUpperCase();
-        }
+      // Fallback to initials
+      const parts = customer.name.trim().split(/\s+/);
+      if (parts.length === 1) {
+        customerPrefix = parts[0].substring(0, 3).toUpperCase();
+      } else {
+        customerPrefix = parts
+          .map((w) => w[0])
+          .join('')
+          .substring(0, 4)
+          .toUpperCase();
+      }
     }
 
     // 2. Resolve template binding (DRILL_PIPE_REPORT v1 scope)
@@ -93,11 +131,13 @@ export class InspectionReportsService {
       },
       orderBy: {
         templateVersion: 'desc',
-      }
+      },
     });
 
     if (!template) {
-      throw new BadRequestException(`No active template found for ${templateKey}`);
+      throw new BadRequestException(
+        `No active template found for ${templateKey}`,
+      );
     }
 
     // 3. Generate Report Number (PREFIX-YYMMDD-HHMMSS)
@@ -159,11 +199,18 @@ export class InspectionReportsService {
     }
 
     if (existing.version !== version) {
-      throw new ConflictException(`Version mismatch. Expected ${existing.version}, got ${version}`);
+      throw new ConflictException(
+        `Version mismatch. Expected ${existing.version}, got ${version}`,
+      );
     }
 
-    if (existing.status === InspectionReportStatus.APPROVED || existing.status === InspectionReportStatus.CLOSED) {
-      throw new BadRequestException('Cannot mutate an Approved or Closed report. Admin revision required.');
+    if (
+      existing.status === InspectionReportStatus.APPROVED ||
+      existing.status === InspectionReportStatus.CLOSED
+    ) {
+      throw new BadRequestException(
+        'Cannot mutate an Approved or Closed report. Admin revision required.',
+      );
     }
 
     return await this.prisma.$transaction(async (tx) => {
@@ -172,14 +219,21 @@ export class InspectionReportsService {
         version: existing.version + 1,
       };
 
-      if (data.inspectorComment !== undefined) updateData.inspectorComment = data.inspectorComment;
-      if (data.inspectionAddress !== undefined) updateData.inspectionAddress = data.inspectionAddress;
-      if (data.standardUsed !== undefined) updateData.standardUsed = data.standardUsed;
+      if (data.inspectorComment !== undefined)
+        updateData.inspectorComment = data.inspectorComment;
+      if (data.inspectionAddress !== undefined)
+        updateData.inspectionAddress = data.inspectionAddress;
+      if (data.standardUsed !== undefined)
+        updateData.standardUsed = data.standardUsed;
       if (data.equipmentUsed !== undefined) {
-         updateData.equipmentUsed = data.equipmentUsed === null ? Prisma.DbNull : data.equipmentUsed;
+        updateData.equipmentUsed =
+          data.equipmentUsed === null ? Prisma.DbNull : data.equipmentUsed;
       }
       if (data.inspectionMethod !== undefined) {
-         updateData.inspectionMethod = data.inspectionMethod === null ? Prisma.DbNull : data.inspectionMethod;
+        updateData.inspectionMethod =
+          data.inspectionMethod === null
+            ? Prisma.DbNull
+            : data.inspectionMethod;
       }
       if (data.grade !== undefined) updateData.grade = data.grade;
       if (data.range !== undefined) updateData.range = data.range;
@@ -187,29 +241,48 @@ export class InspectionReportsService {
       if (data.nomWT !== undefined) updateData.nomWT = data.nomWT;
       if (data.nomOD !== undefined) updateData.nomOD = data.nomOD;
       if (data.nomID !== undefined) updateData.nomID = data.nomID;
-      if (data.connection !== undefined) updateData.connection = data.connection;
+      if (data.connection !== undefined)
+        updateData.connection = data.connection;
       if (data.poNumber !== undefined) updateData.poNumber = data.poNumber;
-      
+
       if (data.status !== undefined) {
-         updateData.status = data.status;
+        updateData.status = data.status;
       }
-      
+
       const updateResult = await tx.inspectionReport.updateMany({
-        where: { 
-            id,
-            tenantId,
-            version: existing.version
+        where: {
+          id,
+          tenantId,
+          version: existing.version,
         },
         data: updateData,
       });
 
       if (updateResult.count === 0) {
-          throw new ConflictException(`Version mismatch or entity not found. Expected version: ${existing.version}`);
+        throw new ConflictException(
+          `Version mismatch or entity not found. Expected version: ${existing.version}`,
+        );
       }
-      
+
       const updated = await tx.inspectionReport.findUniqueOrThrow({
-          where: { id }
+        where: { id },
       });
+
+      const nextStatus =
+        typeof data.status === 'string'
+          ? (data.status as InspectionReportStatus)
+          : undefined;
+
+      if (nextStatus && nextStatus !== existing.status) {
+        await tx.inspectionReportTransitionLog.create({
+          data: {
+            inspectionReportId: id,
+            fromStatus: existing.status,
+            toStatus: nextStatus,
+            userId,
+          },
+        });
+      }
 
       await tx.auditLog.create({
         data: {
@@ -226,7 +299,16 @@ export class InspectionReportsService {
     });
   }
 
-  async submitForApproval(tenantId: string, reportId: string, userId: string, data: { serialNumberIds: string[], reportVersion: number, childReportId?: string }) {
+  async submitForApproval(
+    tenantId: string,
+    reportId: string,
+    userId: string,
+    data: {
+      serialNumberIds: string[];
+      reportVersion: number;
+      childReportId?: string;
+    },
+  ) {
     return await this.prisma.$transaction(async (tx) => {
       // 1. Validate Report
       const report = await tx.inspectionReport.findFirst({
@@ -234,31 +316,74 @@ export class InspectionReportsService {
       });
 
       if (!report) throw new NotFoundException('Report not found');
-      if (report.version !== data.reportVersion) throw new ConflictException(`Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`);
+      if (report.version !== data.reportVersion)
+        throw new ConflictException(
+          `Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`,
+        );
 
       // 2. Validate Serial Numbers
       if (data.childReportId) {
+        const childReport = await tx.childReport.findFirst({
+          where: {
+            id: data.childReportId,
+            tenantId,
+            inspectionReportId: reportId,
+          },
+          include: {
+            attachments: {
+              select: { id: true },
+            },
+          },
+        });
+
+        if (!childReport) {
+          throw new NotFoundException(
+            'Child report not found for this inspection report',
+          );
+        }
+
+        if (childReport.attachments.length === 0) {
+          throw new BadRequestException(
+            'At least one attachment is required before submitting a child report batch',
+          );
+        }
+
         const crSns = await tx.childReportSerialNumber.findMany({
-          where: { childReportId: data.childReportId, serialNumberId: { in: data.serialNumberIds } }
+          where: {
+            childReportId: data.childReportId,
+            serialNumberId: { in: data.serialNumberIds },
+          },
         });
         if (crSns.length !== data.serialNumberIds.length) {
-          throw new BadRequestException('One or more serial numbers are not part of this child report');
+          throw new BadRequestException(
+            'One or more serial numbers are not part of this child report',
+          );
         }
         for (const sn of crSns) {
           if (sn.approvalStatus !== SerialApprovalStatus.INSPECTED_DRAFT) {
-            throw new BadRequestException(`Serial number ${sn.serialNumberId} is in status ${sn.approvalStatus} and cannot be submitted`);
+            throw new BadRequestException(
+              `Serial number ${sn.serialNumberId} is in status ${sn.approvalStatus} and cannot be submitted`,
+            );
           }
         }
       } else {
         const sns = await tx.serialNumber.findMany({
-          where: { inspectionReportId: reportId, tenantId, id: { in: data.serialNumberIds } }
+          where: {
+            inspectionReportId: reportId,
+            tenantId,
+            id: { in: data.serialNumberIds },
+          },
         });
         if (sns.length !== data.serialNumberIds.length) {
-          throw new BadRequestException('One or more serial numbers are not part of this report');
+          throw new BadRequestException(
+            'One or more serial numbers are not part of this report',
+          );
         }
         for (const sn of sns) {
           if (sn.approvalStatus !== SerialApprovalStatus.INSPECTED_DRAFT) {
-            throw new BadRequestException(`Serial number ${sn.serial} is in status ${sn.approvalStatus} and cannot be submitted`);
+            throw new BadRequestException(
+              `Serial number ${sn.serial} is in status ${sn.approvalStatus} and cannot be submitted`,
+            );
           }
         }
       }
@@ -273,32 +398,35 @@ export class InspectionReportsService {
           status: InspectionApprovalBatchStatus.SUBMITTED,
           version: 1,
           serialNumbers: {
-            create: data.serialNumberIds.map(snId => ({
+            create: data.serialNumberIds.map((snId) => ({
               tenantId,
               serialNumberId: snId,
-              status: 'PENDING'
-            }))
-          }
-        }
+              status: 'PENDING',
+            })),
+          },
+        },
       });
 
       // 4. Update Serial Statuses
       if (data.childReportId) {
         await tx.childReportSerialNumber.updateMany({
-          where: { childReportId: data.childReportId, serialNumberId: { in: data.serialNumberIds } },
-          data: { approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+          where: {
+            childReportId: data.childReportId,
+            serialNumberId: { in: data.serialNumberIds },
+          },
+          data: { approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL },
         });
       } else {
         await tx.serialNumber.updateMany({
           where: { id: { in: data.serialNumberIds } },
-          data: { approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+          data: { approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL },
         });
       }
 
       // 5. Update report version
       const updatedReport = await tx.inspectionReport.update({
         where: { id: report.id },
-        data: { version: report.version + 1 }
+        data: { version: report.version + 1 },
       });
 
       // 6. Audit log
@@ -311,41 +439,62 @@ export class InspectionReportsService {
           tenantId,
           userId,
           inspectionReportId: report.id,
-        }
+        },
       });
 
       return { batch, updatedReport };
     });
   }
 
-  async approveBatch(tenantId: string, reportId: string, batchId: string, userId: string, data: { batchVersion: number, reportVersion: number, reason?: string, serialNumberIds?: string[] }) {
+  async approveBatch(
+    tenantId: string,
+    reportId: string,
+    batchId: string,
+    userId: string,
+    data: {
+      batchVersion: number;
+      reportVersion: number;
+      reason?: string;
+      serialNumberIds?: string[];
+    },
+  ) {
     return await this.prisma.$transaction(async (tx) => {
       const batch = await tx.inspectionApprovalBatch.findFirst({
         where: { id: batchId, tenantId, inspectionReportId: reportId },
-        include: { serialNumbers: true }
+        include: { serialNumbers: true },
       });
 
       if (!batch) throw new NotFoundException('Batch not found');
       if (batch.status !== InspectionApprovalBatchStatus.SUBMITTED) {
-        throw new BadRequestException(`Cannot approve batch in status ${batch.status}`);
+        throw new BadRequestException(
+          `Cannot approve batch in status ${batch.status}`,
+        );
       }
-      if (batch.version !== data.batchVersion) throw new ConflictException(`Batch version mismatch. Expected ${batch.version}, got ${data.batchVersion}`);
+      if (batch.version !== data.batchVersion)
+        throw new ConflictException(
+          `Batch version mismatch. Expected ${batch.version}, got ${data.batchVersion}`,
+        );
 
       const report = await tx.inspectionReport.findFirst({
         where: { id: reportId, tenantId },
       });
 
       if (!report) throw new NotFoundException('Report not found');
-      if (report.version !== data.reportVersion) throw new ConflictException(`Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`);
+      if (report.version !== data.reportVersion)
+        throw new ConflictException(
+          `Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`,
+        );
 
       // Filter SNs to approve
-      const allBatchSnIds = batch.serialNumbers.map(m => m.serialNumberId);
+      const allBatchSnIds = batch.serialNumbers.map((m) => m.serialNumberId);
       const targetSnIds = data.serialNumberIds || allBatchSnIds;
 
       // Validate targetSnIds are members of the batch
       for (const id of targetSnIds) {
         if (!allBatchSnIds.includes(id)) {
-          throw new BadRequestException(`Serial number ${id} is not part of batch ${batchId}`);
+          throw new BadRequestException(
+            `Serial number ${id} is not part of batch ${batchId}`,
+          );
         }
       }
 
@@ -353,19 +502,26 @@ export class InspectionReportsService {
       const filteredTargetIds: string[] = [];
       if (batch.childReportId) {
         const crSns = await tx.childReportSerialNumber.findMany({
-          where: { childReportId: batch.childReportId, serialNumberId: { in: targetSnIds } }
+          where: {
+            childReportId: batch.childReportId,
+            serialNumberId: { in: targetSnIds },
+          },
         });
         for (const sn of crSns) {
-          if (sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+          if (
+            sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL
+          ) {
             filteredTargetIds.push(sn.serialNumberId);
           }
         }
       } else {
         const sns = await tx.serialNumber.findMany({
-          where: { id: { in: targetSnIds } }
+          where: { id: { in: targetSnIds } },
         });
         for (const sn of sns) {
-          if (sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+          if (
+            sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL
+          ) {
             filteredTargetIds.push(sn.id);
           }
         }
@@ -375,23 +531,26 @@ export class InspectionReportsService {
         // Update SN states
         if (batch.childReportId) {
           await tx.childReportSerialNumber.updateMany({
-            where: { childReportId: batch.childReportId, serialNumberId: { in: filteredTargetIds } },
-            data: { approvalStatus: SerialApprovalStatus.APPROVED }
+            where: {
+              childReportId: batch.childReportId,
+              serialNumberId: { in: filteredTargetIds },
+            },
+            data: { approvalStatus: SerialApprovalStatus.APPROVED },
           });
         } else {
           await tx.serialNumber.updateMany({
             where: { id: { in: filteredTargetIds } },
-            data: { approvalStatus: SerialApprovalStatus.APPROVED }
+            data: { approvalStatus: SerialApprovalStatus.APPROVED },
           });
         }
 
         // Update Junction Table Status
         await tx.inspectionApprovalBatchSerialNumber.updateMany({
-           where: {
-              inspectionApprovalBatchId: batchId,
-              serialNumberId: { in: filteredTargetIds }
-           },
-           data: { status: 'APPROVED' }
+          where: {
+            inspectionApprovalBatchId: batchId,
+            serialNumberId: { in: filteredTargetIds },
+          },
+          data: { status: 'APPROVED' },
         });
       }
 
@@ -401,17 +560,31 @@ export class InspectionReportsService {
 
       if (batch.childReportId) {
         remainingInBatch = await tx.childReportSerialNumber.count({
-          where: { childReportId: batch.childReportId, serialNumberId: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+          where: {
+            childReportId: batch.childReportId,
+            serialNumberId: { in: allBatchSnIds },
+            approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL,
+          },
         });
         approvedCount = await tx.childReportSerialNumber.count({
-          where: { childReportId: batch.childReportId, serialNumberId: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.APPROVED }
+          where: {
+            childReportId: batch.childReportId,
+            serialNumberId: { in: allBatchSnIds },
+            approvalStatus: SerialApprovalStatus.APPROVED,
+          },
         });
       } else {
         remainingInBatch = await tx.serialNumber.count({
-          where: { id: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+          where: {
+            id: { in: allBatchSnIds },
+            approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL,
+          },
         });
         approvedCount = await tx.serialNumber.count({
-          where: { id: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.APPROVED }
+          where: {
+            id: { in: allBatchSnIds },
+            approvalStatus: SerialApprovalStatus.APPROVED,
+          },
         });
       }
 
@@ -427,19 +600,87 @@ export class InspectionReportsService {
           status: updatedBatchStatus,
           reviewedByUserId: userId,
           reviewedAt: new Date(),
-          version: batch.version + 1
-        }
+          version: batch.version + 1,
+        },
       });
+
+      const shouldAutoApproveParent = !batch.childReportId
+        ? (await tx.serialNumber.count({
+            where: {
+              inspectionReportId: report.id,
+              approvalStatus: { not: SerialApprovalStatus.APPROVED },
+            },
+          })) === 0 &&
+          (await tx.inspectionApprovalBatch.count({
+            where: {
+              inspectionReportId: report.id,
+              status: { not: InspectionApprovalBatchStatus.APPROVED },
+            },
+          })) === 0
+        : false;
 
       // Update report
       const updatedReport = await tx.inspectionReport.update({
         where: { id: report.id },
         data: {
-          version: report.version + 1
-        }
+          version: report.version + 1,
+          status: shouldAutoApproveParent
+            ? InspectionReportStatus.APPROVED
+            : undefined,
+        },
       });
 
-      const updatedChildReport = batch.childReportId ? await tx.childReport.findUnique({ where: { id: batch.childReportId } }) : null;
+      let updatedChildReport = null;
+      if (batch.childReportId) {
+        const shouldAutoApproveChild =
+          (await tx.childReportSerialNumber.count({
+            where: {
+              childReportId: batch.childReportId,
+              approvalStatus: { not: SerialApprovalStatus.APPROVED },
+            },
+          })) === 0 &&
+          (await tx.inspectionApprovalBatch.count({
+            where: {
+              childReportId: batch.childReportId,
+              status: { not: InspectionApprovalBatchStatus.APPROVED },
+            },
+          })) === 0;
+
+        if (shouldAutoApproveChild) {
+          const currentChild = await tx.childReport.findUnique({
+            where: { id: batch.childReportId },
+            select: { status: true },
+          });
+
+          updatedChildReport = await tx.childReport.update({
+            where: { id: batch.childReportId },
+            data: {
+              status:
+                currentChild?.status !== ChildReportStatus.APPROVED
+                  ? ChildReportStatus.APPROVED
+                  : undefined,
+            },
+          });
+
+          if (
+            currentChild &&
+            currentChild.status !== ChildReportStatus.APPROVED
+          ) {
+            await tx.childReportTransitionLog.create({
+              data: {
+                childReportId: batch.childReportId,
+                fromStatus: currentChild.status,
+                toStatus: ChildReportStatus.APPROVED,
+                userId,
+              },
+            });
+          }
+        } else {
+          updatedChildReport = await tx.childReport.findUnique({
+            where: { id: batch.childReportId },
+          });
+        }
+      }
 
       // Audit Log
       await tx.auditLog.create({
@@ -447,49 +688,80 @@ export class InspectionReportsService {
           action: 'BATCH_APPROVE',
           entity: 'InspectionApprovalBatch',
           entityId: batch.id,
-          reason: (data.reason || 'Approved items') + (data.serialNumberIds ? ` (${data.serialNumberIds.length} S/N)` : ''),
+          reason:
+            (data.reason || 'Approved items') +
+            (data.serialNumberIds
+              ? ` (${data.serialNumberIds.length} S/N)`
+              : ''),
           tenantId,
           userId,
           inspectionReportId: report.id,
-        }
+        },
       });
 
-      return { batch: updatedBatch, updatedReport, childReport: updatedChildReport };
+      return {
+        batch: updatedBatch,
+        updatedReport,
+        childReport: updatedChildReport,
+      };
     });
   }
 
-  async returnBatch(tenantId: string, reportId: string, batchId: string, userId: string, data: { batchVersion: number, reportVersion: number, reason: string, serialNumberIds?: string[] }) {
+  async returnBatch(
+    tenantId: string,
+    reportId: string,
+    batchId: string,
+    userId: string,
+    data: {
+      batchVersion: number;
+      reportVersion: number;
+      reason: string;
+      serialNumberIds?: string[];
+    },
+  ) {
     if (!data.reason || data.reason.trim() === '') {
-      throw new BadRequestException('Reason is mandatory when returning a batch');
+      throw new BadRequestException(
+        'Reason is mandatory when returning a batch',
+      );
     }
 
     return await this.prisma.$transaction(async (tx) => {
       const batch = await tx.inspectionApprovalBatch.findFirst({
         where: { id: batchId, tenantId, inspectionReportId: reportId },
-        include: { serialNumbers: true }
+        include: { serialNumbers: true },
       });
 
       if (!batch) throw new NotFoundException('Batch not found');
       if (batch.status !== InspectionApprovalBatchStatus.SUBMITTED) {
-        throw new BadRequestException(`Cannot return batch in status ${batch.status}`);
+        throw new BadRequestException(
+          `Cannot return batch in status ${batch.status}`,
+        );
       }
-      if (batch.version !== data.batchVersion) throw new ConflictException(`Batch version mismatch. Expected ${batch.version}, got ${data.batchVersion}`);
+      if (batch.version !== data.batchVersion)
+        throw new ConflictException(
+          `Batch version mismatch. Expected ${batch.version}, got ${data.batchVersion}`,
+        );
 
       const report = await tx.inspectionReport.findFirst({
         where: { id: reportId, tenantId },
       });
 
       if (!report) throw new NotFoundException('Report not found');
-      if (report.version !== data.reportVersion) throw new ConflictException(`Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`);
+      if (report.version !== data.reportVersion)
+        throw new ConflictException(
+          `Report version mismatch. Expected ${report.version}, got ${data.reportVersion}`,
+        );
 
       // Filter SNs to return
-      const allBatchSnIds = batch.serialNumbers.map(m => m.serialNumberId);
+      const allBatchSnIds = batch.serialNumbers.map((m) => m.serialNumberId);
       const targetSnIds = data.serialNumberIds || allBatchSnIds;
 
       // Validate
       for (const id of targetSnIds) {
         if (!allBatchSnIds.includes(id)) {
-          throw new BadRequestException(`Serial number ${id} is not part of batch ${batchId}`);
+          throw new BadRequestException(
+            `Serial number ${id} is not part of batch ${batchId}`,
+          );
         }
       }
 
@@ -497,19 +769,26 @@ export class InspectionReportsService {
       const filteredTargetIds: string[] = [];
       if (batch.childReportId) {
         const crSns = await tx.childReportSerialNumber.findMany({
-          where: { childReportId: batch.childReportId, serialNumberId: { in: targetSnIds } }
+          where: {
+            childReportId: batch.childReportId,
+            serialNumberId: { in: targetSnIds },
+          },
         });
         for (const sn of crSns) {
-          if (sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+          if (
+            sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL
+          ) {
             filteredTargetIds.push(sn.serialNumberId);
           }
         }
       } else {
         const sns = await tx.serialNumber.findMany({
-          where: { id: { in: targetSnIds } }
+          where: { id: { in: targetSnIds } },
         });
         for (const sn of sns) {
-          if (sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL) {
+          if (
+            sn.approvalStatus === SerialApprovalStatus.SUBMITTED_FOR_APPROVAL
+          ) {
             filteredTargetIds.push(sn.id);
           }
         }
@@ -519,34 +798,44 @@ export class InspectionReportsService {
         // Revert SNs to INSPECTED_DRAFT
         if (batch.childReportId) {
           await tx.childReportSerialNumber.updateMany({
-            where: { childReportId: batch.childReportId, serialNumberId: { in: filteredTargetIds } },
-            data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT }
+            where: {
+              childReportId: batch.childReportId,
+              serialNumberId: { in: filteredTargetIds },
+            },
+            data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT },
           });
         } else {
           await tx.serialNumber.updateMany({
             where: { id: { in: filteredTargetIds } },
-            data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT }
+            data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT },
           });
         }
 
         // Update Junction Table Status
         await tx.inspectionApprovalBatchSerialNumber.updateMany({
-           where: {
-              inspectionApprovalBatchId: batchId,
-              serialNumberId: { in: filteredTargetIds }
-           },
-           data: { status: 'RETURNED' }
+          where: {
+            inspectionApprovalBatchId: batchId,
+            serialNumberId: { in: filteredTargetIds },
+          },
+          data: { status: 'RETURNED' },
         });
       }
       // Check if ALL SNs in this batch are now processed
       let remainingInBatch = 0;
       if (batch.childReportId) {
         remainingInBatch = await tx.childReportSerialNumber.count({
-          where: { childReportId: batch.childReportId, serialNumberId: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+          where: {
+            childReportId: batch.childReportId,
+            serialNumberId: { in: allBatchSnIds },
+            approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL,
+          },
         });
       } else {
         remainingInBatch = await tx.serialNumber.count({
-          where: { id: { in: allBatchSnIds }, approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL }
+          where: {
+            id: { in: allBatchSnIds },
+            approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL,
+          },
         });
       }
       let updatedBatchStatus: InspectionApprovalBatchStatus = batch.status;
@@ -564,16 +853,16 @@ export class InspectionReportsService {
           reviewedByUserId: userId,
           reviewedAt: new Date(),
           version: batch.version + 1,
-          notes: data.reason // Overwrite notes with the latest return reason if applicable
-        }
+          notes: data.reason, // Overwrite notes with the latest return reason if applicable
+        },
       });
 
       // Update report
       const updatedReport = await tx.inspectionReport.update({
         where: { id: report.id },
         data: {
-          version: report.version + 1
-        }
+          version: report.version + 1,
+        },
       });
 
       // Audit Log
@@ -582,11 +871,15 @@ export class InspectionReportsService {
           action: 'BATCH_RETURN',
           entity: 'InspectionApprovalBatch',
           entityId: batch.id,
-          reason: data.reason + (data.serialNumberIds ? ` (${data.serialNumberIds.length} S/N)` : ''),
+          reason:
+            data.reason +
+            (data.serialNumberIds
+              ? ` (${data.serialNumberIds.length} S/N)`
+              : ''),
           tenantId,
           userId,
           inspectionReportId: report.id,
-        }
+        },
       });
 
       return { batch: updatedBatch, updatedReport };
@@ -597,18 +890,18 @@ export class InspectionReportsService {
     return this.prisma.inspectionApprovalBatch.findMany({
       where: {
         tenantId,
-        inspectionReportId: reportId
+        inspectionReportId: reportId,
       },
       include: {
         submittedByUser: { select: { id: true, name: true, email: true } },
         reviewedByUser: { select: { id: true, name: true, email: true } },
         serialNumbers: {
           include: {
-            serialNumber: true
-          }
-        }
+            serialNumber: true,
+          },
+        },
       },
-      orderBy: { submittedAt: 'desc' }
+      orderBy: { submittedAt: 'desc' },
     });
   }
 
@@ -617,17 +910,17 @@ export class InspectionReportsService {
       where: {
         id: batchId,
         tenantId,
-        inspectionReportId: reportId
+        inspectionReportId: reportId,
       },
       include: {
         submittedByUser: { select: { id: true, name: true, email: true } },
         reviewedByUser: { select: { id: true, name: true, email: true } },
         serialNumbers: {
           include: {
-            serialNumber: true
-          }
-        }
-      }
+            serialNumber: true,
+          },
+        },
+      },
     });
 
     if (!batch) throw new NotFoundException('Batch not found');
@@ -636,15 +929,20 @@ export class InspectionReportsService {
 
   async getReportApprovalProgress(tenantId: string, reportId: string) {
     const serials = await this.prisma.serialNumber.findMany({
-      where: { tenantId, inspectionReportId: reportId }
+      where: { tenantId, inspectionReportId: reportId },
     });
 
     return {
       total: serials.length,
-      notInspected: serials.filter(s => s.approvalStatus === 'NOT_INSPECTED').length,
-      inspectedDraft: serials.filter(s => s.approvalStatus === 'INSPECTED_DRAFT').length,
-      submitted: serials.filter(s => s.approvalStatus === 'SUBMITTED_FOR_APPROVAL').length,
-      approved: serials.filter(s => s.approvalStatus === 'APPROVED').length,
+      notInspected: serials.filter((s) => s.approvalStatus === 'NOT_INSPECTED')
+        .length,
+      inspectedDraft: serials.filter(
+        (s) => s.approvalStatus === 'INSPECTED_DRAFT',
+      ).length,
+      submitted: serials.filter(
+        (s) => s.approvalStatus === 'SUBMITTED_FOR_APPROVAL',
+      ).length,
+      approved: serials.filter((s) => s.approvalStatus === 'APPROVED').length,
     };
   }
 }

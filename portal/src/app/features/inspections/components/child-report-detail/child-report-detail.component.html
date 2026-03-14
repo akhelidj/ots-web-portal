@@ -2,9 +2,9 @@
   <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
     <!-- Header -->
     <div
-      class="page-section p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      class="page-section p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
     >
-      <div class="flex items-center gap-4">
+      <div class="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
         <button
           (click)="goBack()"
           class="text-neutral-500 hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-full hover:bg-neutral-100"
@@ -23,19 +23,22 @@
             />
           </svg>
         </button>
-        <div>
+        <div class="min-w-0">
           <h1
-            class="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900 flex items-center gap-3"
+            class="text-base sm:text-xl font-semibold tracking-tight text-neutral-900 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 min-w-0"
           >
-            Branch Report:
-            <span class="code-text text-neutral-500 text-xl pt-1">{{
-              cr.reportNumber || (cr.id.substring(0, 8) | uppercase)
-            }}</span>
+            {{ (cr.type | titlecase) || 'Sub' }} Report:
+            <span
+              class="code-text text-neutral-500 text-sm sm:text-lg break-all leading-tight"
+              >{{
+                cr.reportNumber || (cr.id.substring(0, 8) | uppercase)
+              }}</span
+            >
           </h1>
           <p
-            class="text-sm font-medium text-neutral-500 mt-1 flex items-center gap-2"
+            class="text-sm font-medium text-neutral-500 mt-1 flex flex-wrap items-center gap-2"
           >
-            <span>Child Report of</span>
+            <span>Parent Report:</span>
             @if (parentReport(); as parent) {
               <a
                 [routerLink]="getParentReportLink(parent.id)"
@@ -46,8 +49,10 @@
           </p>
         </div>
       </div>
-      @if (userRole !== 'CUSTOMER') {
-        <div class="flex items-center gap-2">
+      <div
+        class="flex items-center gap-2 flex-wrap justify-start sm:justify-end w-full sm:w-auto"
+      >
+        @if (userRole !== 'CUSTOMER') {
           <span
             class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-[0.08em] bg-neutral-100 text-neutral-700 border border-neutral-200"
           >
@@ -64,8 +69,8 @@
           >
             {{ cr.syncState }}
           </span>
-        </div>
-      }
+        }
+      </div>
     </div>
 
     <!-- Banners -->
@@ -120,10 +125,8 @@
                 <div class="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    [checked]="
-                      selectedSnIds().size === serials.length &&
-                      serials.length > 0
-                    "
+                    [checked]="isAllSelectableSelected()"
+                    [disabled]="selectableSerialCount() === 0"
                     (change)="selectAll()"
                     class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
                   />
@@ -146,12 +149,14 @@
                       userRole === 'ADMIN' ||
                       userRole === 'SUPERVISOR'
                     ) {
-                      <input
-                        type="checkbox"
-                        [checked]="selectedSnIds().has(sn.id)"
-                        (change)="toggleSelection(sn.id)"
-                        class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
-                      />
+                      @if (canSelectSerial(sn)) {
+                        <input
+                          type="checkbox"
+                          [checked]="selectedSnIds().has(sn.id)"
+                          (change)="toggleSelection(sn.id)"
+                          class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                      }
                     }
                     <div class="flex flex-col gap-1">
                       <span class="code-text font-bold text-gray-900 text-sm">{{
@@ -283,159 +288,211 @@
         </div>
       </div>
 
-      <!-- Transition Section -->
-      <div class="page-section p-6 flex flex-col h-full">
-        <div class="border-b border-neutral-200 pb-3 mb-5">
-          <h2 class="text-lg font-semibold text-neutral-900">
-            Resolve Branch Workflow
-          </h2>
-        </div>
+      <!-- Column 2: Workflow & Attachments -->
+      <div class="flex flex-col gap-6 h-full">
+        @if (userRole !== 'CUSTOMER') {
+          <!-- Transition Section -->
+          <div class="page-section p-6 flex flex-col shadow-sm">
+            <div class="border-b border-neutral-200 pb-3 mb-5">
+              <h2 class="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                Resolve Branch Workflow
+              </h2>
+            </div>
 
-        @if (formError && !formError.includes('[object Object]')) {
-          <div class="alert-error mb-5 whitespace-pre-line">
-            {{ formError }}
+            @if (formError && !formError.includes('[object Object]')) {
+              <div class="mb-5 p-4 bg-error-light text-error-dark border-l-4 border-error rounded-r-md text-sm font-medium whitespace-pre-line shadow-sm">
+                {{ formError }}
+              </div>
+            }
+
+            <div class="mt-auto">
+              <div class="flex flex-wrap gap-2.5">
+                @for (
+                  transition of allowedTransitions;
+                  track transition.toStatus
+                ) {
+                  <button
+                    (click)="openReasonSelect(transition)"
+                    class="btn btn-primary transform active:scale-95 shadow-sm"
+                    [disabled]="!transition.enabled"
+                    [title]="transition.disabledReason || ''"
+                  >
+                    {{ transition.label || transition.toStatus }}
+                    <svg
+                      class="ml-2 -mr-1 h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M14 5l7 7m0 0l-7 7m7-7H3"
+                      />
+                    </svg>
+                  </button>
+                }
+                @if (allowedTransitions.length === 0) {
+                  <p class="text-sm text-gray-500 italic mt-2 bg-gray-50 px-4 py-3 rounded-lg border border-gray-100 w-full text-center">
+                    No transitions available based on current status and role.
+                  </p>
+                }
+              </div>
+
+              @if (selectedTransition) {
+                <div
+                  class="mt-5 p-5 border border-primary/20 rounded-xl bg-primary/5 shadow-inner flex flex-col gap-4 animate-in fade-in slide-in-from-top-2"
+                >
+                  <p
+                    class="text-sm font-semibold text-gray-900 flex items-center gap-2"
+                  >
+                    Confirm transition to
+                    <span class="text-primary font-bold bg-white px-2 py-0.5 rounded shadow-sm border border-primary/10">{{
+                      selectedTransition.toStatus
+                    }}</span>
+                  </p>
+                  @if (selectedTransition.requiresReason) {
+                    <div>
+                      <input
+                        type="text"
+                        [(ngModel)]="formReason"
+                        placeholder="Reason for transition (Required)"
+                        class="field-control bg-white shadow-sm border-gray-300 focus:border-primary focus:ring-primary/20 placeholder-gray-400"
+                      />
+                    </div>
+                  }
+                  <div class="flex gap-3">
+                    <button
+                      (click)="onTransition()"
+                      class="btn btn-primary shadow-sm"
+                      [disabled]="
+                        selectedTransition.requiresReason && !formReason.trim()
+                      "
+                    >
+                      Confirm & Proceed
+                    </button>
+                    <button
+                      (click)="selectedTransition = null; formReason = ''"
+                      class="btn btn-secondary shadow-sm hover:bg-white"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
           </div>
         }
 
-        <div class="mt-auto">
-          @if (userRole !== 'CUSTOMER') {
-            <div class="flex flex-wrap gap-3">
-              @for (
-                transition of allowedTransitions;
-                track transition.toStatus
-              ) {
-                <button
-                  (click)="openReasonSelect(transition)"
-                  class="btn btn-primary transform active:scale-95"
-                  [disabled]="!transition.enabled"
-                  [title]="transition.disabledReason || ''"
-                >
-                  {{ transition.label || transition.toStatus }}
-                  <svg
-                    class="ml-2 -mr-1 h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M14 5l7 7m0 0l-7 7m7-7H3"
-                    />
-                  </svg>
-                </button>
-              }
-              @if (allowedTransitions.length === 0) {
-                <p class="text-sm text-gray-500 italic mt-2">
-                  No transitions available based on current status and role.
-                </p>
+        <!-- Attachments Section (Visible to Everyone) -->
+        <div class="page-section p-6 flex flex-col flex-grow shadow-sm">
+          <div class="border-b border-neutral-200 pb-3 mb-5 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+              <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+              </svg>
+              Attachments
+            </h2>
+            <span class="bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full text-xs font-semibold border border-gray-200">
+              {{ cr.attachments?.length || cr.attachmentCount || 0 }}
+            </span>
+          </div>
+
+          @if (cr.attachments?.length) {
+            <div class="grid grid-cols-1 gap-3 mb-5 max-h-[300px] overflow-y-auto px-1 custom-scrollbar">
+              @for (attachment of cr.attachments; track attachment.id) {
+                <div class="flex items-center p-3.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-primary/40 hover:shadow-md transition-all group">
+                  <div class="p-2.5 bg-primary/5 rounded-lg mr-4 border border-primary/10 transition-colors group-hover:bg-primary/10">
+                    <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                  </div>
+                  <div class="min-w-0 flex-grow">
+                    <p class="text-sm font-semibold text-gray-900 truncate" [title]="attachment.filename">{{ attachment.filename }}</p>
+                    <p class="text-xs text-gray-500 mt-0.5 tracking-wide">Attached Document</p>
+                  </div>
+                  <div class="ml-4 pl-4 border-l border-gray-100">
+                    <button (click)="downloadAttachment(attachment.url, attachment.filename)" class="text-gray-400 hover:text-primary transition-colors p-1.5 rounded-md hover:bg-gray-50" title="Download">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               }
             </div>
-
-            @if (selectedTransition) {
-              <div
-                class="mt-5 p-5 border border-gray-200 rounded-xl bg-gray-50 shadow-inner flex flex-col gap-4"
-              >
-                <p
-                  class="text-sm font-semibold text-gray-900 flex items-center gap-2"
-                >
-                  Confirm transition to
-                  <span class="text-accent">{{
-                    selectedTransition.toStatus
-                  }}</span>
-                </p>
-                @if (selectedTransition.requiresReason) {
-                  <div>
-                    <input
-                      type="text"
-                      [(ngModel)]="formReason"
-                      placeholder="Reason for transition (Required)"
-                      class="field-control"
-                    />
-                  </div>
-                }
-                <div class="flex gap-3">
-                  <button
-                    (click)="onTransition()"
-                    class="btn btn-accent"
-                    [disabled]="
-                      selectedTransition.requiresReason && !formReason.trim()
-                    "
-                  >
-                    Confirm & Proceed
-                  </button>
-                  <button
-                    (click)="selectedTransition = null; formReason = ''"
-                    class="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                </div>
+          } @else {
+            <div class="flex flex-col items-center justify-center p-8 bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-xl flex-grow mb-5">
+              <div class="p-4 bg-white rounded-full shadow-sm mb-4 border border-gray-100 group-hover:scale-105 transition-transform">
+                <svg class="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
               </div>
-            }
+              <p class="text-base text-gray-700 font-semibold mb-1">No attachments found</p>
+              <p class="text-sm text-gray-500 max-w-[240px] text-center leading-relaxed">Files and documents related to this report will appear here when uploaded.</p>
+            </div>
           }
-        </div>
 
-        <!-- Attachments Section -->
-        @if (userRole !== 'CUSTOMER') {
-          <div class="mt-8 border-t border-gray-100 pt-5">
-            <h3 class="text-md font-semibold text-gray-900 mb-3">
-              Attachments (required)
-            </h3>
-
-            <div
-              class="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-inner"
-            >
-              <p class="text-sm text-gray-600 mb-3">
-                Upload a file required for final approval (e.g. photos,
-                supplementary documents).
+          @if (userRole !== 'CUSTOMER') {
+            <div class="mt-auto border-t border-gray-100 pt-6">
+              <p class="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                Upload New File
+                <span class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">Required for approval</span>
               </p>
 
               @if (uploadSuccess) {
-                <div
-                  class="mb-3 p-3 bg-success-light text-success-dark border border-success rounded-md text-sm font-medium flex items-center"
-                >
-                  <svg
-                    class="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M5 13l4 4L19 7"
-                    ></path>
-                  </svg>
-                  Attachment uploaded successfully!
+                <div class="mb-4 p-3 bg-success/10 text-success-dark border border-success/30 rounded-lg text-sm font-medium flex items-center animate-in fade-in slide-in-from-bottom-2 shadow-sm">
+                  <span class="bg-success text-white rounded-full p-0.5 mr-2 shadow-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </span>
+                  Attachment successfully uploaded!
                 </div>
               }
 
               <div class="flex flex-col sm:flex-row gap-3 items-center">
                 <div class="flex-grow w-full">
-                  <input
-                    type="file"
-                    (change)="onFileSelected($event)"
-                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors cursor-pointer bg-white border border-gray-300 rounded-md"
-                  />
+                  <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                      </svg>
+                    </div>
+                    <input
+                      type="file"
+                      (change)="onFileSelected($event)"
+                      class="block w-full pl-10 text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 transition-all cursor-pointer bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 h-[42px] leading-[42px]"
+                      style="padding-top: 5px; padding-bottom: 5px;"
+                    />
+                  </div>
                 </div>
                 <button
                   (click)="uploadAttachment()"
                   [disabled]="!formFile || isUploading"
-                  class="btn btn-primary w-full sm:w-auto"
+                  class="w-full sm:w-auto px-6 h-[42px] bg-primary text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-primary-light hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed disabled:shadow-none transition-all flex items-center justify-center gap-2 group"
                 >
                   @if (isUploading) {
+                    <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
                     Uploading...
                   } @else {
+                    <svg class="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
                     Upload
                   }
                 </button>
               </div>
             </div>
-          </div>
-        }
+          }
+        </div>
       </div>
     </div>
   </div>
@@ -536,28 +593,29 @@
 
   @if (inspectingSnId && parentReport(); as parentData) {
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all p-4 pb-20 lg:p-8 lg:pb-24"
+      class="fixed inset-0 z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
+      (click)="closeInspectionForm()"
+      (keydown.escape)="closeInspectionForm()"
+      tabindex="0"
+      role="button"
+      aria-label="Close inspection form"
     >
       <div
-        tabindex="0"
-        class="absolute inset-0"
-        (click)="closeInspectionForm()"
-        (keydown.enter)="closeInspectionForm()"
-      ></div>
-
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-full flex flex-col border border-gray-200 z-10 animate-[sliceIn_0.2s_ease-out] overflow-hidden"
+        class="bg-white w-full max-w-2xl h-full flex flex-col shadow-2xl border-l border-gray-200 animate-in slide-in-from-right duration-500 overflow-hidden"
+        (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
+        tabindex="-1"
+        role="region"
+        aria-label="Serial Inspection Details"
       >
-        <!-- Modal Header -->
+        <!-- Drawer Header -->
         <div
-          class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0"
+          class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center shrink-0"
         >
           <div class="flex gap-4 items-center">
-            <h2
-              class="text-xl font-semibold text-gray-900 flex items-center gap-3"
-            >
+            <div class="p-2 bg-primary/10 rounded-xl">
               <svg
-                class="w-5 h-5 text-accent"
+                class="w-6 h-6 text-primary"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -569,23 +627,24 @@
                   d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                 ></path>
               </svg>
-              Inspect
-              <span
-                class="code-text bg-white px-2.5 py-1 rounded-md border border-gray-200 text-base font-bold text-primary shadow-sm"
-              >
+            </div>
+            <div>
+              <h2 class="text-lg font-bold text-gray-900 leading-tight">
+                Inspect Serial
+              </h2>
+              <p class="font-mono text-sm text-primary font-bold">
                 {{ inspectingSnValue }}
-              </span>
-            </h2>
-            <!-- Navigation within modal -->
-            <div class="flex gap-1.5 ml-4 pl-4 border-l border-gray-200">
+              </p>
+            </div>
+            <div class="flex gap-1 ml-4 border-l border-gray-200 pl-4">
               <button
                 (click)="goToPrevSn()"
-                class="bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-600 p-1.5 rounded-md shadow-sm disabled:opacity-40 disabled:shadow-none transition-all flex items-center gap-1"
                 [disabled]="!hasPrevSn"
-                title="Previous Item"
+                class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors"
+                title="Previous SN"
               >
                 <svg
-                  class="h-4 w-4"
+                  class="w-5 h-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -597,21 +656,15 @@
                     d="M15 19l-7-7 7-7"
                   ></path>
                 </svg>
-                <span class="text-xs font-medium sr-only sm:not-sr-only"
-                  >Prev</span
-                >
               </button>
               <button
                 (click)="goToNextSn()"
-                class="bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-600 p-1.5 rounded-md shadow-sm disabled:opacity-40 disabled:shadow-none transition-all flex items-center gap-1"
                 [disabled]="!hasNextSn"
-                title="Next Item"
+                class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors"
+                title="Next SN"
               >
-                <span class="text-xs font-medium sr-only sm:not-sr-only"
-                  >Next</span
-                >
                 <svg
-                  class="h-4 w-4"
+                  class="w-5 h-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -628,10 +681,10 @@
           </div>
           <button
             (click)="closeInspectionForm()"
-            class="text-gray-400 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-full transition-colors flex items-center justify-center shrink-0"
+            class="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-900"
           >
             <svg
-              class="h-5 w-5"
+              class="w-6 h-6"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -646,8 +699,10 @@
           </button>
         </div>
 
-        <!-- Modal Body (Scrollable) -->
-        <div class="flex-grow overflow-y-auto p-6 bg-gray-50/30">
+        <!-- Drawer Body -->
+        <div
+          class="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar bg-white"
+        >
           @if (parentData) {
             <app-serial-inspection-reactive-form
               [initialData]="inspectionFormData"

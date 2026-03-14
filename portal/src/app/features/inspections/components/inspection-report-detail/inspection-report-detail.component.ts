@@ -130,6 +130,7 @@ export class InspectionReportDetailComponent
       batch: LocalInspectionApprovalBatch;
       serials: (LocalSerialNumber & { batchStatus?: string })[];
       submittedByName?: string;
+      reviewedByName?: string;
     }[]
   >([]);
 
@@ -141,6 +142,7 @@ export class InspectionReportDetailComponent
   public isValidationModalOpen = false;
   public activeHistorySn = signal<LocalSerialNumber | null>(null);
   public isPublishingReport = signal(false);
+  public isGeneratingChildReport = signal(false);
 
   public selectedForApproval = signal<Set<string>>(new Set());
   public selectedInBatch = signal<Set<string>>(new Set());
@@ -176,10 +178,25 @@ export class InspectionReportDetailComponent
 
   public isCompactMode = computed(() => this.prefs.preferences().compactMode);
   public hasSubmittedBatches = computed(() => {
+    return this.approvalBatches().length > 0;
+  });
+  public hasPendingApprovals = computed(() => {
     return this.approvalBatches().some(
-      (b) => b.batch.status === BATCH_STATUSES.SUBMITTED,
+      (batch) => batch.batch.status === BATCH_STATUSES.SUBMITTED,
     );
   });
+  public allBatchesApproved = computed(() => {
+    const batches = this.approvalBatches();
+    return (
+      batches.length > 0 &&
+      batches.every((batch) => batch.batch.status === BATCH_STATUSES.APPROVED)
+    );
+  });
+  public hasReworkChildReport = computed(() =>
+    this.childReports().some(
+      (report) => report.type === CHILD_REPORT_TYPES.REWORK,
+    ),
+  );
 
   // Search Filter Signals
   public snSearchQuery = signal('');
@@ -201,6 +218,7 @@ export class InspectionReportDetailComponent
 
   // Meta Fields
   public formInspectorComment = '';
+  public formGlobalComment = '';
   public formInspectionAddress = '';
   public formStandardUsed = '';
   public formEquipmentUsed: Array<{
@@ -220,6 +238,7 @@ export class InspectionReportDetailComponent
   public formConnection = '';
 
   public isEditingMeta = false;
+  public isEditingGlobalComment = false;
 
   constructor() {
     toObservable(this.activeTab, { injector: this.injector }).subscribe(() => {
@@ -422,6 +441,14 @@ export class InspectionReportDetailComponent
   public isSupervisor = computed(
     () => this.userRole().toUpperCase() === APP_ROLES.SUPERVISOR,
   );
+  public canAccessBatchApprovals = computed(() => {
+    const role = this.userRole().toUpperCase();
+    return (
+      role === APP_ROLES.INSPECTOR ||
+      role === APP_ROLES.SUPERVISOR ||
+      role === APP_ROLES.ADMIN
+    );
+  });
   public isAdmin = computed(
     () => this.userRole().toUpperCase() === APP_ROLES.ADMIN,
   );
@@ -440,13 +467,10 @@ export class InspectionReportDetailComponent
     const role = this.userRole().toUpperCase();
     const isSuperOrAdmin =
       role === APP_ROLES.SUPERVISOR || role === APP_ROLES.ADMIN;
-    const progress = this.inspectionProgress();
-    const isFullyApproved =
-      progress.total > 0 && progress.approved === progress.total;
     const currentStatus = this.report()?.status;
     return (
       isSuperOrAdmin &&
-      isFullyApproved &&
+      this.allBatchesApproved() &&
       currentStatus !== REPORT_STATUSES.APPROVED &&
       currentStatus !== REPORT_STATUSES.CLOSED
     );
@@ -518,7 +542,9 @@ export class InspectionReportDetailComponent
       ) {
         await this.irService.refreshAvailableTransitions(this.reportId);
         await this.irService.refreshTransitionLogs(this.reportId);
-        await this.irService.pullBatchesForReport(this.reportId);
+        if (this.canAccessBatchApprovals()) {
+          await this.irService.pullBatchesForReport(this.reportId);
+        }
         await this.crService.pullForInspectionFromServer(this.reportId);
       }
     }
@@ -579,7 +605,20 @@ export class InspectionReportDetailComponent
         if (u) submittedByName = u.name || u.email;
       }
 
-      enrichedBatches.push({ batch, serials: batchSerials, submittedByName });
+      let reviewedByName = 'Unknown';
+      if (batch.reviewedByUserId) {
+        const reviewer = await this.userRepo.getById(batch.reviewedByUserId);
+        if (reviewer) {
+          reviewedByName = reviewer.name || reviewer.email;
+        }
+      }
+
+      enrichedBatches.push({
+        batch,
+        serials: batchSerials,
+        submittedByName,
+        reviewedByName,
+      });
     }
     // Sort batches by submittedAt desc
     enrichedBatches.sort(
@@ -688,6 +727,18 @@ export class InspectionReportDetailComponent
         if (approveLog && approveLog.userId) {
           const u = await this.userRepo.getById(approveLog.userId);
           this.approvedByName = u?.name || u?.email || 'N/A';
+        } else {
+          const latestApprovedBatch = enrichedBatches
+            .filter((b) => b.batch.status === BATCH_STATUSES.APPROVED)
+            .sort(
+              (a, b) =>
+                new Date(b.batch.reviewedAt || b.batch.submittedAt).getTime() -
+                new Date(a.batch.reviewedAt || a.batch.submittedAt).getTime(),
+            )[0];
+
+          if (latestApprovedBatch?.reviewedByName) {
+            this.approvedByName = latestApprovedBatch.reviewedByName;
+          }
         }
       }
 
@@ -726,7 +777,9 @@ export class InspectionReportDetailComponent
         if (role === APP_ROLES.INSPECTOR) {
           this.activeTab.set('serials');
         } else if (role === APP_ROLES.SUPERVISOR) {
-          this.activeTab.set('approvals');
+          this.activeTab.set(
+            this.hasPendingApprovals() ? 'approvals' : 'serials',
+          );
         }
       }
 
@@ -775,6 +828,10 @@ export class InspectionReportDetailComponent
         this.formNomOD = r.nomOD || '';
         this.formNomID = r.nomID || '';
         this.formConnection = r.connection || '';
+      }
+
+      if (!this.isEditingGlobalComment) {
+        this.formGlobalComment = r.inspectorComment || '';
       }
     } else {
       this.validationResult = null;
@@ -972,7 +1029,7 @@ export class InspectionReportDetailComponent
         inspectionData as Record<string, unknown>,
       );
 
-      this.refreshData();
+      await this.refreshData();
       this.closeInspectionForm();
     } catch (error) {
       const e = error as Error;
@@ -1045,6 +1102,30 @@ export class InspectionReportDetailComponent
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to save details.';
+    }
+  }
+
+  public startEditingGlobalComment(): void {
+    this.formGlobalComment = this.report()?.inspectorComment || '';
+    this.isEditingGlobalComment = true;
+  }
+
+  public cancelEditingGlobalComment(): void {
+    this.formGlobalComment = this.report()?.inspectorComment || '';
+    this.isEditingGlobalComment = false;
+  }
+
+  public async saveGlobalComment(): Promise<void> {
+    this.formError = '';
+    try {
+      await this.irService.saveReportUpdates(this.reportId, {
+        inspectorComment: this.formGlobalComment,
+      });
+      this.isEditingGlobalComment = false;
+      await this.refreshData();
+    } catch (error) {
+      const e = error as Error;
+      this.formError = e.message || 'Failed to save global comment.';
     }
   }
 
@@ -1310,6 +1391,54 @@ export class InspectionReportDetailComponent
     } finally {
       this.isPublishingReport.set(false);
     }
+  }
+
+  public async onGenerateReworkChildReport(): Promise<void> {
+    if (!this.reportId || this.reportId.startsWith('local-ir-')) {
+      this.formError =
+        'Child report generation requires a synced inspection report.';
+      return;
+    }
+
+    this.isGeneratingChildReport.set(true);
+    this.formError = '';
+    try {
+      await this.crService.generateReworkChildReport(this.reportId);
+      await this.refreshData();
+    } catch (error) {
+      const e = error as Error;
+      this.formError = e.message || 'Failed to generate child report.';
+    } finally {
+      this.isGeneratingChildReport.set(false);
+    }
+  }
+
+  public shouldPulseTab(tab: 'serials' | 'approvals'): boolean {
+    const report = this.report();
+    if (!report) {
+      return false;
+    }
+
+    if (tab === 'approvals') {
+      return this.canAccessBatchApprovals() && this.hasPendingApprovals();
+    }
+
+    return (
+      report.status === REPORT_STATUSES.IN_INSPECTION &&
+      !this.hasPendingApprovals()
+    );
+  }
+
+  public tabTooltip(tab: 'serials' | 'approvals'): string {
+    if (tab === 'approvals' && this.shouldPulseTab('approvals')) {
+      return 'Pending approvals require review';
+    }
+
+    if (tab === 'serials' && this.shouldPulseTab('serials')) {
+      return 'Inspect pipes and set dispositions';
+    }
+
+    return '';
   }
 
   public openHistory(sn: LocalSerialNumber): void {

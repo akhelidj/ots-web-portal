@@ -22,6 +22,25 @@
               <span class="text-xs text-gray-500">{{
                 batchItem.batch.submittedAt | date: 'medium'
               }}</span>
+              @if (batchItem.batch.childReportId) {
+                <span
+                  class="mt-1 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary"
+                >
+                  Source: Child Report
+                  <a
+                    [routerLink]="childRoute(batchItem.batch.childReportId)"
+                    class="normal-case tracking-normal text-xs font-medium"
+                  >
+                    Open
+                  </a>
+                </span>
+              } @else {
+                <span
+                  class="mt-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-500"
+                >
+                  Source: Parent Report
+                </span>
+              }
             </div>
 
             <div class="flex items-center gap-3">

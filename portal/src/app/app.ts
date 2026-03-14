@@ -11,19 +11,15 @@ import { ToastComponent } from '@portal/shared/toast/toast.component';
   styleUrl: './app.scss',
 })
 export class App implements OnInit {
-  protected title = 'portal';
-  protected message = 'Loading health check...';
   private http = inject(HttpClient);
 
   ngOnInit() {
     this.http.get(environment.apiUrl + '/health').subscribe({
-      next: (res) => {
-        this.message = 'API Health Check: OK ' + JSON.stringify(res);
-        console.log('API Health Check:', res);
+      next: () => {
+        // no-op health check warm-up
       },
-      error: (err) => {
-        this.message = 'API Health Check Failed: ' + err.statusText;
-        console.error('API Health Check Failed:', err);
+      error: () => {
+        // no-op: app handles API failures where needed
       },
     });
   }

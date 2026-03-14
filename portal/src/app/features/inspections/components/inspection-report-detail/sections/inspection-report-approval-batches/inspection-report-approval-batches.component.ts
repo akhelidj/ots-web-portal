@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import {
   APP_ROLES,
   BATCH_STATUSES,
@@ -18,7 +19,7 @@ type ApprovalBatchView = {
 @Component({
   selector: 'app-inspection-report-approval-batches',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './inspection-report-approval-batches.component.html',
   host: {
     class: 'block w-full',
@@ -26,6 +27,7 @@ type ApprovalBatchView = {
 })
 export class InspectionReportApprovalBatchesComponent {
   @Input() userRole = '';
+  @Input() roleRoute = '';
   @Input() batches: ApprovalBatchView[] = [];
   @Input() selectedIds: ReadonlySet<string> = new Set<string>();
   @Input() isActioning = false;
@@ -49,5 +51,9 @@ export class InspectionReportApprovalBatchesComponent {
 
     return batch.serials.filter((serial) => serial.batchStatus === 'PENDING')
       .length;
+  }
+
+  protected childRoute(childReportId: string): string[] {
+    return ['/', this.roleRoute, 'reports', childReportId, 'child'];
   }
 }

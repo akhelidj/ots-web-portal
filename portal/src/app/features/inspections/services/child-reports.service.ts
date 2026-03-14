@@ -3,7 +3,10 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-local.repo';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
-import { ENTITY_TYPES } from '@portal/core/constants/app.constants';
+import {
+  CHILD_REPORT_TYPES,
+  ENTITY_TYPES,
+} from '@portal/core/constants/app.constants';
 import { LocalChildReport } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
@@ -225,6 +228,37 @@ export class ChildReportsService {
         e,
       );
     }
+  }
+
+  public async generateReworkChildReport(
+    inspectionReportId: string,
+  ): Promise<LocalChildReport | null> {
+    if (!this.isOnline) {
+      throw new Error('Child report generation requires internet connection.');
+    }
+
+    const serverReport = await firstValueFrom(
+      this.http.post<LocalChildReport | null>(
+        `${environment.apiUrl}/inspection-reports/${inspectionReportId}/child-reports/sync-rework`,
+        {},
+      ),
+    );
+    this.connectivity.markApiReachable();
+
+    if (serverReport) {
+      await this.crRepo.upsert({ ...serverReport, syncState: 'SYNCED' });
+      return serverReport;
+    }
+
+    const localChildren = await this.crRepo.listByReportId(inspectionReportId);
+    const reworkChild = localChildren.find(
+      (child) => child.type === CHILD_REPORT_TYPES.REWORK,
+    );
+    if (reworkChild) {
+      await this.crRepo.delete(reworkChild.id);
+    }
+
+    return null;
   }
 
   public async uploadAttachment(id: string, file: File): Promise<void> {

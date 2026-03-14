@@ -361,11 +361,13 @@ export class SyncDispatcherService {
           const mappedUpdate = {
             ...updateRes,
             value: updateRes.serialNumber,
+            inspectionJson: updateRes['inspectionData'],
           } as Partial<{ serialNumber: unknown }> & {
             value: string;
             [key: string]: unknown;
           };
           delete mappedUpdate.serialNumber;
+          delete mappedUpdate['inspectionData'];
 
           const existingSn = await this.snRepo.getById(item.entityId);
           await this.snRepo.upsert({
@@ -392,11 +394,13 @@ export class SyncDispatcherService {
           const mappedUpdate = {
             ...updateRes,
             value: updateRes.serialNumber,
+            inspectionJson: updateRes['inspectionData'],
           } as Partial<{ serialNumber: unknown }> & {
             value: string;
             [key: string]: unknown;
           };
           delete mappedUpdate.serialNumber;
+          delete mappedUpdate['inspectionData'];
 
           const existingSn = await this.snRepo.getById(item.entityId);
           await this.snRepo.upsert({
@@ -511,6 +515,9 @@ export class SyncDispatcherService {
           const reportId = item.payload['inspectionReportId'] as string;
           const serialNumberIds = item.payload['serialNumberIds'] as string[];
           const reportVersion = item.payload['reportVersion'] as number;
+          const childReportId = item.payload['childReportId'] as
+            | string
+            | undefined;
 
           const createRes = await firstValueFrom(
             this.http.post<{
@@ -523,7 +530,7 @@ export class SyncDispatcherService {
               };
             }>(
               `${environment.apiUrl}/inspection-reports/${reportId}/approval-batches`,
-              { serialNumberIds, reportVersion },
+              { serialNumberIds, reportVersion, childReportId },
             ),
           );
 
@@ -536,6 +543,7 @@ export class SyncDispatcherService {
             id: b.id,
             tenantId: b.tenantId,
             inspectionReportId: b.inspectionReportId,
+            childReportId: b.childReportId,
             submittedByUserId: b.submittedByUserId,
             submittedAt: b.submittedAt,
             reviewedByUserId: b.reviewedByUserId,
@@ -564,7 +572,7 @@ export class SyncDispatcherService {
           const pendingItems = await this.outboxRepo.getPendingItems();
           for (const pending of pendingItems) {
             if (
-              pending.entityType === 'APPROVAL_BATCH' &&
+              pending.entityType === ENTITY_TYPES.APPROVAL_BATCH &&
               pending.entityId === item.entityId
             ) {
               pending.entityId = b.id;
@@ -641,6 +649,15 @@ export class SyncDispatcherService {
               await this.snRepo.upsert({ ...sn, syncState: 'SYNCED' });
             }
           }
+
+          if (batch.childReportId) {
+            const childReport = await firstValueFrom(
+              this.http.get<LocalChildReport>(
+                `${environment.apiUrl}/child-reports/${batch.childReportId}`,
+              ),
+            );
+            await this.crRepo.upsert({ ...childReport, syncState: 'SYNCED' });
+          }
           return true;
         }
 
@@ -705,6 +722,15 @@ export class SyncDispatcherService {
               await this.snRepo.upsert({ ...sn, syncState: 'SYNCED' });
             }
           }
+
+          if (batch.childReportId) {
+            const childReport = await firstValueFrom(
+              this.http.get<LocalChildReport>(
+                `${environment.apiUrl}/child-reports/${batch.childReportId}`,
+              ),
+            );
+            await this.crRepo.upsert({ ...childReport, syncState: 'SYNCED' });
+          }
           return true;
         }
 
@@ -740,7 +766,7 @@ export class SyncDispatcherService {
           } else if (item.entityType === ENTITY_TYPES.CHILD_REPORT) {
             const cr = await this.crRepo.getById(item.entityId);
             if (cr) await this.crRepo.upsert({ ...cr, syncState: 'CONFLICT' });
-          } else if (item.entityType === 'APPROVAL_BATCH') {
+          } else if (item.entityType === ENTITY_TYPES.APPROVAL_BATCH) {
             const batch = await this.approvalBatchRepo.getById(item.entityId);
             if (batch)
               await this.approvalBatchRepo.upsert({
@@ -777,7 +803,7 @@ export class SyncDispatcherService {
             if (cr) {
               await this.crRepo.upsert({ ...cr, syncState: 'ERROR' });
             }
-          } else if (item.entityType === 'APPROVAL_BATCH') {
+          } else if (item.entityType === ENTITY_TYPES.APPROVAL_BATCH) {
             const batch = await this.approvalBatchRepo.getById(item.entityId);
             if (batch) {
               await this.approvalBatchRepo.upsert({

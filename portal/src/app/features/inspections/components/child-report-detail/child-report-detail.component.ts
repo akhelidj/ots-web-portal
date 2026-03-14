@@ -1,9 +1,8 @@
-import { Component, inject, OnInit, Injector } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ChildReportsService } from '@portal/features/inspections/services/child-reports.service';
@@ -20,7 +19,9 @@ import {
 } from '@portal/core/ui-policy/child-report-ui-policy';
 import {
   AppRole,
+  APP_ROLES,
   ChildReportStatus,
+  SERIAL_STATUSES,
 } from '@portal/core/constants/app.constants';
 import { environment } from '@app-env/environment';
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
@@ -37,15 +38,15 @@ import { ConnectivityService } from '@portal/core/offline/services/connectivity.
   ],
   templateUrl: './child-report-detail.component.html',
 })
-export class ChildReportDetailComponent implements OnInit {
+export class ChildReportDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private http = inject(HttpClient);
   private crService = inject(ChildReportsService);
   private irService = inject(InspectionReportsService);
   private session = inject(SessionService);
-  private injector = inject(Injector);
   private connectivity = inject(ConnectivityService);
+  private subscriptions = new Subscription();
 
   public reportId = '';
   public cr = signal<LocalChildReport | null>(null);
@@ -87,6 +88,8 @@ export class ChildReportDetailComponent implements OnInit {
   public notes = '';
   public isEditingNotes = false;
   private isRefreshing = false;
+  private refreshQueued = false;
+  private isDestroyed = false;
 
   public get isOnline(): boolean {
     return this.connectivity.isOnline();
@@ -104,15 +107,33 @@ export class ChildReportDetailComponent implements OnInit {
 
       // Skip reactive refreshes while a server pull is already in progress
       // to avoid the loop: pullSingleFromServer → crRepo.upsert → changes$ → refreshData loop
-      this.crService.changes$.subscribe(() => {
-        if (!this.isRefreshing) this.refreshData();
-      });
-      toObservable(this.irService.reports, {
-        injector: this.injector,
-      }).subscribe(() => {
-        if (!this.isRefreshing) this.refreshData();
-      });
+      this.subscriptions.add(
+        this.crService.changes$.subscribe(() => {
+          this.queueRefresh();
+        }),
+      );
     }
+  }
+
+  ngOnDestroy(): void {
+    this.isDestroyed = true;
+    this.subscriptions.unsubscribe();
+  }
+
+  private queueRefresh(): void {
+    if (this.isRefreshing || this.refreshQueued || this.isDestroyed) {
+      return;
+    }
+
+    this.refreshQueued = true;
+    queueMicrotask(async () => {
+      this.refreshQueued = false;
+      if (this.isDestroyed || this.isRefreshing) {
+        return;
+      }
+
+      await this.refreshData();
+    });
   }
 
   private async refreshData() {
@@ -166,8 +187,21 @@ export class ChildReportDetailComponent implements OnInit {
           ),
         );
 
+        const selectable = new Set(this.getSelectableSerialIds());
+        const sanitized = new Set(
+          Array.from(this.selectedSnIds()).filter((id) => selectable.has(id)),
+        );
+        if (sanitized.size !== this.selectedSnIds().size) {
+          this.selectedSnIds.set(sanitized);
+        }
+
         // Pull batches for this child report (linked via reportId)
-        if (this.isOnline) {
+        const canAccessBatches =
+          this.userRole === APP_ROLES.INSPECTOR ||
+          this.userRole === APP_ROLES.SUPERVISOR ||
+          this.userRole === APP_ROLES.ADMIN;
+
+        if (this.isOnline && canAccessBatches) {
           await this.irService.pullBatchesForReport(cr.inspectionReportId);
         }
         const allBatches = await this.irService[
@@ -197,7 +231,55 @@ export class ChildReportDetailComponent implements OnInit {
 
   public selectedSnIds = signal<Set<string>>(new Set());
 
+  public canSelectSerial(sn: { approvalStatus?: string }): boolean {
+    if (sn.approvalStatus === SERIAL_STATUSES.APPROVED) {
+      return false;
+    }
+
+    if (this.userRole === APP_ROLES.INSPECTOR) {
+      return sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT;
+    }
+
+    if (this.userRole === APP_ROLES.SUPERVISOR) {
+      return sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL;
+    }
+
+    if (this.userRole === APP_ROLES.ADMIN) {
+      return (
+        sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT ||
+        sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL
+      );
+    }
+
+    return false;
+  }
+
+  private getSelectableSerialIds(): string[] {
+    return this.serials()
+      .filter((sn) => this.canSelectSerial(sn))
+      .map((sn) => sn.id);
+  }
+
+  public selectableSerialCount(): number {
+    return this.getSelectableSerialIds().length;
+  }
+
+  public isAllSelectableSelected(): boolean {
+    const selectableIds = this.getSelectableSerialIds();
+    if (selectableIds.length === 0) {
+      return false;
+    }
+
+    const selected = this.selectedSnIds();
+    return selectableIds.every((id) => selected.has(id));
+  }
+
   public toggleSelection(id: string) {
+    const sn = this.serials().find((s) => s.id === id);
+    if (!sn || !this.canSelectSerial(sn)) {
+      return;
+    }
+
     const current = new Set(this.selectedSnIds());
     if (current.has(id)) {
       current.delete(id);
@@ -208,12 +290,14 @@ export class ChildReportDetailComponent implements OnInit {
   }
 
   public selectAll() {
-    const all = this.serials();
+    const all = this.getSelectableSerialIds();
     const current = this.selectedSnIds();
-    if (current.size === all.length) {
+
+    const allSelected = all.length > 0 && all.every((id) => current.has(id));
+    if (allSelected) {
       this.selectedSnIds.set(new Set());
     } else {
-      this.selectedSnIds.set(new Set(all.map((s) => s.id)));
+      this.selectedSnIds.set(new Set(all));
     }
   }
 
@@ -222,8 +306,23 @@ export class ChildReportDetailComponent implements OnInit {
   }
 
   public async submitSelectedForApproval() {
-    const ids = Array.from(this.selectedSnIds());
+    const ids = this.serials()
+      .filter(
+        (sn) =>
+          this.selectedSnIds().has(sn.id) &&
+          sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT,
+      )
+      .map((sn) => sn.id);
+
     if (ids.length === 0) return;
+
+    const attachmentCount =
+      this.cr()?.attachmentCount ?? this.cr()?.attachments?.length ?? 0;
+    if (attachmentCount < 1) {
+      this.formError =
+        'At least one attachment is required before submitting child report serials for approval.';
+      return;
+    }
 
     try {
       await this.irService.submitApprovalBatch(
@@ -345,10 +444,7 @@ export class ChildReportDetailComponent implements OnInit {
 
   public getParentReportLink(parentId: string): string[] {
     const role = this.userRole.toLowerCase();
-    if (role === 'admin' || role === 'inspector') {
-      return ['/', role, 'reports', parentId];
-    }
-    return ['/', role, parentId];
+    return ['/', role, 'reports', parentId];
   }
 
   public goBack() {
@@ -360,7 +456,7 @@ export class ChildReportDetailComponent implements OnInit {
       if (role === 'admin' || role === 'inspector') {
         this.router.navigate(['/', role, 'reports']);
       } else {
-        this.router.navigate(['/', role]);
+        this.router.navigate(['/', role, 'reports']);
       }
     }
   }
@@ -396,11 +492,6 @@ export class ChildReportDetailComponent implements OnInit {
       // Auto-hide success message after 3 seconds
       setTimeout(() => (this.uploadSuccess = false), 3000);
 
-      // In a full implementation, you'd refresh the attachments list here.
-      // But since attachments are currently only checked for length > 0 on transition
-      // by pulling from DB directly, a successful API upload will satisfy the backend.
-      // We'll just show a success message or clear the form.
-
       this.refreshData();
     } catch (error: unknown) {
       const e = error as { error?: { message?: string }; message?: string };
@@ -408,6 +499,43 @@ export class ChildReportDetailComponent implements OnInit {
         e?.error?.message || e?.message || 'Failed to upload attachment.';
     } finally {
       this.isUploading = false;
+    }
+  }
+
+  public async downloadAttachment(url: string, filename: string): Promise<void> {
+    if (!url) return;
+    
+    // Resolve relative URL if necessary
+    let fullUrl = url;
+    if (url.startsWith('/')) {
+      try {
+        const base = new URL(environment.apiUrl);
+        fullUrl = `${base.origin}${url}`;
+      } catch {
+        // Fallback if environment.apiUrl is relative
+        fullUrl = `${environment.apiUrl.replace(/\/api$/, '')}${url}`;
+      }
+    }
+
+    try {
+      // Fetch as a blob so that the Auth Interceptor automatically attaches tokens
+      const blob = await firstValueFrom(
+        this.http.get(fullUrl, { responseType: 'blob' })
+      );
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      
+      setTimeout(() => {
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      }, 0);
+    } catch {
+      this.formError = 'Failed to download attachment. It might be unavailable.';
     }
   }
 

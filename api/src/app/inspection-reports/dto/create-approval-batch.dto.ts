@@ -1,4 +1,12 @@
-import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
 
 export class CreateApprovalBatchDto {
   @IsArray()
@@ -13,4 +21,8 @@ export class CreateApprovalBatchDto {
   @IsInt()
   @Min(1)
   reportVersion: number;
+
+  @IsUUID('4')
+  @IsOptional()
+  childReportId?: string;
 }

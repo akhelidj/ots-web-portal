@@ -16,9 +16,11 @@ import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { TransitionLogLocalRepo } from '@portal/core/offline/repos/transition-log-local.repo';
 import { ApprovalBatchLocalRepo } from '@portal/core/offline/repos/approval-batch-local.repo';
 import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-serial-number-local.repo';
+import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-local.repo';
 import { SessionService } from '@portal/core/auth/services/session.service';
 import {
   BATCH_STATUSES,
+  CHILD_REPORT_TYPES,
   ENTITY_TYPES,
   ReportStatus,
   REPORT_STATUSES,
@@ -41,6 +43,7 @@ export class InspectionReportsService implements DataHydrationSource {
   private tlRepo = inject(TransitionLogLocalRepo);
   private approvalBatchRepo = inject(ApprovalBatchLocalRepo);
   private batchSnRepo = inject(BatchSerialNumberLocalRepo);
+  private crRepo = inject(ChildReportLocalRepo);
   private outbox = inject(OutboxService);
   private outboxRepo = inject(OutboxLocalRepo);
   private session = inject(SessionService);
@@ -48,6 +51,31 @@ export class InspectionReportsService implements DataHydrationSource {
 
   public readonly reports = signal<LocalInspectionReport[]>([]);
   public readonly resourceKey = 'inspection-reports';
+
+  private mapServerSerialUpdate(
+    local: LocalSerialNumber,
+    update: {
+      serialNumber?: string;
+      inspectionData?: Record<string, unknown>;
+      approvalStatus?: LocalSerialNumber['approvalStatus'];
+      version?: number;
+      updatedAt?: string;
+      [key: string]: unknown;
+    },
+  ): LocalSerialNumber {
+    return {
+      ...local,
+      value: update.serialNumber ?? local.value,
+      inspectionJson:
+        update.inspectionData !== undefined
+          ? update.inspectionData
+          : local.inspectionJson,
+      approvalStatus: update.approvalStatus ?? local.approvalStatus,
+      version: update.version ?? local.version,
+      updatedAt: update.updatedAt ?? local.updatedAt,
+      syncState: 'SYNCED',
+    };
+  }
 
   private get canUseNetwork(): boolean {
     return this.connectivity.isOnline();
@@ -57,7 +85,21 @@ export class InspectionReportsService implements DataHydrationSource {
     return context.isAuthenticated;
   }
 
-  public async enqueueChildSync(reportId: string): Promise<void> {
+  public async enqueueChildSync(
+    reportId: string,
+    options?: { forceCreate?: boolean },
+  ): Promise<void> {
+    if (!options?.forceCreate) {
+      const existingChildren = await this.crRepo.listByReportId(reportId);
+      const hasReworkChild = existingChildren.some(
+        (child) => child.type === CHILD_REPORT_TYPES.REWORK,
+      );
+
+      if (!hasReworkChild) {
+        return;
+      }
+    }
+
     const alreadyQueued = await this.outboxRepo.hasPendingOperation(
       ENTITY_TYPES.CHILD_REPORT,
       reportId,
@@ -85,13 +127,31 @@ export class InspectionReportsService implements DataHydrationSource {
 
   constructor() {
     this.irRepo.changes$.subscribe(() => {
-      this.refreshLocalCache();
+      if (!this.session.isAuthenticated()) {
+        return;
+      }
+
+      void this.refreshLocalCache();
     });
   }
 
   public async refreshLocalCache(): Promise<void> {
-    const list = await this.irRepo.list();
-    this.reports.set(list);
+    if (!this.session.isAuthenticated()) {
+      this.reports.set([]);
+      return;
+    }
+
+    try {
+      const list = await this.irRepo.list();
+      this.reports.set(list);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.includes('Database is not opened for any tenant')) {
+        this.reports.set([]);
+        return;
+      }
+      throw e;
+    }
   }
 
   public async getSnForReport(reportId: string): Promise<LocalSerialNumber[]> {
@@ -181,6 +241,7 @@ export class InspectionReportsService implements DataHydrationSource {
           id: b.id,
           tenantId: b.tenantId,
           inspectionReportId: reportId,
+          childReportId: b.childReportId,
           submittedByUserId: b.submittedByUserId,
           submittedAt: b.submittedAt,
           reviewedByUserId: b.reviewedByUserId,
@@ -626,12 +687,7 @@ export class InspectionReportsService implements DataHydrationSource {
         );
 
         this.connectivity.markApiReachable();
-        await this.snRepo.upsert({
-          ...sn,
-          ...updateRes,
-          value: updateRes.serialNumber,
-          syncState: 'SYNCED',
-        } as unknown as LocalSerialNumber);
+        await this.snRepo.upsert(this.mapServerSerialUpdate(sn, updateRes));
         return;
       } catch (error) {
         if (!this.isOfflineError(error)) {
@@ -682,12 +738,7 @@ export class InspectionReportsService implements DataHydrationSource {
         );
 
         this.connectivity.markApiReachable();
-        await this.snRepo.upsert({
-          ...sn,
-          ...updateRes,
-          value: updateRes.serialNumber,
-          syncState: 'SYNCED',
-        } as unknown as LocalSerialNumber);
+        await this.snRepo.upsert(this.mapServerSerialUpdate(sn, updateRes));
         await this.enqueueChildSync(sn.inspectionReportId);
         return;
       } catch (error) {
@@ -818,6 +869,7 @@ export class InspectionReportsService implements DataHydrationSource {
       id: batchId,
       tenantId: profile?.tenantId || '',
       inspectionReportId: reportId,
+      childReportId: childReportId || null,
       submittedByUserId: profile?.id || '',
       submittedAt: new Date().toISOString(),
       status: 'SUBMITTED',
@@ -840,7 +892,7 @@ export class InspectionReportsService implements DataHydrationSource {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'APPROVAL_BATCH', // We defined it as APPROVAL_BATCH in sync-dispatcher
+      entityType: ENTITY_TYPES.APPROVAL_BATCH,
       entityId: batchId,
       operation: 'SUBMIT',
       payload: {
@@ -854,14 +906,35 @@ export class InspectionReportsService implements DataHydrationSource {
       lastError: null,
     });
 
-    for (const snId of serialNumberIds) {
-      const sn = await this.snRepo.getById(snId);
-      if (sn) {
-        await this.snRepo.upsert({
-          ...sn,
-          approvalStatus: 'SUBMITTED_FOR_APPROVAL',
+    if (childReportId) {
+      const childReport = await this.crRepo.getById(childReportId);
+      if (childReport) {
+        const updatedSerials = childReport.serialNumbers.map((serial) =>
+          serialNumberIds.includes(serial.id)
+            ? {
+                ...serial,
+                approvalStatus: SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL,
+              }
+            : serial,
+        );
+
+        await this.crRepo.upsert({
+          ...childReport,
+          serialNumbers: updatedSerials,
           syncState: 'PENDING',
+          updatedAt: new Date().toISOString(),
         });
+      }
+    } else {
+      for (const snId of serialNumberIds) {
+        const sn = await this.snRepo.getById(snId);
+        if (sn) {
+          await this.snRepo.upsert({
+            ...sn,
+            approvalStatus: SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL,
+            syncState: 'PENDING',
+          });
+        }
       }
     }
 
@@ -917,7 +990,7 @@ export class InspectionReportsService implements DataHydrationSource {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'APPROVAL_BATCH',
+      entityType: ENTITY_TYPES.APPROVAL_BATCH,
       entityId: batchId,
       operation: 'APPROVE',
       payload: {
@@ -931,58 +1004,37 @@ export class InspectionReportsService implements DataHydrationSource {
     });
 
     const batchSns = await this.batchSnRepo.listByBatchId(batchId);
-    const targetSnIds: string[] = [];
-    if (serialNumberIds && serialNumberIds.length > 0) {
-      // Filter provided IDs to only include those that are actually pending
-      for (const id of serialNumberIds) {
-        const sn = await this.snRepo.getById(id);
-        if (
-          sn &&
-          sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL
-        ) {
-          targetSnIds.push(id);
-        }
-      }
-    } else {
-      // Filter batch members for items that are actually pending
-      for (const m of batchSns) {
-        const sn = await this.snRepo.getById(m.serialNumberId);
-        if (
-          sn &&
-          sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL
-        ) {
-          targetSnIds.push(m.serialNumberId);
-        }
-      }
-    }
+    const selectedIds =
+      serialNumberIds && serialNumberIds.length > 0
+        ? serialNumberIds
+        : batchSns.map((member) => member.serialNumberId);
+    const targetSnIds = await this.filterPendingBatchSerials(
+      batch,
+      selectedIds,
+    );
 
     if (targetSnIds.length > 0) {
-      for (const snId of targetSnIds) {
-        const sn = await this.snRepo.getById(snId);
-        if (sn) {
-          sn.approvalStatus = SERIAL_STATUSES.APPROVED;
-          sn.syncState = 'PENDING';
-          await this.snRepo.upsert(sn);
-        }
+      await this.updateLocalBatchSerialStatuses(
+        batch,
+        targetSnIds,
+        SERIAL_STATUSES.APPROVED,
+      );
 
-        const link = batchSns.find((b) => b.serialNumberId === snId);
-        if (link) {
-          link.status = 'APPROVED';
-          await this.batchSnRepo.bulkUpsert([link]);
-        }
-      }
+      const toUpsertLinks = batchSns
+        .filter((member) => targetSnIds.includes(member.serialNumberId))
+        .map((member) => ({
+          ...member,
+          status: 'APPROVED' as const,
+        }));
+      await this.batchSnRepo.bulkUpsert(toUpsertLinks);
     }
 
-    // Update batch status only if all members are processed
     const allMembers = await this.batchSnRepo.listByBatchId(batchId);
-    let allProcessed = true;
-    for (const m of allMembers) {
-      const sn = await this.snRepo.getById(m.serialNumberId);
-      if (sn && sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
-        allProcessed = false;
-        break;
-      }
-    }
+    const pendingMembers = await this.filterPendingBatchSerials(
+      batch,
+      allMembers.map((member) => member.serialNumberId),
+    );
+    const allProcessed = pendingMembers.length === 0;
 
     if (allProcessed) {
       batch.status = BATCH_STATUSES.APPROVED;
@@ -1045,7 +1097,7 @@ export class InspectionReportsService implements DataHydrationSource {
       id: crypto.randomUUID(),
       idempotencyKey: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      entityType: 'APPROVAL_BATCH',
+      entityType: ENTITY_TYPES.APPROVAL_BATCH,
       entityId: batchId,
       operation: 'RETURN',
       payload: {
@@ -1060,58 +1112,37 @@ export class InspectionReportsService implements DataHydrationSource {
     });
 
     const batchSns = await this.batchSnRepo.listByBatchId(batchId);
-    const targetSnIds: string[] = [];
-    if (serialNumberIds && serialNumberIds.length > 0) {
-      // Filter provided IDs to only include those that are actually pending
-      for (const id of serialNumberIds) {
-        const sn = await this.snRepo.getById(id);
-        if (
-          sn &&
-          sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL
-        ) {
-          targetSnIds.push(id);
-        }
-      }
-    } else {
-      // Filter batch members for items that are actually pending
-      for (const m of batchSns) {
-        const sn = await this.snRepo.getById(m.serialNumberId);
-        if (
-          sn &&
-          sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL
-        ) {
-          targetSnIds.push(m.serialNumberId);
-        }
-      }
-    }
+    const selectedIds =
+      serialNumberIds && serialNumberIds.length > 0
+        ? serialNumberIds
+        : batchSns.map((member) => member.serialNumberId);
+    const targetSnIds = await this.filterPendingBatchSerials(
+      batch,
+      selectedIds,
+    );
 
     if (targetSnIds.length > 0) {
-      for (const snId of targetSnIds) {
-        const sn = await this.snRepo.getById(snId);
-        if (sn) {
-          sn.approvalStatus = SERIAL_STATUSES.INSPECTED_DRAFT;
-          sn.syncState = 'PENDING';
-          await this.snRepo.upsert(sn);
-        }
+      await this.updateLocalBatchSerialStatuses(
+        batch,
+        targetSnIds,
+        SERIAL_STATUSES.INSPECTED_DRAFT,
+      );
 
-        const link = batchSns.find((b) => b.serialNumberId === snId);
-        if (link) {
-          link.status = 'RETURNED';
-          await this.batchSnRepo.bulkUpsert([link]);
-        }
-      }
+      const toUpsertLinks = batchSns
+        .filter((member) => targetSnIds.includes(member.serialNumberId))
+        .map((member) => ({
+          ...member,
+          status: 'RETURNED' as const,
+        }));
+      await this.batchSnRepo.bulkUpsert(toUpsertLinks);
     }
 
-    // Update batch status only if all members are processed
     const allMembers = await this.batchSnRepo.listByBatchId(batchId);
-    let allProcessed = true;
-    for (const m of allMembers) {
-      const sn = await this.snRepo.getById(m.serialNumberId);
-      if (sn && sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL) {
-        allProcessed = false;
-        break;
-      }
-    }
+    const pendingMembers = await this.filterPendingBatchSerials(
+      batch,
+      allMembers.map((member) => member.serialNumberId),
+    );
+    const allProcessed = pendingMembers.length === 0;
 
     if (allProcessed) {
       batch.status = BATCH_STATUSES.RETURNED;
@@ -1120,6 +1151,81 @@ export class InspectionReportsService implements DataHydrationSource {
     }
 
     await this.refreshLocalCache();
+  }
+
+  private async filterPendingBatchSerials(
+    batch: LocalInspectionApprovalBatch,
+    serialNumberIds: string[],
+  ): Promise<string[]> {
+    if (batch.childReportId) {
+      const childReport = await this.crRepo.getById(batch.childReportId);
+      if (!childReport) {
+        return [];
+      }
+
+      return childReport.serialNumbers
+        .filter(
+          (serial) =>
+            serialNumberIds.includes(serial.id) &&
+            serial.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL,
+        )
+        .map((serial) => serial.id);
+    }
+
+    const pendingIds: string[] = [];
+    for (const serialId of serialNumberIds) {
+      const serial = await this.snRepo.getById(serialId);
+      if (
+        serial &&
+        serial.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL
+      ) {
+        pendingIds.push(serialId);
+      }
+    }
+
+    return pendingIds;
+  }
+
+  private async updateLocalBatchSerialStatuses(
+    batch: LocalInspectionApprovalBatch,
+    serialNumberIds: string[],
+    targetStatus:
+      | typeof SERIAL_STATUSES.APPROVED
+      | typeof SERIAL_STATUSES.INSPECTED_DRAFT,
+  ): Promise<void> {
+    if (batch.childReportId) {
+      const childReport = await this.crRepo.getById(batch.childReportId);
+      if (!childReport) {
+        return;
+      }
+
+      const updatedSerials = childReport.serialNumbers.map((serial) =>
+        serialNumberIds.includes(serial.id)
+          ? { ...serial, approvalStatus: targetStatus }
+          : serial,
+      );
+
+      await this.crRepo.upsert({
+        ...childReport,
+        serialNumbers: updatedSerials,
+        syncState: 'PENDING',
+        updatedAt: new Date().toISOString(),
+      });
+      return;
+    }
+
+    for (const serialId of serialNumberIds) {
+      const serial = await this.snRepo.getById(serialId);
+      if (!serial) {
+        continue;
+      }
+
+      await this.snRepo.upsert({
+        ...serial,
+        approvalStatus: targetStatus,
+        syncState: 'PENDING',
+      });
+    }
   }
 
   public async publishReport(reportId: string): Promise<void> {
@@ -1176,21 +1282,7 @@ export class InspectionReportsService implements DataHydrationSource {
   }
 
   private async checkAndAutoApproveReport(reportId: string): Promise<void> {
-    const sns = await this.snRepo.listByReportId(reportId);
-    if (sns.length === 0) return;
-
-    const allApproved = sns.every(
-      (sn) => sn.approvalStatus === SERIAL_STATUSES.APPROVED,
-    );
-    if (allApproved) {
-      const rep = await this.irRepo.getById(reportId);
-      if (rep && rep.status !== REPORT_STATUSES.APPROVED) {
-        // We still allow manual publish via button, but we could auto-trigger here if desired.
-        // For now, only local update to help UI states.
-        rep.status = REPORT_STATUSES.APPROVED;
-        await this.irRepo.upsert(rep);
-      }
-    }
+    void reportId;
   }
 
   private isOfflineError(error: unknown): boolean {

@@ -28,9 +28,25 @@
           class="bg-warning-light text-warning-dark text-xs py-0.5 px-2.5 rounded-full font-bold border border-warning/20"
           >{{ items.length }} Serials</span
         >
-        <span class="text-xs text-neutral-500"
-          >Rework updates follow the global sync action.</span
-        >
+        @if (missingChildCount() > 0) {
+          <span class="text-xs text-neutral-500"
+            >{{ missingChildCount() }} not yet linked to child report.</span
+          >
+        }
+        @if (canGenerate()) {
+          <button
+            type="button"
+            (click)="generateChildReport.emit()"
+            [disabled]="isGenerating"
+            class="btn btn-secondary btn-sm"
+          >
+            @if (isGenerating) {
+              Generating...
+            } @else {
+              Generate Child Report
+            }
+          </button>
+        }
       </div>
     </div>
 
@@ -92,7 +108,7 @@
                 <td class="px-6 py-4 text-xs text-gray-400 italic">None</td>
                 <td class="px-6 py-4">
                   <span class="data-chip-warning px-2 py-0.5 text-[10px]"
-                    >Needs Sync</span
+                    >Not Generated</span
                   >
                 </td>
                 <td class="px-6 py-4 text-right"></td>

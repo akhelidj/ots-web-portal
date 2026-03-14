@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { APP_ROLES } from '@portal/core/constants/app.constants';
 import {
   LocalChildReport,
   LocalInspectionReport,
@@ -25,6 +26,26 @@ export class InspectionReportReworkStatusComponent {
   @Input() report: LocalInspectionReport | null = null;
   @Input() userRole = '';
   @Input() items: ReworkItem[] = [];
+  @Input() hasGeneratedChildReport = false;
+  @Input() isGenerating = false;
+
+  @Output() generateChildReport = new EventEmitter<void>();
+
+  protected readonly APP_ROLES = APP_ROLES;
+
+  protected canGenerate(): boolean {
+    return (
+      !this.hasGeneratedChildReport &&
+      this.items.length > 0 &&
+      (this.userRole === APP_ROLES.INSPECTOR ||
+        this.userRole === APP_ROLES.SUPERVISOR ||
+        this.userRole === APP_ROLES.ADMIN)
+    );
+  }
+
+  protected missingChildCount(): number {
+    return this.items.filter((item) => !item.childLinked).length;
+  }
 
   protected childRoute(childId: string): string[] {
     return ['/', this.userRole.toLowerCase(), 'reports', childId, 'child'];

@@ -18,10 +18,18 @@ export class OutboxService {
   private isProcessing = false;
 
   constructor() {
-    this.rehydrateCount();
+    if (this.session.isAuthenticated()) {
+      void this.rehydrateCount();
+    }
   }
 
   private async rehydrateCount(): Promise<void> {
+    if (!this.session.isAuthenticated()) {
+      this.pendingCount.set(0);
+      this.hasConflict.set(false);
+      return;
+    }
+
     try {
       const count = await this.repo.countPendingItems();
       this.pendingCount.set(count);
@@ -29,6 +37,11 @@ export class OutboxService {
       const hasConflict = await this.repo.hasConflictItems();
       this.hasConflict.set(hasConflict);
     } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.includes('Database is not opened for any tenant')) {
+        return;
+      }
+
       console.error('Failed to rehydrate pending/conflict count:', e);
     }
   }

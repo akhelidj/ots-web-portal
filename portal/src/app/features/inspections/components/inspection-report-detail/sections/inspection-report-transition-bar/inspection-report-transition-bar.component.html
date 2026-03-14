@@ -140,7 +140,21 @@
                 </button>
               }
 
-              @if (allowedTransitions.length === 0) {
+              @if (canPublish) {
+                <button
+                  (click)="publish.emit()"
+                  class="btn btn-accent btn-sm px-4 py-2 transform active:scale-95"
+                  [disabled]="isPublishing"
+                >
+                  @if (isPublishing) {
+                    Publishing...
+                  } @else {
+                    Publish Report to Client
+                  }
+                </button>
+              }
+
+              @if (allowedTransitions.length === 0 && !canPublish) {
                 <p class="text-xs text-gray-400 italic">
                   No actions available for this role at current status.
                 </p>

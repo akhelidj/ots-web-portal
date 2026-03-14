@@ -8,6 +8,7 @@ import { LocalUser } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { APP_ROLES, ENTITY_TYPES } from '@portal/core/constants/app.constants';
+import { SessionService } from '@portal/core/auth/services/session.service';
 import {
   DataHydrationContext,
   DataHydrationSource,
@@ -21,6 +22,7 @@ export class AdminUsersService implements DataHydrationSource {
   private http = inject(HttpClient);
   private connectivity = inject(ConnectivityService);
   private outbox = inject(OutboxService);
+  private session = inject(SessionService);
 
   public readonly users = signal<LocalUser[]>([]);
   public readonly tempPasswordNotified = signal<string | null>(null);
@@ -35,12 +37,28 @@ export class AdminUsersService implements DataHydrationSource {
   }
 
   constructor() {
-    this.refreshLocalCache();
+    if (this.session.isAuthenticated()) {
+      void this.refreshLocalCache();
+    }
   }
 
   public async refreshLocalCache(): Promise<void> {
-    const localData = await this.repo.list();
-    this.users.set(localData);
+    if (!this.session.isAuthenticated()) {
+      this.users.set([]);
+      return;
+    }
+
+    try {
+      const localData = await this.repo.list();
+      this.users.set(localData);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.includes('Database is not opened for any tenant')) {
+        this.users.set([]);
+        return;
+      }
+      throw e;
+    }
   }
 
   public async pullAllAndCache(): Promise<void> {
@@ -70,8 +88,7 @@ export class AdminUsersService implements DataHydrationSource {
   }
 
   public async reloadStreamFromLocal(): Promise<void> {
-    const data = await this.repo.list();
-    this.users.set(data);
+    await this.refreshLocalCache();
   }
 
   public async createUser(input: {
