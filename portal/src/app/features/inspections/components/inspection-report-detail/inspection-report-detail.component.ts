@@ -6,6 +6,8 @@ import {
   signal,
   computed,
   Injector,
+  ViewChild,
+  ElementRef,
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -17,6 +19,7 @@ import {
   HttpResponse,
   HttpErrorResponse,
 } from '@angular/common/http';
+import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 import {
   APP_ROLES,
@@ -58,7 +61,7 @@ import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-ser
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
 import { InspectionReportHeaderComponent } from './sections/inspection-report-header/inspection-report-header.component';
 import { InspectionReportBannersComponent } from './sections/inspection-report-banners/inspection-report-banners.component';
-import { InspectionReportTransitionBarComponent } from './sections/inspection-report-transition-bar/inspection-report-transition-bar.component';
+import { InspectionReportTransitionActionComponent } from './sections/inspection-report-transition-bar/inspection-report-transition-bar.component';
 import { InspectionReportKpiOverviewComponent } from './sections/inspection-report-kpi-overview/inspection-report-kpi-overview.component';
 import { InspectionReportReworkStatusComponent } from './sections/inspection-report-rework-status/inspection-report-rework-status.component';
 import { InspectionReportAddSerialPanelComponent } from './sections/inspection-report-add-serial-panel/inspection-report-add-serial-panel.component';
@@ -76,7 +79,7 @@ import { InspectionReportSerialsTableComponent } from './sections/inspection-rep
     SerialInspectionReactiveFormComponent,
     InspectionReportHeaderComponent,
     InspectionReportBannersComponent,
-    InspectionReportTransitionBarComponent,
+    InspectionReportTransitionActionComponent,
     InspectionReportKpiOverviewComponent,
     InspectionReportReworkStatusComponent,
     InspectionReportAddSerialPanelComponent,
@@ -101,11 +104,20 @@ export class InspectionReportDetailComponent implements OnInit {
   private batchSnRepo = inject(BatchSerialNumberLocalRepo);
   private cdr = inject(ChangeDetectorRef);
   private injector = inject(Injector);
+  public prefs = inject(UserPreferencesService);
+  private el = inject(ElementRef);
+
+  @ViewChild('summaryTab') summaryTab?: ElementRef;
+  @ViewChild('serialsTab') serialsTab?: ElementRef;
+  @ViewChild('approvalsTab') approvalsTab?: ElementRef;
+  @ViewChild('specsTab') specsTab?: ElementRef;
+  @ViewChild('historyTab') historyTab?: ElementRef;
 
   public reportId = '';
   public report = signal<LocalInspectionReport | null>(null);
   public serials = signal<LocalSerialNumber[]>([]);
   public transitionLogs = signal<LocalTransitionLog[]>([]);
+  public enrichedTransitionLogs = signal<(LocalTransitionLog & { userName?: string })[]>([]);
   public childReports = signal<LocalChildReport[]>([]);
   public approvalBatches = signal<
     {
@@ -141,6 +153,15 @@ export class InspectionReportDetailComponent implements OnInit {
   public readonly SERIAL_STATUSES = SERIAL_STATUSES;
   public readonly SYNC_STATES = SYNC_STATES;
   public batchError = '';
+  public activeTab = signal<
+    'summary' | 'serials' | 'approvals' | 'specs' | 'history'
+  >('summary');
+  public activeTabPos = signal({ left: 0, width: 0 });
+
+  public isCompactMode = computed(() => this.prefs.preferences().compactMode);
+  public hasSubmittedBatches = computed(() => {
+    return this.approvalBatches().some(b => b.batch.status === BATCH_STATUSES.SUBMITTED);
+  });
 
   // Search Filter Signals
   public snSearchQuery = signal('');
@@ -181,6 +202,39 @@ export class InspectionReportDetailComponent implements OnInit {
   public formConnection = '';
 
   public isEditingMeta = false;
+
+  constructor() {
+    toObservable(this.activeTab, { injector: this.injector }).subscribe(() => {
+      this.updateTabMarker();
+    });
+  }
+
+  private updateTabMarker() {
+    // We need a small delay for the DOM to be ready if we just switched on screen
+    setTimeout(() => {
+      let activeEl: ElementRef | undefined;
+      const tab = this.activeTab();
+
+      if (tab === 'summary') activeEl = this.summaryTab;
+      else if (tab === 'serials') activeEl = this.serialsTab;
+      else if (tab === 'approvals') activeEl = this.approvalsTab;
+      else if (tab === 'specs') activeEl = this.specsTab;
+      else if (tab === 'history') activeEl = this.historyTab;
+
+      if (activeEl?.nativeElement) {
+        const rect = activeEl.nativeElement.getBoundingClientRect();
+        // The marker is inside the <nav> which is relative
+        const navEl = activeEl.nativeElement.closest('nav');
+        if (navEl) {
+          const navRect = navEl.getBoundingClientRect();
+          this.activeTabPos.set({
+            left: rect.left - navRect.left,
+            width: rect.width,
+          });
+        }
+      }
+    }, 0);
+  }
 
   // Dropdown Options
   public readonly METHOD_OPTIONS = [
@@ -397,6 +451,20 @@ export class InspectionReportDetailComponent implements OnInit {
     const logs = await this.irService.getTransitionLogsLocally(this.reportId);
     this.transitionLogs.set(logs);
 
+    // Enrich logs with user names
+    const enrichedLogs = [];
+    for (const log of logs) {
+      let userName = 'Unknown';
+      if (log.userId) {
+        const u = await this.userRepo.getById(log.userId);
+        if (u) userName = u.name || u.email;
+      }
+      enrichedLogs.push({ ...log, userName });
+    }
+    // Sort by timestamp desc for timeline feel (newest first)
+    enrichedLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    this.enrichedTransitionLogs.set(enrichedLogs);
+
     const childReports = await this.crService.getChildReportsForInspection(
       this.reportId,
     );
@@ -563,6 +631,16 @@ export class InspectionReportDetailComponent implements OnInit {
       }
 
       this.reworkSerials = reworkList;
+
+      // Set default tab if not set
+      if (this.activeTab() === 'summary') {
+        const role = this.userRole().toUpperCase();
+        if (role === APP_ROLES.INSPECTOR) {
+          this.activeTab.set('serials');
+        } else if (role === APP_ROLES.SUPERVISOR) {
+          this.activeTab.set('approvals');
+        }
+      }
 
       this.kpiTotal = total;
       this.kpiPassed = pass;

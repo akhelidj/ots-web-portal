@@ -37,6 +37,7 @@ export class InspectionReportSerialsTableComponent {
   @Input() canEditSerial = false;
   @Input() canRemoveSerial = false;
   @Input() historySerialIds: ReadonlySet<string> = new Set<string>();
+  @Input() isCompactMode = false;
 
   @Output() searchQueryChange = new EventEmitter<string>();
   @Output() toggleAllEligible = new EventEmitter<void>();

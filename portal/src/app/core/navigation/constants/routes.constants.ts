@@ -1,6 +1,7 @@
 export const AppRoutes = {
   LOGIN: 'login',
   CHANGE_PASSWORD: 'change-password',
+  SETTINGS: 'settings',
   ADMIN: 'admin',
   RECEIVER: 'receiver',
   INSPECTOR: 'inspector',

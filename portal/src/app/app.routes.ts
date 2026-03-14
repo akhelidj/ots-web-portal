@@ -15,7 +15,7 @@ import { roleGuard } from '@portal/core/auth/guards/role.guard';
 import { authGuard } from '@portal/core/auth/guards/auth.guard';
 import { mustChangePasswordGuard } from '@portal/core/auth/guards/must-change-password.guard';
 import { LoginComponent } from '@portal/features/auth/components/login/login.component';
-import { ChangePasswordComponent } from '@portal/features/auth/components/change-password/change-password.component';
+import { SettingsComponent } from '@portal/features/auth/components/settings/settings.component';
 import { LandingComponent } from '@portal/features/landing/components/landing/landing.component';
 import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
 import { AccessDeniedComponent } from '@portal/features/errors/components/access-denied/access-denied.component';
@@ -29,8 +29,8 @@ export const appRoutes: Route[] = [
   },
   {
     path: AppRoutes.CHANGE_PASSWORD,
-    component: ChangePasswordComponent,
-    canActivate: [authGuard, mustChangePasswordGuard],
+    redirectTo: AppRoutes.SETTINGS,
+    pathMatch: 'full',
   },
   {
     path: AppRoutes.ACCESS_DENIED,
@@ -42,6 +42,11 @@ export const appRoutes: Route[] = [
     canActivate: [authGuard, mustChangePasswordGuard],
     children: [
       { path: '', component: LandingComponent, pathMatch: 'full' },
+      {
+        path: AppRoutes.SETTINGS,
+        component: SettingsComponent,
+        canActivate: [authGuard, mustChangePasswordGuard],
+      },
       { 
         path: AppRoutes.ADMIN, 
         canActivate: [roleGuard],

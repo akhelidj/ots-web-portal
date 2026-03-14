@@ -1,52 +1,145 @@
-<div
-  class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-7xl mx-auto"
->
-  <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-    <h2 class="font-bold text-lg text-primary">Transition History</h2>
+<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6">
+  <div class="flex items-center justify-between mb-8">
+    <h2 class="text-xl font-bold text-gray-900 tracking-tight">
+      Report History
+    </h2>
+    <div
+      class="bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border border-primary/10"
+    >
+      {{ logs.length }} Events
+    </div>
   </div>
-  <div class="overflow-x-auto">
-    <table class="min-w-full text-left border-collapse text-sm">
-      <thead class="bg-gray-50 border-b border-gray-200">
-        <tr>
-          <th scope="col" class="table-th">Date</th>
-          <th scope="col" class="table-th">From</th>
-          <th scope="col" class="table-th">To</th>
-          <th scope="col" class="table-th">Reason</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100 bg-white">
-        @for (log of logs; track log.id) {
-          <tr class="hover:bg-primary/5 transition-colors">
-            <td class="table-td code-text text-xs text-gray-500">
-              {{ log.timestamp | date: 'shortTime' }}
-              <span class="text-gray-400">|</span>
-              {{ log.timestamp | date: 'MMM d, y' }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
+
+  @if (logs.length > 0) {
+    <!-- Timeline Container -->
+    <div
+      class="relative space-y-8 before:absolute before:inset-0 before:ml-4 before:w-0.5 before:-translate-x-px before:bg-gradient-to-b before:from-gray-100 before:via-gray-200 before:to-gray-100 sm:before:ml-[4.25rem]"
+    >
+      @for (log of logs; track log.id) {
+        <div class="relative flex items-start gap-3 sm:gap-10 group">
+          <!-- Date/Time (Desktop Side) -->
+          <div class="hidden sm:flex flex-col items-end w-16 shrink-0 pt-1">
+            <span class="text-xs font-bold text-gray-900 leading-none">{{
+              log.timestamp | date: 'MMM d'
+            }}</span>
+            <span
+              class="text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-tighter"
+              >{{ log.timestamp | date: 'h:mm a' }}</span
+            >
+          </div>
+
+          <!-- Dot / Action Marker -->
+          <div
+            class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[3px] border-white bg-white shadow-sm transition-all group-hover:scale-110 z-10"
+          >
+            <div
+              class="h-2 w-2 rounded-full"
+              [ngClass]="{
+                'bg-success shadow-[0_0_6px_rgba(34,197,94,0.3)]':
+                  log.toStatus === 'APPROVED' || log.toStatus === 'CLOSED',
+                'bg-primary shadow-[0_0_6px_rgba(var(--primary-rgb),0.3)]':
+                  log.toStatus === 'IN_INSPECTION' ||
+                  log.toStatus === 'PENDING_APPROVAL',
+                'bg-warning shadow-[0_0_6px_rgba(234,179,8,0.3)]':
+                  log.toStatus === 'ON_HOLD',
+                'bg-gray-400': ![
+                  'APPROVED',
+                  'CLOSED',
+                  'IN_INSPECTION',
+                  'PENDING_APPROVAL',
+                  'ON_HOLD',
+                ].includes(log.toStatus),
+              }"
+            ></div>
+          </div>
+
+          <!-- Content Card -->
+          <div class="min-w-0 flex-grow pb-2">
+            <!-- Header: Name + Time -->
+            <div class="flex items-center justify-between gap-2 mb-1">
               <span
-                class="bg-gray-100 border border-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                >{{ log.fromStatus }}</span
+                class="text-sm font-bold text-gray-900 group-hover:text-primary transition-colors truncate"
               >
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
+                {{ log.userName || 'System' }}
+              </span>
               <span
-                class="bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                >{{ log.toStatus }}</span
+                class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-tighter shrink-0"
               >
-            </td>
-            <td class="px-6 py-4 text-gray-600 italic text-sm">
-              {{ log.reason || '-' }}
-            </td>
-          </tr>
-        }
-        @if (logs.length === 0) {
-          <tr>
-            <td colspan="4" class="px-6 py-8 text-center text-gray-500 text-sm">
-              No transition history log available for this report.
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </div>
+                {{ log.timestamp | date: 'MMM d, h:mm a' }}
+              </span>
+            </div>
+
+            <!-- Transition Badges: Dedicated Line with Ellipsis -->
+            <div class="flex items-center gap-2 mb-2">
+              <span
+                class="bg-gray-100 text-gray-500 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-gray-200 truncate max-w-[120px] sm:max-w-none"
+                [title]="log.fromStatus"
+              >
+                {{ log.fromStatus }}
+              </span>
+              <svg
+                class="w-2.5 h-2.5 text-gray-400 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+              <span
+                class="bg-primary/10 text-primary text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-primary/20 truncate max-w-[120px] sm:max-w-none"
+                [title]="log.toStatus"
+              >
+                {{ log.toStatus }}
+              </span>
+            </div>
+
+            @if (log.reason) {
+              <div
+                class="relative mt-2.5 p-3 sm:p-4 bg-gray-100/80 border border-gray-200 rounded-2xl group-hover:bg-white group-hover:shadow-md transition-all overflow-hidden shadow-inner"
+              >
+                <!-- Speech Bubble Arrow -->
+                <div
+                  class="absolute -top-1.5 left-4 w-3.5 h-3.5 bg-gray-100/80 border-t border-l border-gray-200 rotate-45 group-hover:bg-white shrink-0"
+                ></div>
+
+                <p
+                  class="text-[13px] sm:text-sm text-gray-700 leading-relaxed italic relative font-medium"
+                >
+                  "{{ log.reason }}"
+                </p>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <div
+      class="flex flex-col items-center justify-center py-20 bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-200"
+    >
+      <div class="p-4 bg-white rounded-full shadow-sm mb-4">
+        <svg
+          class="w-8 h-8 text-gray-300"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      </div>
+      <p class="text-sm font-medium text-gray-500">
+        No transition history log available for this report.
+      </p>
+    </div>
+  }
 </div>

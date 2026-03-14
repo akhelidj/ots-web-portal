@@ -1,10 +1,11 @@
-import { Component, inject, OnInit, ViewChild } from '@angular/core';
+import { Component, inject, OnInit, ViewChild, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { AdminUsersService } from '@portal/features/users/services/admin-users.service';
 import { LocalUser, LocalCustomer } from '@portal/core/offline/models/types';
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
 import { APP_ROLES, AppRole } from '@portal/core/constants/app.constants';
+import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
 
 @Component({
   selector: 'app-admin-users',
@@ -16,6 +17,8 @@ export class AdminUsersComponent implements OnInit {
   private usersService = inject(AdminUsersService);
 
   public users = this.usersService.users;
+  public prefs = inject(UserPreferencesService);
+  public isCompactMode = computed(() => this.prefs.preferences().compactMode);
 
   @ViewChild('userForm') userForm!: NgForm;
 

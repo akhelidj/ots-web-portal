@@ -175,10 +175,12 @@
             <th class="table-th">Customer</th>
           }
           <th class="table-th">Status</th>
-          <th class="table-th">Last Updated</th>
-          <th class="table-th">Joints</th>
-          <th class="table-th">Pass Rate</th>
-          @if (!isCustomer) {
+          @if (!isCompactMode()) {
+            <th class="table-th">Last Updated</th>
+            <th class="table-th">Joints</th>
+            <th class="table-th">Pass Rate</th>
+          }
+          @if (!isCustomer && !isCompactMode()) {
             <th class="table-th">Sync</th>
           }
           <th class="table-th-right">
@@ -213,16 +215,18 @@
                   >{{ r.status }}</span
                 >
               </td>
-              <td class="table-td">
-                {{ r.updatedAt ? (r.updatedAt | date: 'medium') : 'N/A' }}
-              </td>
-              <td class="table-td-code">
-                {{ reportStatsCache[r.id]?.serialCount || 0 }}
-              </td>
-              <td class="table-td-code text-neutral-900">
-                {{ getPassRate(r.id) || 0 | percent: '1.0-0' }}
-              </td>
-              @if (!isCustomer) {
+              @if (!isCompactMode()) {
+                <td class="table-td">
+                  {{ r.updatedAt ? (r.updatedAt | date: 'medium') : 'N/A' }}
+                </td>
+                <td class="table-td-code">
+                  {{ reportStatsCache[r.id]?.serialCount || 0 }}
+                </td>
+                <td class="table-td-code text-neutral-900">
+                  {{ getPassRate(r.id) || 0 | percent: '1.0-0' }}
+                </td>
+              }
+              @if (!isCustomer && !isCompactMode()) {
                 <td class="table-td">
                   <span
                     class="data-chip"
@@ -242,7 +246,7 @@
           @if (getFilteredReports(reports).length === 0) {
             <tr>
               <td
-                [attr.colspan]="isCustomer ? 7 : 9"
+                [attr.colspan]="isCompactMode() ? (isCustomer ? 4 : 5) : (isCustomer ? 7 : 9)"
                 class="p-10 text-center text-neutral-500"
               >
                 No inspection reports found for the selected filters.

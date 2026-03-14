@@ -12,5 +12,5 @@ import { LocalTransitionLog } from '@portal/core/offline/models/types';
   },
 })
 export class InspectionReportTransitionHistoryComponent {
-  @Input() logs: LocalTransitionLog[] = [];
+  @Input() logs: (LocalTransitionLog & { userName?: string })[] = [];
 }

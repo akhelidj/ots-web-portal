@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, Input, OnDestroy, ChangeDetectorRef, Injector, signal } from '@angular/core';
+import { Component, inject, OnInit, Input, OnDestroy, ChangeDetectorRef, Injector, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Subscription, combineLatest, startWith } from 'rxjs';
@@ -12,6 +12,7 @@ import { ReportValidationService, ValidationResult } from '@portal/core/validati
 import { SerialNumberLocalRepo } from '@portal/core/offline/repos/serial-number-local.repo';
 import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-local.repo';
 import { SessionService } from '@portal/core/auth/services/session.service';
+import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
 import { APP_ROLES } from '@portal/core/constants/app.constants';
 
 @Component({
@@ -27,7 +28,8 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   private validationService = inject(ReportValidationService);
   private snRepo = inject(SerialNumberLocalRepo);
   private childReportRepo = inject(ChildReportLocalRepo);
-  private sessionService = inject(SessionService);
+   private sessionService = inject(SessionService);
+  public prefs = inject(UserPreferencesService);
   private cdr = inject(ChangeDetectorRef);
   private injector = inject(Injector);
 
@@ -51,6 +53,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   
   public reportStatsCache: Record<string, { serialCount: number, passCount: number, serialValues: string[] }> = {};
   public validationCache: Record<string, ValidationResult> = {};
+  public isCompactMode = computed(() => this.prefs.preferences().compactMode);
   private subs = new Subscription();
 
   @Input() initialStatusFilter?: string;

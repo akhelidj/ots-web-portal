@@ -19,7 +19,7 @@ type SelectedTransition = {
 };
 
 @Component({
-  selector: 'app-inspection-report-transition-bar',
+  selector: 'app-inspection-report-transition-actions',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './inspection-report-transition-bar.component.html',
@@ -27,9 +27,10 @@ type SelectedTransition = {
     class: 'block w-full',
   },
 })
-export class InspectionReportTransitionBarComponent {
+export class InspectionReportTransitionActionComponent {
   @Input() report: LocalInspectionReport | null = null;
   @Input() expanded = true;
+  @Input() isFixed = true;
   @Input() allowedTransitions: TransitionChoice[] = [];
   @Input() selectedTransition: SelectedTransition | null = null;
   @Input() formReason = '';

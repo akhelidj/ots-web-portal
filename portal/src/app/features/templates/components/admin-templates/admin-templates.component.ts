@@ -1,8 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminTemplatesService } from '@portal/features/templates/services/admin-templates.service';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
+import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
 
 @Component({
   selector: 'app-admin-templates',
@@ -13,6 +14,8 @@ import { ConnectivityService } from '@portal/core/offline/services/connectivity.
 export class AdminTemplatesComponent implements OnInit {
   public templatesService = inject(AdminTemplatesService);
   public connectivity = inject(ConnectivityService);
+  public prefs = inject(UserPreferencesService);
+  public isCompactMode = computed(() => this.prefs.preferences().compactMode);
 
   public templates = this.templatesService.templates;
   public isOnline = this.connectivity.isOnline;

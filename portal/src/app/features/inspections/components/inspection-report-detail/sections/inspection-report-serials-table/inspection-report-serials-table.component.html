@@ -110,8 +110,8 @@
     }
   </div>
 
-  <div class="overflow-x-auto overflow-y-auto flex-grow">
-    <table class="min-w-full text-left border-collapse">
+  <div class="overflow-x-auto overflow-y-auto flex-grow" [class.compact-table]="isCompactMode">
+    <table class="min-w-full text-left border-collapse" [class.compact]="isCompactMode">
       <thead
         class="bg-gray-50 sticky top-0 shadow-sm z-[25] border-b border-gray-200"
       >
@@ -123,36 +123,36 @@
           >
             Info / Actions
           </th>
-          @if (userRole !== APP_ROLES.CUSTOMER) {
+          <th
+            scope="col"
+            rowspan="2"
+            class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 bg-gray-50 z-30 border-r border-gray-200"
+          >
+            Sync
+          </th>
+          @if (!isCompactMode) {
             <th
               scope="col"
-              rowspan="2"
-              class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 bg-gray-50 z-30 border-r border-gray-200"
+              colspan="9"
+              class="px-3 py-2 text-center text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 z-30 border-r border-gray-200 border-b border-blue-200/50"
             >
-              Sync
+              Box Connection
+            </th>
+            <th
+              scope="col"
+              colspan="8"
+              class="px-3 py-2 text-center text-[10px] font-bold text-indigo-700 uppercase tracking-wider bg-indigo-50 z-30 border-r border-gray-200 border-b border-indigo-200/50"
+            >
+              Pin Connection
+            </th>
+            <th
+              scope="col"
+              colspan="8"
+              class="px-3 py-2 text-center text-[10px] font-bold text-purple-700 uppercase tracking-wider bg-purple-50 z-30 border-r border-gray-200 border-b border-purple-200/50"
+            >
+              Body
             </th>
           }
-          <th
-            scope="col"
-            colspan="9"
-            class="px-3 py-2 text-center text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 z-30 border-r border-gray-200 border-b border-blue-200/50"
-          >
-            Box Connection
-          </th>
-          <th
-            scope="col"
-            colspan="8"
-            class="px-3 py-2 text-center text-[10px] font-bold text-indigo-700 uppercase tracking-wider bg-indigo-50 z-30 border-r border-gray-200 border-b border-indigo-200/50"
-          >
-            Pin Connection
-          </th>
-          <th
-            scope="col"
-            colspan="8"
-            class="px-3 py-2 text-center text-[10px] font-bold text-purple-700 uppercase tracking-wider bg-purple-50 z-30 border-r border-gray-200 border-b border-purple-200/50"
-          >
-            Body
-          </th>
           <th
             scope="col"
             colspan="4"
@@ -193,166 +193,169 @@
           >
             EMI Res. / Act.
           </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            Tong Spc.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            Min OD
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            Box Thd.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-            title="Ecc Shoulder"
-          >
-            Ecc Sh.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-            title="Counter Bore Dia."
-          >
-            CBor D.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-            title="Counter Bore Len."
-          >
-            CBor L.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-            title="Bevel Diameter (Min/Max)"
-          >
-            Bvl D.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            Cond.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200"
-            title="Hard Banding"
-          >
-            Hard B.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            Tong Spc.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            Min OD
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            Max ID
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-            title="Ecc Shoulder"
-          >
-            Ecc Sh.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-            title="Pin Conn (Min/Max)"
-          >
-            P. Conn
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-            title="Max Pin Base"
-          >
-            P. Base
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-            title="Bevel Diameter (Min/Max)"
-          >
-            Bvl D.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200"
-          >
-            Cond.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-            title="Wall Remaining"
-          >
-            Wall R.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            OD Decr.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            EMI Res.
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            Slip Area
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            Corr. In
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            Corr. Out
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
-          >
-            IPC
-          </th>
-          <th
-            scope="col"
-            class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200"
-          >
-            Bent Jts
-          </th>
+          @if (!isCompactMode) {
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              Tong Spc.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              Min OD
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              Box Thd.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+              title="Ecc Shoulder"
+            >
+              Ecc Sh.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+              title="Counter Bore Dia."
+            >
+              CBor D.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+              title="Counter Bore Len."
+            >
+              CBor L.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+              title="Bevel Diameter (Min/Max)"
+            >
+              Bvl D.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              Cond.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200"
+              title="Hard Banding"
+            >
+              Hard B.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              Tong Spc.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              Min OD
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              Max ID
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+              title="Ecc Shoulder"
+            >
+              Ecc Sh.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+              title="Pin Conn (Min/Max)"
+            >
+              P. Conn
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+              title="Max Pin Base"
+            >
+              P. Base
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+              title="Bevel Diameter (Min/Max)"
+            >
+              Bvl D.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200"
+            >
+              Cond.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+              title="Wall Remaining"
+            >
+              Wall R.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              OD Decr.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              EMI Res.
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              Slip Area
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              Corr. In
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              Corr. Out
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
+            >
+              IPC
+            </th>
+            <th
+              scope="col"
+              class="px-2 py-2 text-center text-[9px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 border-r border-gray-200"
+              title="Bent Jts"
+            >
+              Bent Jts
+            </th>
+          }
           <th
             scope="col"
             class="px-2 py-2 text-center text-[9px] font-bold text-gray-600 uppercase tracking-wider bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2"
@@ -382,9 +385,16 @@
 
       <tbody class="divide-y divide-gray-100 bg-white">
         @for (sn of serials; track sn.id) {
-          <tr class="hover:bg-primary/5 transition-colors group">
+          <tr 
+            class="hover:bg-primary/5 transition-colors group"
+            [class.compact-row]="isCompactMode"
+          >
             <td
-              class="px-5 py-3 align-top md:sticky md:left-0 bg-white md:z-20 md:shadow-[1px_0_0_0_#eee] group-hover:bg-[#f3f4f6] transition-colors border-r border-gray-200 w-48 min-w-[12rem] max-w-[12rem]"
+              class="align-top md:sticky md:left-0 bg-white md:z-20 md:shadow-[1px_0_0_0_#eee] group-hover:bg-[#f3f4f6] transition-colors border-r border-gray-200 w-48 min-w-[12rem] max-w-[12rem]"
+              [class.px-5]="!isCompactMode"
+              [class.py-3]="!isCompactMode"
+              [class.px-3]="isCompactMode"
+              [class.py-1.5]="isCompactMode"
             >
               @if (editingSnId === sn.id) {
                 <div class="flex items-center gap-2 max-w-[180px]">
@@ -501,10 +511,16 @@
                   <div
                     class="flex flex-col gap-1.5 flex-grow min-w-0 justify-center"
                   >
-                    <span
-                      class="code-text font-bold text-gray-900 text-sm whitespace-nowrap"
-                      >{{ sn.value }}</span
+                    <button
+                      type="button"
+                      (click)="canInspectInspectionData ? openInspection.emit(sn) : null"
+                      (keydown.enter)="canInspectInspectionData ? openInspection.emit(sn) : null"
+                      [class.cursor-pointer]="canInspectInspectionData"
+                      [class.hover:text-primary]="canInspectInspectionData"
+                      class="code-text font-bold text-gray-900 text-sm whitespace-nowrap transition-colors text-left bg-transparent border-none p-0"
                     >
+                      {{ sn.value }}
+                    </button>
                     <div class="space-y-1">
                       @for (cr of childReports; track cr.id) {
                         @for (csn of cr.serialNumbers || []; track csn.id) {
@@ -538,7 +554,11 @@
             </td>
 
             <td
-              class="px-3 py-3 align-top whitespace-nowrap bg-white group-hover:bg-[#f3f4f6] transition-colors border-r border-gray-200 min-w-[120px] md:sticky md:left-[12rem] md:z-20 md:shadow-[1px_0_0_0_#eee]"
+              class="align-top whitespace-nowrap bg-white group-hover:bg-[#f3f4f6] transition-colors border-r border-gray-200 min-w-[120px] md:sticky md:left-[12rem] md:z-20 md:shadow-[1px_0_0_0_#eee]"
+              [class.px-3]="!isCompactMode"
+              [class.py-3]="!isCompactMode"
+              [class.px-2]="isCompactMode"
+              [class.py-1.5]="isCompactMode"
             >
               <div class="flex flex-col items-center gap-2">
                 @if (getDisposition(sn); as disp) {
@@ -711,130 +731,132 @@
               </td>
             }
 
-            <td class="matrix-cell-data matrix-hover-box">
-              {{ getInspectionFieldText(sn, 'box', 'minTongSpace') }}
-            </td>
-            <td class="matrix-cell-data matrix-hover-box">
-              {{ getInspectionFieldText(sn, 'box', 'minOD') }}
-            </td>
-            <td class="matrix-cell-data matrix-hover-box">
-              {{ getInspectionFieldText(sn, 'box', 'minBoxThreads') }}
-            </td>
-            <td class="matrix-cell-data matrix-hover-box">
-              {{ getInspectionFieldText(sn, 'box', 'minEccShoulder') }}
-            </td>
-            <td class="matrix-cell-data matrix-hover-box">
-              {{ getInspectionFieldText(sn, 'box', 'maxCounterBoreDiameter') }}
-            </td>
-            <td class="matrix-cell-data matrix-hover-box">
-              {{ getInspectionFieldText(sn, 'box', 'maxCounterBoreLength') }}
-            </td>
-            <td class="matrix-cell-muted matrix-hover-box">
-              @if (hasInspectionField(sn, 'box', 'bevelDiameterMin')) {
-                {{
-                  getInspectionRange(
-                    sn,
-                    'box',
-                    'bevelDiameterMin',
-                    'bevelDiameterMax'
-                  )
-                }}
-              } @else {
-                -
-              }
-            </td>
-            <td class="matrix-cell-flag matrix-hover-box">
-              {{ getInspectionFieldText(sn, 'box', 'condition') }}
-            </td>
-            <td class="matrix-cell-flag matrix-hover-box matrix-cell-divider">
-              {{ getInspectionFieldText(sn, 'box', 'hardBanding') }}
-            </td>
-            <td class="matrix-cell-data matrix-hover-pin">
-              {{ getInspectionFieldText(sn, 'pin', 'minTongSpace') }}
-            </td>
-            <td class="matrix-cell-data matrix-hover-pin">
-              {{ getInspectionFieldText(sn, 'pin', 'minOD') }}
-            </td>
-            <td class="matrix-cell-data matrix-hover-pin">
-              {{ getInspectionFieldText(sn, 'pin', 'maxID') }}
-            </td>
-            <td class="matrix-cell-data matrix-hover-pin">
-              {{ getInspectionFieldText(sn, 'pin', 'minEccShoulder') }}
-            </td>
-            <td class="matrix-cell-muted matrix-hover-pin">
-              @if (hasInspectionField(sn, 'pin', 'lengthPinConnMin')) {
-                {{
-                  getInspectionRange(
-                    sn,
-                    'pin',
-                    'lengthPinConnMin',
-                    'lengthPinConnMax'
-                  )
-                }}
-              } @else {
-                -
-              }
-            </td>
-            <td class="matrix-cell-data matrix-hover-pin">
-              {{ getInspectionFieldText(sn, 'pin', 'maxLengthPinBase') }}
-            </td>
-            <td class="matrix-cell-muted matrix-hover-pin">
-              @if (hasInspectionField(sn, 'pin', 'bevelDiameterMin')) {
-                {{
-                  getInspectionRange(
-                    sn,
-                    'pin',
-                    'bevelDiameterMin',
-                    'bevelDiameterMax'
-                  )
-                }}
-              } @else {
-                -
-              }
-            </td>
-            <td class="matrix-cell-flag matrix-hover-pin matrix-cell-divider">
-              {{ getInspectionFieldText(sn, 'pin', 'condition') }}
-            </td>
-            <td class="matrix-cell-data matrix-hover-body">
-              {{ getInspectionFieldText(sn, 'body', 'wallRemaining') }}
-            </td>
-            <td class="matrix-cell-muted matrix-hover-body uppercase">
-              {{ getInspectionFieldText(sn, 'body', 'odDecrease') }}
-            </td>
-            <td class="matrix-cell-flag matrix-hover-body">
-              {{ getInspectionFieldText(sn, 'body', 'emiResult') }}
-            </td>
-            <td class="matrix-cell-muted matrix-hover-body uppercase">
-              {{ getInspectionFieldText(sn, 'body', 'slipArea') }}
-            </td>
-            <td class="matrix-cell-flag matrix-hover-body">
-              @if (hasInspectionField(sn, 'body', 'corrosionIn')) {
-                {{ getInspectionBooleanLabel(sn, 'body', 'corrosionIn') }}
-              } @else {
-                -
-              }
-            </td>
-            <td class="matrix-cell-flag matrix-hover-body">
-              @if (hasInspectionField(sn, 'body', 'corrosionOut')) {
-                {{ getInspectionBooleanLabel(sn, 'body', 'corrosionOut') }}
-              } @else {
-                -
-              }
-            </td>
-            <td class="matrix-cell-flag matrix-hover-body">
-              @if (hasInspectionField(sn, 'body', 'ipc')) {
-                {{ getInspectionBooleanLabel(sn, 'body', 'ipc') }}
-              } @else {
-                -
-              }
-            </td>
-            <td class="matrix-cell-flag matrix-hover-body matrix-cell-divider">
-              @if (hasInspectionField(sn, 'body', 'bentJoints')) {
-                {{ getInspectionBooleanLabel(sn, 'body', 'bentJoints') }}
-              } @else {
-                -
-              }
-            </td>
+            @if (!isCompactMode) {
+              <td class="matrix-cell-data matrix-hover-box">
+                {{ getInspectionFieldText(sn, 'box', 'minTongSpace') }}
+              </td>
+              <td class="matrix-cell-data matrix-hover-box">
+                {{ getInspectionFieldText(sn, 'box', 'minOD') }}
+              </td>
+              <td class="matrix-cell-data matrix-hover-box">
+                {{ getInspectionFieldText(sn, 'box', 'minBoxThreads') }}
+              </td>
+              <td class="matrix-cell-data matrix-hover-box">
+                {{ getInspectionFieldText(sn, 'box', 'minEccShoulder') }}
+              </td>
+              <td class="matrix-cell-data matrix-hover-box">
+                {{ getInspectionFieldText(sn, 'box', 'maxCounterBoreDiameter') }}
+              </td>
+              <td class="matrix-cell-data matrix-hover-box">
+                {{ getInspectionFieldText(sn, 'box', 'maxCounterBoreLength') }}
+              </td>
+              <td class="matrix-cell-muted matrix-hover-box">
+                @if (hasInspectionField(sn, 'box', 'bevelDiameterMin')) {
+                  {{
+                    getInspectionRange(
+                      sn,
+                      'box',
+                      'bevelDiameterMin',
+                      'bevelDiameterMax'
+                    )
+                  }}
+                } @else {
+                  -
+                }
+              </td>
+              <td class="matrix-cell-flag matrix-hover-box">
+                {{ getInspectionFieldText(sn, 'box', 'condition') }}
+              </td>
+              <td class="matrix-cell-flag matrix-hover-box matrix-cell-divider">
+                {{ getInspectionFieldText(sn, 'box', 'hardBanding') }}
+              </td>
+              <td class="matrix-cell-data matrix-hover-pin">
+                {{ getInspectionFieldText(sn, 'pin', 'minTongSpace') }}
+              </td>
+              <td class="matrix-cell-data matrix-hover-pin">
+                {{ getInspectionFieldText(sn, 'pin', 'minOD') }}
+              </td>
+              <td class="matrix-cell-data matrix-hover-pin">
+                {{ getInspectionFieldText(sn, 'pin', 'maxID') }}
+              </td>
+              <td class="matrix-cell-data matrix-hover-pin">
+                {{ getInspectionFieldText(sn, 'pin', 'minEccShoulder') }}
+              </td>
+              <td class="matrix-cell-muted matrix-hover-pin">
+                @if (hasInspectionField(sn, 'pin', 'lengthPinConnMin')) {
+                  {{
+                    getInspectionRange(
+                      sn,
+                      'pin',
+                      'lengthPinConnMin',
+                      'lengthPinConnMax'
+                    )
+                  }}
+                } @else {
+                  -
+                }
+              </td>
+              <td class="matrix-cell-data matrix-hover-pin">
+                {{ getInspectionFieldText(sn, 'pin', 'maxLengthPinBase') }}
+              </td>
+              <td class="matrix-cell-muted matrix-hover-pin">
+                @if (hasInspectionField(sn, 'pin', 'bevelDiameterMin')) {
+                  {{
+                    getInspectionRange(
+                      sn,
+                      'pin',
+                      'bevelDiameterMin',
+                      'bevelDiameterMax'
+                    )
+                  }}
+                } @else {
+                  -
+                }
+              </td>
+              <td class="matrix-cell-flag matrix-hover-pin matrix-cell-divider">
+                {{ getInspectionFieldText(sn, 'pin', 'condition') }}
+              </td>
+              <td class="matrix-cell-data matrix-hover-body">
+                {{ getInspectionFieldText(sn, 'body', 'wallRemaining') }}
+              </td>
+              <td class="matrix-cell-muted matrix-hover-body uppercase">
+                {{ getInspectionFieldText(sn, 'body', 'odDecrease') }}
+              </td>
+              <td class="matrix-cell-flag matrix-hover-body">
+                {{ getInspectionFieldText(sn, 'body', 'emiResult') }}
+              </td>
+              <td class="matrix-cell-muted matrix-hover-body uppercase">
+                {{ getInspectionFieldText(sn, 'body', 'slipArea') }}
+              </td>
+              <td class="matrix-cell-flag matrix-hover-body">
+                @if (hasInspectionField(sn, 'body', 'corrosionIn')) {
+                  {{ getInspectionBooleanLabel(sn, 'body', 'corrosionIn') }}
+                } @else {
+                  -
+                }
+              </td>
+              <td class="matrix-cell-flag matrix-hover-body">
+                @if (hasInspectionField(sn, 'body', 'corrosionOut')) {
+                  {{ getInspectionBooleanLabel(sn, 'body', 'corrosionOut') }}
+                } @else {
+                  -
+                }
+              </td>
+              <td class="matrix-cell-flag matrix-hover-body">
+                @if (hasInspectionField(sn, 'body', 'ipc')) {
+                  {{ getInspectionBooleanLabel(sn, 'body', 'ipc') }}
+                } @else {
+                  -
+                }
+              </td>
+              <td class="matrix-cell-flag matrix-hover-body matrix-cell-divider">
+                @if (hasInspectionField(sn, 'body', 'bentJoints')) {
+                  {{ getInspectionBooleanLabel(sn, 'body', 'bentJoints') }}
+                } @else {
+                  -
+                }
+              </td>
+            }
             <td class="matrix-cell-flag-strong matrix-hover-final">
               {{ getInspectionBooleanLabel(sn, 'final', 'isNew', 'X', '-') }}
             </td>
@@ -851,19 +873,21 @@
             >
               {{ getInspectionBooleanLabel(sn, 'final', 'isScrap', 'X', '-') }}
             </td>
-            <td
-              class="px-4 py-3 align-top text-[10px] text-gray-600 group-hover:bg-gray-50/20 break-words max-w-[200px]"
-              [title]="
-                getInspectionRemarks(sn) === '-' ? '' : getInspectionRemarks(sn)
-              "
-            >
-              <span class="line-clamp-2">{{ getInspectionRemarks(sn) }}</span>
-            </td>
+            @if (!isCompactMode) {
+              <td
+                class="px-4 py-3 align-top text-[10px] text-gray-600 group-hover:bg-gray-50/20 break-words max-w-[200px]"
+                [title]="
+                  getInspectionRemarks(sn) === '-' ? '' : getInspectionRemarks(sn)
+                "
+              >
+                <span class="line-clamp-2">{{ getInspectionRemarks(sn) }}</span>
+              </td>
+            }
           </tr>
         } @empty {
           <tr>
             <td
-              [colSpan]="userRole !== APP_ROLES.CUSTOMER ? 33 : 32"
+              [colSpan]="isCompactMode ? (userRole !== APP_ROLES.CUSTOMER ? 7 : 6) : (userRole !== APP_ROLES.CUSTOMER ? 33 : 32)"
               class="px-6 py-12 text-center bg-gray-50/50"
             >
               <svg

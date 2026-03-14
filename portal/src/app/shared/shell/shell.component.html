@@ -5,11 +5,11 @@
 >
 
 <div
-  class="min-h-screen bg-stone-100 flex flex-col font-sans text-neutral-800 transition-colors duration-300"
+  class="h-screen flex flex-col overflow-hidden bg-stone-100 font-sans text-neutral-800 transition-colors duration-300"
 >
   <!-- Header App Bar -->
   <header
-    class="bg-primary text-white shadow-md z-50 sticky top-0 border-b border-primary-light/50"
+    class="flex-shrink-0 bg-primary text-white shadow-md z-50 border-b border-primary-light/50"
   >
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16 items-center">
@@ -133,7 +133,7 @@
           >
             @if (isAuthenticated()) {
               <a
-                routerLink="/change-password"
+                routerLink="/settings"
                 class="text-sm font-medium text-neutral-300 hover:text-white transition-colors mr-3"
                 >Settings</a
               >
@@ -153,14 +153,14 @@
   </header>
 
   <!-- Navigation -->
-  @if (isAuthenticated()) {
+  @if (isAuthenticated() && profile()?.role === 'ADMIN') {
     @if (profile(); as profile) {
       <nav
-        class="bg-white border-b border-neutral-200 shadow-sm"
+        class="flex-shrink-0 bg-white border-b border-neutral-200 shadow-sm z-40"
         aria-label="Main Navigation"
       >
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ul class="flex space-x-1 overflow-x-auto py-1">
+          <ul class="flex space-x-1 py-1">
             @for (
               item of navigation.buildNavigation(profile.role);
               track item.label
@@ -185,9 +185,10 @@
 
   <!-- Main Content Area -->
   <main
-    class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 transition-opacity duration-300"
+    id="main-content"
+    class="flex-grow overflow-y-auto custom-scrollbar transition-opacity duration-300"
   >
-    <div id="main-content" tabindex="-1" class="outline-none h-full">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-40 outline-none" tabindex="-1">
       @if (isAuthenticated()) {
         <router-outlet></router-outlet>
       } @else {
@@ -195,20 +196,4 @@
       }
     </div>
   </main>
-
-  <!-- Footer -->
-  <footer class="bg-white border-t border-neutral-200 mt-auto">
-    <div
-      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex justify-between items-center text-sm text-neutral-500"
-    >
-      <p>&copy; 2026 OTS Trackline</p>
-      <div class="flex gap-4">
-        <span>Offline-Ready PWA</span>
-        <span
-          class="w-1.5 h-1.5 rounded-full bg-neutral-300 self-center"
-        ></span>
-        <span>Operational Workspace</span>
-      </div>
-    </div>
-  </footer>
 </div>

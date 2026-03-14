@@ -1,1363 +1,647 @@
 @if (report(); as reportData) {
   <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <!-- HEADER -->
     <app-inspection-report-header
       [report]="reportData"
       [isCustomer]="isCustomer()"
       [userRole]="userRole()"
       [isExporting]="isExporting"
       [isOnline]="isOnline"
-      [showCustomerExport]="
-        !!(isCustomer() && uiState?.actions?.['CUSTOMER_EXPORT']?.visible)
-      "
+      [showCustomerExport]="!!(isCustomer() && uiState?.actions?.['CUSTOMER_EXPORT']?.visible)"
       [canExport]="!!uiState?.actions?.['CUSTOMER_EXPORT']?.enabled"
-      [exportDisabledReason]="
-        uiState?.actions?.['CUSTOMER_EXPORT']?.disabledReason || ''
-      "
+      [exportDisabledReason]="uiState?.actions?.['CUSTOMER_EXPORT']?.disabledReason || ''"
       (export)="exportReport()"
     />
 
-    <app-inspection-report-banners [banners]="uiState?.banners || []" />
+    <!-- BANNERS -->
+    @if (!isCustomer()) {
+      <app-inspection-report-banners [banners]="uiState?.banners || []" />
+    }
 
-    <div class="mb-8">
-      <!-- Meta Section -->
-      <div class="page-section p-6 flex flex-col justify-between">
-        <div>
-          <div
-            class="flex items-center justify-between border-b border-neutral-200 pb-3 mb-4"
+    <!-- TAB NAVIGATION -->
+    <div class="z-30 fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] pb-safe">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav class="relative flex justify-between sm:justify-center sm:gap-14" aria-label="Tabs">
+          <!-- Active Indicator (All sizes) -->
+          <div 
+            class="absolute bottom-0 h-0.5 bg-primary transition-all duration-300 ease-out z-10"
+            [style.left.px]="activeTabPos().left"
+            [style.width.px]="activeTabPos().width"
+          ></div>
+
+          <button
+            #summaryTab
+            (click)="activeTab.set('summary')"
+            [class]="activeTab() === 'summary' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
+            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
           >
-            <h2 class="text-lg font-semibold text-neutral-900">
-              Executive Summary
-            </h2>
-            <div class="flex items-center gap-3">
-              <span
-                class="data-chip bg-primary/10 text-primary border-primary/20"
-                >{{ reportData.status }}</span
-              >
-              @if (
-                !isEditingMeta &&
-                isInspectorCapable() &&
-                uiState?.actions?.['IR_EDIT_META']?.visible
-              ) {
-                <button
-                  (click)="isEditingMeta = true"
-                  class="btn btn-secondary btn-sm gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
-                >
-                  <svg
-                    class="h-3.5 w-3.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                    ></path>
-                  </svg>
-                  Update Inspection Report Data
-                </button>
-              }
+            <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'summary'">
+              <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             </div>
-          </div>
+            <span class="sm:block" [class.font-bold]="activeTab() === 'summary'">Summary</span>
+            
+          </button>
 
-          <div class="grid grid-cols-2 gap-y-5 gap-x-4 mb-4">
-            <div>
-              <span class="detail-label">Report #</span>
-              <span class="detail-value-code tracking-widest">{{
-                reportData.reportNumber ||
-                  (reportData.id.substring(0, 8) | uppercase)
-              }}</span>
+          <button
+            #serialsTab
+            (click)="activeTab.set('serials')"
+            [class]="activeTab() === 'serials' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
+            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
+          >
+            <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'serials'">
+              <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
             </div>
-            <div>
-              <span class="detail-label">Date</span>
-              <span class="detail-value">{{
-                reportData.updatedAt
-                  ? (reportData.updatedAt | date: 'medium')
-                  : 'N/A'
-              }}</span>
-            </div>
-            <div class="col-span-2">
-              <span class="detail-label">Address of Inspection</span>
-              <span class="detail-value">{{
-                reportData.inspectionAddress || customerAddress || 'N/A'
-              }}</span>
-            </div>
-            <div>
-              <span class="detail-label">PO #</span>
-              <span class="detail-value-code">{{ reportData.poNumber }}</span>
-            </div>
-            <div>
-              <span class="detail-label">Standard Used</span>
-              @if (reportData.standardUsed) {
-                <span class="detail-value-code">{{
-                  reportData.standardUsed
-                }}</span>
-              } @else {
-                <span class="detail-value-code"
-                  >{{ reportData.templateKey }}
-                  <span class="text-xs text-gray-500"
-                    >v{{ reportData.templateVersion }}</span
-                  ></span
-                >
-              }
-            </div>
-            <div>
-              <span class="detail-label">Inspected By</span>
-              <span class="detail-value">{{ inspectedByName }}</span>
-            </div>
-            <div>
-              <span class="detail-label">Approved By</span>
-              <span class="detail-value">{{ approvedByName }}</span>
-            </div>
-            <div>
-              @if (isCustomer()) {
-                <span class="detail-label">Inspection Progress</span>
-              } @else {
-                <span class="detail-label">Approval Progress</span>
-              }
-              <div class="flex items-center gap-2 mt-1">
-                <div class="flex-1 bg-gray-200 rounded-full h-2">
-                  <div
-                    class="bg-success h-2 rounded-full transition-all duration-500"
-                    [style.width.%]="inspectionProgress().percent"
-                  ></div>
-                </div>
-                <span class="text-xs font-bold text-gray-700"
-                  >{{ inspectionProgress().approved }} /
-                  {{ inspectionProgress().total }}</span
-                >
-              </div>
-              @if (canPublishReport()) {
-                <div class="mt-2">
-                  <button
-                    (click)="onPublishReport()"
-                    [disabled]="isPublishingReport()"
-                    class="btn btn-success w-full gap-2 text-xs uppercase tracking-wider"
-                  >
-                    @if (isPublishingReport()) {
-                      <svg
-                        class="animate-spin h-3 w-3 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          class="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          stroke-width="4"
-                        ></circle>
-                        <path
-                          class="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Publishing...
-                    } @else {
-                      <svg
-                        class="w-3.5 h-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        ></path>
-                      </svg>
-                      Publish Report
-                    }
-                  </button>
-                </div>
-              }
-            </div>
-          </div>
+            <span class="sm:block" [class.font-bold]="activeTab() === 'serials'">Pipes</span>
+            
+          </button>
 
-          <div class="mt-8 border-t border-gray-100 pt-5">
-            <div class="flex justify-between items-center mb-2">
-              <h3 class="text-sm font-semibold text-gray-900">
-                Overall Inspector Comment
-              </h3>
-            </div>
-
-            @if (isEditingMeta) {
-              <textarea
-                [(ngModel)]="formInspectorComment"
-                rows="3"
-                class="field-control mb-3"
-                placeholder="Add an overall comment for the inspection..."
-              ></textarea>
-            } @else {
-              <div
-                class="p-4 border border-gray-200 bg-white rounded-lg min-h-[60px] text-sm text-gray-700 whitespace-pre-wrap shadow-inner mb-4"
-              >
-                @if (reportData.inspectorComment) {
-                  {{ reportData.inspectorComment }}
-                } @else {
-                  <span class="text-gray-400 italic"
-                    >No overall comment provided.</span
-                  >
-                }
-              </div>
-            }
-
-            <div
-              class="flex justify-between items-center mb-2 mt-4 pt-4 border-t border-gray-100"
+          @if (userRole() !== APP_ROLES.CUSTOMER) {
+            <button
+              #approvalsTab
+              (click)="hasSubmittedBatches() ? activeTab.set('approvals') : null"
+              [disabled]="!hasSubmittedBatches()"
+              [title]="!hasSubmittedBatches() ? 'No batches are currently pending approval' : 'Review and approve submitted batches'"
+              [class]="activeTab() === 'approvals' ? 'text-primary' : (hasSubmittedBatches() ? 'text-gray-500 hover:text-gray-700' : 'text-gray-300 cursor-not-allowed')"
+              class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
             >
-              <h3 class="text-sm font-semibold text-gray-900">
-                Additional Meta Information
-              </h3>
+              <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'approvals'">
+                <svg class="w-5 h-5 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              </div>
+              <span class="sm:block" [class.font-bold]="activeTab() === 'approvals'">Approvals</span>
+            </button>
+          }
+
+          <button
+            #specsTab
+            (click)="activeTab.set('specs')"
+            [class]="activeTab() === 'specs' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
+            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
+          >
+            <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'specs'">
+              <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+            </div>
+            <span class="sm:block" [class.font-bold]="activeTab() === 'specs'">Specs</span>
+            
+          </button>
+
+          <button
+            #historyTab
+            (click)="activeTab.set('history')"
+            [class]="activeTab() === 'history' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
+            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
+          >
+            <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'history'">
+              <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <span class="sm:block" [class.font-bold]="activeTab() === 'history'">Activity</span>
+            
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- TAB CONTENT AREA -->
+    <div class="flex-grow pt-8">
+      <!-- SUMMARY TAB -->
+      @if (activeTab() === 'summary') {
+        <div class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column: Summary & KPIs -->
+            <div class="lg:col-span-2 space-y-6">
+              <!-- Executive Summary Card -->
+              <div class="page-section p-6 border-neutral-200">
+                <div class="flex items-center justify-between border-b border-neutral-100 pb-3 mb-5">
+                  <h2 class="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                    <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    Inspection Summary
+                  </h2>
+                  <div class="flex items-center gap-3">
+                    <span class="data-chip bg-primary/10 text-primary border-primary/20">{{ reportData.status }}</span>
+                    @if (!isEditingMeta && isInspectorCapable() && uiState?.actions?.['IR_EDIT_META']?.visible) {
+                      <button (click)="isEditingMeta = true; activeTab.set('specs')" class="btn btn-secondary btn-sm gap-1.5 text-primary border-primary/30 hover:bg-primary/5">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        Edit Metadata
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-y-5 gap-x-4">
+                  <div>
+                    <span class="detail-label">Report #</span>
+                    <span class="detail-value-code tracking-widest text-primary font-bold">{{ reportData.reportNumber || (reportData.id.substring(0, 8) | uppercase) }}</span>
+                  </div>
+                  <div>
+                    <span class="detail-label">Date</span>
+                    <span class="detail-value">{{ reportData.updatedAt ? (reportData.updatedAt | date: 'mediumDate') : 'N/A' }}</span>
+                  </div>
+                  <div>
+                    <span class="detail-label">PO #</span>
+                    <span class="detail-value-code">{{ reportData.poNumber || 'N/A' }}</span>
+                  </div>
+                  <div>
+                    <span class="detail-label">Inspected By</span>
+                    <span class="detail-value font-medium">{{ inspectedByName }}</span>
+                  </div>
+                </div>
+
+                <!-- Inspector Comments -->
+                <div class="mt-8 pt-5 border-t border-gray-100">
+                  <h3 class="text-sm font-semibold text-gray-900 mb-3">Overall Inspector Comments</h3>
+                  <div class="p-4 bg-gray-50 border border-gray-200 rounded-xl min-h-[80px] text-sm text-gray-700 whitespace-pre-wrap">
+                    @if (reportData.inspectorComment) {
+                      {{ reportData.inspectorComment }}
+                    } @else {
+                      <span class="text-gray-400 italic">No comments provided for this inspection.</span>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <!-- KPIs Overview -->
+              <app-inspection-report-kpi-overview
+                [total]="kpiTotal"
+                [passed]="kpiPassed"
+                [rework]="kpiRework"
+                [scrap]="kpiScrap"
+                [passRate]="kpiPassRate"
+                (dispositionOpen)="openKpiModal($event)"
+              />
+
+              <!-- Rework Status -->
+              <app-inspection-report-rework-status
+                [report]="reportData"
+                [userRole]="userRole()"
+                [items]="reworkSerials"
+              />
             </div>
 
-            @if (isEditingMeta) {
-              <!-- Pipe Details Grid -->
-              <div class="mb-4">
-                <h4
-                  class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide"
-                >
-                  Pipe Details
-                </h4>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div>
-                    <label for="form_grade" class="detail-label">Grade</label>
-                    <input
-                      id="form_grade"
-                      type="text"
-                      [(ngModel)]="formGrade"
-                      placeholder="e.g. S135"
-                      class="field-control px-2 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label for="form_range" class="detail-label">Range</label>
-                    <input
-                      id="form_range"
-                      type="text"
-                      [(ngModel)]="formRange"
-                      placeholder="e.g. 2"
-                      class="field-control px-2 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label for="form_weight" class="detail-label">Weight</label>
-                    <input
-                      id="form_weight"
-                      type="text"
-                      [(ngModel)]="formWeight"
-                      placeholder="e.g. 19.50 ppf"
-                      class="field-control px-2 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label for="form_nom_wt" class="detail-label"
-                      >Nom. W.T</label
-                    >
-                    <input
-                      id="form_nom_wt"
-                      type="text"
-                      [(ngModel)]="formNomWT"
-                      placeholder='e.g. 0.362"'
-                      class="field-control px-2 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label for="form_nom_od" class="detail-label">Nom OD</label>
-                    <input
-                      id="form_nom_od"
-                      type="text"
-                      [(ngModel)]="formNomOD"
-                      placeholder='e.g. 5"'
-                      class="field-control px-2 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label for="form_nom_id" class="detail-label">Nom ID</label>
-                    <input
-                      id="form_nom_id"
-                      type="text"
-                      [(ngModel)]="formNomID"
-                      placeholder='e.g. 4.276"'
-                      class="field-control px-2 py-2"
-                    />
-                  </div>
-                  <div class="col-span-2 md:col-span-2">
-                    <label for="form_connection" class="detail-label"
-                      >Connection</label
-                    >
-                    <input
-                      id="form_connection"
-                      type="text"
-                      [(ngModel)]="formConnection"
-                      placeholder="e.g. NC50"
-                      class="field-control px-2 py-2"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Inspection Job Meta -->
-              <div class="mb-4">
-                <h4
-                  class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide"
-                >
-                  Inspection Report Info
-                </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div class="md:col-span-2">
-                    <label for="form_inspection_address" class="detail-label"
-                      >Inspection Address</label
-                    >
-                    <input
-                      id="form_inspection_address"
-                      type="text"
-                      [(ngModel)]="formInspectionAddress"
-                      placeholder="e.g. 123 Industrial Pkwy"
-                      class="field-control px-2 py-2"
-                    />
-                  </div>
-                  <div class="md:col-span-2">
-                    <label
-                      for="form_standard_used"
-                      class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                      >Standard Used</label
-                    >
-                    <input
-                      id="form_standard_used"
-                      type="text"
-                      [(ngModel)]="formStandardUsed"
-                      placeholder="e.g. API RP 7G-2"
-                      class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div class="mb-4">
-                <div class="flex justify-between items-center mb-2">
-                  <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest"
-                    >Inspection Methods</span
-                  >
-                  <button
-                    (click)="addMethodFormRow()"
-                    class="text-xs text-primary hover:underline font-medium flex items-center gap-1"
-                  >
-                    <svg
-                      class="h-3 w-3"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 4v16m8-8H4"
-                      ></path>
-                    </svg>
-                    Add
-                  </button>
-                </div>
-
-                @if (formInspectionMethod.length === 0) {
-                  <p class="text-xs text-gray-400 italic mb-2">
-                    No methods added.
-                  </p>
-                }
-
-                <div class="space-y-2">
-                  @for (
-                    m of formInspectionMethod;
-                    track $index;
-                    let i = $index
-                  ) {
-                    <div class="flex items-center gap-2">
-                      <div class="flex-1 flex gap-2">
-                        <select
-                          [(ngModel)]="m.name"
-                          (change)="onMethodSelectChange(i)"
-                          class="field-control w-full sm:w-1/2 px-2 py-2 bg-white"
-                        >
-                          <option value="" disabled selected>
-                            Select method...
-                          </option>
-                          @for (opt of METHOD_OPTIONS; track opt) {
-                            <option [value]="opt">{{ opt }}</option>
-                          }
-                        </select>
-                        @if (m.isOther) {
-                          <input
-                            type="text"
-                            [(ngModel)]="m.name"
-                            placeholder="Specify..."
-                            class="field-control w-full sm:w-1/2 px-2 py-2"
-                          />
-                        }
+            <!-- Right Column: Workflow & Validation -->
+            <div class="space-y-6">
+              <!-- Validation Status Card -->
+              @if (validationResult && !isCustomer()) {
+                <div class="page-section p-5 border-neutral-200 shadow-sm">
+                  <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Quality Validation</h3>
+                  
+                  @if (validationResult.isReady) {
+                    <div class="flex items-center gap-3 p-4 bg-success-light/20 border border-success/20 rounded-xl">
+                      <div class="p-2 bg-success rounded-lg text-white">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                       </div>
-                      <button
-                        (click)="removeMethodFormRow(i)"
-                        class="p-1.5 text-error hover:bg-error-light rounded transition-colors"
-                        title="Remove"
-                      >
-                        <svg
-                          class="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                          ></path>
-                        </svg>
-                      </button>
-                    </div>
-                  }
-                </div>
-              </div>
-
-              <div class="mb-4">
-                <div class="flex justify-between items-center mb-2">
-                  <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest"
-                    >Equipment Used</span
-                  >
-                  <button
-                    (click)="addEquipmentFormRow()"
-                    class="text-xs text-primary hover:underline font-medium flex items-center gap-1"
-                  >
-                    <svg
-                      class="h-3 w-3"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 4v16m8-8H4"
-                      ></path>
-                    </svg>
-                    Add
-                  </button>
-                </div>
-
-                @if (formEquipmentUsed.length === 0) {
-                  <p class="text-xs text-gray-400 italic mb-2">
-                    No equipment added.
-                  </p>
-                }
-
-                <div class="space-y-2">
-                  @for (eq of formEquipmentUsed; track $index; let i = $index) {
-                    <div class="flex items-center gap-2">
-                      <div class="w-1/2 flex gap-2">
-                        <select
-                          [(ngModel)]="eq.name"
-                          (change)="onEquipmentSelectChange(i)"
-                          class="field-control w-full px-2 py-2 bg-white"
-                        >
-                          <option value="" disabled selected>
-                            Select equipment...
-                          </option>
-                          @for (opt of EQUIPMENT_OPTIONS; track opt) {
-                            <option [value]="opt">{{ opt }}</option>
-                          }
-                        </select>
-                        @if (eq.isOther) {
-                          <input
-                            type="text"
-                            [(ngModel)]="eq.name"
-                            placeholder="Specify..."
-                            class="field-control w-full px-2 py-2"
-                          />
-                        }
+                      <div>
+                        <span class="block text-sm font-bold text-success-dark">Validation Passed</span>
+                        <span class="block text-xs text-success-dark/70">Ready for next workflow step</span>
                       </div>
-                      <input
-                        type="text"
-                        [(ngModel)]="eq.number"
-                        placeholder="S/N or ID (Optional)"
-                        class="field-control flex-1 px-2 py-2"
-                      />
-                      <button
-                        (click)="removeEquipmentFormRow(i)"
-                        class="p-1.5 text-error hover:bg-error-light rounded transition-colors"
-                        title="Remove"
-                      >
-                        <svg
-                          class="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                          ></path>
-                        </svg>
-                      </button>
-                    </div>
-                  }
-                </div>
-              </div>
-
-              <div class="flex gap-2 justify-end mt-4">
-                <button
-                  (click)="
-                    isEditingMeta = false;
-                    formInspectorComment = reportData.inspectorComment || '';
-                    formInspectionAddress = reportData.inspectionAddress || '';
-                    formStandardUsed = reportData.standardUsed || ''
-                  "
-                  class="btn btn-secondary btn-sm"
-                >
-                  Cancel
-                </button>
-                <button (click)="saveMeta()" class="btn btn-primary btn-sm">
-                  Save Details
-                </button>
-              </div>
-            } @else {
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-4 mb-4">
-                <div
-                  class="col-span-2 md:col-span-4 border-b border-gray-100 pb-2 mb-2"
-                >
-                  <h4
-                    class="text-xs font-bold text-primary uppercase tracking-wide"
-                  >
-                    Inspection Report Info & Pipe Specifications
-                  </h4>
-                </div>
-                <div>
-                  <span class="detail-label">Grade</span>
-                  <span class="detail-value">{{
-                    reportData.grade || '-'
-                  }}</span>
-                </div>
-                <div>
-                  <span class="detail-label">Range</span>
-                  <span class="detail-value">{{
-                    reportData.range || '-'
-                  }}</span>
-                </div>
-                <div>
-                  <span class="detail-label">Weight</span>
-                  <span class="detail-value">{{
-                    reportData.weight || '-'
-                  }}</span>
-                </div>
-                <div>
-                  <span class="detail-label">Nom. W.T</span>
-                  <span class="detail-value">{{
-                    reportData.nomWT || '-'
-                  }}</span>
-                </div>
-                <div>
-                  <span class="detail-label">Nom OD</span>
-                  <span class="detail-value">{{
-                    reportData.nomOD || '-'
-                  }}</span>
-                </div>
-                <div>
-                  <span class="detail-label">Nom ID</span>
-                  <span class="detail-value">{{
-                    reportData.nomID || '-'
-                  }}</span>
-                </div>
-                <div>
-                  <span class="detail-label">Connection</span>
-                  <span
-                    class="detail-value code-text px-1 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs select-all"
-                    >{{ reportData.connection || '-' }}</span
-                  >
-                </div>
-                <div
-                  class="col-span-2 md:col-span-4 mt-2 border-t border-gray-100 pt-3"
-                >
-                  <span class="detail-label mb-2">Inspection Methods</span>
-                  @if (
-                    $any(reportData.inspectionMethod) &&
-                    $any(reportData.inspectionMethod).length > 0
-                  ) {
-                    <div class="flex flex-wrap gap-2">
-                      @for (
-                        m of $any(reportData.inspectionMethod);
-                        track $index
-                      ) {
-                        <span
-                          class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold border border-blue-200/50 shadow-sm"
-                        >
-                          <svg
-                            class="h-3 w-3 text-blue-500"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            ></path>
-                          </svg>
-                          {{ m.name || m }}
-                        </span>
-                      }
                     </div>
                   } @else {
-                    <span class="font-medium text-gray-400 text-sm italic"
-                      >None added.</span
-                    >
+                    <div class="flex flex-col gap-3 p-4 bg-error-light/20 border border-error/20 rounded-xl">
+                      <div class="flex items-center gap-3">
+                        <div class="p-2 bg-error rounded-lg text-white">
+                          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        </div>
+                        <div>
+                          <span class="block text-sm font-bold text-error-dark">Review Required</span>
+                          <span class="block text-xs text-error-dark/70">{{ validationResult.issues.length }} conditions need attention</span>
+                        </div>
+                      </div>
+                      <button (click)="isValidationModalOpen = true" class="text-xs font-bold text-error hover:underline text-left ml-11">
+                        View Details →
+                      </button>
+                    </div>
                   }
                 </div>
+              }
 
-                <div class="col-span-2 md:col-span-4 mt-2">
-                  <span class="detail-label">Equipment Used</span>
-                  @if (
-                    $any(reportData.equipmentUsed) &&
-                    $any(reportData.equipmentUsed).length > 0
-                  ) {
-                    <div
-                      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-1"
-                    >
-                      @for (
-                        eq of $any(reportData.equipmentUsed);
-                        track $index
-                      ) {
-                        <div
-                          class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100 shadow-sm"
-                        >
-                          <svg
-                            class="h-3 w-3 text-accent shrink-0"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                            ></path>
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            ></path>
-                          </svg>
-                          <span
-                            class="font-medium text-gray-900 text-sm truncate"
-                            [title]="eq.name"
-                            >{{ eq.name }}</span
-                          >
-                          @if (eq.number) {
-                            <span
-                              class="code-text text-gray-500 text-[10px] ml-auto bg-white px-1.5 py-0.5 rounded border border-gray-200 shrink-0"
-                              >#{{ eq.number }}</span
-                            >
-                          }
+              <!-- Workflow Actions (Transition Bar) -->
+              @if (!isCustomer()) {
+                <div class="page-section p-5 border-neutral-200 relative overflow-hidden">
+                  <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 px-1">Workflow Actions</h3>
+                  <app-inspection-report-transition-actions
+                    [report]="reportData"
+                    [expanded]="true"
+                    [isFixed]="false"
+                    [allowedTransitions]="allowedTransitions"
+                    [selectedTransition]="selectedTransition"
+                    [formReason]="formReason"
+                    [formError]="formError"
+                    [validationResult]="validationResult"
+                    [isOnline]="isOnline"
+                    [showExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.visible"
+                    [canExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.enabled"
+                    [exportDisabledReason]="uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || ''"
+                    [isExporting]="isExporting"
+                    (expandedChange)="isTransitionExpanded = $event"
+                    (export)="exportReport()"
+                    (showValidationDetails)="isValidationModalOpen = true"
+                    (selectTransition)="openReasonSelect($event)"
+                    (formReasonChange)="formReason = $event"
+                    (confirmTransition)="onTransition()"
+                    (cancelTransition)="selectedTransition = null; formReason = ''"
+                  />
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- SERIALS TAB -->
+      @if (activeTab() === 'serials') {
+        <div class="animate-in fade-in duration-300">
+          <div class="flex flex-col xl:flex-row gap-6 items-start w-full">
+            <app-inspection-report-serials-table
+              [serials]="filteredSerials()"
+              [childReports]="childReports()"
+              [userRole]="userRole()"
+              [searchQuery]="snSearchQuery()"
+              [selectedForApproval]="selectedForApproval()"
+              [isSubmittingBatch]="isSubmittingBatch"
+              [canSubmitBatch]="canSubmitBatch()"
+              [isLocked]="isLocked()"
+              [isAllEligibleSelected]="isAllEligibleSelected"
+              [editingSnId]="editingSnId"
+              [editingSnValue]="editingSnValue"
+              [canInspectInspectionData]="
+                !!(
+                  uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.visible ||
+                  uiState?.actions?.['SN_SET_DISPOSITION']?.visible
+                )
+              "
+              [canEditSerial]="!!uiState?.actions?.['IR_EDIT_SERIAL']?.visible"
+              [canRemoveSerial]="!!uiState?.actions?.['IR_REMOVE_SERIAL']?.visible"
+              [historySerialIds]="historySerialIds()"
+              [isCompactMode]="isCompactMode()"
+              (searchQueryChange)="snSearchQuery.set($event)"
+              (toggleAllEligible)="toggleAllEligible()"
+              (submitSelected)="submitSelectedForApproval()"
+              (toggleSelection)="toggleSelection($event)"
+              (openInspection)="openInspectionForm($event)"
+              (startEdit)="onEditSn($event)"
+              (editingSnValueChange)="editingSnValue = $event"
+              (saveEdit)="saveEditSn($event)"
+              (cancelEdit)="cancelEditSn()"
+              (deleteSn)="onDeleteSn($event)"
+              (openHistory)="openHistory($event)"
+            />
+            @if (uiState?.actions?.['IR_ADD_SERIAL']?.visible) {
+              <app-inspection-report-add-serial-panel
+                [value]="formBulkSerials"
+                [enabled]="!!uiState?.actions?.['IR_ADD_SERIAL']?.enabled"
+                (valueChange)="formBulkSerials = $event"
+                (submit)="onAddSerials()"
+              />
+            }
+          </div>
+        </div>
+      }
+
+      <!-- APPROVALS TAB -->
+      @if (activeTab() === 'approvals' && userRole() !== APP_ROLES.CUSTOMER) {
+        <div class="animate-in fade-in duration-300">
+          <app-inspection-report-approval-batches
+            [userRole]="userRole()"
+            [batches]="approvalBatches()"
+            [selectedIds]="selectedInBatch()"
+            [isActioning]="isActioningBatch"
+            (returnBatch)="openReturnBatchModal($event)"
+            (approveBatch)="approveBatch($event)"
+            (toggleSerialSelection)="toggleBatchSnSelection($event)"
+          />
+        </div>
+      }
+
+      <!-- SPECS TAB -->
+      @if (activeTab() === 'specs' || isEditingMeta) {
+        <div class="animate-in fade-in duration-300">
+          <div class="page-section p-6 border-neutral-200">
+            @if (isEditingMeta) {
+              <div class="space-y-8">
+                <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+                  <h3 class="text-lg font-bold text-neutral-900">Edit Inspection Details</h3>
+                  <div class="flex gap-2">
+                    <button (click)="isEditingMeta = false" class="btn btn-secondary btn-sm">Cancel</button>
+                    <button (click)="saveMeta()" class="btn btn-primary btn-sm">Save Changes</button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div class="space-y-6">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pipe Specifications</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                      <div><label for="grade-input" class="detail-label">Grade</label><input id="grade-input" type="text" [(ngModel)]="formGrade" class="field-control" /></div>
+                      <div><label for="range-input" class="detail-label">Range</label><input id="range-input" type="text" [(ngModel)]="formRange" class="field-control" /></div>
+                      <div><label for="weight-input" class="detail-label">Weight</label><input id="weight-input" type="text" [(ngModel)]="formWeight" class="field-control" /></div>
+                      <div><label for="nom-wt-input" class="detail-label">Nom. W.T</label><input id="nom-wt-input" type="text" [(ngModel)]="formNomWT" class="field-control" /></div>
+                      <div><label for="nom-od-input" class="detail-label">Nom OD</label><input id="nom-od-input" type="text" [(ngModel)]="formNomOD" class="field-control" /></div>
+                      <div><label for="nom-id-input" class="detail-label">Nom ID</label><input id="nom-id-input" type="text" [(ngModel)]="formNomID" class="field-control" /></div>
+                      <div class="col-span-2"><label for="connection-input" class="detail-label">Connection</label><input id="connection-input" type="text" [(ngModel)]="formConnection" class="field-control" /></div>
+                    </div>
+                  </div>
+                  <div class="space-y-6">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Job Information</h4>
+                    <div class="space-y-4">
+                      <div><label for="address-input" class="detail-label">Inspection Address</label><input id="address-input" type="text" [(ngModel)]="formInspectionAddress" class="field-control" /></div>
+                      <div><label for="standard-input" class="detail-label">Standard Used</label><input id="standard-input" type="text" [(ngModel)]="formStandardUsed" class="field-control" /></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-gray-100">
+                  <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                      <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Methods</h4>
+                      <button (click)="addMethodFormRow()" class="text-xs text-primary font-bold hover:underline">+ Add Method</button>
+                    </div>
+                    <div class="space-y-2">
+                      @for (m of formInspectionMethod; track $index; let i = $index) {
+                        <div class="flex gap-2">
+                          <select [(ngModel)]="m.name" (change)="onMethodSelectChange(i)" class="field-control text-sm">
+                            <option value="" disabled>Select...</option>
+                            @for (opt of METHOD_OPTIONS; track opt) { <option [value]="opt">{{ opt }}</option> }
+                          </select>
+                          @if (m.isOther) { <input type="text" [(ngModel)]="m.name" class="field-control text-sm" /> }
+                          <button (click)="removeMethodFormRow(i)" class="text-error p-2 hover:bg-error/10 rounded-lg">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+                          </button>
                         </div>
                       }
                     </div>
-                  } @else {
-                    <span class="font-medium text-gray-400 text-sm italic"
-                      >None added.</span
-                    >
+                  </div>
+                  <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                      <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Equipment</h4>
+                      <button (click)="addEquipmentFormRow()" class="text-xs text-primary font-bold hover:underline">+ Add Equipment</button>
+                    </div>
+                    <div class="space-y-2">
+                      @for (eq of formEquipmentUsed; track $index; let i = $index) {
+                        <div class="flex gap-2">
+                          <select [(ngModel)]="eq.name" (change)="onEquipmentSelectChange(i)" class="field-control text-sm">
+                            <option value="" disabled>Select...</option>
+                            @for (opt of EQUIPMENT_OPTIONS; track opt) { <option [value]="opt">{{ opt }}</option> }
+                          </select>
+                          <input type="text" [(ngModel)]="eq.number" placeholder="S/N" class="field-control text-sm w-24" />
+                          <button (click)="removeEquipmentFormRow(i)" class="text-error p-2 hover:bg-error/10 rounded-lg">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <div class="space-y-8">
+                <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+                  <h3 class="text-lg font-bold text-neutral-900">Pipe & Inspection Specifications</h3>
+                  @if (isInspectorCapable() && uiState?.actions?.['IR_EDIT_META']?.visible) {
+                    <button (click)="isEditingMeta = true" class="btn btn-secondary btn-sm gap-2">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                      Edit Info
+                    </button>
                   }
                 </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                  <div class="space-y-4">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2">Technical Specs</h4>
+                    <div class="space-y-3">
+                      <div class="flex justify-between"><span class="text-sm text-gray-500">Grade</span><span class="text-sm font-bold text-neutral-900">{{ reportData.grade || '-' }}</span></div>
+                      <div class="flex justify-between"><span class="text-sm text-gray-500">Range</span><span class="text-sm font-bold text-neutral-900">{{ reportData.range || '-' }}</span></div>
+                      <div class="flex justify-between"><span class="text-sm text-gray-500">Weight</span><span class="text-sm font-bold text-neutral-900">{{ reportData.weight || '-' }}</span></div>
+                      <div class="flex justify-between"><span class="text-sm text-gray-500">Nom. W.T</span><span class="text-sm font-bold text-neutral-900">{{ reportData.nomWT || '-' }}</span></div>
+                      <div class="flex justify-between"><span class="text-sm text-gray-500">Nom OD / ID</span><span class="text-sm font-bold text-neutral-900">{{ reportData.nomOD || '-' }} / {{ reportData.nomID || '-' }}</span></div>
+                      <div class="flex justify-between"><span class="text-sm text-gray-500">Connection</span><span class="text-sm font-mono font-bold text-primary">{{ reportData.connection || '-' }}</span></div>
+                    </div>
+                  </div>
+                  <div class="space-y-4">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2">Inspection Methods</h4>
+                    <div class="flex flex-wrap gap-2">
+                      @for (m of $any(reportData.inspectionMethod); track $index) {
+                        <span class="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-xs font-bold">{{ m.name || m }}</span>
+                      }
+                      @if (!$any(reportData.inspectionMethod)?.length) { <span class="text-sm italic text-gray-400">No methods listed</span> }
+                    </div>
+                  </div>
+                  <div class="space-y-4">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2">Equipment Used</h4>
+                    <div class="space-y-2">
+                      @for (eq of $any(reportData.equipmentUsed); track $index) {
+                        <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100">
+                          <span class="text-xs font-bold text-gray-700">{{ eq.name }}</span>
+                          @if (eq.number) { <span class="text-[10px] font-mono text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200">#{{ eq.number }}</span> }
+                        </div>
+                      }
+                      @if (!$any(reportData.equipmentUsed)?.length) { <span class="text-sm italic text-gray-400">No equipment listed</span> }
+                    </div>
+                  </div>
+                </div>
               </div>
             }
           </div>
         </div>
+      }
 
-        @if (validationResult) {
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            @if (validationResult.isReady) {
-              <span
-                class="inline-flex items-center text-xs font-bold text-success-dark tracking-wide uppercase"
-              >
-                <svg
-                  class="mr-1.5 h-4 w-4 text-success"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-                Validation Passed
-              </span>
-            } @else {
-              <span
-                class="inline-flex items-center text-xs font-bold text-error-dark tracking-wide uppercase"
-              >
-                <svg
-                  class="mr-1.5 h-4 w-4 text-error"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-                Validation Failed
-              </span>
-              <span class="text-xs text-error block ml-5 font-medium mt-0.5"
-                >({{ validationResult.issues.length }} conditions)</span
-              >
-            }
-          </div>
-        }
-      </div>
-    </div>
-
-    @if (!isCustomer()) {
-      <app-inspection-report-transition-bar
-        [report]="reportData"
-        [expanded]="isTransitionExpanded"
-        [allowedTransitions]="allowedTransitions"
-        [selectedTransition]="selectedTransition"
-        [formReason]="formReason"
-        [formError]="formError"
-        [validationResult]="validationResult"
-        [isOnline]="isOnline"
-        [showExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.visible"
-        [canExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.enabled"
-        [exportDisabledReason]="
-          uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || ''
-        "
-        [isExporting]="isExporting"
-        (expandedChange)="isTransitionExpanded = $event"
-        (export)="exportReport()"
-        (showValidationDetails)="isValidationModalOpen = true"
-        (selectTransition)="openReasonSelect($event)"
-        (formReasonChange)="formReason = $event"
-        (confirmTransition)="onTransition()"
-        (cancelTransition)="selectedTransition = null; formReason = ''"
-      />
-    }
-
-    <app-inspection-report-kpi-overview
-      [total]="kpiTotal"
-      [passed]="kpiPassed"
-      [rework]="kpiRework"
-      [scrap]="kpiScrap"
-      [passRate]="kpiPassRate"
-      (dispositionOpen)="openKpiModal($event)"
-    />
-
-    <app-inspection-report-rework-status
-      [report]="reportData"
-      [userRole]="userRole()"
-      [items]="reworkSerials"
-    />
-
-    <div class="flex flex-col xl:flex-row gap-6 items-start w-full">
-      <app-inspection-report-serials-table
-        [serials]="filteredSerials()"
-        [childReports]="childReports()"
-        [userRole]="userRole()"
-        [searchQuery]="snSearchQuery()"
-        [selectedForApproval]="selectedForApproval()"
-        [isSubmittingBatch]="isSubmittingBatch"
-        [canSubmitBatch]="canSubmitBatch()"
-        [isLocked]="isLocked()"
-        [isAllEligibleSelected]="isAllEligibleSelected"
-        [editingSnId]="editingSnId"
-        [editingSnValue]="editingSnValue"
-        [canInspectInspectionData]="
-          !!(
-            uiState?.actions?.['SN_EDIT_INSPECTION_DATA']?.visible ||
-            uiState?.actions?.['SN_SET_DISPOSITION']?.visible
-          )
-        "
-        [canEditSerial]="!!uiState?.actions?.['IR_EDIT_SERIAL']?.visible"
-        [canRemoveSerial]="!!uiState?.actions?.['IR_REMOVE_SERIAL']?.visible"
-        [historySerialIds]="historySerialIds()"
-        (searchQueryChange)="snSearchQuery.set($event)"
-        (toggleAllEligible)="toggleAllEligible()"
-        (submitSelected)="submitSelectedForApproval()"
-        (toggleSelection)="toggleSelection($event)"
-        (openInspection)="openInspectionForm($event)"
-        (startEdit)="onEditSn($event)"
-        (editingSnValueChange)="editingSnValue = $event"
-        (saveEdit)="saveEditSn($event)"
-        (cancelEdit)="cancelEditSn()"
-        (deleteSn)="onDeleteSn($event)"
-        (openHistory)="openHistory($event)"
-      />
-      @if (uiState?.actions?.['IR_ADD_SERIAL']?.visible) {
-        <app-inspection-report-add-serial-panel
-          [value]="formBulkSerials"
-          [enabled]="!!uiState?.actions?.['IR_ADD_SERIAL']?.enabled"
-          (valueChange)="formBulkSerials = $event"
-          (submit)="onAddSerials()"
-        />
+      @if (activeTab() === 'history') {
+        <div class="animate-in fade-in duration-300">
+          <app-inspection-report-transition-history [logs]="enrichedTransitionLogs()" />
+        </div>
       }
     </div>
-  </div>
 
-  @if (inspectingSn) {
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all p-4 pb-20 lg:p-8 lg:pb-24"
-    >
-      <div
-        tabindex="0"
-        class="absolute inset-0"
+    <!-- GLOBAL MODALS -->
+
+    <!-- SN Inspection Side Drawer (Sheet) -->
+    @if (inspectingSn) {
+      <div 
+        class="fixed inset-0 z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
         (click)="closeInspectionForm()"
-        (keydown.enter)="closeInspectionForm()"
-      ></div>
-
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-full flex flex-col border border-gray-200 z-10 animate-[sliceIn_0.2s_ease-out] overflow-hidden"
+        (keydown.escape)="closeInspectionForm()"
+        tabindex="0"
+        role="button"
+        aria-label="Close inspection form"
       >
-        <!-- Modal Header -->
-        <div
-          class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0"
+        <div 
+          class="bg-white w-full max-w-2xl h-full flex flex-col shadow-2xl border-l border-gray-200 animate-in slide-in-from-right duration-500 overflow-hidden"
+          (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()"
+          tabindex="-1"
+          role="region"
+          aria-label="Serial Inspection Details"
         >
-          <div class="flex gap-4 items-center">
-            <h2
-              class="text-xl font-semibold text-gray-900 flex items-center gap-3"
-            >
-              <svg
-                class="w-5 h-5 text-accent"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                ></path>
-              </svg>
-              Inspect
-              <span
-                class="font-mono bg-white px-2.5 py-1 rounded-md border border-gray-200 text-base font-bold text-primary shadow-sm"
-                >{{ inspectingSn.value }}</span
-              >
-            </h2>
-            <!-- Navigation within modal -->
-            <div class="flex gap-1.5 ml-4 pl-4 border-l border-gray-200">
-              <button
-                (click)="goToPrevSn()"
-                class="bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-600 p-1.5 rounded-md shadow-sm disabled:opacity-40 disabled:shadow-none transition-all flex items-center gap-1"
-                [disabled]="!hasPrevSn"
-                title="Previous Item"
-              >
-                <svg
-                  class="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 19l-7-7 7-7"
-                  ></path>
-                </svg>
-                <span class="text-xs font-medium sr-only sm:not-sr-only"
-                  >Prev</span
-                >
-              </button>
-              <button
-                (click)="goToNextSn()"
-                class="bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-600 p-1.5 rounded-md shadow-sm disabled:opacity-40 disabled:shadow-none transition-all flex items-center gap-1"
-                [disabled]="!hasNextSn"
-                title="Next Item"
-              >
-                <span class="text-xs font-medium sr-only sm:not-sr-only"
-                  >Next</span
-                >
-                <svg
-                  class="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 5l7 7-7 7"
-                  ></path>
-                </svg>
-              </button>
+          <!-- Drawer Header -->
+          <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-4">
+                <div class="p-2 bg-primary/10 rounded-xl">
+                  <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                </div>
+                <div>
+                  <h2 class="text-lg font-bold text-gray-900 leading-tight">Inspect Serial</h2>
+                  <p class="font-mono text-sm text-primary font-bold">{{ inspectingSn.value }}</p>
+                </div>
+                <div class="flex gap-1 ml-4 border-l border-gray-200 pl-4">
+                  <button (click)="goToPrevSn()" [disabled]="!hasPrevSn" class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors" title="Previous SN"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                  <button (click)="goToNextSn()" [disabled]="!hasNextSn" class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors" title="Next SN"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                </div>
+            </div>
+            <button (click)="closeInspectionForm()" class="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-900"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+          </div>
+
+          <!-- Drawer Body -->
+          <div class="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar bg-white">
+            <app-serial-inspection-reactive-form
+              [initialData]="inspectionFormData"
+              [schemaKey]="reportData.templateKey"
+              [isReadOnly]="(uiState?.fieldModes?.['inspectionData'] !== 'editable' && uiState?.fieldModes?.['disposition'] !== 'editable') || inspectingSn.approvalStatus === 'SUBMITTED_FOR_APPROVAL' || inspectingSn.approvalStatus === 'APPROVED'"
+              (saveData)="saveInspectionForm($event)"
+              (formCancel)="closeInspectionForm()"
+            />
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- KPI Equipment Modal -->
+    @if (activeModalStatus) {
+      <div class="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-300">
+          <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-3">
+              Equipment List: 
+              <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                {{ activeModalStatus }}
+              </span>
+            </h3>
+            <button (click)="closeKpiModal()" class="p-2 hover:bg-gray-200 rounded-full"><svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+          </div>
+          <div class="p-6 overflow-y-auto flex-grow bg-white">
+            @if (modalEquipmentList.length > 0) {
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                @for (sn of modalEquipmentList; track sn.id) {
+                  <button 
+                    type="button" 
+                    (click)="openInspectionForm(sn); closeKpiModal()"
+                    (keydown.enter)="openInspectionForm(sn); closeKpiModal()"
+                    class="p-3 bg-gray-50 border border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 hover:shadow-sm transition-all text-center"
+                  >
+                    <span class="font-mono text-sm font-bold text-gray-700">{{ sn.value }}</span>
+                  </button>
+                }
+              </div>
+            } @else {
+              <div class="text-center py-12 text-gray-400">No equipment found matching this status.</div>
+            }
+          </div>
+          <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+            <button (click)="closeKpiModal()" class="btn btn-secondary btn-sm">Close</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Validation Details Modal -->
+    @if (isValidationModalOpen && validationResult) {
+      <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in slide-in-from-bottom-4">
+          <div class="p-6 border-b border-error/10 bg-error-light/10 flex justify-between items-center">
+             <h3 class="text-lg font-bold text-error-dark flex items-center gap-3">
+               <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+               Prerequisites for Approval
+             </h3>
+             <button (click)="isValidationModalOpen = false" class="p-2 hover:bg-error/10 rounded-full text-error-dark"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+          </div>
+          <div class="p-8 overflow-y-auto flex-grow bg-white">
+            <div class="space-y-4">
+              @for (issue of validationResult.issues; track issue.message) {
+                <div class="flex items-start gap-4 p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                  <div class="w-2 h-2 rounded-full bg-error mt-2 shrink-0"></div>
+                  <p class="text-sm font-medium text-gray-700 leading-relaxed">{{ issue.message }}</p>
+                </div>
+              }
             </div>
           </div>
-          <button
-            (click)="closeInspectionForm()"
-            class="text-gray-400 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-full transition-colors flex items-center justify-center shrink-0"
-          >
-            <svg
-              class="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              ></path>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Modal Body (Scrollable) -->
-        <div class="flex-grow overflow-y-auto p-6 bg-gray-50/30">
-          <app-serial-inspection-reactive-form
-            [initialData]="inspectionFormData"
-            [schemaKey]="reportData.templateKey"
-            [isReadOnly]="
-              (uiState?.fieldModes?.['inspectionData'] !== 'editable' &&
-                uiState?.fieldModes?.['disposition'] !== 'editable') ||
-              inspectingSn.approvalStatus === 'SUBMITTED_FOR_APPROVAL' ||
-              inspectingSn.approvalStatus === 'APPROVED'
-            "
-            (saveData)="saveInspectionForm($event)"
-            (formCancel)="closeInspectionForm()"
-          >
-          </app-serial-inspection-reactive-form>
-        </div>
-      </div>
-    </div>
-  }
-
-  @if (userRole() !== APP_ROLES.CUSTOMER) {
-    <app-inspection-report-approval-batches
-      [userRole]="userRole()"
-      [batches]="approvalBatches()"
-      [selectedIds]="selectedInBatch()"
-      [isActioning]="isActioningBatch"
-      (returnBatch)="openReturnBatchModal($event)"
-      (approveBatch)="approveBatch($event)"
-      (toggleSerialSelection)="toggleBatchSnSelection($event)"
-    />
-
-    <app-inspection-report-transition-history [logs]="transitionLogs()" />
-  }
-
-  <div class="h-80 lg:h-64 w-full shrink-0"></div>
-}
-
-@if (activeModalStatus) {
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm transition-all p-4"
-  >
-    <!-- Click boundary -->
-    <div
-      tabindex="0"
-      class="absolute inset-0"
-      (click)="closeKpiModal()"
-      (keydown.enter)="closeKpiModal()"
-    ></div>
-    <div
-      class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-gray-200 z-10 animate-[sliceIn_0.2s_ease-out]"
-    >
-      <div
-        class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-xl"
-      >
-        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-          Equipment:
-          <span
-            class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border"
-            [ngClass]="{
-              'bg-success-light text-success-dark border-success/30':
-                activeModalStatus === SERIAL_DISPOSITIONS.PASS,
-              'bg-warning-light text-warning-dark border-warning/30':
-                activeModalStatus === SERIAL_DISPOSITIONS.REWORK,
-              'bg-error-light text-error-dark border-error/30':
-                activeModalStatus === SERIAL_DISPOSITIONS.SCRAP,
-              'bg-primary/10 text-primary border-primary/20':
-                activeModalStatus === SERIAL_DISPOSITIONS.HOLD,
-            }"
-            >{{ activeModalStatus }}</span
-          >
-        </h3>
-        <button
-          (click)="closeKpiModal()"
-          class="text-gray-400 hover:text-gray-900 hover:bg-gray-100 p-1.5 rounded-full transition-colors"
-        >
-          <svg
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
-      </div>
-      <div class="p-5 overflow-y-auto flex-grow bg-white">
-        @if (modalEquipmentList.length > 0) {
-          <ul class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            @for (sn of modalEquipmentList; track sn.id) {
-              <li
-                tabindex="0"
-                class="bg-gray-50 px-3 py-2.5 rounded-lg border border-gray-200 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-primary/5 hover:shadow-md transition-all group"
-                (click)="openInspectionForm(sn); closeKpiModal()"
-                (keydown.enter)="openInspectionForm(sn); closeKpiModal()"
-              >
-                <span
-                  class="font-mono font-bold text-gray-700 group-hover:text-primary text-sm break-all text-center"
-                  >{{ sn.value }}</span
-                >
-              </li>
-            }
-          </ul>
-        } @else {
-          <div
-            class="text-center py-12 text-gray-400 flex flex-col items-center"
-          >
-            <svg
-              class="h-12 w-12 mb-3 text-gray-300"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1.5"
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              ></path>
-            </svg>
-            <span class="text-sm font-medium"
-              >No equipment found matching this disposition status.</span
-            >
+          <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-end">
+            <button (click)="isValidationModalOpen = false" class="btn btn-secondary">Close</button>
           </div>
-        }
-      </div>
-      <div
-        class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end rounded-b-xl"
-      >
-        <button
-          (click)="closeKpiModal()"
-          class="px-5 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
-}
-
-@if (isValidationModalOpen && validationResult) {
-  <div
-    class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all p-4 lg:p-8"
-  >
-    <div
-      tabindex="0"
-      class="absolute inset-0"
-      (click)="isValidationModalOpen = false"
-      (keydown.enter)="isValidationModalOpen = false"
-    ></div>
-    <div
-      class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col border border-gray-200 z-10 animate-[sliceIn_0.2s_ease-out]"
-    >
-      <div
-        class="p-5 border-b border-gray-100 flex justify-between items-center bg-error-light/30 rounded-t-xl shrink-0"
-      >
-        <h3 class="text-lg font-bold text-error-dark flex items-center gap-2">
-          <svg class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fill-rule="evenodd"
-              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          Missing Prerequisites for Approval ({{
-            validationResult.issues.length
-          }})
-        </h3>
-        <button
-          (click)="isValidationModalOpen = false"
-          class="text-gray-400 hover:text-gray-900 hover:bg-gray-100 p-1.5 rounded-full transition-colors flex items-center justify-center shrink-0"
-        >
-          <svg
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
-      </div>
-      <div class="p-6 overflow-y-auto flex-grow bg-white">
-        <ul class="space-y-3">
-          @for (issue of validationResult.issues; track issue.message) {
-            <li
-              class="flex items-start gap-3 p-3.5 bg-gray-50 rounded-lg border border-gray-100"
-            >
-              <svg
-                class="h-5 w-5 text-warning flex-shrink-0 mt-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <span class="text-sm text-gray-700 leading-relaxed font-medium">{{
-                issue.message
-              }}</span>
-            </li>
-          }
-        </ul>
-      </div>
-      <div
-        class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end rounded-b-xl shrink-0"
-      >
-        <button
-          (click)="isValidationModalOpen = false"
-          class="px-5 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
-}
-
-@if (activeActionBatchId && !batchError) {
-  <div
-    class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all p-4"
-  >
-    <div
-      tabindex="0"
-      class="absolute inset-0"
-      (click)="closeReturnBatchModal()"
-      (keydown.enter)="closeReturnBatchModal()"
-    ></div>
-    <div
-      class="bg-white rounded-xl shadow-2xl w-full max-w-lg flex flex-col border border-gray-200 z-10 animate-[sliceIn_0.2s_ease-out]"
-    >
-      <div
-        class="p-5 border-b border-gray-100 flex justify-between items-center bg-red-50 rounded-t-xl shrink-0"
-      >
-        <h3 class="text-lg font-bold text-red-700 flex items-center gap-2">
-          <svg
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-            />
-          </svg>
-          Return Items to Inspector
-        </h3>
-        <button
-          (click)="closeReturnBatchModal()"
-          class="text-gray-400 hover:text-gray-900 hover:bg-gray-100 p-1.5 rounded-full transition-colors flex items-center justify-center shrink-0"
-        >
-          <svg
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
-      </div>
-      <div class="p-6 bg-white shrink-0">
-        <p class="text-sm text-gray-600 mb-4">
-          You are returning
-          <span class="font-bold text-gray-900">
-            {{
-              selectedInBatch().size > 0 && activeActionBatchId
-                ? selectedInBatch().size + ' selected item(s)'
-                : 'all remaining pending items'
-            }}
-          </span>
-          for correction. Please provide a reason below.
-        </p>
-
-        <label
-          for="return-notes-input"
-          class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2"
-          >Reason for Return</label
-        >
-        <textarea
-          id="return-notes-input"
-          [(ngModel)]="returnNotes"
-          rows="4"
-          class="w-full border border-gray-300 p-3 rounded-md focus:ring-red-500 focus:border-red-500 text-sm shadow-sm transition-colors"
-          placeholder="Explain what needs to be corrected..."
-        ></textarea>
-
-        @if (batchError) {
-          <p class="mt-2 text-xs text-red-600 font-medium">{{ batchError }}</p>
-        }
-      </div>
-      <div
-        class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-xl shrink-0"
-      >
-        <button
-          (click)="closeReturnBatchModal()"
-          class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-50 transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          (click)="returnBatch()"
-          [disabled]="isActioningBatch || !returnNotes.trim()"
-          class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors disabled:opacity-50"
-        >
-          @if (isActioningBatch) {
-            Returning...
-          } @else {
-            Confirm Return
-          }
-        </button>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- SN History Modal -->
-@if (activeHistorySn()) {
-  <div
-    class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-  >
-    <div
-      class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] border border-gray-100 animate-in zoom-in-95 duration-200"
-    >
-      <div
-        class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center"
-      >
-        <div>
-          <h3 class="text-lg font-bold text-gray-900">Return History</h3>
-          <p class="text-xs text-gray-500 font-mono">
-            SN: {{ activeHistorySn()?.value }}
-          </p>
         </div>
-        <button
-          (click)="closeHistory()"
-          class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
-        >
-          <svg
-            class="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
       </div>
+    }
 
-      <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
-        @if (historyNotes().length === 0) {
-          <div class="text-center py-8">
-            <svg
-              class="mx-auto h-12 w-12 text-gray-300"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
-            </svg>
-            <p class="mt-2 text-sm text-gray-500">
-              No return notes found for this serial number.
+    <!-- Return Batch Modal -->
+    @if (activeActionBatchId && !batchError) {
+      <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden animate-in zoom-in-95">
+          <div class="p-6 bg-error-light/10 border-b border-error/10 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-error-dark flex items-center gap-2">
+              <svg class="w-5 h-5 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path></svg>
+              Return for Correction
+            </h3>
+            <button (click)="closeReturnBatchModal()" class="p-2 hover:bg-error/10 rounded-full text-error-dark"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+          </div>
+          <div class="p-8 space-y-6">
+            <p class="text-gray-600 text-sm leading-relaxed">
+              You are returning 
+              <span class="font-bold text-gray-900">{{ selectedInBatch().size > 0 ? selectedInBatch().size : 'all remaining' }}</span> 
+              item(s). Please specify why further attention is required.
             </p>
+            <div class="space-y-2">
+              <label for="return-notes" class="block text-xs font-bold text-gray-400 uppercase tracking-widest">Reason for Return</label>
+              <textarea id="return-notes" [(ngModel)]="returnNotes" rows="4" class="field-control w-full p-4 text-sm" placeholder="Provide clear instructions for the inspector..."></textarea>
+            </div>
           </div>
-        } @else {
-          <div class="relative pl-6 border-l-2 border-gray-100 space-y-8 ml-4">
-            @for (entry of historyNotes(); track $index) {
-              <div class="relative">
-                <div
-                  class="absolute -left-[31px] mt-1.5 h-3.5 w-3.5 rounded-full border-2 border-gray-300 bg-white"
-                ></div>
-                <div class="mb-1 flex items-center justify-between">
-                  <span
-                    class="text-[10px] font-bold text-primary uppercase tracking-wider"
-                    >{{ entry.user || 'Unknown User' }}</span
-                  >
-                  <span class="text-[10px] text-gray-400 font-medium">{{
-                    entry.date | date: 'MMM d, y, h:mm a'
-                  }}</span>
-                </div>
-                <div
-                  class="bg-gray-50 rounded-lg p-3 border border-gray-200 shadow-sm"
-                >
-                  <p
-                    class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed italic"
-                  >
-                    "{{ entry.notes }}"
-                  </p>
-                </div>
+          <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+             <button (click)="closeReturnBatchModal()" class="btn btn-secondary">Cancel</button>
+             <button (click)="returnBatch()" [disabled]="isActioningBatch || !returnNotes.trim()" class="btn btn-error min-w-[120px]">
+               {{ isActioningBatch ? 'Processing...' : 'Confirm Return' }}
+             </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- SN History Modal -->
+    @if (activeHistorySn()) {
+      <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4">
+          <div class="p-6 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">Return History</h3>
+              <p class="text-xs font-mono text-primary font-bold mt-1">SN: {{ activeHistorySn()?.value }}</p>
+            </div>
+            <button (click)="closeHistory()" class="p-2 hover:bg-gray-200 rounded-full"><svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+          </div>
+          <div class="p-8 overflow-y-auto flex-grow bg-white custom-scrollbar">
+            @if (historyNotes().length === 0) {
+              <div class="text-center py-12 flex flex-col items-center gap-4">
+                <div class="p-4 bg-gray-50 rounded-full"><svg class="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                <p class="text-sm font-medium text-gray-500">No return notes found for this serial number.</p>
+              </div>
+            } @else {
+              <div class="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100">
+                @for (entry of historyNotes(); track $index) {
+                  <div class="relative pl-8">
+                    <div class="absolute left-0 top-1.5 w-6 h-6 rounded-full border-4 border-white bg-primary shadow-sm z-10"></div>
+                    <div class="flex flex-col gap-2">
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-gray-900">{{ entry.user || 'System' }}</span>
+                        <span class="text-[10px] font-bold text-gray-400">{{ entry.date | date:'MMM d, h:mm a' }}</span>
+                      </div>
+                      <div class="p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                        <p class="text-sm text-gray-600 leading-relaxed italic">"{{ entry.notes }}"</p>
+                      </div>
+                    </div>
+                  </div>
+                }
               </div>
             }
           </div>
-        }
+          <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+            <button (click)="closeHistory()" class="btn btn-secondary">Close</button>
+          </div>
+        </div>
       </div>
+    }
 
-      <div
-        class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end"
-      >
-        <button
-          (click)="closeHistory()"
-          class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
-        >
-          Close
-        </button>
-      </div>
-    </div>
+    <!-- Footer spacer for sticky navigation -->
+    <div class="h-24 px-4 overflow-hidden pointer-events-none"></div>
   </div>
 }

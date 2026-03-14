@@ -291,8 +291,10 @@
           <th scope="col" class="table-th">Email</th>
           <th scope="col" class="table-th">Name</th>
           <th scope="col" class="table-th">Role</th>
-          <th scope="col" class="table-th">Active</th>
-          <th scope="col" class="table-th">Sync Status</th>
+          @if (!isCompactMode()) {
+            <th scope="col" class="table-th">Active</th>
+            <th scope="col" class="table-th">Sync Status</th>
+          }
           <th scope="col" class="table-th-right">Actions</th>
         </tr>
       </thead>
@@ -314,22 +316,24 @@
                 >{{ user.role }}</span
               >
             </td>
-            <td class="table-td">
-              @if (user.isActive) {
-                <span class="data-chip-success-soft">Yes</span>
-              } @else {
-                <span class="data-chip-neutral-soft">No</span>
-              }
-            </td>
-            <td class="table-td">
-              @if (user.syncState === 'PENDING_CREATE') {
-                <span class="data-chip-warning">Pending Create Sync</span>
-              } @else if (user.syncState === 'PENDING_UPDATE') {
-                <span class="data-chip-warning">Pending Update Sync</span>
-              } @else {
-                <span class="data-chip-success">Synced</span>
-              }
-            </td>
+            @if (!isCompactMode()) {
+              <td class="table-td">
+                @if (user.isActive) {
+                  <span class="data-chip-success-soft">Yes</span>
+                } @else {
+                  <span class="data-chip-neutral-soft">No</span>
+                }
+              </td>
+              <td class="table-td">
+                @if (user.syncState === 'PENDING_CREATE') {
+                  <span class="data-chip-warning">Pending Create Sync</span>
+                } @else if (user.syncState === 'PENDING_UPDATE') {
+                  <span class="data-chip-warning">Pending Update Sync</span>
+                } @else {
+                  <span class="data-chip-success">Synced</span>
+                }
+              </td>
+            }
             <td class="table-actions flex gap-3 justify-end items-center">
               <button
                 (click)="openEditModal(user)"

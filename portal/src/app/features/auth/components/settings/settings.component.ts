@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -16,8 +16,8 @@ import { UserPreferencesService } from '@portal/core/services/user-preferences.s
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './change-password.component.html',
+  imports: [CommonModule, FormsModule, RouterModule],
+  templateUrl: './settings.component.html',
 })
 export class SettingsComponent {
   private http = inject(HttpClient);

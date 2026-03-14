@@ -287,10 +287,14 @@
       <thead class="bg-neutral-50">
         <tr>
           <th scope="col" class="table-th">Name</th>
-          <th scope="col" class="table-th">Code</th>
-          <th scope="col" class="table-th">Email</th>
+          @if (!isCompactMode()) {
+            <th scope="col" class="table-th">Code</th>
+            <th scope="col" class="table-th">Email</th>
+          }
           <th scope="col" class="table-th">Active</th>
-          <th scope="col" class="table-th">Sync Status</th>
+          @if (!isCompactMode()) {
+            <th scope="col" class="table-th">Sync Status</th>
+          }
           <th scope="col" class="table-th-right">Actions</th>
         </tr>
       </thead>
@@ -303,12 +307,14 @@
             <td class="table-td-strong">
               {{ cust.name }}
             </td>
-            <td class="table-td-code">
-              {{ cust.code || '-' }}
-            </td>
-            <td class="table-td">
-              {{ cust.email || '-' }}
-            </td>
+            @if (!isCompactMode()) {
+              <td class="table-td-code">
+                {{ cust.code || '-' }}
+              </td>
+              <td class="table-td">
+                {{ cust.email || '-' }}
+              </td>
+            }
             <td class="table-td">
               @if (cust.isActive) {
                 <span class="data-chip-success-soft">Yes</span>
@@ -316,26 +322,28 @@
                 <span class="data-chip-neutral-soft">No</span>
               }
             </td>
-            <td class="table-td">
-              @if (cust.syncState === 'PENDING') {
-                <span class="data-chip-warning">Pending Sync</span>
-              } @else if (cust.syncState === 'CONFLICT') {
-                <div class="flex flex-col">
-                  <span
-                    class="data-chip-error"
-                    title="Refresh from server to resolve"
-                    >Sync Error</span
-                  >
-                  <span class="text-[10px] text-gray-400 mt-1"
-                    >Refresh to resolve</span
-                  >
-                </div>
-              } @else if (cust.syncState === 'ERROR') {
-                <span class="data-chip-error">Error</span>
-              } @else {
-                <span class="data-chip-success">Synced</span>
-              }
-            </td>
+            @if (!isCompactMode()) {
+              <td class="table-td">
+                @if (cust.syncState === 'PENDING') {
+                  <span class="data-chip-warning">Pending Sync</span>
+                } @else if (cust.syncState === 'CONFLICT') {
+                  <div class="flex flex-col">
+                    <span
+                      class="data-chip-error"
+                      title="Refresh from server to resolve"
+                      >Sync Error</span
+                    >
+                    <span class="text-[10px] text-gray-400 mt-1"
+                      >Refresh to resolve</span
+                    >
+                  </div>
+                } @else if (cust.syncState === 'ERROR') {
+                  <span class="data-chip-error">Error</span>
+                } @else {
+                  <span class="data-chip-success">Synced</span>
+                }
+              </td>
+            }
             <td class="table-actions flex gap-3 justify-end items-center">
               <button
                 (click)="promptEdit(cust)"

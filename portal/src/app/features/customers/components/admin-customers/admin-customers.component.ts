@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
 import { LocalCustomer } from '@portal/core/offline/models/types';
 import { AdminCustomersService } from '@portal/features/customers/services/admin-customers.service';
+import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
 
 @Component({
   selector: 'app-admin-customers',
@@ -17,6 +18,8 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
   private adminCustomers = inject(AdminCustomersService);
 
   public customers = signal<LocalCustomer[]>([]);
+  public prefs = inject(UserPreferencesService);
+  public isCompactMode = computed(() => this.prefs.preferences().compactMode);
   private changesSub?: Subscription;
 
   public deletingIds = new Set<string>();

@@ -217,8 +217,10 @@
           <th scope="col" class="table-th">Template Key</th>
           <th scope="col" class="table-th">Version</th>
           <th scope="col" class="table-th">Status</th>
-          <th scope="col" class="table-th">Note</th>
-          <th scope="col" class="table-th">Uploaded At</th>
+          @if (!isCompactMode()) {
+            <th scope="col" class="table-th">Note</th>
+            <th scope="col" class="table-th">Uploaded At</th>
+          }
           <th scope="col" class="table-th-right">Actions</th>
         </tr>
       </thead>
@@ -257,12 +259,14 @@
                 {{ tmpl.status }}
               </span>
             </td>
-            <td class="table-td truncate max-w-xs" [title]="tmpl.changeNote">
-              {{ tmpl.changeNote }}
-            </td>
-            <td class="table-td">
-              {{ tmpl.createdAt | date: 'mediumDate' }}
-            </td>
+            @if (!isCompactMode()) {
+              <td class="table-td truncate max-w-xs" [title]="tmpl.changeNote">
+                {{ tmpl.changeNote }}
+              </td>
+              <td class="table-td">
+                {{ tmpl.createdAt | date: 'mediumDate' }}
+              </td>
+            }
             <td class="table-actions">
               @if (tmpl.status === 'ACTIVE' && isOnline()) {
                 <button
@@ -281,7 +285,7 @@
         } @empty {
           <tr>
             <td
-              colspan="6"
+              [colSpan]="isCompactMode() ? 4 : 6"
               class="px-6 py-10 text-center text-sm text-gray-500"
             >
               <div class="flex flex-col items-center justify-center">
