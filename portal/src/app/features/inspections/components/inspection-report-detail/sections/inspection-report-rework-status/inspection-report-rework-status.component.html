@@ -38,53 +38,27 @@
       <table class="min-w-full text-left border-collapse text-sm">
         <thead class="bg-white border-b border-gray-100">
           <tr>
-            <th
-              scope="col"
-              class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-            >
-              Serial Number
-            </th>
-            <th
-              scope="col"
-              class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-            >
-              EMI Result
-            </th>
-            <th
-              scope="col"
-              class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-            >
-              Child Report
-            </th>
-            <th
-              scope="col"
-              class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-            >
-              Status
-            </th>
-            <th
-              scope="col"
-              class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"
-            >
-              Action
-            </th>
+            <th scope="col" class="table-th">Serial Number</th>
+            <th scope="col" class="table-th">EMI Result</th>
+            <th scope="col" class="table-th">Child Report</th>
+            <th scope="col" class="table-th">Status</th>
+            <th scope="col" class="table-th-right">Action</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 bg-white">
           @for (item of items; track item.sn.id) {
             <tr class="hover:bg-primary/5 transition-colors">
-              <td class="px-6 py-4 font-mono font-bold text-gray-900">
+              <td class="table-td-strong code-text">
                 {{ item.sn.value }}
               </td>
               <td class="px-6 py-4">
-                <span
-                  class="bg-warning-light text-warning-dark border-warning/30 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-sm"
+                <span class="data-chip-warning px-2 py-0.5 text-[10px]"
                   >REWORK</span
                 >
               </td>
 
               @if (item.childLinked) {
-                <td class="px-6 py-4 font-mono text-xs text-gray-600">
+                <td class="table-td code-text text-xs text-gray-600">
                   <a
                     [routerLink]="childRoute(item.childLinked.id)"
                     class="text-primary hover:text-primary-light hover:underline transition-colors"
@@ -94,7 +68,7 @@
                 </td>
                 <td class="px-6 py-4">
                   <span
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border border-transparent"
+                    class="data-chip px-2 py-0.5 text-[10px] border-transparent"
                     [ngClass]="{
                       'bg-success-light text-success-dark':
                         item.childLinked.status === 'APPROVED' ||
@@ -117,8 +91,7 @@
               } @else {
                 <td class="px-6 py-4 text-xs text-gray-400 italic">None</td>
                 <td class="px-6 py-4">
-                  <span
-                    class="bg-warning-light text-warning-dark border-warning/30 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-sm"
+                  <span class="data-chip-warning px-2 py-0.5 text-[10px]"
                     >Needs Sync</span
                   >
                 </td>

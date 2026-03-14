@@ -30,7 +30,7 @@
             </h2>
             <div class="flex items-center gap-3">
               <span
-                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20"
+                class="data-chip bg-primary/10 text-primary border-primary/20"
                 >{{ reportData.status }}</span
               >
               @if (
@@ -40,7 +40,7 @@
               ) {
                 <button
                   (click)="isEditingMeta = true"
-                  class="px-3 py-1 text-xs font-bold text-primary bg-white border border-primary/30 rounded shadow-sm hover:bg-primary/5 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  class="btn btn-secondary btn-sm gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
                 >
                   <svg
                     class="h-3.5 w-3.5"
@@ -63,58 +63,38 @@
 
           <div class="grid grid-cols-2 gap-y-5 gap-x-4 mb-4">
             <div>
-              <span
-                class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                >Report #</span
-              >
-              <span
-                class="font-medium text-gray-900 text-sm font-mono tracking-widest text-accent"
-                >{{
-                  reportData.reportNumber ||
-                    (reportData.id.substring(0, 8) | uppercase)
-                }}</span
-              >
+              <span class="detail-label">Report #</span>
+              <span class="detail-value-code text-accent tracking-widest">{{
+                reportData.reportNumber ||
+                  (reportData.id.substring(0, 8) | uppercase)
+              }}</span>
             </div>
             <div>
-              <span
-                class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                >Date</span
-              >
-              <span class="font-medium text-gray-900 text-sm">{{
+              <span class="detail-label">Date</span>
+              <span class="detail-value">{{
                 reportData.updatedAt
                   ? (reportData.updatedAt | date: 'medium')
                   : 'N/A'
               }}</span>
             </div>
             <div class="col-span-2">
-              <span
-                class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                >Address of Inspection</span
-              >
-              <span class="font-medium text-gray-900 text-sm">{{
+              <span class="detail-label">Address of Inspection</span>
+              <span class="detail-value">{{
                 reportData.inspectionAddress || customerAddress || 'N/A'
               }}</span>
             </div>
             <div>
-              <span
-                class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                >PO #</span
-              >
-              <span class="font-medium text-gray-900 text-sm font-mono">{{
-                reportData.poNumber
-              }}</span>
+              <span class="detail-label">PO #</span>
+              <span class="detail-value-code">{{ reportData.poNumber }}</span>
             </div>
             <div>
-              <span
-                class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                >Standard Used</span
-              >
+              <span class="detail-label">Standard Used</span>
               @if (reportData.standardUsed) {
-                <span class="font-medium text-gray-900 text-sm font-mono">{{
+                <span class="detail-value-code">{{
                   reportData.standardUsed
                 }}</span>
               } @else {
-                <span class="font-medium text-gray-900 text-sm font-mono"
+                <span class="detail-value-code"
                   >{{ reportData.templateKey }}
                   <span class="text-xs text-gray-500"
                     >v{{ reportData.templateVersion }}</span
@@ -123,30 +103,17 @@
               }
             </div>
             <div>
-              <span
-                class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                >Inspected By</span
-              >
-              <span class="font-medium text-gray-900 text-sm">{{
-                inspectedByName
-              }}</span>
+              <span class="detail-label">Inspected By</span>
+              <span class="detail-value">{{ inspectedByName }}</span>
             </div>
             <div>
-              <span class="font-medium text-gray-900 text-sm">{{
-                approvedByName
-              }}</span>
+              <span class="detail-value">{{ approvedByName }}</span>
             </div>
             <div>
               @if (isCustomer()) {
-                <span
-                  class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                  >Inspection Progress</span
-                >
+                <span class="detail-label">Inspection Progress</span>
               } @else {
-                <span
-                  class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                  >Approval Progress</span
-                >
+                <span class="detail-label">Approval Progress</span>
               }
               <div class="flex items-center gap-2 mt-1">
                 <div class="flex-1 bg-gray-200 rounded-full h-2">
@@ -165,7 +132,7 @@
                   <button
                     (click)="onPublishReport()"
                     [disabled]="isPublishingReport()"
-                    class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-success text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-success-dark transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="btn btn-success w-full gap-2 text-xs uppercase tracking-wider"
                   >
                     @if (isPublishingReport()) {
                       <svg
@@ -221,7 +188,7 @@
               <textarea
                 [(ngModel)]="formInspectorComment"
                 rows="3"
-                class="w-full border border-gray-300 p-3 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm transition-colors mb-3"
+                class="field-control mb-3"
                 placeholder="Add an overall comment for the inspection..."
               ></textarea>
             } @else {
@@ -256,51 +223,37 @@
                 </h4>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
-                    <label
-                      for="form_grade"
-                      class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                      >Grade</label
-                    >
+                    <label for="form_grade" class="detail-label">Grade</label>
                     <input
                       id="form_grade"
                       type="text"
                       [(ngModel)]="formGrade"
                       placeholder="e.g. S135"
-                      class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                      class="field-control px-2 py-2"
                     />
                   </div>
                   <div>
-                    <label
-                      for="form_range"
-                      class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                      >Range</label
-                    >
+                    <label for="form_range" class="detail-label">Range</label>
                     <input
                       id="form_range"
                       type="text"
                       [(ngModel)]="formRange"
                       placeholder="e.g. 2"
-                      class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                      class="field-control px-2 py-2"
                     />
                   </div>
                   <div>
-                    <label
-                      for="form_weight"
-                      class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                      >Weight</label
-                    >
+                    <label for="form_weight" class="detail-label">Weight</label>
                     <input
                       id="form_weight"
                       type="text"
                       [(ngModel)]="formWeight"
                       placeholder="e.g. 19.50 ppf"
-                      class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                      class="field-control px-2 py-2"
                     />
                   </div>
                   <div>
-                    <label
-                      for="form_nom_wt"
-                      class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
+                    <label for="form_nom_wt" class="detail-label"
                       >Nom. W.T</label
                     >
                     <input
@@ -308,41 +261,31 @@
                       type="text"
                       [(ngModel)]="formNomWT"
                       placeholder='e.g. 0.362"'
-                      class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                      class="field-control px-2 py-2"
                     />
                   </div>
                   <div>
-                    <label
-                      for="form_nom_od"
-                      class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                      >Nom OD</label
-                    >
+                    <label for="form_nom_od" class="detail-label">Nom OD</label>
                     <input
                       id="form_nom_od"
                       type="text"
                       [(ngModel)]="formNomOD"
                       placeholder='e.g. 5"'
-                      class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                      class="field-control px-2 py-2"
                     />
                   </div>
                   <div>
-                    <label
-                      for="form_nom_id"
-                      class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                      >Nom ID</label
-                    >
+                    <label for="form_nom_id" class="detail-label">Nom ID</label>
                     <input
                       id="form_nom_id"
                       type="text"
                       [(ngModel)]="formNomID"
                       placeholder='e.g. 4.276"'
-                      class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                      class="field-control px-2 py-2"
                     />
                   </div>
                   <div class="col-span-2 md:col-span-2">
-                    <label
-                      for="form_connection"
-                      class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
+                    <label for="form_connection" class="detail-label"
                       >Connection</label
                     >
                     <input
@@ -350,7 +293,7 @@
                       type="text"
                       [(ngModel)]="formConnection"
                       placeholder="e.g. NC50"
-                      class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                      class="field-control px-2 py-2"
                     />
                   </div>
                 </div>
@@ -365,9 +308,7 @@
                 </h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div class="md:col-span-2">
-                    <label
-                      for="form_inspection_address"
-                      class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
+                    <label for="form_inspection_address" class="detail-label"
                       >Inspection Address</label
                     >
                     <input
@@ -375,7 +316,7 @@
                       type="text"
                       [(ngModel)]="formInspectionAddress"
                       placeholder="e.g. 123 Industrial Pkwy"
-                      class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                      class="field-control px-2 py-2"
                     />
                   </div>
                   <div class="md:col-span-2">
@@ -439,7 +380,7 @@
                         <select
                           [(ngModel)]="m.name"
                           (change)="onMethodSelectChange(i)"
-                          class="w-full sm:w-1/2 border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm bg-white"
+                          class="field-control w-full sm:w-1/2 px-2 py-2 bg-white"
                         >
                           <option value="" disabled selected>
                             Select method...
@@ -453,7 +394,7 @@
                             type="text"
                             [(ngModel)]="m.name"
                             placeholder="Specify..."
-                            class="w-full sm:w-1/2 border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                            class="field-control w-full sm:w-1/2 px-2 py-2"
                           />
                         }
                       </div>
@@ -521,7 +462,7 @@
                         <select
                           [(ngModel)]="eq.name"
                           (change)="onEquipmentSelectChange(i)"
-                          class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm bg-white"
+                          class="field-control w-full px-2 py-2 bg-white"
                         >
                           <option value="" disabled selected>
                             Select equipment...
@@ -535,7 +476,7 @@
                             type="text"
                             [(ngModel)]="eq.name"
                             placeholder="Specify..."
-                            class="w-full border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                            class="field-control w-full px-2 py-2"
                           />
                         }
                       </div>
@@ -543,7 +484,7 @@
                         type="text"
                         [(ngModel)]="eq.number"
                         placeholder="S/N or ID (Optional)"
-                        class="flex-1 border border-gray-300 p-2 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm"
+                        class="field-control flex-1 px-2 py-2"
                       />
                       <button
                         (click)="removeEquipmentFormRow(i)"
@@ -577,14 +518,11 @@
                     formInspectionAddress = reportData.inspectionAddress || '';
                     formStandardUsed = reportData.standardUsed || ''
                   "
-                  class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors"
+                  class="btn btn-secondary btn-sm"
                 >
                   Cancel
                 </button>
-                <button
-                  (click)="saveMeta()"
-                  class="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded shadow-sm hover:bg-primary/95 transition-colors"
-                >
+                <button (click)="saveMeta()" class="btn btn-primary btn-sm">
                   Save Details
                 </button>
               </div>
@@ -600,76 +538,52 @@
                   </h4>
                 </div>
                 <div>
-                  <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                    >Grade</span
-                  >
-                  <span class="font-medium text-gray-900 text-sm">{{
+                  <span class="detail-label">Grade</span>
+                  <span class="detail-value">{{
                     reportData.grade || '-'
                   }}</span>
                 </div>
                 <div>
-                  <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                    >Range</span
-                  >
-                  <span class="font-medium text-gray-900 text-sm">{{
+                  <span class="detail-label">Range</span>
+                  <span class="detail-value">{{
                     reportData.range || '-'
                   }}</span>
                 </div>
                 <div>
-                  <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                    >Weight</span
-                  >
-                  <span class="font-medium text-gray-900 text-sm">{{
+                  <span class="detail-label">Weight</span>
+                  <span class="detail-value">{{
                     reportData.weight || '-'
                   }}</span>
                 </div>
                 <div>
-                  <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                    >Nom. W.T</span
-                  >
-                  <span class="font-medium text-gray-900 text-sm">{{
+                  <span class="detail-label">Nom. W.T</span>
+                  <span class="detail-value">{{
                     reportData.nomWT || '-'
                   }}</span>
                 </div>
                 <div>
-                  <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                    >Nom OD</span
-                  >
-                  <span class="font-medium text-gray-900 text-sm">{{
+                  <span class="detail-label">Nom OD</span>
+                  <span class="detail-value">{{
                     reportData.nomOD || '-'
                   }}</span>
                 </div>
                 <div>
-                  <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                    >Nom ID</span
-                  >
-                  <span class="font-medium text-gray-900 text-sm">{{
+                  <span class="detail-label">Nom ID</span>
+                  <span class="detail-value">{{
                     reportData.nomID || '-'
                   }}</span>
                 </div>
                 <div>
+                  <span class="detail-label">Connection</span>
                   <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                    >Connection</span
-                  >
-                  <span
-                    class="font-medium text-gray-900 text-sm px-1 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs select-all"
+                    class="detail-value code-text px-1 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs select-all"
                     >{{ reportData.connection || '-' }}</span
                   >
                 </div>
                 <div
                   class="col-span-2 md:col-span-4 mt-2 border-t border-gray-100 pt-3"
                 >
-                  <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2"
-                    >Inspection Methods</span
-                  >
+                  <span class="detail-label mb-2">Inspection Methods</span>
                   @if (
                     $any(reportData.inspectionMethod) &&
                     $any(reportData.inspectionMethod).length > 0
@@ -707,10 +621,7 @@
                 </div>
 
                 <div class="col-span-2 md:col-span-4 mt-2">
-                  <span
-                    class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1"
-                    >Equipment Used</span
-                  >
+                  <span class="detail-label">Equipment Used</span>
                   @if (
                     $any(reportData.equipmentUsed) &&
                     $any(reportData.equipmentUsed).length > 0
@@ -751,7 +662,7 @@
                           >
                           @if (eq.number) {
                             <span
-                              class="font-mono text-gray-500 text-[10px] ml-auto bg-white px-1.5 py-0.5 rounded border border-gray-200 shrink-0"
+                              class="code-text text-gray-500 text-[10px] ml-auto bg-white px-1.5 py-0.5 rounded border border-gray-200 shrink-0"
                               >#{{ eq.number }}</span
                             >
                           }

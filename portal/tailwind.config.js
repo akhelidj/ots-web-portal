@@ -36,6 +36,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['"IBM Plex Sans"', '"Source Sans 3"', 'sans-serif'],
+        mono: ['"IBM Plex Sans"', '"Source Sans 3"', 'sans-serif'],
       },
     },
   },

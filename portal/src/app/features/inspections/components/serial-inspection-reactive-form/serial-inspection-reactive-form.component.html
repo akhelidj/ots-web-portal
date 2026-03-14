@@ -15,7 +15,7 @@
             <div>
               <label
                 [for]="getInternalKey(field.key)"
-                class="field-label !mb-1 !text-[11px] !tracking-[0.06em]"
+                class="field-label-compact"
               >
                 {{ field.label }}
                 @if (field.required) {
@@ -76,9 +76,7 @@
                 formGroup.get(getInternalKey(field.key))?.invalid &&
                 formGroup.get(getInternalKey(field.key))?.touched
               ) {
-                <p class="mt-1 text-xs text-error font-medium">
-                  This field is required.
-                </p>
+                <p class="field-error font-medium">This field is required.</p>
               }
             </div>
           }

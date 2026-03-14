@@ -19,7 +19,7 @@
         @if (selectedForApproval.size > 0 && canSubmitBatch) {
           <button
             (click)="submitSelected.emit()"
-            class="bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+            class="btn btn-accent btn-sm gap-2"
             [disabled]="isSubmittingBatch"
           >
             @if (isSubmittingBatch) {
@@ -83,7 +83,7 @@
             [ngModel]="searchQuery"
             (ngModelChange)="searchQueryChange.emit($event)"
             placeholder="Search S/N..."
-            class="block w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-accent focus:border-accent sm:text-sm transition-colors shadow-sm"
+            class="field-control pl-9 py-1.5 placeholder-gray-500"
           />
           @if (searchQuery) {
             <button
@@ -392,7 +392,7 @@
                     type="text"
                     [ngModel]="editingSnValue"
                     (ngModelChange)="editingSnValueChange.emit($event)"
-                    class="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:ring-accent focus:border-accent text-xs font-mono"
+                    class="field-control px-2 py-1 text-xs code-text"
                     (keyup.enter)="saveEdit.emit(sn)"
                   />
                   <button
@@ -416,7 +416,7 @@
                   </button>
                   <button
                     (click)="cancelEdit.emit()"
-                    class="p-1 text-gray-500 bg-white border border-gray-300 hover:bg-gray-50 rounded shadow-sm transition-colors"
+                    class="btn btn-secondary p-1 min-w-0 text-gray-500"
                     title="Cancel"
                   >
                     <svg
@@ -502,7 +502,7 @@
                     class="flex flex-col gap-1.5 flex-grow min-w-0 justify-center"
                   >
                     <span
-                      class="font-mono font-bold text-gray-900 text-sm whitespace-nowrap"
+                      class="code-text font-bold text-gray-900 text-sm whitespace-nowrap"
                       >{{ sn.value }}</span
                     >
                     <div class="space-y-1">
@@ -516,12 +516,12 @@
                                 cr.type
                               }}</span>
                               <span
-                                class="px-1 py-px rounded-sm font-bold tracking-wide uppercase border border-transparent"
+                                class="data-chip px-1 py-px rounded-sm text-[10px] border-transparent"
                                 [ngClass]="{
-                                  'bg-success-light text-success-dark':
+                                  'data-chip-success':
                                     cr.status === 'APPROVED' ||
                                     cr.status === 'CLOSED',
-                                  'bg-primary/10 text-primary':
+                                  'data-chip-info':
                                     cr.status !== 'APPROVED' &&
                                     cr.status !== 'CLOSED',
                                 }"
@@ -543,16 +543,12 @@
               <div class="flex flex-col items-center gap-2">
                 @if (getDisposition(sn); as disp) {
                   <span
-                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border flex items-center justify-center gap-1 w-full shadow-sm"
+                    class="data-chip w-full justify-center gap-1 px-2 py-0.5 text-[10px]"
                     [ngClass]="{
-                      'bg-success-light text-success-dark border-success/30':
-                        disp === SERIAL_DISPOSITIONS.PASS,
-                      'bg-warning-light text-warning-dark border-warning/30':
-                        disp === SERIAL_DISPOSITIONS.REWORK,
-                      'bg-error-light text-error-dark border-error/30':
-                        disp === SERIAL_DISPOSITIONS.SCRAP,
-                      'bg-primary/10 text-primary border-primary/20':
-                        disp === SERIAL_DISPOSITIONS.HOLD,
+                      'data-chip-success': disp === SERIAL_DISPOSITIONS.PASS,
+                      'data-chip-warning': disp === SERIAL_DISPOSITIONS.REWORK,
+                      'data-chip-error': disp === SERIAL_DISPOSITIONS.SCRAP,
+                      'data-chip-info': disp === SERIAL_DISPOSITIONS.HOLD,
                     }"
                     >{{ disp }}</span
                   >
@@ -573,7 +569,7 @@
                   ) {
                     <button
                       (click)="openInspection.emit(sn)"
-                      class="text-accent hover:text-accent-hover hover:underline text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5"
+                      class="action-link-accent text-[10px] flex items-center gap-0.5 px-1.5 py-0.5 hover:underline"
                       title="Inspect"
                     >
                       <svg
@@ -593,7 +589,7 @@
                   } @else {
                     <button
                       (click)="openInspection.emit(sn)"
-                      class="text-primary hover:text-primary-light hover:underline text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5"
+                      class="action-link-primary text-[10px] flex items-center gap-0.5 px-1.5 py-0.5 hover:underline"
                       title="View Inspection"
                     >
                       <svg
@@ -626,7 +622,7 @@
                   ) {
                     <button
                       (click)="startEdit.emit(sn)"
-                      class="text-gray-500 hover:text-gray-800 text-[10px] font-semibold transition-colors px-1"
+                      class="action-link-neutral text-[10px] px-1"
                       title="Rename"
                     >
                       <svg
@@ -653,7 +649,7 @@
                   ) {
                     <button
                       (click)="deleteSn.emit(sn)"
-                      class="text-error hover:text-error-dark text-[10px] font-semibold transition-colors px-1 border-l border-gray-200 ml-0.5 pl-1.5"
+                      class="action-link-danger text-[10px] px-1 border-l border-gray-200 ml-0.5 pl-1.5"
                       title="Remove"
                     >
                       <svg
@@ -675,7 +671,7 @@
                   @if (hasHistory(sn)) {
                     <button
                       (click)="openHistory.emit(sn)"
-                      class="text-primary hover:text-primary-dark text-[10px] font-semibold transition-colors px-1 border-l border-gray-200 ml-0.5 pl-1.5"
+                      class="action-link-primary text-[10px] px-1 border-l border-gray-200 ml-0.5 pl-1.5"
                       title="History"
                     >
                       <svg
@@ -702,54 +698,38 @@
                 class="px-2 py-3 align-top text-center border-r border-gray-100"
               >
                 <span
-                  class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border"
+                  class="data-chip px-1.5 py-0.5 text-[9px]"
                   [ngClass]="{
-                    'bg-error-light text-error-dark border-error/20':
+                    'data-chip-error':
                       sn.syncState === SYNC_STATES.CONFLICT ||
                       sn.syncState === SYNC_STATES.ERROR,
-                    'bg-warning-light text-warning-dark border-warning/20':
-                      sn.syncState === SYNC_STATES.PENDING,
-                    'bg-success-light text-success-dark border-success/20':
-                      sn.syncState === SYNC_STATES.SYNCED,
+                    'data-chip-warning': sn.syncState === SYNC_STATES.PENDING,
+                    'data-chip-success': sn.syncState === SYNC_STATES.SYNCED,
                   }"
                   >{{ sn.syncState }}</span
                 >
               </td>
             }
 
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-box">
               {{ getInspectionFieldText(sn, 'box', 'minTongSpace') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-box">
               {{ getInspectionFieldText(sn, 'box', 'minOD') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-box">
               {{ getInspectionFieldText(sn, 'box', 'minBoxThreads') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-box">
               {{ getInspectionFieldText(sn, 'box', 'minEccShoulder') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-box">
               {{ getInspectionFieldText(sn, 'box', 'maxCounterBoreDiameter') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-blue-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-box">
               {{ getInspectionFieldText(sn, 'box', 'maxCounterBoreLength') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-mono text-gray-500 whitespace-nowrap group-hover:bg-blue-50/20"
-            >
+            <td class="matrix-cell-muted matrix-hover-box">
               @if (hasInspectionField(sn, 'box', 'bevelDiameterMin')) {
                 {{
                   getInspectionRange(
@@ -763,39 +743,25 @@
                 -
               }
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-blue-50/20"
-            >
+            <td class="matrix-cell-flag matrix-hover-box">
               {{ getInspectionFieldText(sn, 'box', 'condition') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-blue-50/20 border-r border-gray-100"
-            >
+            <td class="matrix-cell-flag matrix-hover-box matrix-cell-divider">
               {{ getInspectionFieldText(sn, 'box', 'hardBanding') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-indigo-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-pin">
               {{ getInspectionFieldText(sn, 'pin', 'minTongSpace') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-indigo-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-pin">
               {{ getInspectionFieldText(sn, 'pin', 'minOD') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-indigo-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-pin">
               {{ getInspectionFieldText(sn, 'pin', 'maxID') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-indigo-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-pin">
               {{ getInspectionFieldText(sn, 'pin', 'minEccShoulder') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-mono text-gray-500 whitespace-nowrap group-hover:bg-indigo-50/20"
-            >
+            <td class="matrix-cell-muted matrix-hover-pin">
               @if (hasInspectionField(sn, 'pin', 'lengthPinConnMin')) {
                 {{
                   getInspectionRange(
@@ -809,14 +775,10 @@
                 -
               }
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-indigo-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-pin">
               {{ getInspectionFieldText(sn, 'pin', 'maxLengthPinBase') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-mono text-gray-500 whitespace-nowrap group-hover:bg-indigo-50/20"
-            >
+            <td class="matrix-cell-muted matrix-hover-pin">
               @if (hasInspectionField(sn, 'pin', 'bevelDiameterMin')) {
                 {{
                   getInspectionRange(
@@ -830,86 +792,62 @@
                 -
               }
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-indigo-50/20 border-r border-gray-100"
-            >
+            <td class="matrix-cell-flag matrix-hover-pin matrix-cell-divider">
               {{ getInspectionFieldText(sn, 'pin', 'condition') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-xs font-mono text-gray-700 group-hover:bg-purple-50/20"
-            >
+            <td class="matrix-cell-data matrix-hover-body">
               {{ getInspectionFieldText(sn, 'body', 'wallRemaining') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-mono text-gray-500 uppercase group-hover:bg-purple-50/20"
-            >
+            <td class="matrix-cell-muted matrix-hover-body uppercase">
               {{ getInspectionFieldText(sn, 'body', 'odDecrease') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20"
-            >
+            <td class="matrix-cell-flag matrix-hover-body">
               {{ getInspectionFieldText(sn, 'body', 'emiResult') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-mono text-gray-500 uppercase group-hover:bg-purple-50/20"
-            >
+            <td class="matrix-cell-muted matrix-hover-body uppercase">
               {{ getInspectionFieldText(sn, 'body', 'slipArea') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20"
-            >
+            <td class="matrix-cell-flag matrix-hover-body">
               @if (hasInspectionField(sn, 'body', 'corrosionIn')) {
                 {{ getInspectionBooleanLabel(sn, 'body', 'corrosionIn') }}
               } @else {
                 -
               }
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20"
-            >
+            <td class="matrix-cell-flag matrix-hover-body">
               @if (hasInspectionField(sn, 'body', 'corrosionOut')) {
                 {{ getInspectionBooleanLabel(sn, 'body', 'corrosionOut') }}
               } @else {
                 -
               }
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20"
-            >
+            <td class="matrix-cell-flag matrix-hover-body">
               @if (hasInspectionField(sn, 'body', 'ipc')) {
                 {{ getInspectionBooleanLabel(sn, 'body', 'ipc') }}
               } @else {
                 -
               }
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-500 uppercase group-hover:bg-purple-50/20 border-r border-gray-100"
-            >
+            <td class="matrix-cell-flag matrix-hover-body matrix-cell-divider">
               @if (hasInspectionField(sn, 'body', 'bentJoints')) {
                 {{ getInspectionBooleanLabel(sn, 'body', 'bentJoints') }}
               } @else {
                 -
               }
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20"
-            >
+            <td class="matrix-cell-flag-strong matrix-hover-final">
               {{ getInspectionBooleanLabel(sn, 'final', 'isNew', 'X', '-') }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20"
-            >
+            <td class="matrix-cell-flag-strong matrix-hover-final">
               {{
                 getInspectionBooleanLabel(sn, 'final', 'isPremium', 'X', '-')
               }}
             </td>
-            <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20"
-            >
+            <td class="matrix-cell-flag-strong matrix-hover-final">
               {{ getInspectionBooleanLabel(sn, 'final', 'isC2', 'X', '-') }}
             </td>
             <td
-              class="px-2 py-3 text-center align-top text-[10px] font-bold text-gray-700 uppercase group-hover:bg-gray-50/20 border-r border-gray-100"
+              class="matrix-cell-flag-strong matrix-hover-final matrix-cell-divider"
             >
               {{ getInspectionBooleanLabel(sn, 'final', 'isScrap', 'X', '-') }}
             </td>

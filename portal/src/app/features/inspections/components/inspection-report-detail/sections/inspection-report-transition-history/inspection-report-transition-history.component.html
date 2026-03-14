@@ -8,38 +8,16 @@
     <table class="min-w-full text-left border-collapse text-sm">
       <thead class="bg-gray-50 border-b border-gray-200">
         <tr>
-          <th
-            scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-          >
-            Date
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-          >
-            From
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-          >
-            To
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-          >
-            Reason
-          </th>
+          <th scope="col" class="table-th">Date</th>
+          <th scope="col" class="table-th">From</th>
+          <th scope="col" class="table-th">To</th>
+          <th scope="col" class="table-th">Reason</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100 bg-white">
         @for (log of logs; track log.id) {
           <tr class="hover:bg-primary/5 transition-colors">
-            <td
-              class="px-6 py-4 whitespace-nowrap text-xs text-gray-500 font-mono"
-            >
+            <td class="table-td code-text text-xs text-gray-500">
               {{ log.timestamp | date: 'shortTime' }}
               <span class="text-gray-400">|</span>
               {{ log.timestamp | date: 'MMM d, y' }}

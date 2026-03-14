@@ -19,10 +19,7 @@
       class="space-y-6"
     >
       <fieldset>
-        <legend
-          id="create-user-legend"
-          class="text-lg font-semibold text-neutral-900 border-b border-neutral-200 pb-3 w-full mb-6"
-        >
+        <legend id="create-user-legend" class="section-legend">
           Create New User
         </legend>
 
@@ -30,9 +27,7 @@
           class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           <div>
-            <label
-              for="email"
-              class="field-label !text-[11px] !normal-case !tracking-normal"
+            <label for="email" class="form-label"
               >Email <span class="text-error">*</span></label
             >
             <div class="mt-1">
@@ -55,16 +50,12 @@
             @if (
               emailField.invalid && (emailField.dirty || emailField.touched)
             ) {
-              <p class="mt-1 text-xs text-error">A valid email is required.</p>
+              <p class="field-error">A valid email is required.</p>
             }
           </div>
 
           <div>
-            <label
-              for="name"
-              class="field-label !text-[11px] !normal-case !tracking-normal"
-              >Name (Optional)</label
-            >
+            <label for="name" class="form-label">Name (Optional)</label>
             <div class="mt-1">
               <input
                 type="text"
@@ -77,9 +68,7 @@
           </div>
 
           <div>
-            <label
-              for="password"
-              class="field-label !text-[11px] !normal-case !tracking-normal"
+            <label for="password" class="form-label"
               >Temporary Password <span class="text-error">*</span></label
             >
             <div class="mt-1">
@@ -109,11 +98,7 @@
           </div>
 
           <div>
-            <label
-              for="role"
-              class="field-label !text-[11px] !normal-case !tracking-normal"
-              >Role</label
-            >
+            <label for="role" class="form-label">Role</label>
             <div class="mt-1">
               <select
                 id="role"
@@ -132,9 +117,7 @@
 
           @if (formRole === 'CUSTOMER') {
             <div>
-              <label
-                for="customerId"
-                class="field-label !text-[11px] !normal-case !tracking-normal"
+              <label for="customerId" class="form-label"
                 >Associated Customer</label
               >
               <div class="mt-1">
@@ -170,10 +153,7 @@
       </fieldset>
 
       @if (formError) {
-        <div
-          role="alert"
-          class="mt-4 text-sm text-error bg-error-light py-3 px-4 rounded-md border-l-4 border-error"
-        >
+        <div role="alert" class="alert-error mt-4">
           {{ formError }}
         </div>
       }
@@ -184,7 +164,7 @@
   @if (editUserId) {
     <!-- Semi-transparent overlay -->
     <div
-      class="fixed inset-0 bg-primary/40 transition-opacity z-40 backdrop-blur-sm"
+      class="dialog-overlay"
       aria-hidden="true"
       (click)="closeEditModal()"
     ></div>
@@ -222,18 +202,14 @@
           class="space-y-6"
         >
           <div>
-            <label
-              for="editName"
-              class="block text-sm font-medium text-gray-700"
-              >Name (Optional)</label
-            >
+            <label for="editName" class="form-label">Name (Optional)</label>
             <div class="mt-1">
               <input
                 type="text"
                 id="editName"
                 name="editName"
                 [(ngModel)]="editFormName"
-                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm transition-colors"
+                class="field-control"
               />
             </div>
           </div>
@@ -243,7 +219,7 @@
           >
             <label
               for="editPassword"
-              class="block text-sm font-medium text-gray-800 flex items-center gap-2 mb-1"
+              class="form-label flex items-center gap-2 text-gray-800 mb-1"
             >
               <svg
                 class="w-4 h-4 text-warning-dark"
@@ -260,7 +236,7 @@
               </svg>
               Force Reset Password
             </label>
-            <p class="text-[11px] text-gray-600 mb-3 leading-tight">
+            <p class="field-help mb-3">
               If a password is provided here, it will immediately overwrite the
               user's password. They will be forced to change it again on their
               next login attempt.
@@ -272,16 +248,13 @@
                 name="editPassword"
                 [(ngModel)]="editFormPassword"
                 placeholder="Leave blank to keep current password..."
-                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-warning focus:border-warning sm:text-sm transition-colors"
+                class="field-control field-control-warning"
               />
             </div>
           </div>
 
           @if (editFormError) {
-            <div
-              role="alert"
-              class="mt-4 text-sm text-error bg-error-light py-2 px-3 rounded-md"
-            >
+            <div role="alert" class="alert-error mt-4 py-2 border-l-0">
               {{ editFormError }}
             </div>
           }
@@ -290,14 +263,14 @@
             <button
               type="button"
               (click)="closeEditModal()"
-              class="w-full bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium py-2 rounded-md text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              class="btn btn-secondary w-full"
             >
               Cancel
             </button>
             <button
               type="submit"
               [disabled]="!editUserForm.valid"
-              class="w-full bg-primary hover:bg-primary/95 text-white font-medium py-2 rounded-md text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              class="btn btn-primary w-full"
             >
               Save Changes
             </button>
@@ -311,120 +284,71 @@
   <div class="queue-table-wrap">
     <table
       aria-label="Internal Users List"
-      class="min-w-full divide-y divide-gray-200"
+      class="table-base divide-y divide-gray-200"
     >
-      <thead class="bg-neutral-50">
+      <thead class="table-head">
         <tr>
-          <th
-            scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Email
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Name
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Role
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Active
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Sync Status
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-3 text-right text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Actions
-          </th>
+          <th scope="col" class="table-th">Email</th>
+          <th scope="col" class="table-th">Name</th>
+          <th scope="col" class="table-th">Role</th>
+          <th scope="col" class="table-th">Active</th>
+          <th scope="col" class="table-th">Sync Status</th>
+          <th scope="col" class="table-th-right">Actions</th>
         </tr>
       </thead>
-      <tbody class="bg-white divide-y divide-neutral-200">
+      <tbody class="table-body">
         @for (user of users(); track user.id) {
           <tr
             class="hover:bg-primary/5 transition-all duration-300 transform"
             [class.opacity-50]="deletingIds.has(user.id)"
           >
-            <td
-              class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-            >
+            <td class="table-td-strong">
               {{ user.email }}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            <td class="table-td">
               {{ user.name || '-' }}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm">
+            <td class="table-td">
               <span
                 class="inline-flex items-center px-2.5 py-0.5 rounded-md font-medium text-xs bg-gray-100 text-gray-800 border border-gray-200 tracking-wide uppercase"
                 >{{ user.role }}</span
               >
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm">
+            <td class="table-td">
               @if (user.isActive) {
-                <span
-                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark"
-                  >Yes</span
-                >
+                <span class="data-chip-success-soft">Yes</span>
               } @else {
-                <span
-                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"
-                  >No</span
-                >
+                <span class="data-chip-neutral-soft">No</span>
               }
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm">
+            <td class="table-td">
               @if (user.syncState === 'PENDING_CREATE') {
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning-dark"
-                  >Pending Create Sync</span
-                >
+                <span class="data-chip-warning">Pending Create Sync</span>
               } @else if (user.syncState === 'PENDING_UPDATE') {
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning-dark"
-                  >Pending Update Sync</span
-                >
+                <span class="data-chip-warning">Pending Update Sync</span>
               } @else {
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark"
-                  >Synced</span
-                >
+                <span class="data-chip-success">Synced</span>
               }
             </td>
-            <td
-              class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-3 justify-end items-center"
-            >
+            <td class="table-actions flex gap-3 justify-end items-center">
               <button
                 (click)="openEditModal(user)"
                 [disabled]="deletingIds.has(user.id)"
-                class="text-gray-500 hover:text-gray-900 font-semibold transition-colors disabled:opacity-50"
+                class="action-link-neutral"
               >
                 Edit
               </button>
               <button
                 (click)="onToggleActive(user)"
                 [disabled]="deletingIds.has(user.id)"
-                class="text-accent hover:text-accent-hover font-semibold transition-colors disabled:opacity-50"
+                class="action-link-accent"
               >
                 {{ user.isActive ? 'Deactivate' : 'Activate' }}
               </button>
               <button
                 (click)="onDelete(user)"
                 [disabled]="deletingIds.has(user.id)"
-                class="text-error hover:text-error-hover font-semibold transition-colors disabled:opacity-50 flex items-center justify-center relative p-1 rounded-md hover:bg-error/10"
+                class="icon-action-danger"
                 aria-label="Delete User"
               >
                 @if (deletingIds.has(user.id)) {

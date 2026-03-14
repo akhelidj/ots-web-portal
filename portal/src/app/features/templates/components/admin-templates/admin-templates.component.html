@@ -210,53 +210,23 @@
   <div class="queue-table-wrap">
     <table
       aria-label="Templates List"
-      class="min-w-full divide-y divide-gray-200"
+      class="table-base divide-y divide-gray-200"
     >
-      <thead class="bg-gray-50 border-b border-gray-200">
+      <thead class="table-head">
         <tr>
-          <th
-            scope="col"
-            class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-          >
-            Template Key
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-          >
-            Version
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-          >
-            Status
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-          >
-            Note
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-          >
-            Uploaded At
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"
-          >
-            Actions
-          </th>
+          <th scope="col" class="table-th">Template Key</th>
+          <th scope="col" class="table-th">Version</th>
+          <th scope="col" class="table-th">Status</th>
+          <th scope="col" class="table-th">Note</th>
+          <th scope="col" class="table-th">Uploaded At</th>
+          <th scope="col" class="table-th-right">Actions</th>
         </tr>
       </thead>
-      <tbody class="bg-white divide-y divide-gray-100">
+      <tbody class="table-body divide-y divide-gray-100">
         @for (tmpl of templates(); track tmpl.id) {
           <tr class="hover:bg-primary/5 transition-colors group">
             <td
-              class="px-6 py-4 whitespace-nowrap text-sm font-mono font-medium text-gray-900 border-l-[3px] border-transparent"
+              class="table-td-strong code-text border-l-[3px] border-transparent"
               [ngClass]="{
                 '!border-success': tmpl.status === 'ACTIVE',
                 '!border-warning': tmpl.status === 'DEPRECATED',
@@ -264,12 +234,8 @@
             >
               {{ tmpl.templateKey }}
             </td>
-            <td
-              class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium"
-            >
-              v{{ tmpl.templateVersion }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
+            <td class="table-td">v{{ tmpl.templateVersion }}</td>
+            <td class="table-td">
               <span
                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm"
                 [ngClass]="{
@@ -291,18 +257,13 @@
                 {{ tmpl.status }}
               </span>
             </td>
-            <td
-              class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs"
-              [title]="tmpl.changeNote"
-            >
+            <td class="table-td truncate max-w-xs" [title]="tmpl.changeNote">
               {{ tmpl.changeNote }}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            <td class="table-td">
               {{ tmpl.createdAt | date: 'mediumDate' }}
             </td>
-            <td
-              class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
-            >
+            <td class="table-actions">
               @if (tmpl.status === 'ACTIVE' && isOnline()) {
                 <button
                   (click)="deprecateTemplate(tmpl.id)"

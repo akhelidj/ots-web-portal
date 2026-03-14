@@ -39,7 +39,7 @@
         <div class="flex flex-col items-end">
           <button
             (click)="export.emit()"
-            class="flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn btn-secondary gap-1.5"
             [disabled]="isExporting || !canExport || !isOnline"
             [title]="
               !isOnline
@@ -108,9 +108,7 @@
           }"
         >
           @if (formError && !formError.includes('[object Object]')) {
-            <div
-              class="mb-3 bg-error-light border-l-4 border-error text-error-dark p-3 rounded-r-md text-sm whitespace-pre-line shadow-sm"
-            >
+            <div class="alert-error mb-3 whitespace-pre-line">
               {{ formError }}
             </div>
           }
@@ -136,7 +134,7 @@
               </p>
               <button
                 (click)="showValidationDetails.emit()"
-                class="text-xs font-bold bg-white text-error-dark border border-error/30 hover:bg-error/10 px-3 py-1.5 rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-error"
+                class="btn btn-secondary btn-sm text-error-dark border-error/30 hover:bg-error/10 focus:ring-error"
               >
                 Show Details
               </button>
@@ -181,7 +179,7 @@
                 ) {
                   <button
                     (click)="selectTransition.emit(transition)"
-                    class="inline-flex items-center bg-primary hover:bg-primary/95 text-white px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
+                    class="btn btn-primary transform active:scale-95"
                     [disabled]="!transition.enabled"
                     [title]="transition.disabledReason || ''"
                   >
@@ -231,13 +229,13 @@
                           ? 'Reason for transition (Required)'
                           : 'Notes or remarks (Optional)'
                       "
-                      class="w-full border border-gray-300 shadow-sm px-3 py-2 rounded-md focus:ring-accent focus:border-accent text-sm transition-colors"
+                      class="field-control"
                     />
                   </div>
                   <div class="flex gap-2 whitespace-nowrap">
                     <button
                       (click)="confirmTransition.emit()"
-                      class="bg-accent hover:bg-accent-hover text-white px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50"
+                      class="btn btn-accent"
                       [disabled]="
                         (selectedTransition.requiresReason &&
                           !formReason.trim()) ||
@@ -249,7 +247,7 @@
                     </button>
                     <button
                       (click)="cancelTransition.emit()"
-                      class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                      class="btn btn-secondary"
                     >
                       Cancel
                     </button>

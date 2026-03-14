@@ -28,7 +28,7 @@
             class="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900 flex items-center gap-3"
           >
             Branch Report:
-            <span class="font-mono text-neutral-500 text-xl pt-1">{{
+            <span class="code-text text-neutral-500 text-xl pt-1">{{
               cr.reportNumber || (cr.id.substring(0, 8) | uppercase)
             }}</span>
           </h1>
@@ -39,7 +39,7 @@
             @if (parentReport(); as parent) {
               <a
                 [routerLink]="getParentReportLink(parent.id)"
-                class="font-mono bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200 text-primary hover:underline hover:text-primary-light transition-colors"
+                class="code-text bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200 text-primary hover:underline hover:text-primary-light transition-colors"
                 >{{ parent.poNumber }}</a
               >
             }
@@ -100,7 +100,7 @@
             Details & Disposition
           </h2>
           <span
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20"
+            class="data-chip bg-primary/10 text-primary border-primary/20"
             >{{ cr.status }}</span
           >
         </div>
@@ -154,29 +154,24 @@
                       />
                     }
                     <div class="flex flex-col gap-1">
-                      <span class="font-mono font-bold text-gray-900 text-sm">{{
+                      <span class="code-text font-bold text-gray-900 text-sm">{{
                         sn.serial
                       }}</span>
                       <div class="flex items-center gap-2">
                         <span
-                          class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border shadow-sm"
+                          class="data-chip px-2 py-0.5 text-[10px]"
                           [ngClass]="{
-                            'bg-success-light text-success-dark border-success/30':
-                              sn.disposition === 'PASS',
-                            'bg-warning-light text-warning-dark border-warning/30':
-                              sn.disposition === 'REWORK',
-                            'bg-error-light text-error-dark border-error/30':
-                              sn.disposition === 'SCRAP',
-                            'bg-primary/10 text-primary border-primary/20':
-                              sn.disposition === 'HOLD',
-                            'bg-gray-100 text-gray-500 border-gray-200':
-                              !sn.disposition,
+                            'data-chip-success': sn.disposition === 'PASS',
+                            'data-chip-warning': sn.disposition === 'REWORK',
+                            'data-chip-error': sn.disposition === 'SCRAP',
+                            'data-chip-info': sn.disposition === 'HOLD',
+                            'data-chip-neutral': !sn.disposition,
                           }"
                           >{{ sn.disposition || 'Pending' }}</span
                         >
                         @if (sn.approvalStatus) {
                           <span
-                            class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-gray-200 bg-white text-gray-400"
+                            class="data-chip-neutral px-2 py-0.5 text-[10px]"
                             >{{ sn.approvalStatus }}</span
                           >
                         }
@@ -189,7 +184,7 @@
                   ) {
                     <button
                       (click)="openInspectionForm(sn.id)"
-                      class="text-accent hover:text-white hover:bg-accent text-xs font-semibold px-3 py-1.5 bg-white border border-gray-200 rounded shadow-sm transition-colors flex items-center gap-1.5"
+                      class="btn btn-secondary btn-sm gap-1.5 text-accent hover:text-white hover:bg-accent"
                     >
                       <svg
                         class="w-3.5 h-3.5"
@@ -209,7 +204,7 @@
                   } @else {
                     <button
                       (click)="openInspectionForm(sn.id)"
-                      class="text-primary hover:text-primary-light hover:bg-primary/5 text-xs font-semibold px-3 py-1.5 bg-white border border-gray-200 rounded shadow-sm transition-colors flex items-center gap-1.5"
+                      class="btn btn-secondary btn-sm gap-1.5 text-primary hover:bg-primary/5"
                     >
                       <svg
                         class="w-3.5 h-3.5"
@@ -241,9 +236,7 @@
 
         <div class="flex-grow flex flex-col">
           <div class="flex justify-between items-center mb-2">
-            <label
-              for="operatorNotes"
-              class="block text-sm font-semibold text-gray-900"
+            <label for="operatorNotes" class="form-label text-gray-900 mb-0"
               >Operator Notes / Findings</label
             >
             @if (
@@ -263,19 +256,16 @@
               id="operatorNotes"
               [(ngModel)]="notes"
               rows="4"
-              class="w-full border border-gray-300 p-3 rounded-md focus:ring-accent focus:border-accent text-sm shadow-sm transition-colors mb-3"
+              class="field-control mb-3"
             ></textarea>
             <div class="flex gap-2 justify-end">
               <button
                 (click)="isEditingNotes = false; notes = cr.notes || ''"
-                class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors"
+                class="btn btn-secondary btn-sm"
               >
                 Cancel
               </button>
-              <button
-                (click)="saveNotes()"
-                class="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded shadow-sm hover:bg-primary/95 transition-colors"
-              >
+              <button (click)="saveNotes()" class="btn btn-primary btn-sm">
                 Save Notes
               </button>
             </div>
@@ -302,9 +292,7 @@
         </div>
 
         @if (formError && !formError.includes('[object Object]')) {
-          <div
-            class="mb-5 bg-error-light border-l-4 border-error text-error-dark p-3 rounded-r-md text-sm whitespace-pre-line shadow-sm"
-          >
+          <div class="alert-error mb-5 whitespace-pre-line">
             {{ formError }}
           </div>
         }
@@ -318,7 +306,7 @@
               ) {
                 <button
                   (click)="openReasonSelect(transition)"
-                  class="inline-flex items-center bg-primary hover:bg-primary/95 text-white px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
+                  class="btn btn-primary transform active:scale-95"
                   [disabled]="!transition.enabled"
                   [title]="transition.disabledReason || ''"
                 >
@@ -363,14 +351,14 @@
                       type="text"
                       [(ngModel)]="formReason"
                       placeholder="Reason for transition (Required)"
-                      class="w-full border border-gray-300 shadow-sm px-3 py-2 rounded-md focus:ring-accent focus:border-accent text-sm transition-colors"
+                      class="field-control"
                     />
                   </div>
                 }
                 <div class="flex gap-3">
                   <button
                     (click)="onTransition()"
-                    class="bg-accent hover:bg-accent-hover text-white px-5 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50"
+                    class="btn btn-accent"
                     [disabled]="
                       selectedTransition.requiresReason && !formReason.trim()
                     "
@@ -379,7 +367,7 @@
                   </button>
                   <button
                     (click)="selectedTransition = null; formReason = ''"
-                    class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-5 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    class="btn btn-secondary"
                   >
                     Cancel
                   </button>
@@ -436,7 +424,7 @@
                 <button
                   (click)="uploadAttachment()"
                   [disabled]="!formFile || isUploading"
-                  class="w-full sm:w-auto bg-primary hover:bg-primary/95 text-white px-5 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+                  class="btn btn-primary w-full sm:w-auto"
                 >
                   @if (isUploading) {
                     Uploading...
@@ -583,7 +571,7 @@
               </svg>
               Inspect
               <span
-                class="font-mono bg-white px-2.5 py-1 rounded-md border border-gray-200 text-base font-bold text-primary shadow-sm"
+                class="code-text bg-white px-2.5 py-1 rounded-md border border-gray-200 text-base font-bold text-primary shadow-sm"
               >
                 {{ inspectingSnValue }}
               </span>

@@ -166,123 +166,77 @@
   </div>
 
   <div class="queue-table-wrap">
-    <table class="min-w-full text-left border-collapse">
-      <thead class="bg-neutral-50 border-b border-neutral-200">
+    <table class="table-base">
+      <thead class="table-head">
         <tr>
-          <th
-            class="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Report #
-          </th>
-          <th
-            class="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            PO Number
-          </th>
+          <th class="table-th">Report #</th>
+          <th class="table-th">PO Number</th>
           @if (!isCustomer) {
-            <th
-              class="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-            >
-              Customer
-            </th>
+            <th class="table-th">Customer</th>
           }
-          <th
-            class="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Status
-          </th>
-          <th
-            class="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Last Updated
-          </th>
-          <th
-            class="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Joints
-          </th>
-          <th
-            class="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-          >
-            Pass Rate
-          </th>
+          <th class="table-th">Status</th>
+          <th class="table-th">Last Updated</th>
+          <th class="table-th">Joints</th>
+          <th class="table-th">Pass Rate</th>
           @if (!isCustomer) {
-            <th
-              class="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em]"
-            >
-              Sync
-            </th>
+            <th class="table-th">Sync</th>
           }
-          <th class="relative px-6 py-3">
+          <th class="table-th-right">
             <span class="sr-only">Actions</span>
           </th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-neutral-200 bg-white">
+      <tbody class="table-body">
         @if (reports(); as reports) {
           @for (r of getFilteredReports(reports); track r.id) {
             <tr
               class="hover:bg-neutral-50 transition-colors group cursor-pointer"
               [routerLink]="[r.id]"
             >
-              <td
-                class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-neutral-900 font-mono tracking-wider"
-              >
+              <td class="table-td-strong code-text">
                 {{ r.reportNumber || (r.id.substring(0, 8) | uppercase) }}
               </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900"
-              >
+              <td class="table-td-strong">
                 {{ r.poNumber }}
               </td>
               @if (!isCustomer) {
                 <td
-                  class="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 max-w-[220px] truncate"
+                  class="table-td max-w-[220px] truncate"
                   [title]="getCustomerName(r.customerId)"
                 >
                   {{ getCustomerName(r.customerId) }}
                 </td>
               }
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="table-td">
                 <span
                   class="data-chip bg-neutral-100 text-neutral-700 border-neutral-200"
                   >{{ r.status }}</span
                 >
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+              <td class="table-td">
                 {{ r.updatedAt ? (r.updatedAt | date: 'medium') : 'N/A' }}
               </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700 font-mono"
-              >
+              <td class="table-td-code">
                 {{ reportStatsCache[r.id]?.serialCount || 0 }}
               </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-900"
-              >
+              <td class="table-td-code text-neutral-900">
                 {{ getPassRate(r.id) || 0 | percent: '1.0-0' }}
               </td>
               @if (!isCustomer) {
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="table-td">
                   <span
                     class="data-chip"
                     [ngClass]="{
-                      'bg-error-light text-error-dark border-error/30':
+                      'data-chip-error':
                         r.syncState === 'CONFLICT' || r.syncState === 'ERROR',
-                      'bg-warning-light text-warning-dark border-warning/30':
-                        r.syncState === 'PENDING',
-                      'bg-success-light text-success-dark border-success/30':
-                        r.syncState === 'SYNCED',
+                      'data-chip-warning': r.syncState === 'PENDING',
+                      'data-chip-success': r.syncState === 'SYNCED',
                     }"
                     >{{ r.syncState }}</span
                   >
                 </td>
               }
-              <td
-                class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-primary"
-              >
-                View
-              </td>
+              <td class="table-actions text-primary">View</td>
             </tr>
           }
           @if (getFilteredReports(reports).length === 0) {
