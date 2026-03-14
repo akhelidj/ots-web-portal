@@ -2,12 +2,15 @@ import {
   Component,
   inject,
   OnInit,
+  AfterViewInit,
+  OnDestroy,
   ChangeDetectorRef,
   signal,
   computed,
   Injector,
   ViewChild,
   ElementRef,
+  HostListener,
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -89,7 +92,9 @@ import { InspectionReportSerialsTableComponent } from './sections/inspection-rep
   ],
   templateUrl: './inspection-report-detail.component.html',
 })
-export class InspectionReportDetailComponent implements OnInit {
+export class InspectionReportDetailComponent
+  implements OnInit, AfterViewInit, OnDestroy
+{
   private route = inject(ActivatedRoute);
   private irService = inject(InspectionReportsService);
   private crService = inject(ChildReportsService);
@@ -105,7 +110,6 @@ export class InspectionReportDetailComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private injector = inject(Injector);
   public prefs = inject(UserPreferencesService);
-  private el = inject(ElementRef);
 
   @ViewChild('summaryTab') summaryTab?: ElementRef;
   @ViewChild('serialsTab') serialsTab?: ElementRef;
@@ -117,7 +121,9 @@ export class InspectionReportDetailComponent implements OnInit {
   public report = signal<LocalInspectionReport | null>(null);
   public serials = signal<LocalSerialNumber[]>([]);
   public transitionLogs = signal<LocalTransitionLog[]>([]);
-  public enrichedTransitionLogs = signal<(LocalTransitionLog & { userName?: string })[]>([]);
+  public enrichedTransitionLogs = signal<
+    (LocalTransitionLog & { userName?: string })[]
+  >([]);
   public childReports = signal<LocalChildReport[]>([]);
   public approvalBatches = signal<
     {
@@ -157,10 +163,22 @@ export class InspectionReportDetailComponent implements OnInit {
     'summary' | 'serials' | 'approvals' | 'specs' | 'history'
   >('summary');
   public activeTabPos = signal({ left: 0, width: 0 });
+  public isMobileTabletViewport = signal(window.innerWidth < 1024);
+  public headerPastThreshold = signal(false);
+  public headerCondenseProgress = signal(0);
+  public shellScrollbarWidth = signal(0);
+  public isHeaderCondensed = computed(
+    () => this.isMobileTabletViewport() && this.headerPastThreshold(),
+  );
+
+  private shellScrollEl: HTMLElement | null = null;
+  private readonly onShellScrollBound = () => this.onShellScroll();
 
   public isCompactMode = computed(() => this.prefs.preferences().compactMode);
   public hasSubmittedBatches = computed(() => {
-    return this.approvalBatches().some(b => b.batch.status === BATCH_STATUSES.SUBMITTED);
+    return this.approvalBatches().some(
+      (b) => b.batch.status === BATCH_STATUSES.SUBMITTED,
+    );
   });
 
   // Search Filter Signals
@@ -207,6 +225,73 @@ export class InspectionReportDetailComponent implements OnInit {
     toObservable(this.activeTab, { injector: this.injector }).subscribe(() => {
       this.updateTabMarker();
     });
+  }
+
+  ngAfterViewInit(): void {
+    this.setupShellScrollTracking();
+    this.updateTabMarker();
+  }
+
+  ngOnDestroy(): void {
+    if (this.shellScrollEl) {
+      this.shellScrollEl.removeEventListener('scroll', this.onShellScrollBound);
+    }
+  }
+
+  @HostListener('window:resize')
+  public onViewportResize(): void {
+    const isMobileTablet = window.innerWidth < 1024;
+    this.isMobileTabletViewport.set(isMobileTablet);
+
+    if (!isMobileTablet) {
+      this.headerPastThreshold.set(false);
+      return;
+    }
+
+    this.onShellScroll();
+  }
+
+  private setupShellScrollTracking(): void {
+    if (this.shellScrollEl) {
+      this.shellScrollEl.removeEventListener('scroll', this.onShellScrollBound);
+    }
+
+    this.shellScrollEl = document.getElementById('main-content');
+    if (!this.shellScrollEl) {
+      return;
+    }
+
+    this.shellScrollEl.addEventListener('scroll', this.onShellScrollBound, {
+      passive: true,
+    });
+    this.onShellScroll();
+  }
+
+  private onShellScroll(): void {
+    if (!this.isMobileTabletViewport() || !this.shellScrollEl) {
+      this.headerPastThreshold.set(false);
+      this.headerCondenseProgress.set(0);
+      return;
+    }
+
+    const scrollTop = this.shellScrollEl.scrollTop;
+    const start = 8;
+    const end = 88;
+    const ratio = Math.max(0, Math.min(1, (scrollTop - start) / (end - start)));
+
+    this.headerCondenseProgress.set(ratio);
+
+    if (!this.headerPastThreshold() && scrollTop > start) {
+      this.headerPastThreshold.set(true);
+    } else if (this.headerPastThreshold() && scrollTop < 2) {
+      this.headerPastThreshold.set(false);
+    }
+
+    const scrollbarWidth = Math.max(
+      0,
+      this.shellScrollEl.offsetWidth - this.shellScrollEl.clientWidth,
+    );
+    this.shellScrollbarWidth.set(scrollbarWidth);
   }
 
   private updateTabMarker() {
@@ -462,7 +547,10 @@ export class InspectionReportDetailComponent implements OnInit {
       enrichedLogs.push({ ...log, userName });
     }
     // Sort by timestamp desc for timeline feel (newest first)
-    enrichedLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    enrichedLogs.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
     this.enrichedTransitionLogs.set(enrichedLogs);
 
     const childReports = await this.crService.getChildReportsForInspection(
@@ -700,6 +788,9 @@ export class InspectionReportDetailComponent implements OnInit {
       this.kpiPassRate = 0;
       this.reworkSerials = [];
     }
+
+    this.updateTabMarker();
+    setTimeout(() => this.setupShellScrollTracking(), 0);
   }
 
   public async onAddSerials() {

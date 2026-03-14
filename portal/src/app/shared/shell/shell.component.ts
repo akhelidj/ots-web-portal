@@ -1,7 +1,12 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import {
+  NavigationEnd,
+  RouterOutlet,
+  RouterLink,
+  RouterLinkActive,
+} from '@angular/router';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { SessionService } from '@portal/core/auth/services/session.service';
@@ -42,6 +47,34 @@ export class ShellComponent {
   public lastSyncError = this.orchestrator.lastSyncError;
 
   public isDevMode = !environment.production;
+  public mobileMenuOpen = signal(false);
+
+  constructor() {
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.closeMobileMenu();
+      }
+    });
+  }
+
+  public toggleMobileMenu(): void {
+    this.mobileMenuOpen.update((v) => !v);
+  }
+
+  public closeMobileMenu(): void {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) {
+      active.blur();
+    }
+
+    this.mobileMenuOpen.set(false);
+  }
+
+  public getProfileLabel(): string {
+    const p = this.profile();
+    if (!p) return 'Menu';
+    return p.name?.trim() || p.email;
+  }
 
   public onSignOut() {
     this.session.logout();

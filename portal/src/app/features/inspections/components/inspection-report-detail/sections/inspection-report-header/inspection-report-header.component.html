@@ -1,14 +1,22 @@
 <div
-  class="page-section p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-  [ngClass]="isCustomer ? 'sticky top-16 z-50' : ''"
+  class="page-section flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-300 ease-out"
+  [style.padding-top.px]="16 - 4 * condenseProgress"
+  [style.padding-bottom.px]="16 - 4 * condenseProgress"
+  [style.padding-left.px]="16 - 4 * condenseProgress"
+  [style.padding-right.px]="16 - 4 * condenseProgress"
+  [ngClass]="isCondensed ? 'rounded-none border-x-0 shadow-md' : ''"
 >
   <div class="flex items-center gap-4">
     <a
       routerLink=".."
-      class="text-neutral-500 hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-full hover:bg-neutral-100"
+      class="text-neutral-500 hover:text-primary transition-all duration-300 flex items-center justify-center rounded-full hover:bg-neutral-100"
+      [style.width.px]="40 - 4 * condenseProgress"
+      [style.height.px]="40 - 4 * condenseProgress"
     >
       <svg
-        class="h-6 w-6"
+        class="transition-all duration-300"
+        [style.width.px]="24 - 4 * condenseProgress"
+        [style.height.px]="24 - 4 * condenseProgress"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -23,7 +31,9 @@
     </a>
     <div>
       <h1
-        class="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900"
+        class="font-semibold tracking-tight text-neutral-900 transition-all duration-300"
+        [style.font-size.rem]="1.5 - 0.375 * condenseProgress"
+        [style.line-height]="1.2"
       >
         Report: {{ report.reportNumber }}
       </h1>

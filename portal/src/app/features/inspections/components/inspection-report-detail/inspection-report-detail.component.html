@@ -1,17 +1,29 @@
 @if (report(); as reportData) {
   <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
     <!-- HEADER -->
-    <app-inspection-report-header
-      [report]="reportData"
-      [isCustomer]="isCustomer()"
-      [userRole]="userRole()"
-      [isExporting]="isExporting"
-      [isOnline]="isOnline"
-      [showCustomerExport]="!!(isCustomer() && uiState?.actions?.['CUSTOMER_EXPORT']?.visible)"
-      [canExport]="!!uiState?.actions?.['CUSTOMER_EXPORT']?.enabled"
-      [exportDisabledReason]="uiState?.actions?.['CUSTOMER_EXPORT']?.disabledReason || ''"
-      (export)="exportReport()"
-    />
+    <div
+      class="transition-all duration-300 ease-out"
+      [style.--shell-scrollbar-width.px]="shellScrollbarWidth()"
+      [ngClass]="
+        isHeaderCondensed()
+          ? 'sticky top-0 z-30 report-header-condensed-shell bg-stone-100/95 backdrop-blur'
+          : ''
+      "
+    >
+      <app-inspection-report-header
+        [report]="reportData"
+        [isCustomer]="isCustomer()"
+        [userRole]="userRole()"
+        [isExporting]="isExporting"
+        [isOnline]="isOnline"
+        [isCondensed]="isHeaderCondensed()"
+        [condenseProgress]="headerCondenseProgress()"
+        [showCustomerExport]="!!(isCustomer() && uiState?.actions?.['CUSTOMER_EXPORT']?.visible)"
+        [canExport]="!!uiState?.actions?.['CUSTOMER_EXPORT']?.enabled"
+        [exportDisabledReason]="uiState?.actions?.['CUSTOMER_EXPORT']?.disabledReason || ''"
+        (export)="exportReport()"
+      />
+    </div>
 
     <!-- BANNERS -->
     @if (!isCustomer()) {
@@ -208,9 +220,12 @@
                         View Details →
                       </button>
                     </div>
-                  }
-                </div>
-              }
+    }
+
+    <!-- Footer spacer for sticky navigation -->
+    <div class="h-24 px-4 overflow-hidden pointer-events-none"></div>
+  </div>
+}
 
               <!-- Workflow Actions (Transition Bar) -->
               @if (!isCustomer()) {
@@ -641,7 +656,5 @@
       </div>
     }
 
-    <!-- Footer spacer for sticky navigation -->
-    <div class="h-24 px-4 overflow-hidden pointer-events-none"></div>
   </div>
 }

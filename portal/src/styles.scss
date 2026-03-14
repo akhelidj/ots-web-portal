@@ -5,6 +5,21 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
+  }
+
+  app-root {
+    display: block;
+    height: 100%;
+    overflow: hidden;
+    overflow-x: hidden;
+  }
+
   body {
     @apply font-sans antialiased text-neutral-800 bg-stone-100;
   }
@@ -40,12 +55,44 @@
 
 @layer components {
   .shell-layout {
-    @apply h-screen min-h-0;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .shell-header-sticky {
+    position: relative;
+    z-index: 50;
+  }
+
+  .shell-admin-nav-sticky {
+    position: relative;
+    z-index: 40;
   }
 
   .shell-main-scroll {
     min-height: 0 !important;
-    overscroll-behavior-y: contain;
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .report-header-condensed-shell {
+    width: auto;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw - var(--shell-scrollbar-width, 0px));
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .sticky-bottom-dock {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
   }
 
   .page-section {

@@ -19,6 +19,8 @@ export class InspectionReportHeaderComponent {
   @Input() userRole = '';
   @Input() isExporting = false;
   @Input() isOnline = false;
+  @Input() isCondensed = false;
+  @Input() condenseProgress = 0;
   @Input() showCustomerExport = false;
   @Input() canExport = false;
   @Input() exportDisabledReason = '';
