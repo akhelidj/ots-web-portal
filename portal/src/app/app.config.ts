@@ -8,6 +8,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { appRoutes } from './app.routes';
 import { jwtInterceptor } from '@portal/core/auth/interceptors/jwt.interceptor';
 import { apiErrorInterceptor } from '@portal/core/http/interceptors/api-error.interceptor';
+import { environment } from '@app-env/environment';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -15,7 +16,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(appRoutes),
     provideHttpClient(withInterceptors([jwtInterceptor, apiErrorInterceptor])),
     provideServiceWorker('ngsw-worker.js', {
-      enabled: true,
+      enabled: environment.production,
       registrationStrategy: 'registerWhenStable:30000',
     }),
   ],
