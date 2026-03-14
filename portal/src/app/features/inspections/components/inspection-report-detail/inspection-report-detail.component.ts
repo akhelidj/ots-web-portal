@@ -50,13 +50,21 @@ import {
   getInspectionReportUiState,
   InspectionReportUiState,
 } from '@portal/core/ui-policy/inspection-report-ui-policy';
-import { SyncOrchestratorService } from '@portal/core/offline/services/sync-orchestrator.service';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
 import { ApprovalBatchLocalRepo } from '@portal/core/offline/repos/approval-batch-local.repo';
 import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-serial-number-local.repo';
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
+import { InspectionReportHeaderComponent } from './sections/inspection-report-header/inspection-report-header.component';
+import { InspectionReportBannersComponent } from './sections/inspection-report-banners/inspection-report-banners.component';
+import { InspectionReportTransitionBarComponent } from './sections/inspection-report-transition-bar/inspection-report-transition-bar.component';
+import { InspectionReportKpiOverviewComponent } from './sections/inspection-report-kpi-overview/inspection-report-kpi-overview.component';
+import { InspectionReportReworkStatusComponent } from './sections/inspection-report-rework-status/inspection-report-rework-status.component';
+import { InspectionReportAddSerialPanelComponent } from './sections/inspection-report-add-serial-panel/inspection-report-add-serial-panel.component';
+import { InspectionReportApprovalBatchesComponent } from './sections/inspection-report-approval-batches/inspection-report-approval-batches.component';
+import { InspectionReportTransitionHistoryComponent } from './sections/inspection-report-transition-history/inspection-report-transition-history.component';
+import { InspectionReportSerialsTableComponent } from './sections/inspection-report-serials-table/inspection-report-serials-table.component';
 
 @Component({
   selector: 'app-inspection-report-detail',
@@ -66,6 +74,15 @@ import { SerialInspectionReactiveFormComponent } from '@portal/features/inspecti
     FormsModule,
     RouterModule,
     SerialInspectionReactiveFormComponent,
+    InspectionReportHeaderComponent,
+    InspectionReportBannersComponent,
+    InspectionReportTransitionBarComponent,
+    InspectionReportKpiOverviewComponent,
+    InspectionReportReworkStatusComponent,
+    InspectionReportAddSerialPanelComponent,
+    InspectionReportApprovalBatchesComponent,
+    InspectionReportTransitionHistoryComponent,
+    InspectionReportSerialsTableComponent,
   ],
   templateUrl: './inspection-report-detail.component.html',
 })
@@ -77,7 +94,6 @@ export class InspectionReportDetailComponent implements OnInit {
   private session = inject(SessionService);
   private validationService = inject(ReportValidationService);
   private outboxRepo = inject(OutboxLocalRepo);
-  private syncOrchestrator = inject(SyncOrchestratorService);
   private connectivity = inject(ConnectivityService);
   private userRepo = inject(UserLocalRepo);
   private customerRepo = inject(CustomerLocalRepo);
@@ -107,7 +123,6 @@ export class InspectionReportDetailComponent implements OnInit {
   public isValidationModalOpen = false;
   public activeHistorySn = signal<LocalSerialNumber | null>(null);
   public isPublishingReport = signal(false);
-  public isSyncingRework = signal(false);
 
   public selectedForApproval = signal<Set<string>>(new Set());
   public selectedInBatch = signal<Set<string>>(new Set());
@@ -310,6 +325,25 @@ export class InspectionReportDetailComponent implements OnInit {
         user: b.submittedByName,
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  });
+
+  public historySerialIds = computed(() => {
+    const ids = new Set<string>();
+
+    for (const batch of this.approvalBatches()) {
+      if (
+        batch.batch.status !== BATCH_STATUSES.RETURNED ||
+        !batch.batch.notes
+      ) {
+        continue;
+      }
+
+      for (const serial of batch.serials) {
+        ids.add(serial.id);
+      }
+    }
+
+    return ids;
   });
 
   public get isOnline(): boolean {
@@ -650,20 +684,6 @@ export class InspectionReportDetailComponent implements OnInit {
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to transition report.';
-    }
-  }
-
-  public async onSyncReworkReport() {
-    this.isSyncingRework.set(true);
-    try {
-      await this.irService.enqueueChildSync(this.reportId);
-      await this.syncOrchestrator.syncNow();
-      this.refreshData();
-      this.isSyncingRework.set(false);
-    } catch (error) {
-      const e = error as Error;
-      this.formError = e.message || 'Failed to sync rework report.';
-      this.isSyncingRework.set(false);
     }
   }
 
@@ -1039,10 +1059,6 @@ export class InspectionReportDetailComponent implements OnInit {
     this.selectedInBatch.set(current);
   }
 
-  public isBatchSnSelected(snId: string): boolean {
-    return this.selectedInBatch().has(snId);
-  }
-
   public async approveBatch(batchId: string): Promise<void> {
     const selected = Array.from(this.selectedInBatch());
 
@@ -1068,12 +1084,6 @@ export class InspectionReportDetailComponent implements OnInit {
     } finally {
       this.isActioningBatch = false;
     }
-  }
-
-  public getBatchEligibleCount(batchId: string): number {
-    const batch = this.approvalBatches().find((b) => b.batch.id === batchId);
-    if (!batch) return 0;
-    return batch.serials.filter((s) => s.batchStatus === 'PENDING').length;
   }
 
   public async returnBatch(): Promise<void> {
@@ -1139,14 +1149,5 @@ export class InspectionReportDetailComponent implements OnInit {
 
   public closeHistory(): void {
     this.activeHistorySn.set(null);
-  }
-
-  public hasHistory(sn: LocalSerialNumber): boolean {
-    return this.approvalBatches().some(
-      (b) =>
-        b.batch.status === BATCH_STATUSES.RETURNED &&
-        b.batch.notes &&
-        b.serials.some((s) => s.id === sn.id),
-    );
   }
 }

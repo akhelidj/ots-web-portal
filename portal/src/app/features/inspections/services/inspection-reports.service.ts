@@ -161,7 +161,7 @@ export class InspectionReportsService {
   public async pullBatchesForReport(reportId: string): Promise<void> {
     try {
       const batches = await firstValueFrom(
-        this.http.get<any[]>(
+        this.http.get<LocalInspectionApprovalBatch[]>(
           `${environment.apiUrl}/inspection-reports/${reportId}/approval-batches`,
         ),
       );
@@ -183,13 +183,17 @@ export class InspectionReportsService {
         await this.approvalBatchRepo.upsert(batchData);
 
         // Upsert serial associations
-        if (b.serialNumbers && Array.isArray(b.serialNumbers)) {
-          const associations = b.serialNumbers.map((sn: any) => ({
-            id: sn.id,
-            inspectionApprovalBatchId: b.id,
-            serialNumberId: sn.serialNumberId,
-            status: sn.status || 'PENDING',
-          }));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const bExt = b as any;
+        if (bExt.serialNumbers && Array.isArray(bExt.serialNumbers)) {
+          const associations = bExt.serialNumbers.map(
+            (sn: { id: string; serialNumberId: string; status?: string }) => ({
+              id: sn.id,
+              inspectionApprovalBatchId: b.id,
+              serialNumberId: sn.serialNumberId,
+              status: sn.status || 'PENDING',
+            }),
+          );
           await this.batchSnRepo.bulkUpsert(associations);
         }
       }
@@ -251,24 +255,35 @@ export class InspectionReportsService {
               const { serialNumber, inspectionData, ...restS } = s;
 
               // Safeguard: Preserve local disposition/final section if server data is partial
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               let mergedInspectionJson = inspectionData as Record<string, any>;
               if (local?.inspectionJson && inspectionData) {
+                const localFinal = local.inspectionJson['final'] as
+                  | Record<string, unknown>
+                  | undefined;
                 const localDisp =
                   local.inspectionJson['disposition'] ||
-                  local.inspectionJson['final']?.['disposition'];
+                  localFinal?.['disposition'];
                 const serverDisp =
-                  (inspectionData as Record<string, any>)['disposition'] ||
-                  (inspectionData as Record<string, any>)['final']?.[
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  ((inspectionData as Record<string, any>)[
                     'disposition'
-                  ];
+                  ] as string) ||
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  ((
+                    (inspectionData as Record<string, any>)['final'] as
+                      | Record<string, any>
+                      | undefined
+                  )?.['disposition'] as string | undefined);
 
                 if (localDisp && !serverDisp) {
                   // Merge local disposition back into the server payload if missing
                   mergedInspectionJson = {
-                    ...(inspectionData as Record<string, any>),
+                    ...(inspectionData as Record<string, unknown>),
                     ['final']: {
-                      ...((inspectionData as Record<string, any>)['final'] ||
-                        {}),
+                      ...((inspectionData as Record<string, unknown>)[
+                        'final'
+                      ] || {}),
                       ['disposition']: localDisp,
                     },
                   };
@@ -751,8 +766,8 @@ export class InspectionReportsService {
       if (!rep) throw new Error('Report not found');
 
       try {
-        const response = await firstValueFrom(
-          this.http.post<any>(
+        await firstValueFrom(
+          this.http.post<Record<string, unknown>>(
             `${environment.apiUrl}/inspection-reports/${reportId}/approval-batches`,
             {
               serialNumberIds,
@@ -855,7 +870,7 @@ export class InspectionReportsService {
         if (rep) {
           try {
             await firstValueFrom(
-              this.http.post<any>(
+              this.http.post<Record<string, unknown>>(
                 `${environment.apiUrl}/inspection-reports/${batch.inspectionReportId}/approval-batches/${batchId}/approve`,
                 {
                   batchVersion: batch.version,
@@ -981,7 +996,7 @@ export class InspectionReportsService {
         if (rep) {
           try {
             await firstValueFrom(
-              this.http.post<any>(
+              this.http.post<Record<string, unknown>>(
                 `${environment.apiUrl}/inspection-reports/${batch.inspectionReportId}/approval-batches/${batchId}/return`,
                 {
                   reason,

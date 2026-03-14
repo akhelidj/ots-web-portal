@@ -1,0 +1,167 @@
+@if (batches.length > 0) {
+  <div
+    class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-7xl mx-auto"
+  >
+    <div
+      class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center"
+    >
+      <h2 class="font-bold text-lg text-primary">Approval Batches</h2>
+    </div>
+    <div class="p-6 grid grid-cols-1 gap-6">
+      @for (batchItem of batches; track batchItem.batch.id) {
+        <div
+          class="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm"
+        >
+          <div
+            class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex flex-wrap justify-between items-center gap-4"
+          >
+            <div class="flex flex-col">
+              <span class="text-sm font-bold text-gray-900"
+                >Batch submitted by {{ batchItem.submittedByName }}</span
+              >
+              <span class="text-xs text-gray-500">{{
+                batchItem.batch.submittedAt | date: 'medium'
+              }}</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <span
+                class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border pointer-events-none"
+                [ngClass]="{
+                  'bg-amber-100 text-amber-800 border-amber-200':
+                    batchItem.batch.status === BATCH_STATUSES.SUBMITTED,
+                  'bg-green-100 text-green-800 border-green-200':
+                    batchItem.batch.status === BATCH_STATUSES.APPROVED,
+                  'bg-red-100 text-red-800 border-red-200':
+                    batchItem.batch.status === BATCH_STATUSES.RETURNED,
+                }"
+              >
+                {{
+                  batchItem.batch.status === BATCH_STATUSES.SUBMITTED
+                    ? 'PENDING REVIEW'
+                    : batchItem.batch.status
+                }}
+              </span>
+
+              @if (
+                (userRole === APP_ROLES.SUPERVISOR ||
+                  userRole === APP_ROLES.ADMIN) &&
+                batchItem.batch.status === BATCH_STATUSES.SUBMITTED
+              ) {
+                <button
+                  (click)="returnBatch.emit(batchItem.batch.id)"
+                  class="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-100 hover:bg-red-200 border border-red-200 rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  [disabled]="isActioning"
+                >
+                  Return
+                  {{
+                    selectedIds.size > 0 &&
+                    eligibleCount(batchItem.batch.id) > 0
+                      ? selectedIds.size + ' Selected'
+                      : 'Whole Batch (' +
+                        eligibleCount(batchItem.batch.id) +
+                        ')'
+                  }}...
+                </button>
+                <button
+                  (click)="approveBatch.emit(batchItem.batch.id)"
+                  class="px-3 py-1.5 text-xs font-bold text-white bg-success hover:bg-success-dark rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-success"
+                  [disabled]="
+                    isActioning || eligibleCount(batchItem.batch.id) === 0
+                  "
+                >
+                  Approve
+                  {{
+                    selectedIds.size > 0 &&
+                    eligibleCount(batchItem.batch.id) > 0
+                      ? selectedIds.size + ' Selected'
+                      : '(' + eligibleCount(batchItem.batch.id) + ')'
+                  }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="p-4 bg-white">
+            @if (batchItem.batch.notes) {
+              <div
+                class="mb-4 p-3 bg-red-50 text-red-800 text-sm rounded-md border border-red-100 flex gap-2 items-start"
+              >
+                <svg
+                  class="w-4 h-4 shrink-0 mt-0.5 text-red-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                <div>
+                  <p class="font-bold mb-1 text-red-900">Return Notes</p>
+                  <p>{{ batchItem.batch.notes }}</p>
+                </div>
+              </div>
+            }
+
+            <div
+              class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2"
+            >
+              Included Serial Numbers (<span class="text-primary">{{
+                batchItem.serials.length
+              }}</span
+              >)
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              @for (sn of batchItem.serials; track sn.id) {
+                <div
+                  class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded px-2 py-1 transition-all"
+                  [ngClass]="{
+                    'border-primary bg-primary/5': isSelected(sn.id),
+                  }"
+                >
+                  @if (
+                    sn.batchStatus === 'PENDING' &&
+                    (userRole === APP_ROLES.SUPERVISOR ||
+                      userRole === APP_ROLES.ADMIN)
+                  ) {
+                    <input
+                      type="checkbox"
+                      [checked]="isSelected(sn.id)"
+                      (change)="toggleSerialSelection.emit(sn.id)"
+                      class="h-3.5 w-3.5 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer"
+                    />
+                  }
+
+                  <span class="font-mono text-xs text-gray-700">{{
+                    sn.value
+                  }}</span>
+
+                  @if (sn.batchStatus === 'APPROVED') {
+                    <svg
+                      class="h-3 w-3 text-success"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                  } @else if (sn.batchStatus === 'RETURNED') {
+                    <span class="text-[10px] text-red-500 font-bold"
+                      >RETURNED</span
+                    >
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}

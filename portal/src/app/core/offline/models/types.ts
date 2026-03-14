@@ -13,10 +13,8 @@ export interface LocalInspectionReport {
   inspectorComment?: string | null;
   inspectionAddress?: string | null;
   standardUsed?: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  equipmentUsed?: any[] | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  inspectionMethod?: any[] | null;
+  equipmentUsed?: unknown[] | null;
+  inspectionMethod?: unknown[] | null;
   grade?: string | null;
   range?: string | null;
   weight?: string | null;
@@ -37,8 +35,7 @@ export interface LocalSerialNumber {
   inspectionReportId: string;
   value: string;
   version: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  inspectionJson?: any;
+  inspectionJson?: Record<string, unknown>;
   approvalStatus?: SerialApprovalStatus;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
   updatedAt?: string;
@@ -135,8 +132,7 @@ export interface LocalChildReport {
   serialNumbers: Array<{
     id: string;
     serial: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    inspectionData?: any;
+    inspectionData?: Record<string, unknown>;
     disposition?: string;
     approvalStatus?: SerialApprovalStatus;
   }>;

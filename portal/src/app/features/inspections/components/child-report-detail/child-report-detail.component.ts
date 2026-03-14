@@ -13,7 +13,6 @@ import {
   LocalChildReport,
   LocalInspectionReport,
   LocalInspectionApprovalBatch,
-  SerialApprovalStatus,
 } from '@portal/core/offline/models/types';
 import {
   getChildReportUiState,
@@ -57,7 +56,7 @@ export class ChildReportDetailComponent implements OnInit {
     {
       id: string;
       serial: string;
-      inspectionData?: any;
+      inspectionData?: Record<string, unknown>;
       disposition?: string;
       approvalStatus?: string;
     }[]

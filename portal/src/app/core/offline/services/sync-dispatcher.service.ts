@@ -4,8 +4,6 @@ import { firstValueFrom } from 'rxjs';
 import { OutboxItem, LocalUser } from '@portal/core/offline/models/types';
 import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
 import { OutboxLocalRepo } from '@portal/core/offline/repos/outbox-local.repo';
-import { AdminUsersService } from '@portal/features/users/services/admin-users.service';
-import { AdminCustomersService } from '@portal/features/customers/services/admin-customers.service';
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
 import { InspectionReportLocalRepo } from '@portal/core/offline/repos/inspection-report-local.repo';
 import { SerialNumberLocalRepo } from '@portal/core/offline/repos/serial-number-local.repo';
@@ -18,6 +16,7 @@ import {
   LocalChildReport,
   LocalInspectionApprovalBatch,
   LocalBatchSerialNumber,
+  LocalCustomer,
 } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { ENTITY_TYPES } from '@portal/core/constants/app.constants';
@@ -29,9 +28,7 @@ export class SyncDispatcherService {
   private http = inject(HttpClient);
   private userRepo = inject(UserLocalRepo);
   private outboxRepo = inject(OutboxLocalRepo);
-  private adminUsers = inject(AdminUsersService);
   private customerRepo = inject(CustomerLocalRepo);
-  private adminCustomers = inject(AdminCustomersService);
   private irRepo = inject(InspectionReportLocalRepo);
   private snRepo = inject(SerialNumberLocalRepo);
   private crRepo = inject(ChildReportLocalRepo);
@@ -70,12 +67,6 @@ export class SyncDispatcherService {
             }
           }
 
-          if (createRes.temporaryPassword) {
-            this.adminUsers.notifyTempPassword(createRes.temporaryPassword);
-          }
-
-          // Refresh stream just in case
-          await this.adminUsers.reloadStreamFromLocal();
           return true;
         }
 
@@ -91,7 +82,6 @@ export class SyncDispatcherService {
 
           // Overwrite local UI store with truth and clear syncState
           await this.userRepo.upsert({ ...updateRes, syncState: 'CLEAN' });
-          await this.adminUsers.reloadStreamFromLocal();
           return true;
         }
 
@@ -107,7 +97,6 @@ export class SyncDispatcherService {
           );
 
           await this.userRepo.upsert({ ...updateRes, syncState: 'CLEAN' });
-          await this.adminUsers.reloadStreamFromLocal();
           return true;
         }
 
@@ -115,15 +104,16 @@ export class SyncDispatcherService {
           await firstValueFrom(
             this.http.delete(`${environment.apiUrl}/users/${item.entityId}`),
           );
-          // It's already optimistically deleted locally, but we can call it here just in case outbox runs from fresh sync
           await this.userRepo.delete(item.entityId);
-          await this.adminUsers.reloadStreamFromLocal();
           return true;
         }
 
         case 'CUSTOMER:CREATE': {
-          const createRes = await this.adminCustomers.createOnServer(
-            item.payload,
+          const createRes = await firstValueFrom(
+            this.http.post<LocalCustomer>(
+              `${environment.apiUrl}/customers`,
+              item.payload,
+            ),
           );
 
           const tempCustomer = await this.customerRepo.getById(item.entityId);
@@ -153,29 +143,32 @@ export class SyncDispatcherService {
             }
           }
 
-          await this.adminCustomers.pullAllAndCache();
           return true;
         }
 
         case 'CUSTOMER:UPDATE': {
-          const updateRes = await this.adminCustomers.patchOnServer(
-            item.entityId,
-            item.payload,
+          const updateRes = await firstValueFrom(
+            this.http.patch<LocalCustomer>(
+              `${environment.apiUrl}/customers/${item.entityId}`,
+              item.payload,
+            ),
           );
           await this.customerRepo.upsert({ ...updateRes, syncState: 'SYNCED' });
-          await this.adminCustomers.pullAllAndCache();
           return true;
         }
 
         case 'CUSTOMER:SET_ACTIVE': {
-          const activeRes = await this.adminCustomers.setActiveOnServer(
-            item.entityId,
-            item.payload['isActive'] as boolean,
-            item.payload['version'] as number,
-            item.payload['reason'] as string | undefined,
+          const activeRes = await firstValueFrom(
+            this.http.patch<LocalCustomer>(
+              `${environment.apiUrl}/customers/${item.entityId}/active`,
+              {
+                isActive: item.payload['isActive'] as boolean,
+                version: item.payload['version'] as number,
+                reason: item.payload['reason'] as string | undefined,
+              },
+            ),
           );
           await this.customerRepo.upsert({ ...activeRes, syncState: 'SYNCED' });
-          await this.adminCustomers.pullAllAndCache();
           return true;
         }
 
@@ -186,7 +179,6 @@ export class SyncDispatcherService {
             ),
           );
           await this.customerRepo.delete(item.entityId);
-          await this.adminCustomers.pullAllAndCache();
           return true;
         }
 
@@ -457,14 +449,14 @@ export class SyncDispatcherService {
           const syncRes = await firstValueFrom(
             this.http.post<LocalChildReport | null>(
               `${environment.apiUrl}/inspection-reports/${item.entityId}/child-reports/sync-rework`,
-              {}
+              {},
             ),
           );
           if (syncRes) {
             await this.crRepo.upsert({ ...syncRes, syncState: 'SYNCED' });
           } else {
             const allLocal = await this.crRepo.listByReportId(item.entityId);
-            const reworkCr = allLocal.find(cr => cr.type === 'REWORK');
+            const reworkCr = allLocal.find((cr) => cr.type === 'REWORK');
             if (reworkCr) {
               await this.crRepo.delete(reworkCr.id);
             }
@@ -478,9 +470,9 @@ export class SyncDispatcherService {
               `${environment.apiUrl}/child-reports/${item.entityId}/serial-numbers/${item.payload['serialNumberId']}`,
               {
                 inspectionData: item.payload['inspectionData'],
-                disposition: item.payload['disposition']
-              }
-            )
+                disposition: item.payload['disposition'],
+              },
+            ),
           );
           await this.crRepo.upsert({ ...updateRes, syncState: 'SYNCED' });
           return true;
@@ -519,12 +511,20 @@ export class SyncDispatcherService {
           const reportId = item.payload['inspectionReportId'] as string;
           const serialNumberIds = item.payload['serialNumberIds'] as string[];
           const reportVersion = item.payload['reportVersion'] as number;
-          
+
           const createRes = await firstValueFrom(
-            this.http.post<any>(
+            this.http.post<{
+              batch: LocalInspectionApprovalBatch & {
+                serialNumbers: Array<{
+                  id: string;
+                  serialNumberId: string;
+                  status?: string;
+                }>;
+              };
+            }>(
               `${environment.apiUrl}/inspection-reports/${reportId}/approval-batches`,
-              { serialNumberIds, reportVersion }
-            )
+              { serialNumberIds, reportVersion },
+            ),
           );
 
           // Clear local temporary batch and its associations
@@ -533,34 +533,43 @@ export class SyncDispatcherService {
 
           const b = createRes.batch;
           await this.approvalBatchRepo.upsert({
-              id: b.id,
-              tenantId: b.tenantId,
-              inspectionReportId: b.inspectionReportId,
-              submittedByUserId: b.submittedByUserId,
-              submittedAt: b.submittedAt,
-              reviewedByUserId: b.reviewedByUserId,
-              reviewedAt: b.reviewedAt,
-              status: b.status,
-              notes: b.notes,  
-              version: b.version,
-              syncState: 'SYNCED'
+            id: b.id,
+            tenantId: b.tenantId,
+            inspectionReportId: b.inspectionReportId,
+            submittedByUserId: b.submittedByUserId,
+            submittedAt: b.submittedAt,
+            reviewedByUserId: b.reviewedByUserId,
+            reviewedAt: b.reviewedAt,
+            status: b.status,
+            notes: b.notes,
+            version: b.version,
+            syncState: 'SYNCED',
           });
 
           if (b.serialNumbers) {
-             const associations: LocalBatchSerialNumber[] = b.serialNumbers.map((sn: any) => ({
-                 id: sn.id,
-                 inspectionApprovalBatchId: b.id,
-                 serialNumberId: sn.serialNumberId
-             }));
-             await this.batchSnRepo.bulkUpsert(associations);
+            const associations: LocalBatchSerialNumber[] = b.serialNumbers.map(
+              (sn: {
+                id: string;
+                serialNumberId: string;
+                status?: string;
+              }) => ({
+                id: sn.id,
+                inspectionApprovalBatchId: b.id,
+                serialNumberId: sn.serialNumberId,
+              }),
+            );
+            await this.batchSnRepo.bulkUpsert(associations);
           }
 
           const pendingItems = await this.outboxRepo.getPendingItems();
           for (const pending of pendingItems) {
-              if (pending.entityType === 'APPROVAL_BATCH' && pending.entityId === item.entityId) {
-                  pending.entityId = b.id;
-                  await this.outboxRepo.upsert(pending);
-              }
+            if (
+              pending.entityType === 'APPROVAL_BATCH' &&
+              pending.entityId === item.entityId
+            ) {
+              pending.entityId = b.id;
+              await this.outboxRepo.upsert(pending);
+            }
           }
 
           for (const snId of serialNumberIds) {
@@ -575,35 +584,56 @@ export class SyncDispatcherService {
         case 'APPROVAL_BATCH:APPROVE': {
           const batch = await this.approvalBatchRepo.getById(item.entityId);
           if (!batch) return true;
-          
+
           const res = await firstValueFrom(
-            this.http.post<any>(
+            this.http.post<{
+              updatedReport?: LocalInspectionReport;
+              batch?: LocalInspectionApprovalBatch;
+            }>(
               `${environment.apiUrl}/inspection-reports/${batch.inspectionReportId}/approval-batches/${item.entityId}/approve`,
-              { 
+              {
                 batchVersion: item.payload['batchVersion'],
                 reportVersion: item.payload['reportVersion'],
-                serialNumberIds: item.payload['serialNumberIds']
-              }
-            )
+                serialNumberIds: item.payload['serialNumberIds'],
+              },
+            ),
           );
 
           if (res && res.updatedReport) {
-             const localRep = await this.irRepo.getById(batch.inspectionReportId);
-             if (localRep) {
-               await this.irRepo.upsert({ ...localRep, status: res.updatedReport.status, version: res.updatedReport.version, syncState: 'SYNCED' });
-             }
+            const localRep = await this.irRepo.getById(
+              batch.inspectionReportId,
+            );
+            if (localRep) {
+              await this.irRepo.upsert({
+                ...localRep,
+                status: res.updatedReport.status,
+                version: res.updatedReport.version,
+                syncState: 'SYNCED',
+              });
+            }
           }
 
           if (res && res.batch) {
-            await this.approvalBatchRepo.upsert({ ...batch, status: res.batch.status, version: res.batch.version, syncState: 'SYNCED' });
+            await this.approvalBatchRepo.upsert({
+              ...batch,
+              status: res.batch.status,
+              version: res.batch.version,
+              syncState: 'SYNCED',
+            });
           } else {
             // Fallback for older API versions or if batch not returned
-            await this.approvalBatchRepo.upsert({ ...batch, syncState: 'SYNCED' });
+            await this.approvalBatchRepo.upsert({
+              ...batch,
+              syncState: 'SYNCED',
+            });
           }
-          
-          const targetSnIds = item.payload['serialNumberIds'] as string[] | undefined;
+
+          const targetSnIds = item.payload['serialNumberIds'] as
+            | string[]
+            | undefined;
           const batchSns = await this.batchSnRepo.listByBatchId(item.entityId);
-          const finalSnIds = targetSnIds || batchSns.map(b => b.serialNumberId);
+          const finalSnIds =
+            targetSnIds || batchSns.map((b) => b.serialNumberId);
 
           for (const snId of finalSnIds) {
             const sn = await this.snRepo.getById(snId);
@@ -619,33 +649,55 @@ export class SyncDispatcherService {
           if (!batch) return true;
 
           const res = await firstValueFrom(
-            this.http.post<any>(
+            this.http.post<{
+              updatedReport?: LocalInspectionReport;
+              batch?: LocalInspectionApprovalBatch;
+            }>(
               `${environment.apiUrl}/inspection-reports/${batch.inspectionReportId}/approval-batches/${item.entityId}/return`,
-              { 
+              {
                 reason: item.payload['reason'] || item.payload['notes'], // Fix payload key
                 batchVersion: item.payload['batchVersion'],
                 reportVersion: item.payload['reportVersion'],
-                serialNumberIds: item.payload['serialNumberIds']
-              }
-            )
+                serialNumberIds: item.payload['serialNumberIds'],
+              },
+            ),
           );
 
           if (res && res.updatedReport) {
-            const localRep = await this.irRepo.getById(batch.inspectionReportId);
+            const localRep = await this.irRepo.getById(
+              batch.inspectionReportId,
+            );
             if (localRep) {
-              await this.irRepo.upsert({ ...localRep, status: res.updatedReport.status, version: res.updatedReport.version, syncState: 'SYNCED' });
+              await this.irRepo.upsert({
+                ...localRep,
+                status: res.updatedReport.status,
+                version: res.updatedReport.version,
+                syncState: 'SYNCED',
+              });
             }
           }
 
           if (res && res.batch) {
-            await this.approvalBatchRepo.upsert({ ...batch, status: res.batch.status, version: res.batch.version, notes: res.batch.notes, syncState: 'SYNCED' });
+            await this.approvalBatchRepo.upsert({
+              ...batch,
+              status: res.batch.status,
+              version: res.batch.version,
+              notes: res.batch.notes,
+              syncState: 'SYNCED',
+            });
           } else {
-            await this.approvalBatchRepo.upsert({ ...batch, syncState: 'SYNCED' });
+            await this.approvalBatchRepo.upsert({
+              ...batch,
+              syncState: 'SYNCED',
+            });
           }
 
-          const targetSnIds = item.payload['serialNumberIds'] as string[] | undefined;
+          const targetSnIds = item.payload['serialNumberIds'] as
+            | string[]
+            | undefined;
           const batchSns = await this.batchSnRepo.listByBatchId(item.entityId);
-          const finalSnIds = targetSnIds || batchSns.map(b => b.serialNumberId);
+          const finalSnIds =
+            targetSnIds || batchSns.map((b) => b.serialNumberId);
 
           for (const snId of finalSnIds) {
             const sn = await this.snRepo.getById(snId);
@@ -690,7 +742,11 @@ export class SyncDispatcherService {
             if (cr) await this.crRepo.upsert({ ...cr, syncState: 'CONFLICT' });
           } else if (item.entityType === 'APPROVAL_BATCH') {
             const batch = await this.approvalBatchRepo.getById(item.entityId);
-            if (batch) await this.approvalBatchRepo.upsert({ ...batch, syncState: 'CONFLICT' } as unknown as LocalInspectionApprovalBatch);
+            if (batch)
+              await this.approvalBatchRepo.upsert({
+                ...batch,
+                syncState: 'CONFLICT',
+              } as unknown as LocalInspectionApprovalBatch);
           }
 
           const conflictErr = new Error(
@@ -724,7 +780,10 @@ export class SyncDispatcherService {
           } else if (item.entityType === 'APPROVAL_BATCH') {
             const batch = await this.approvalBatchRepo.getById(item.entityId);
             if (batch) {
-              await this.approvalBatchRepo.upsert({ ...batch, syncState: 'ERROR' } as unknown as LocalInspectionApprovalBatch);
+              await this.approvalBatchRepo.upsert({
+                ...batch,
+                syncState: 'ERROR',
+              } as unknown as LocalInspectionApprovalBatch);
             }
           }
           const appErr = new Error(

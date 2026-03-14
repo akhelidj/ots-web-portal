@@ -1,8 +1,9 @@
 import { Injectable, OnDestroy, computed, signal } from '@angular/core';
 import { environment } from '@app-env/environment';
 
-const REACHABILITY_CHECK_INTERVAL_MS = 30000;
+const REACHABILITY_RECHECK_AFTER_MS = 60000;
 const REACHABILITY_TIMEOUT_MS = 5000;
+const HEALTH_PATH = '/health';
 
 @Injectable({
   providedIn: 'root',
@@ -15,7 +16,7 @@ export class ConnectivityService implements OnDestroy {
     () => this.browserOnline() && this.apiReachable(),
   );
 
-  private reachabilityIntervalId: number | null = null;
+  private lastReachabilityCheckAt = 0;
 
   constructor() {
     window.addEventListener('online', this.handleOnline);
@@ -25,12 +26,6 @@ export class ConnectivityService implements OnDestroy {
     if (this.browserOnline()) {
       void this.refreshReachability();
     }
-
-    this.reachabilityIntervalId = window.setInterval(() => {
-      if (this.browserOnline()) {
-        void this.refreshReachability();
-      }
-    }, REACHABILITY_CHECK_INTERVAL_MS);
   }
 
   ngOnDestroy(): void {
@@ -40,11 +35,6 @@ export class ConnectivityService implements OnDestroy {
       'visibilitychange',
       this.handleVisibilityChange,
     );
-
-    if (this.reachabilityIntervalId !== null) {
-      window.clearInterval(this.reachabilityIntervalId);
-      this.reachabilityIntervalId = null;
-    }
   }
 
   private handleOnline = () => {
@@ -58,7 +48,10 @@ export class ConnectivityService implements OnDestroy {
   };
 
   private handleVisibilityChange = () => {
-    if (!document.hidden && this.browserOnline()) {
+    const staleCheck =
+      Date.now() - this.lastReachabilityCheckAt > REACHABILITY_RECHECK_AFTER_MS;
+
+    if (!document.hidden && this.browserOnline() && staleCheck) {
       void this.refreshReachability();
     }
   };
@@ -80,6 +73,7 @@ export class ConnectivityService implements OnDestroy {
     }
 
     this.isCheckingReachability.set(true);
+    this.lastReachabilityCheckAt = Date.now();
 
     try {
       const controller = new AbortController();
@@ -89,15 +83,18 @@ export class ConnectivityService implements OnDestroy {
       );
 
       try {
-        await fetch(environment.apiUrl, {
+        const response = await fetch(`${environment.apiUrl}${HEALTH_PATH}`, {
           method: 'GET',
-          mode: 'no-cors',
           cache: 'no-store',
+          headers: {
+            Accept: 'application/json',
+          },
           signal: controller.signal,
         });
 
-        this.apiReachable.set(true);
-        return true;
+        const reachable = response.ok;
+        this.apiReachable.set(reachable);
+        return reachable;
       } catch {
         this.apiReachable.set(false);
         return false;

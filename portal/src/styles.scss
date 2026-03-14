@@ -44,7 +44,7 @@
   }
 
   .queue-table-wrap {
-    @apply bg-white border border-neutral-200 rounded-xl shadow-sm overflow-hidden;
+    @apply bg-white border border-neutral-200 rounded-xl shadow-sm overflow-x-auto overflow-y-hidden;
   }
 
   .field-label {

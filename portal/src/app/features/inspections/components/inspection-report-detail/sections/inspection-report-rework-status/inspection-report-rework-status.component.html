@@ -1,0 +1,133 @@
+@if (items.length > 0) {
+  <div
+    class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8 overflow-hidden max-w-7xl mx-auto"
+  >
+    <div
+      class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between"
+    >
+      <h2
+        class="font-semibold text-lg text-neutral-900 flex items-center gap-2"
+      >
+        <svg
+          class="h-5 w-5 text-warning-dark"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+        Rework Status
+      </h2>
+      <div class="flex items-center gap-3">
+        <span
+          class="bg-warning-light text-warning-dark text-xs py-0.5 px-2.5 rounded-full font-bold border border-warning/20"
+          >{{ items.length }} Serials</span
+        >
+        <span class="text-xs text-neutral-500"
+          >Rework updates follow the global sync action.</span
+        >
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-left border-collapse text-sm">
+        <thead class="bg-white border-b border-gray-100">
+          <tr>
+            <th
+              scope="col"
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            >
+              Serial Number
+            </th>
+            <th
+              scope="col"
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            >
+              EMI Result
+            </th>
+            <th
+              scope="col"
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            >
+              Child Report
+            </th>
+            <th
+              scope="col"
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            >
+              Status
+            </th>
+            <th
+              scope="col"
+              class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            >
+              Action
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50 bg-white">
+          @for (item of items; track item.sn.id) {
+            <tr class="hover:bg-primary/5 transition-colors">
+              <td class="px-6 py-4 font-mono font-bold text-gray-900">
+                {{ item.sn.value }}
+              </td>
+              <td class="px-6 py-4">
+                <span
+                  class="bg-warning-light text-warning-dark border-warning/30 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-sm"
+                  >REWORK</span
+                >
+              </td>
+
+              @if (item.childLinked) {
+                <td class="px-6 py-4 font-mono text-xs text-gray-600">
+                  <a
+                    [routerLink]="childRoute(item.childLinked.id)"
+                    class="text-primary hover:text-primary-light hover:underline transition-colors"
+                  >
+                    {{ reportLabel() }} - Rework
+                  </a>
+                </td>
+                <td class="px-6 py-4">
+                  <span
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border border-transparent"
+                    [ngClass]="{
+                      'bg-success-light text-success-dark':
+                        item.childLinked.status === 'APPROVED' ||
+                        item.childLinked.status === 'CLOSED',
+                      'bg-primary/10 text-primary':
+                        item.childLinked.status !== 'APPROVED' &&
+                        item.childLinked.status !== 'CLOSED',
+                    }"
+                    >{{ item.childLinked.status }}</span
+                  >
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <a
+                    [routerLink]="childRoute(item.childLinked.id)"
+                    class="text-primary hover:text-primary-light hover:underline text-xs font-bold transition-colors"
+                  >
+                    Open Child Report
+                  </a>
+                </td>
+              } @else {
+                <td class="px-6 py-4 text-xs text-gray-400 italic">None</td>
+                <td class="px-6 py-4">
+                  <span
+                    class="bg-warning-light text-warning-dark border-warning/30 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-sm"
+                    >Needs Sync</span
+                  >
+                </td>
+                <td class="px-6 py-4 text-right"></td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
