@@ -15,29 +15,6 @@
         >
       </h2>
       <div class="flex items-center gap-3">
-        @if (missingChildCount() > 0) {
-          <span
-            class="text-[11px] font-bold text-primary animate-pulse flex items-center gap-1.5 bg-primary/10 px-2 py-1 rounded-md border border-primary/20"
-          >
-            <svg
-              class="w-3.5 h-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              ></path>
-            </svg>
-            {{ missingChildCount() }} child report{{
-              missingChildCount() === 1 ? '' : 's'
-            }}
-            pending
-          </span>
-        }
         @if (canGenerate()) {
           <div class="relative group inline-block">
             <button
@@ -54,27 +31,18 @@
             >
               @if (isGenerating) {
                 Generating...
+              } @else if (isWaitingForApproval()) {
+                Waiting for approval from Supervisor (before generating child
+                report).
               } @else {
                 Generate Child Report
               }
             </button>
-
-            @if (isWaitingForApproval()) {
-              <div
-                class="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50"
-              >
-                All serial numbers must be approved before generating a child
-                report.
-                <div
-                  class="absolute top-full right-4 -mt-1 border-4 border-transparent border-t-gray-900"
-                ></div>
-              </div>
-            }
           </div>
         } @else if (existingChildReportId) {
           <a
             [routerLink]="childRoute(existingChildReportId)"
-            class="btn btn-primary btn-sm shadow-[0_0_10px_rgba(var(--color-primary),0.4)] px-4"
+            class="btn btn-primary btn-sm shadow-[0_0_10px_rgba(var(--color-primary),0.4)] px-4 hover:text-white"
           >
             Open Child Report
             <svg

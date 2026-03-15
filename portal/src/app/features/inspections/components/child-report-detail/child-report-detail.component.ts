@@ -156,6 +156,8 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   private refreshQueued = false;
   private isDestroyed = false;
 
+  public isUploadingAttachment = false;
+
   public isWorkflowModalOpen = false;
 
   public get isOnline(): boolean {
@@ -206,7 +208,8 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     }
 
     const scrollTop = this.shellScrollEl.scrollTop;
-    const start = this.isMobileTabletViewport() && window.innerWidth < 640 ? 40 : 56;
+    const start =
+      this.isMobileTabletViewport() && window.innerWidth < 640 ? 40 : 56;
     const end = start + 50;
     const ratio = Math.max(0, Math.min(1, (scrollTop - start) / (end - start)));
 
@@ -373,10 +376,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     }
 
     if (this.userRole === APP_ROLES.ADMIN) {
-      return (
-        sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT ||
-        sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL
-      );
+      return sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT;
     }
 
     return false;
@@ -614,6 +614,30 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     const idx = all.findIndex((s) => s.id === this.inspectingSnId);
     if (idx >= 0 && idx < all.length - 1) {
       this.openInspectionForm(all[idx + 1].id);
+    }
+  }
+
+  public async onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    this.isUploadingAttachment = true;
+    this.formError = '';
+
+    try {
+      await this.crService.uploadAttachment(this.reportId, file);
+      await this.refreshData();
+    } catch (e) {
+      const err = e as { error?: { message?: string }; message?: string };
+      this.formError =
+        err?.error?.message ||
+        (err as Error)?.message ||
+        'Failed to upload attachment.';
+    } finally {
+      this.isUploadingAttachment = false;
+      // Reset input value so the same file could be selected again if it failed
+      input.value = '';
     }
   }
 }

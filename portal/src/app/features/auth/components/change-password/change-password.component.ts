@@ -11,20 +11,18 @@ import {
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 import { environment } from '@app-env/environment';
 
-import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
-
 @Component({
-  selector: 'app-settings',
+  selector: 'app-change-password',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './change-password.component.html',
 })
-export class SettingsComponent {
+export class ChangePasswordComponent {
   private http = inject(HttpClient);
   private session = inject(SessionService);
   private router = inject(Router);
+
   public connectivity = inject(ConnectivityService);
-  public prefs = inject(UserPreferencesService);
 
   public currentPassword = '';
   public newPassword = '';
@@ -41,9 +39,11 @@ export class SettingsComponent {
   public toggleCurrentPassword() {
     this.showCurrentPassword = !this.showCurrentPassword;
   }
+
   public toggleNewPassword() {
     this.showNewPassword = !this.showNewPassword;
   }
+
   public toggleConfirmPassword() {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
@@ -87,7 +87,6 @@ export class SettingsComponent {
         }),
       );
 
-      // Store fresh tokens and profile where mustChangePassword is now false
       const userProfile: UserProfile = {
         id: response.user.id,
         email: response.user.email,
@@ -107,24 +106,14 @@ export class SettingsComponent {
       );
 
       this.formSuccess = 'Password changed successfully. Redirecting...';
-
-      // Force a tiny visual delay for UX
       setTimeout(() => {
         this.router.navigate(['/']);
-      }, 1000);
+      }, 800);
     } catch (error) {
       const e = error as Error;
       this.formError = e.message;
     } finally {
       this.isLoading = false;
     }
-  }
-
-  public onToggleCompactMode(enabled: boolean) {
-    this.prefs.setCompactMode(enabled);
-  }
-
-  public isCompactMode() {
-    return this.prefs.preferences().compactMode;
   }
 }

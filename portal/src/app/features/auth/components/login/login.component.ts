@@ -9,6 +9,7 @@ import {
   SessionService,
   UserProfile,
 } from '@portal/core/auth/services/session.service';
+import { RoleLandingService } from '@portal/core/auth/services/role-landing.service';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 import { environment } from '@app-env/environment';
 
@@ -23,6 +24,7 @@ export class LoginComponent {
   private http = inject(HttpClient);
   private session = inject(SessionService);
   private router = inject(Router);
+  private roleLanding = inject(RoleLandingService);
   public connectivity = inject(ConnectivityService);
 
   public email = '';
@@ -80,7 +82,9 @@ export class LoginComponent {
       if (response.user.mustChangePassword) {
         this.router.navigate(['/change-password']);
       } else {
-        this.router.navigate(['/admin']);
+        this.router.navigate(
+          this.roleLanding.getLandingRoute(response.user.role),
+        );
       }
     } catch (err: unknown) {
       const error = err as Error;

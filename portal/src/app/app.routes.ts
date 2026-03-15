@@ -16,6 +16,7 @@ import { authGuard } from '@portal/core/auth/guards/auth.guard';
 import { mustChangePasswordGuard } from '@portal/core/auth/guards/must-change-password.guard';
 import { LoginComponent } from '@portal/features/auth/components/login/login.component';
 import { SettingsComponent } from '@portal/features/auth/components/settings/settings.component';
+import { ChangePasswordComponent } from '@portal/features/auth/components/change-password/change-password.component';
 import { LandingComponent } from '@portal/features/landing/components/landing/landing.component';
 import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
 import { AccessDeniedComponent } from '@portal/features/errors/components/access-denied/access-denied.component';
@@ -30,8 +31,8 @@ export const appRoutes: Route[] = [
   },
   {
     path: AppRoutes.CHANGE_PASSWORD,
-    redirectTo: AppRoutes.SETTINGS,
-    pathMatch: 'full',
+    component: ChangePasswordComponent,
+    canActivate: [authGuard, mustChangePasswordGuard],
   },
   {
     path: AppRoutes.ACCESS_DENIED,

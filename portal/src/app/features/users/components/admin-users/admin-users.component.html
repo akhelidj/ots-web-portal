@@ -289,7 +289,9 @@
       <thead class="table-head">
         <tr>
           <th scope="col" class="table-th">Email</th>
-          <th scope="col" class="table-th">Name</th>
+          @if (!isCompactMode()) {
+            <th scope="col" class="table-th">Name</th>
+          }
           <th scope="col" class="table-th">Role</th>
           @if (!isCompactMode()) {
             <th scope="col" class="table-th">Active</th>
@@ -307,9 +309,11 @@
             <td class="table-td-strong">
               {{ user.email }}
             </td>
-            <td class="table-td">
-              {{ user.name || '-' }}
-            </td>
+            @if (!isCompactMode()) {
+              <td class="table-td">
+                {{ user.name || '-' }}
+              </td>
+            }
             <td class="table-td">
               <span
                 class="inline-flex items-center px-2.5 py-0.5 rounded-md font-medium text-xs bg-gray-100 text-gray-800 border border-gray-200 tracking-wide uppercase"
