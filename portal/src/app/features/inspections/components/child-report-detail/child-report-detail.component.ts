@@ -67,6 +67,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
 
   public inspectingSnId: string | null = null;
   public inspectingSnValue = '';
+  public inspectingSnApprovalStatus = '';
   public inspectionFormData: Record<string, unknown> = {};
 
   public uiState: ChildReportUiState | null = null;
@@ -557,12 +558,14 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     if (!target) return;
     this.inspectingSnId = id;
     this.inspectingSnValue = target.serial;
+    this.inspectingSnApprovalStatus = target.approvalStatus || '';
     this.inspectionFormData = target.inspectionData || {};
   }
 
   public closeInspectionForm() {
     this.inspectingSnId = null;
     this.inspectingSnValue = '';
+    this.inspectingSnApprovalStatus = '';
     this.inspectionFormData = {};
   }
 

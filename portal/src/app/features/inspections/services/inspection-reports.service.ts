@@ -21,6 +21,7 @@ import { SessionService } from '@portal/core/auth/services/session.service';
 import {
   BATCH_STATUSES,
   CHILD_REPORT_TYPES,
+  CHILD_REPORT_STATUSES,
   ENTITY_TYPES,
   ReportStatus,
   REPORT_STATUSES,
@@ -325,8 +326,7 @@ export class InspectionReportsService implements DataHydrationSource {
               const { serialNumber, inspectionData, ...restS } = s;
 
               // Safeguard: Preserve local disposition/final section if server data is partial
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              let mergedInspectionJson = inspectionData as Record<string, any>;
+              let mergedInspectionJson = inspectionData as Record<string, unknown>;
               if (local?.inspectionJson && inspectionData) {
                 const localFinal = local.inspectionJson['final'] as
                   | Record<string, unknown>
@@ -335,14 +335,12 @@ export class InspectionReportsService implements DataHydrationSource {
                   local.inspectionJson['disposition'] ||
                   localFinal?.['disposition'];
                 const serverDisp =
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  ((inspectionData as Record<string, any>)[
+                  ((inspectionData as Record<string, unknown>)[
                     'disposition'
                   ] as string) ||
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   ((
-                    (inspectionData as Record<string, any>)['final'] as
-                      | Record<string, any>
+                    (inspectionData as Record<string, unknown>)['final'] as
+                      | Record<string, unknown>
                       | undefined
                   )?.['disposition'] as string | undefined);
 
@@ -918,9 +916,24 @@ export class InspectionReportsService implements DataHydrationSource {
             : serial,
         );
 
+        const allSubmitted = updatedSerials.every(
+          (serial) =>
+            serial.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL ||
+            serial.approvalStatus === SERIAL_STATUSES.APPROVED,
+        );
+
+        let newStatus = childReport.status;
+        if (
+          allSubmitted &&
+          childReport.status === CHILD_REPORT_STATUSES.IN_INSPECTION
+        ) {
+          newStatus = CHILD_REPORT_STATUSES.PENDING_APPROVAL;
+        }
+
         await this.crRepo.upsert({
           ...childReport,
           serialNumbers: updatedSerials,
+          status: newStatus,
           syncState: 'PENDING',
           updatedAt: new Date().toISOString(),
         });

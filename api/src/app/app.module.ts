@@ -19,6 +19,7 @@ import { InspectionReportsModule } from './inspection-reports/inspection-reports
 import { SerialNumbersModule } from './serial-numbers/serial-numbers.module';
 import { ChildReportsModule } from './child-reports/child-reports.module';
 import { FilesController } from './files/files.controller';
+import { FilesService } from './files/files.service';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { FilesController } from './files/files.controller';
   controllers: [AppController, HealthController, FilesController],
   providers: [
     AppService,
+    FilesService,
     {
       provide: APP_GUARD,
       useClass: DefaultDenyGuard,

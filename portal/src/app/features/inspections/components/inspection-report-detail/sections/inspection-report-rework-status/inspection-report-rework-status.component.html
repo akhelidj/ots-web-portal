@@ -35,19 +35,31 @@
           </span>
         }
         @if (canGenerate()) {
-          <button
-            type="button"
-            (click)="generateChildReport.emit()"
-            [disabled]="isGenerating"
-            [ngClass]="missingChildCount() > 0 ? 'btn-primary shadow-[0_0_10px_rgba(var(--color-primary),0.4)] animate-pulse' : 'btn-secondary'"
-            class="btn btn-sm"
-          >
-            @if (isGenerating) {
-              Generating...
-            } @else {
-              Generate Child Report
+          <div class="relative group inline-block">
+            <button
+              type="button"
+              (click)="generateChildReport.emit()"
+              [disabled]="isGenerating || isWaitingForApproval()"
+              [ngClass]="[
+                missingChildCount() > 0 && !isWaitingForApproval() ? 'btn-primary shadow-[0_0_10px_rgba(var(--color-primary),0.4)] animate-pulse' : 'btn-secondary',
+                isWaitingForApproval() ? 'opacity-50 cursor-not-allowed' : ''
+              ]"
+              class="btn btn-sm"
+            >
+              @if (isGenerating) {
+                Generating...
+              } @else {
+                Generate Child Report
+              }
+            </button>
+            
+            @if (isWaitingForApproval()) {
+              <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+                All serial numbers must be approved before generating a child report.
+                <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+              </div>
             }
-          </button>
+          </div>
         }
       </div>
     </div>

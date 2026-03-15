@@ -184,8 +184,13 @@
                     </div>
                   </div>
                   @if (
-                    uiState?.fieldModes?.['inspectionData'] === 'editable' ||
-                    uiState?.fieldModes?.['disposition'] === 'editable'
+                    (uiState?.fieldModes?.['inspectionData'] === 'editable' ||
+                    uiState?.fieldModes?.['disposition'] === 'editable' ||
+                    userRole === 'INSPECTOR' ||
+                    userRole === 'ADMIN' ||
+                    userRole === 'SUPERVISOR') &&
+                    sn.approvalStatus !== 'SUBMITTED_FOR_APPROVAL' &&
+                    sn.approvalStatus !== 'APPROVED'
                   ) {
                     <button
                       (click)="openInspectionForm(sn.id)"
@@ -476,8 +481,12 @@
                       (click)="
                         downloadAttachment(attachment.url, attachment.filename)
                       "
-                      class="text-gray-400 hover:text-primary transition-colors p-1.5 rounded-md hover:bg-gray-50"
-                      title="Download"
+                      [disabled]="cr.status !== CHILD_REPORT_STATUSES.APPROVED"
+                      [ngClass]="{
+                        'text-gray-400 hover:text-primary transition-colors p-1.5 rounded-md hover:bg-gray-50': cr.status === CHILD_REPORT_STATUSES.APPROVED,
+                        'text-gray-300 cursor-not-allowed p-1.5 rounded-md': cr.status !== CHILD_REPORT_STATUSES.APPROVED
+                      }"
+                      [title]="cr.status === CHILD_REPORT_STATUSES.APPROVED ? 'Download' : 'Report must be approved to download attachments'"
                     >
                       <svg
                         class="w-5 h-5"
@@ -840,8 +849,10 @@
               [initialData]="inspectionFormData"
               [schemaKey]="parentData.templateKey"
               [isReadOnly]="
-                uiState?.fieldModes?.['inspectionData'] !== 'editable' &&
-                uiState?.fieldModes?.['disposition'] !== 'editable'
+                inspectingSnApprovalStatus === 'SUBMITTED_FOR_APPROVAL' ||
+                inspectingSnApprovalStatus === 'APPROVED' ||
+                (uiState?.fieldModes?.['inspectionData'] !== 'editable' &&
+                 uiState?.fieldModes?.['disposition'] !== 'editable')
               "
               [excludedDispositions]="['REWORK']"
               (saveData)="saveInspectionForm($event)"

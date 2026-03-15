@@ -43,6 +43,16 @@ export class InspectionReportReworkStatusComponent {
     );
   }
 
+  protected areAllSerialsApproved(): boolean {
+    return this.items.length > 0 && this.items.every(
+      (item) => item.sn.approvalStatus === 'APPROVED'
+    );
+  }
+
+  protected isWaitingForApproval(): boolean {
+    return this.canGenerate() && !this.areAllSerialsApproved();
+  }
+
   protected missingChildCount(): number {
     return this.items.filter((item) => !item.childLinked).length;
   }

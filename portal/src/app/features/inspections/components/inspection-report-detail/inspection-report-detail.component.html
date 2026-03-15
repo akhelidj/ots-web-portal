@@ -200,7 +200,7 @@
                 <div class="mt-8 pt-5 border-t border-gray-100">
                   <div class="flex items-center justify-between mb-3 gap-3">
                     <h3 class="text-sm font-semibold text-gray-900">Overall Inspector Comments</h3>
-                    @if (isInspectorCapable()) {
+                    @if (isInspectorCapable() && !isSupervisor()) {
                       @if (!isEditingGlobalComment) {
                         <button
                           type="button"
@@ -277,7 +277,7 @@
               <!-- Validation Status Card -->
               @if (validationResult && !isCustomer()) {
                 <div class="page-section p-5 border-neutral-200 shadow-sm">
-                  <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Quality Validation</h3>
+                  <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Workflow Validation</h3>
                   
                   @if (validationResult.isReady) {
                     <div class="flex items-center gap-3 p-4 bg-success-light/20 border border-success/20 rounded-xl">

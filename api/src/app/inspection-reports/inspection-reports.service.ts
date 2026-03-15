@@ -423,7 +423,47 @@ export class InspectionReportsService {
         });
       }
 
-      // 5. Update report version
+      // 5. Check if Child Report should auto-transition
+      if (data.childReportId) {
+        const pendingSns = await tx.childReportSerialNumber.count({
+          where: {
+            childReportId: data.childReportId,
+            approvalStatus: {
+              notIn: [
+                SerialApprovalStatus.SUBMITTED_FOR_APPROVAL,
+                SerialApprovalStatus.APPROVED,
+              ],
+            },
+          },
+        });
+
+        if (pendingSns === 0) {
+          const currentChild = await tx.childReport.findUnique({
+            where: { id: data.childReportId },
+            select: { status: true },
+          });
+
+          if (currentChild?.status === ChildReportStatus.IN_INSPECTION) {
+            await tx.childReport.update({
+              where: { id: data.childReportId },
+              data: {
+                status: ChildReportStatus.PENDING_APPROVAL,
+              },
+            });
+
+            await tx.childReportTransitionLog.create({
+              data: {
+                childReportId: data.childReportId,
+                fromStatus: currentChild.status,
+                toStatus: ChildReportStatus.PENDING_APPROVAL,
+                userId,
+              },
+            });
+          }
+        }
+      }
+
+      // 6. Update report version
       const updatedReport = await tx.inspectionReport.update({
         where: { id: report.id },
         data: { version: report.version + 1 },

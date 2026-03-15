@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FilesService } from '../files/files.service';
 import {
   ChildReportStatus,
   ChildReportType,
@@ -14,7 +15,10 @@ import {
 
 @Injectable()
 export class ChildReportsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private filesService: FilesService,
+  ) {}
 
   async syncReworkChildReport(tenantId: string, inspectionReportId: string) {
     const report = await this.prisma.inspectionReport.findFirst({
@@ -338,16 +342,28 @@ export class ChildReportsService {
       );
     }
 
-    const fakeUrl = `/api/files/mock/${file.originalname}`;
-
     const attachment = await this.prisma.attachment.create({
       data: {
         filename: file.originalname,
-        url: fakeUrl,
+        url: '',
         childReportId: id,
       },
     });
 
-    return attachment;
+    try {
+      await this.filesService.saveAttachmentBinary(attachment.id, file.buffer);
+      const updated = await this.prisma.attachment.update({
+        where: { id: attachment.id },
+        data: {
+          url: this.filesService.buildAttachmentUrl(attachment.id),
+        },
+      });
+
+      return updated;
+    } catch (error) {
+      await this.prisma.attachment.delete({ where: { id: attachment.id } });
+      await this.filesService.removeAttachmentBinary(attachment.id);
+      throw error;
+    }
   }
 }

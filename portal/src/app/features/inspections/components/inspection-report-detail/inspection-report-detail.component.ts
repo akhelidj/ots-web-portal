@@ -468,9 +468,16 @@ export class InspectionReportDetailComponent
     const isSuperOrAdmin =
       role === APP_ROLES.SUPERVISOR || role === APP_ROLES.ADMIN;
     const currentStatus = this.report()?.status;
+    const serials = this.serials();
+
+    const hasSerials = serials && serials.length > 0;
+    const allSerialsApproved =
+      hasSerials &&
+      serials.every((sn) => sn.approvalStatus === SERIAL_STATUSES.APPROVED);
+
     return (
       isSuperOrAdmin &&
-      this.allBatchesApproved() &&
+      allSerialsApproved &&
       currentStatus !== REPORT_STATUSES.APPROVED &&
       currentStatus !== REPORT_STATUSES.CLOSED
     );
@@ -1372,14 +1379,6 @@ export class InspectionReportDetailComponent
   public async onPublishReport(): Promise<void> {
     if (!this.canPublishReport() || this.isPublishingReport()) return;
 
-    if (
-      !confirm(
-        'Are you sure you want to publish this report? This will mark it as APPROVED and lock most edits.',
-      )
-    ) {
-      return;
-    }
-
     this.isPublishingReport.set(true);
     this.formError = '';
     try {
@@ -1421,31 +1420,46 @@ export class InspectionReportDetailComponent
 
     const status = report.status as string;
     const sns = this.serials();
-    const hasUninspected = sns.length === 0 || sns.some(sn => 
-      sn.approvalStatus === SERIAL_STATUSES.NOT_INSPECTED
-    );
+    const hasUninspected =
+      sns.length === 0 ||
+      sns.some((sn) => sn.approvalStatus === SERIAL_STATUSES.NOT_INSPECTED);
 
     if (tab === 'approvals') {
       return this.canAccessBatchApprovals() && this.hasPendingApprovals();
     }
 
     if (tab === 'serials') {
-      if ((this.isReceiver() || this.isAdmin()) && ['DRAFT', 'RECEIVED', 'READY_FOR_CLEANING', 'READY_FOR_INSPECTION'].includes(status)) {
+      if (
+        (this.isReceiver() || this.isAdmin()) &&
+        ['DRAFT', 'RECEIVED', 'READY_FOR_CLEANING'].includes(status)
+      ) {
         return true;
       }
-      
-      if ((this.userRole() === APP_ROLES.INSPECTOR || this.isAdmin()) && status === REPORT_STATUSES.IN_INSPECTION) {
+
+      if (
+        (this.userRole() === APP_ROLES.INSPECTOR || this.isAdmin()) &&
+        (status === REPORT_STATUSES.READY_FOR_INSPECTION ||
+          status === REPORT_STATUSES.IN_INSPECTION)
+      ) {
         if (hasUninspected) return true;
       }
 
-      if ((this.isSupervisor() || this.isAdmin()) && (status === REPORT_STATUSES.IN_INSPECTION || status === REPORT_STATUSES.PENDING_APPROVAL)) {
+      if (
+        (this.isSupervisor() || this.isAdmin()) &&
+        (status === REPORT_STATUSES.IN_INSPECTION ||
+          status === REPORT_STATUSES.PENDING_APPROVAL)
+      ) {
         if (!this.hasPendingApprovals()) return true;
       }
       return false;
     }
 
     if (tab === 'summary' || tab === 'specs') {
-      if ((this.userRole() === APP_ROLES.INSPECTOR || this.isAdmin()) && status === REPORT_STATUSES.IN_INSPECTION) {
+      if (
+        (this.userRole() === APP_ROLES.INSPECTOR || this.isAdmin()) &&
+        (status === REPORT_STATUSES.READY_FOR_INSPECTION ||
+          status === REPORT_STATUSES.IN_INSPECTION)
+      ) {
         if (!hasUninspected && sns.length > 0) {
           return true;
         }
