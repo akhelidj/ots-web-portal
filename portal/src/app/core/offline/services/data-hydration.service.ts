@@ -12,6 +12,8 @@ interface HydrationOptions {
   readonly throwOnError?: boolean;
 }
 
+const AUTO_HYDRATION_INTERVAL_MS = 120000;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -22,6 +24,7 @@ export class DataHydrationService {
     inject(DATA_HYDRATION_SOURCES, { optional: true }) ?? [];
 
   private activeHydration: Promise<void> | null = null;
+  private intervalId: number | null = null;
 
   constructor() {
     effect(() => {
@@ -36,7 +39,42 @@ export class DataHydrationService {
         void this.hydrateAll({ includeRemote: isOnline });
       });
     });
+
+    window.addEventListener('focus', this.handleWindowFocus);
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+
+    this.intervalId = window.setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
+
+      if (!this.session.isAuthenticated() || !this.connectivity.isOnline()) {
+        return;
+      }
+
+      void this.hydrateAll({ includeRemote: true });
+    }, AUTO_HYDRATION_INTERVAL_MS);
   }
+
+  private readonly handleWindowFocus = (): void => {
+    if (!this.session.isAuthenticated() || !this.connectivity.isOnline()) {
+      return;
+    }
+
+    void this.hydrateAll({ includeRemote: true });
+  };
+
+  private readonly handleVisibilityChange = (): void => {
+    if (document.hidden) {
+      return;
+    }
+
+    if (!this.session.isAuthenticated() || !this.connectivity.isOnline()) {
+      return;
+    }
+
+    void this.hydrateAll({ includeRemote: true });
+  };
 
   public async hydrateAll(options?: HydrationOptions): Promise<void> {
     if (this.activeHydration) {

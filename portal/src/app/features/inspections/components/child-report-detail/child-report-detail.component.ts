@@ -20,6 +20,7 @@ import {
 import {
   AppRole,
   APP_ROLES,
+  CHILD_REPORT_STATUSES,
   ChildReportStatus,
   SERIAL_STATUSES,
 } from '@portal/core/constants/app.constants';
@@ -230,6 +231,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   }
 
   public selectedSnIds = signal<Set<string>>(new Set());
+  protected readonly CHILD_REPORT_STATUSES = CHILD_REPORT_STATUSES;
 
   public canSelectSerial(sn: { approvalStatus?: string }): boolean {
     if (sn.approvalStatus === SERIAL_STATUSES.APPROVED) {
@@ -252,6 +254,13 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     }
 
     return false;
+  }
+
+  public canUploadAttachments(status: ChildReportStatus): boolean {
+    return (
+      status !== CHILD_REPORT_STATUSES.APPROVED &&
+      status !== CHILD_REPORT_STATUSES.CLOSED
+    );
   }
 
   private getSelectableSerialIds(): string[] {
@@ -502,9 +511,12 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  public async downloadAttachment(url: string, filename: string): Promise<void> {
+  public async downloadAttachment(
+    url: string,
+    filename: string,
+  ): Promise<void> {
     if (!url) return;
-    
+
     // Resolve relative URL if necessary
     let fullUrl = url;
     if (url.startsWith('/')) {
@@ -520,7 +532,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     try {
       // Fetch as a blob so that the Auth Interceptor automatically attaches tokens
       const blob = await firstValueFrom(
-        this.http.get(fullUrl, { responseType: 'blob' })
+        this.http.get(fullUrl, { responseType: 'blob' }),
       );
 
       const blobUrl = URL.createObjectURL(blob);
@@ -528,14 +540,15 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       a.href = blobUrl;
       a.download = filename;
       document.body.appendChild(a);
-      
+
       setTimeout(() => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(blobUrl);
       }, 0);
     } catch {
-      this.formError = 'Failed to download attachment. It might be unavailable.';
+      this.formError =
+        'Failed to download attachment. It might be unavailable.';
     }
   }
 

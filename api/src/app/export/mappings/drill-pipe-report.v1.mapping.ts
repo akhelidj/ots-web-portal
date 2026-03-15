@@ -25,13 +25,17 @@ function shiftRowsInXml(xml: string, afterRow: number, delta: number): string {
   });
 
   // <c r="XN" …>
-  xml = xml.replace(/(<c\b[^>]*\br=")([A-Z]+)(\d+)(")/g, (_m, pre, col, rStr, post) => {
-    const r = parseInt(rStr, 10);
-    return r > afterRow ? `${pre}${col}${r + delta}${post}` : _m;
-  });
+  xml = xml.replace(
+    /(<c\b[^>]*\br=")([A-Z]+)(\d+)(")/g,
+    (_m, pre, col, rStr, post) => {
+      const r = parseInt(rStr, 10);
+      return r > afterRow ? `${pre}${col}${r + delta}${post}` : _m;
+    },
+  );
 
   // <mergeCell ref="X1:Y2"/>
-  xml = xml.replace(/<mergeCell\s+ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"\s*\/>/g,
+  xml = xml.replace(
+    /<mergeCell\s+ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"\s*\/>/g,
     (_m, c1, r1s, c2, r2s) => {
       const r1 = parseInt(r1s, 10);
       const r2 = parseInt(r2s, 10);
@@ -39,7 +43,7 @@ function shiftRowsInXml(xml: string, afterRow: number, delta: number): string {
         return `<mergeCell ref="${c1}${r1 + delta}:${c2}${r2 + delta}"/>`;
       }
       return _m;
-    }
+    },
   );
 
   return xml;
@@ -50,7 +54,10 @@ function shiftRowsInXml(xml: string, afterRow: number, delta: number): string {
  * Returns the array of strings as plain text (for token detection) and the
  * raw XML blocks (for reconstruction).
  */
-function parseSharedStrings(xml: string): { plain: string[]; blocks: string[] } {
+function parseSharedStrings(xml: string): {
+  plain: string[];
+  blocks: string[];
+} {
   const blocks: string[] = [];
   const plain: string[] = [];
   const re = /<si>([\s\S]*?)<\/si>/g;
@@ -59,7 +66,7 @@ function parseSharedStrings(xml: string): { plain: string[]; blocks: string[] } 
     blocks.push(m[0]);
     // Extract all text between <t>…</t> for a plain-text representation
     const text = (m[1].match(/<t[^>]*>([\s\S]*?)<\/t>/g) || [])
-      .map(t => t.replace(/<\/?t[^>]*>/g, ''))
+      .map((t) => t.replace(/<\/?t[^>]*>/g, ''))
       .join('');
     plain.push(text);
   }
@@ -69,7 +76,10 @@ function parseSharedStrings(xml: string): { plain: string[]; blocks: string[] } 
 /**
  * Rebuild the sharedStrings.xml given a new ordered list of <si> blocks.
  */
-function rebuildSharedStrings(originalXml: string, newBlocks: string[]): string {
+function rebuildSharedStrings(
+  originalXml: string,
+  newBlocks: string[],
+): string {
   // Replace everything between the opening <sst…> tag and </sst> with our new entries
   const count = newBlocks.length;
   return originalXml.replace(
@@ -80,7 +90,7 @@ function rebuildSharedStrings(originalXml: string, newBlocks: string[]): string 
         .replace(/\bcount="[^"]*"/, `count="${count}"`)
         .replace(/\buniqueCount="[^"]*"/, `uniqueCount="${count}"`);
       return `${updatedOpen}${newBlocks.join('')}${close}`;
-    }
+    },
   );
 }
 
@@ -88,7 +98,10 @@ function rebuildSharedStrings(originalXml: string, newBlocks: string[]): string 
  * Replace tokens inside a single <si> block, returning the updated block.
  * Handles both simple <t>text</t> and rich text <r><t>text</t></r> nodes.
  */
-function replaceTokensInSiBlock(block: string, tokens: Record<string, string>): string {
+function replaceTokensInSiBlock(
+  block: string,
+  tokens: Record<string, string>,
+): string {
   let result = block;
   for (const [token, value] of Object.entries(tokens)) {
     const escaped = token.replace(/[{}]/g, '\\$&');
@@ -111,7 +124,7 @@ function getSharedStringIndicesForRow(rowXml: string): Set<number> {
     const vMatch = m[1].match(/<v>(\d+)<\/v>/);
     if (vMatch) indices.add(parseInt(vMatch[1], 10));
   }
-  return cellRe.lastIndex, indices;
+  return (cellRe.lastIndex, indices);
 }
 
 /**
@@ -124,9 +137,12 @@ function cloneRowForNumber(templateRowXml: string, newRowNum: number): string {
   // Update row number
   xml = xml.replace(/(<row\b[^>]*\br=")(\d+)(")/, `$1${newRowNum}$3`);
   // Update all cell addresses to new row number
-  xml = xml.replace(/(<c\b[^>]*\br=")([A-Z]+)(\d+)(")/g, (_m, pre, col, _rStr, post) => {
-    return `${pre}${col}${newRowNum}${post}`;
-  });
+  xml = xml.replace(
+    /(<c\b[^>]*\br=")([A-Z]+)(\d+)(")/g,
+    (_m, pre, col, _rStr, post) => {
+      return `${pre}${col}${newRowNum}${post}`;
+    },
+  );
   return xml;
 }
 
@@ -145,37 +161,53 @@ export async function mapDrillPipeReportV1(
   // 1. Build global token map
   const reportDate = h.updatedAt
     ? new Date(h.updatedAt).toLocaleDateString()
-    : h.createdAt ? new Date(h.createdAt).toLocaleDateString() : 'N/A';
+    : h.createdAt
+      ? new Date(h.createdAt).toLocaleDateString()
+      : 'N/A';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const eqNames = ((h.equipmentUsed || snapshot.equipmentUsed) as any[] || [])
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .map((e: any) => `${e.name}${e.number ? ' #' + e.number : ''}`).join(', ') || 'None specified';
+  const eqNames =
+    (((h.equipmentUsed || snapshot.equipmentUsed) as any[]) || [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((e: any) => `${e.name}${e.number ? ' #' + e.number : ''}`)
+      .join(', ') || 'None specified';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mNames = ((h.inspectionMethod || snapshot.inspectionMethod) as any[] || [])
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .map((m: any) => m.name || m).join(', ') || 'None specified';
+  const mNames =
+    (((h.inspectionMethod || snapshot.inspectionMethod) as any[]) || [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((m: any) => m.name || m)
+      .join(', ') || 'None specified';
 
-  let inspectedByName = 'N/A';
-  let approvedByName  = 'N/A';
+  let inspectedByName = h.inspectedByName || 'N/A';
+  let approvedByName = h.approvedByName || 'N/A';
   const transitionLogs = snapshot.transitionLogs || [];
   if (Array.isArray(transitionLogs) && transitionLogs.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const asc = [...transitionLogs].sort((a: any, b: any) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    const asc = [...transitionLogs].sort(
+      (a: any, b: any) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const inspectLog = asc.find((l: any) => l.toStatus === 'IN_INSPECTION' || l.toStatus === 'PENDING_APPROVAL');
+    const inspectLog = asc.find(
+      (l: any) =>
+        l.toStatus === 'IN_INSPECTION' || l.toStatus === 'PENDING_APPROVAL',
+    );
     if (inspectLog?.userId) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const u = (snapshot.users || []).find((u: any) => u.id === inspectLog.userId);
+      const u = (snapshot.users || []).find(
+        (u: any) => u.id === inspectLog.userId,
+      );
       if (u) inspectedByName = u.name || u.email;
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const approveLog = [...asc].reverse().find((l: any) => l.toStatus === 'APPROVED' || l.toStatus === 'CLOSED');
+    const approveLog = [...asc]
+      .reverse()
+      .find((l: any) => l.toStatus === 'APPROVED' || l.toStatus === 'CLOSED');
     if (approveLog?.userId) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const u = (snapshot.users || []).find((u: any) => u.id === approveLog.userId);
+      const u = (snapshot.users || []).find(
+        (u: any) => u.id === approveLog.userId,
+      );
       if (u) approvedByName = u.name || u.email;
     }
   }
@@ -196,7 +228,10 @@ export async function mapDrillPipeReportV1(
     '{{connection}}': h.connection || 'N/A',
     '{{equipment}}': eqNames,
     '{{methods}}': mNames,
-    '{{inspectorComment}}': h.inspectorComment || snapshot.inspectorComment || 'No comments provided.',
+    '{{inspectorComment}}':
+      h.inspectorComment ||
+      snapshot.inspectorComment ||
+      'No comments provided.',
     '{{inspectedBy}}': inspectedByName,
     '{{approvedBy}}': approvedByName,
   };
@@ -207,10 +242,10 @@ export async function mapDrillPipeReportV1(
   const zip = await JSZip.loadAsync(rawBuffer as any);
 
   const sheetPath = 'xl/worksheets/sheet1.xml';
-  const ssPath    = 'xl/sharedStrings.xml';
+  const ssPath = 'xl/sharedStrings.xml';
 
-  let sheetXml = await zip.file(sheetPath)?.async('string') ?? '';
-  let ssXml    = await zip.file(ssPath)?.async('string') ?? '';
+  let sheetXml = (await zip.file(sheetPath)?.async('string')) ?? '';
+  let ssXml = (await zip.file(ssPath)?.async('string')) ?? '';
 
   if (!sheetXml) throw new Error('Could not read worksheet XML from template');
 
@@ -239,7 +274,8 @@ export async function mapDrillPipeReportV1(
 
   // 5. Handle serial number row expansion (if {{sn}} template row found)
   if (templateRowNumber !== -1 && serialNumbersChunk.length > 0) {
-    const yesNo = (val: unknown) => (val === undefined || val === null ? '' : val ? '1' : '');
+    const yesNo = (val: unknown) =>
+      val === undefined || val === null ? '' : val ? '1' : '';
     const N = serialNumbersChunk.length;
     const delta = N - 1; // net rows added (we replace 1 template row with N data rows)
 
@@ -263,11 +299,37 @@ export async function mapDrillPipeReportV1(
       if (text) {
         // Check if this shared string contains any per-row token
         const allRowTokenKeys = [
-          '{{sn}}','{{b_ts}}','{{b_od}}','{{b_thd}}','{{b_ecc}}','{{b_cbd}}','{{b_cbl}}',
-          '{{b_bvl}}','{{b_cond}}','{{b_hard}}','{{p_ts}}','{{p_od}}','{{p_id}}','{{p_ecc}}',
-          '{{p_conn}}','{{p_base}}','{{p_bvl}}','{{p_cond}}','{{wall}}','{{od_decr}}','{{emi}}',
-          '{{slip}}','{{corr_in}}','{{corr_out}}','{{ipc}}','{{bent}}',
-          '{{jc_new}}','{{jc_prem}}','{{jc_c2}}','{{jc_scrap}}','{{remarks}}',
+          '{{sn}}',
+          '{{b_ts}}',
+          '{{b_od}}',
+          '{{b_thd}}',
+          '{{b_ecc}}',
+          '{{b_cbd}}',
+          '{{b_cbl}}',
+          '{{b_bvl}}',
+          '{{b_cond}}',
+          '{{b_hard}}',
+          '{{p_ts}}',
+          '{{p_od}}',
+          '{{p_id}}',
+          '{{p_ecc}}',
+          '{{p_conn}}',
+          '{{p_base}}',
+          '{{p_bvl}}',
+          '{{p_cond}}',
+          '{{wall}}',
+          '{{od_decr}}',
+          '{{emi}}',
+          '{{slip}}',
+          '{{corr_in}}',
+          '{{corr_out}}',
+          '{{ipc}}',
+          '{{bent}}',
+          '{{jc_new}}',
+          '{{jc_prem}}',
+          '{{jc_c2}}',
+          '{{jc_scrap}}',
+          '{{remarks}}',
         ];
         for (const tok of allRowTokenKeys) {
           if (text.includes(tok)) {
@@ -286,13 +348,19 @@ export async function mapDrillPipeReportV1(
       const rowNum = templateRowNumber + i;
 
       const d = sn.inspectionData || sn.inspectionJson || {};
-      const box   = d.box   || {};
-      const pin   = d.pin   || {};
-      const body  = d.body  || {};
+      const box = d.box || {};
+      const pin = d.pin || {};
+      const body = d.body || {};
       const final = d.final || {};
-      const boxBvl  = box.bevelDiameterMin  ? `${box.bevelDiameterMin}-${box.bevelDiameterMax || ''}` : '';
-      const pinConn = pin.lengthPinConnMin  ? `${pin.lengthPinConnMin}-${pin.lengthPinConnMax || ''}` : '';
-      const pinBvl  = pin.bevelDiameterMin  ? `${pin.bevelDiameterMin}-${pin.bevelDiameterMax || ''}` : '';
+      const boxBvl = box.bevelDiameterMin
+        ? `${box.bevelDiameterMin}-${box.bevelDiameterMax || ''}`
+        : '';
+      const pinConn = pin.lengthPinConnMin
+        ? `${pin.lengthPinConnMin}-${pin.lengthPinConnMax || ''}`
+        : '';
+      const pinBvl = pin.bevelDiameterMin
+        ? `${pin.bevelDiameterMin}-${pin.bevelDiameterMax || ''}`
+        : '';
 
       const rowTokens: Record<string, string> = {
         '{{sn}}': sn.serial || sn.serialNumber || sn.value || '',
@@ -325,7 +393,8 @@ export async function mapDrillPipeReportV1(
         '{{jc_prem}}': final.isPremium ? 'X' : '',
         '{{jc_c2}}': final.isC2 ? 'X' : '',
         '{{jc_scrap}}': final.isScrap ? 'X' : '',
-        '{{remarks}}': final.condition_notes || final.remarks || d.remarks || '',
+        '{{remarks}}':
+          final.condition_notes || final.remarks || d.remarks || '',
       };
 
       // For each template cell that has a token, add a new shared string entry
@@ -353,7 +422,7 @@ export async function mapDrillPipeReportV1(
         // We match the specific pattern: <c ... t="s" ...><v>oldIdx</v></c>
         const cellPattern = new RegExp(
           `(<c\\b[^>]*\\bt="s"[^>]*>(?:<[^v/][^>]*>)*<v>)${oldIdx}(<\\/v>)`,
-          'g'
+          'g',
         );
         clonedRow = clonedRow.replace(cellPattern, `$1${newIdx}$2`);
       }
@@ -379,7 +448,10 @@ export async function mapDrillPipeReportV1(
   zip.file(sheetPath, sheetXml);
   if (ssXml) zip.file(ssPath, ssXml);
 
-  const finalBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+  const finalBuffer = await zip.generateAsync({
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
+  });
 
   // 8. Reload into the ExcelJS workbook so ExportService can call writeBuffer() on it
   while (workbook.worksheets.length > 0) {

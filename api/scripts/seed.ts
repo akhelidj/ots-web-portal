@@ -6,8 +6,6 @@ import {
   SerialDisposition,
   SerialApprovalStatus,
   InspectionReportStatus,
-  ChildReportStatus,
-  ChildReportType,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
@@ -205,11 +203,19 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
 
   const template = await prisma.template.findFirst({
     where: { tenantId: tenant.id, templateKey: 'DRILL_PIPE_REPORT' },
+    orderBy: { templateVersion: 'desc' },
   });
   if (!template) {
     console.log('No template found, skipping report creation');
     return;
   }
+
+  const receiverUser = await prisma.user.findFirst({
+    where: { role: UserRole.RECEIVER, tenantId: tenant.id },
+  });
+  const inspectorUser = await prisma.user.findFirst({
+    where: { role: UserRole.INSPECTOR, tenantId: tenant.id },
+  });
 
   let report = await prisma.inspectionReport.findFirst({
     where: {
@@ -232,14 +238,91 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
         reportNumber: 'NOBLECORP-130326-151748',
       },
     });
-    console.log(`Created report ${report.reportNumber}`);
+    
+    const now = new Date();
+    await prisma.inspectionReportTransitionLog.createMany({
+      data: [
+        {
+          inspectionReportId: report.id,
+          fromStatus: InspectionReportStatus.DRAFT,
+          toStatus: InspectionReportStatus.RECEIVED,
+          userId: receiverUser?.id,
+          timestamp: new Date(now.getTime() - 3600000 * 3),
+        },
+        {
+          inspectionReportId: report.id,
+          fromStatus: InspectionReportStatus.RECEIVED,
+          toStatus: InspectionReportStatus.READY_FOR_CLEANING,
+          userId: receiverUser?.id,
+          timestamp: new Date(now.getTime() - 3600000 * 2),
+        },
+        {
+          inspectionReportId: report.id,
+          fromStatus: InspectionReportStatus.READY_FOR_CLEANING,
+          toStatus: InspectionReportStatus.READY_FOR_INSPECTION,
+          userId: receiverUser?.id,
+          timestamp: new Date(now.getTime() - 3600000 * 1),
+        },
+        {
+          inspectionReportId: report.id,
+          fromStatus: InspectionReportStatus.READY_FOR_INSPECTION,
+          toStatus: InspectionReportStatus.IN_INSPECTION,
+          userId: inspectorUser?.id,
+          timestamp: now,
+        }
+      ]
+    });
+    console.log(`Created report ${report.reportNumber} with transition logs`);
   } else {
-    // Force report status to IN_INSPECTION as requested
+    // Force report status to IN_INSPECTION as requested, update template to latest
     await prisma.inspectionReport.update({
       where: { id: report.id },
-      data: { status: InspectionReportStatus.IN_INSPECTION },
+      data: {
+        status: InspectionReportStatus.IN_INSPECTION,
+        templateKey: template.templateKey,
+        templateVersion: template.templateVersion,
+        templateHash: template.hash,
+      },
     });
-    console.log(`Report ${report.reportNumber} already exists. Ensuring status is IN_INSPECTION and checking serial numbers...`);
+
+    const logCount = await prisma.inspectionReportTransitionLog.count({ where: { inspectionReportId: report.id } });
+    if (logCount === 0) {
+      const now = new Date();
+      await prisma.inspectionReportTransitionLog.createMany({
+        data: [
+          {
+            inspectionReportId: report.id,
+            fromStatus: InspectionReportStatus.DRAFT,
+            toStatus: InspectionReportStatus.RECEIVED,
+            userId: receiverUser?.id,
+            timestamp: new Date(now.getTime() - 3600000 * 3),
+          },
+          {
+            inspectionReportId: report.id,
+            fromStatus: InspectionReportStatus.RECEIVED,
+            toStatus: InspectionReportStatus.READY_FOR_CLEANING,
+            userId: receiverUser?.id,
+            timestamp: new Date(now.getTime() - 3600000 * 2),
+          },
+          {
+            inspectionReportId: report.id,
+            fromStatus: InspectionReportStatus.READY_FOR_CLEANING,
+            toStatus: InspectionReportStatus.READY_FOR_INSPECTION,
+            userId: receiverUser?.id,
+            timestamp: new Date(now.getTime() - 3600000 * 1),
+          },
+          {
+            inspectionReportId: report.id,
+            fromStatus: InspectionReportStatus.READY_FOR_INSPECTION,
+            toStatus: InspectionReportStatus.IN_INSPECTION,
+            userId: inspectorUser?.id,
+            timestamp: now,
+          }
+        ]
+      });
+    }
+
+    console.log(`Report ${report.reportNumber} already exists. Ensured status IN_INSPECTION and added logs.`);
   }
 
 
@@ -272,7 +355,8 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
     const serial = `NCO-SN-${i.toString().padStart(3, '0')}`;
     const isScrap = i === 13;
     const isRework = i === 5 || i === 10;
-    const disposition = isScrap ? SerialDisposition.SCRAP : isRework ? SerialDisposition.REWORK : SerialDisposition.PASS;
+    const isHold = i === 2;
+    const disposition = isScrap ? SerialDisposition.SCRAP : isRework ? SerialDisposition.REWORK : isHold ? SerialDisposition.HOLD : SerialDisposition.PASS;
     
     const inspectionData = {
       box: genericBox,
@@ -296,7 +380,6 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
       remarks: '',
     };
 
-    let snId: string;
     const existing = await prisma.serialNumber.findFirst({
         where: { tenantId: tenant.id, inspectionReportId: report.id, serial }
     });
@@ -310,9 +393,8 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
                 inspectionData
             }
         });
-        snId = existing.id;
     } else {
-        const createdSn = await prisma.serialNumber.create({
+        await prisma.serialNumber.create({
             data: {
                 serial,
                 inspectionReportId: report.id,
@@ -322,57 +404,37 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
                 inspectionData
             }
         });
-        snId = createdSn.id;
     }
 
-    // Handle Child Report for Rework
-    if (isRework) {
-      let childReport = await prisma.childReport.findFirst({
-        where: { inspectionReportId: report.id, type: ChildReportType.REWORK, tenantId: tenant.id }
-      });
-
-      if (!childReport) {
-        childReport = await prisma.childReport.create({
-          data: {
-            tenantId: tenant.id,
-            inspectionReportId: report.id,
-            type: ChildReportType.REWORK,
-            status: ChildReportStatus.DRAFT,
-            reportNumber: `${report.reportNumber}_rework`,
-          }
-        });
-        console.log(`Created REWORK child report for ${report.reportNumber}`);
-      }
-
-      // Ensure the serial number is in the child report
-      const existingCrsn = await prisma.childReportSerialNumber.findFirst({
-        where: { childReportId: childReport.id, serialNumberId: snId }
-      });
-
-      if (!existingCrsn) {
-        await prisma.childReportSerialNumber.create({
-          data: {
-            childReportId: childReport.id,
-            serialNumberId: snId,
-            disposition: SerialDisposition.REWORK,
-            approvalStatus: SerialApprovalStatus.NOT_INSPECTED,
-          }
-        });
-      }
-    }
   }
 
-  // Cleanup SCRAP child reports if they exist
+  // Cleanup ANY leftover child reports to ensure they're removed based on the latest needs
+  await prisma.childReportSerialNumber.deleteMany({
+    where: { childReport: { inspectionReportId: report.id } }
+  });
+  await prisma.childReportTransitionLog.deleteMany({
+    where: { childReport: { inspectionReportId: report.id } }
+  });
+  await prisma.childReportRevision.deleteMany({
+    where: { childReport: { inspectionReportId: report.id } }
+  });
+  await prisma.attachment.deleteMany({
+    where: { childReport: { inspectionReportId: report.id } }
+  });
+  await prisma.inspectionApprovalBatchSerialNumber.deleteMany({
+    where: { batch: { inspectionReportId: report.id } }
+  });
+  await prisma.inspectionApprovalBatch.deleteMany({
+    where: { inspectionReportId: report.id }
+  });
   await prisma.childReport.deleteMany({
     where: { 
         inspectionReportId: report.id, 
-        type: ChildReportType.SCRAP,
         tenantId: tenant.id,
     }
   });
 
   console.log(`All 15 serial numbers for report ${report.reportNumber} are now synced to INSPECTED_DRAFT status.`);
-  console.log(`Child report logic executed (REWORK child report ensured).`);
 }
 
 async function main() {

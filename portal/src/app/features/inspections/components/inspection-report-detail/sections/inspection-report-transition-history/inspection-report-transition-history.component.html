@@ -12,11 +12,9 @@
 
   @if (logs.length > 0) {
     <!-- Timeline Container -->
-    <div
-      class="relative space-y-8 before:absolute before:inset-0 before:ml-4 before:w-0.5 before:-translate-x-px before:bg-gradient-to-b before:from-gray-100 before:via-gray-200 before:to-gray-100 sm:before:ml-[4.25rem]"
-    >
-      @for (log of logs; track log.id) {
-        <div class="relative flex items-start gap-3 sm:gap-10 group">
+    <div class="relative space-y-8">
+      @for (log of logs; track log.id; let isLast = $last) {
+        <div class="relative flex items-stretch gap-3 sm:gap-6 group">
           <!-- Date/Time (Desktop Side) -->
           <div class="hidden sm:flex flex-col items-end w-16 shrink-0 pt-1">
             <span class="text-xs font-bold text-gray-900 leading-none">{{
@@ -28,29 +26,37 @@
             >
           </div>
 
-          <!-- Dot / Action Marker -->
-          <div
-            class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[3px] border-white bg-white shadow-sm transition-all group-hover:scale-110 z-10"
-          >
+          <!-- Dot / Action Marker & Line -->
+          <div class="relative flex flex-col items-center w-8 shrink-0">
+            <!-- Line connecting to next item -->
+            @if (!isLast) {
+              <div
+                class="absolute top-8 bottom-[-2rem] w-0.5 bg-gradient-to-b from-gray-100 via-gray-200 to-gray-100"
+              ></div>
+            }
             <div
-              class="h-2 w-2 rounded-full"
-              [ngClass]="{
-                'bg-success shadow-[0_0_6px_rgba(34,197,94,0.3)]':
-                  log.toStatus === 'APPROVED' || log.toStatus === 'CLOSED',
-                'bg-primary shadow-[0_0_6px_rgba(var(--primary-rgb),0.3)]':
-                  log.toStatus === 'IN_INSPECTION' ||
-                  log.toStatus === 'PENDING_APPROVAL',
-                'bg-warning shadow-[0_0_6px_rgba(234,179,8,0.3)]':
-                  log.toStatus === 'ON_HOLD',
-                'bg-gray-400': ![
-                  'APPROVED',
-                  'CLOSED',
-                  'IN_INSPECTION',
-                  'PENDING_APPROVAL',
-                  'ON_HOLD',
-                ].includes(log.toStatus),
-              }"
-            ></div>
+              class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[3px] border-white bg-white shadow-sm transition-all group-hover:scale-110 z-10"
+            >
+              <div
+                class="h-2 w-2 rounded-full"
+                [ngClass]="{
+                  'bg-success shadow-[0_0_6px_rgba(34,197,94,0.3)]':
+                    log.toStatus === 'APPROVED' || log.toStatus === 'CLOSED',
+                  'bg-primary shadow-[0_0_6px_rgba(var(--primary-rgb),0.3)]':
+                    log.toStatus === 'IN_INSPECTION' ||
+                    log.toStatus === 'PENDING_APPROVAL',
+                  'bg-warning shadow-[0_0_6px_rgba(234,179,8,0.3)]':
+                    log.toStatus === 'ON_HOLD',
+                  'bg-gray-400': ![
+                    'APPROVED',
+                    'CLOSED',
+                    'IN_INSPECTION',
+                    'PENDING_APPROVAL',
+                    'ON_HOLD',
+                  ].includes(log.toStatus),
+                }"
+              ></div>
+            </div>
           </div>
 
           <!-- Content Card -->
@@ -63,7 +69,7 @@
                 {{ log.userName || 'System' }}
               </span>
               <span
-                class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-tighter shrink-0"
+                class="text-[10px] sm:hidden font-bold text-gray-400 uppercase tracking-tighter shrink-0"
               >
                 {{ log.timestamp | date: 'MMM d, h:mm a' }}
               </span>

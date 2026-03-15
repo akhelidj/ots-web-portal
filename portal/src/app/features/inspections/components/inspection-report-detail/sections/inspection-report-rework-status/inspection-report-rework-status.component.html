@@ -29,16 +29,18 @@
           >{{ items.length }} Serials</span
         >
         @if (missingChildCount() > 0) {
-          <span class="text-xs text-neutral-500"
-            >{{ missingChildCount() }} not yet linked to child report.</span
-          >
+          <span class="text-[11px] font-bold text-primary animate-pulse flex items-center gap-1.5 bg-primary/10 px-2 py-1 rounded-md border border-primary/20">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            {{ missingChildCount() }} child report{{ missingChildCount() === 1 ? '' : 's' }} pending
+          </span>
         }
         @if (canGenerate()) {
           <button
             type="button"
             (click)="generateChildReport.emit()"
             [disabled]="isGenerating"
-            class="btn btn-secondary btn-sm"
+            [ngClass]="missingChildCount() > 0 ? 'btn-primary shadow-[0_0_10px_rgba(var(--color-primary),0.4)] animate-pulse' : 'btn-secondary'"
+            class="btn btn-sm"
           >
             @if (isGenerating) {
               Generating...

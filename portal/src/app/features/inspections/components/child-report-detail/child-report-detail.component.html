@@ -294,16 +294,30 @@
           <!-- Transition Section -->
           <div class="page-section p-6 flex flex-col shadow-sm">
             <div class="border-b border-neutral-200 pb-3 mb-5">
-              <h2 class="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+              <h2
+                class="text-lg font-semibold text-neutral-900 flex items-center gap-2"
+              >
+                <svg
+                  class="w-5 h-5 text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  ></path>
                 </svg>
                 Resolve Branch Workflow
               </h2>
             </div>
 
             @if (formError && !formError.includes('[object Object]')) {
-              <div class="mb-5 p-4 bg-error-light text-error-dark border-l-4 border-error rounded-r-md text-sm font-medium whitespace-pre-line shadow-sm">
+              <div
+                class="mb-5 p-4 bg-error-light text-error-dark border-l-4 border-error rounded-r-md text-sm font-medium whitespace-pre-line shadow-sm"
+              >
                 {{ formError }}
               </div>
             }
@@ -337,7 +351,9 @@
                   </button>
                 }
                 @if (allowedTransitions.length === 0) {
-                  <p class="text-sm text-gray-500 italic mt-2 bg-gray-50 px-4 py-3 rounded-lg border border-gray-100 w-full text-center">
+                  <p
+                    class="text-sm text-gray-500 italic mt-2 bg-gray-50 px-4 py-3 rounded-lg border border-gray-100 w-full text-center"
+                  >
                     No transitions available based on current status and role.
                   </p>
                 }
@@ -351,9 +367,10 @@
                     class="text-sm font-semibold text-gray-900 flex items-center gap-2"
                   >
                     Confirm transition to
-                    <span class="text-primary font-bold bg-white px-2 py-0.5 rounded shadow-sm border border-primary/10">{{
-                      selectedTransition.toStatus
-                    }}</span>
+                    <span
+                      class="text-primary font-bold bg-white px-2 py-0.5 rounded shadow-sm border border-primary/10"
+                      >{{ selectedTransition.toStatus }}</span
+                    >
                   </p>
                   @if (selectedTransition.requiresReason) {
                     <div>
@@ -390,35 +407,90 @@
 
         <!-- Attachments Section (Visible to Everyone) -->
         <div class="page-section p-6 flex flex-col flex-grow shadow-sm">
-          <div class="border-b border-neutral-200 pb-3 mb-5 flex justify-between items-center">
-            <h2 class="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-              <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+          <div
+            class="border-b border-neutral-200 pb-3 mb-5 flex justify-between items-center"
+          >
+            <h2
+              class="text-lg font-semibold text-neutral-900 flex items-center gap-2"
+            >
+              <svg
+                class="w-5 h-5 text-gray-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                ></path>
               </svg>
               Attachments
             </h2>
-            <span class="bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full text-xs font-semibold border border-gray-200">
+            <span
+              class="bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full text-xs font-semibold border border-gray-200"
+            >
               {{ cr.attachments?.length || cr.attachmentCount || 0 }}
             </span>
           </div>
 
           @if (cr.attachments?.length) {
-            <div class="grid grid-cols-1 gap-3 mb-5 max-h-[300px] overflow-y-auto px-1 custom-scrollbar">
+            <div
+              class="grid grid-cols-1 gap-3 mb-5 max-h-[300px] overflow-y-auto px-1 custom-scrollbar"
+            >
               @for (attachment of cr.attachments; track attachment.id) {
-                <div class="flex items-center p-3.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-primary/40 hover:shadow-md transition-all group">
-                  <div class="p-2.5 bg-primary/5 rounded-lg mr-4 border border-primary/10 transition-colors group-hover:bg-primary/10">
-                    <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                <div
+                  class="flex items-center p-3.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-primary/40 hover:shadow-md transition-all group"
+                >
+                  <div
+                    class="p-2.5 bg-primary/5 rounded-lg mr-4 border border-primary/10 transition-colors group-hover:bg-primary/10"
+                  >
+                    <svg
+                      class="w-5 h-5 text-primary"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      ></path>
                     </svg>
                   </div>
                   <div class="min-w-0 flex-grow">
-                    <p class="text-sm font-semibold text-gray-900 truncate" [title]="attachment.filename">{{ attachment.filename }}</p>
-                    <p class="text-xs text-gray-500 mt-0.5 tracking-wide">Attached Document</p>
+                    <p
+                      class="text-sm font-semibold text-gray-900 truncate"
+                      [title]="attachment.filename"
+                    >
+                      {{ attachment.filename }}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-0.5 tracking-wide">
+                      Attached Document
+                    </p>
                   </div>
                   <div class="ml-4 pl-4 border-l border-gray-100">
-                    <button (click)="downloadAttachment(attachment.url, attachment.filename)" class="text-gray-400 hover:text-primary transition-colors p-1.5 rounded-md hover:bg-gray-50" title="Download">
-                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    <button
+                      (click)="
+                        downloadAttachment(attachment.url, attachment.filename)
+                      "
+                      class="text-gray-400 hover:text-primary transition-colors p-1.5 rounded-md hover:bg-gray-50"
+                      title="Download"
+                    >
+                      <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                        ></path>
                       </svg>
                     </button>
                   </div>
@@ -426,50 +498,84 @@
               }
             </div>
           } @else {
-            <div class="flex flex-col items-center justify-center p-8 bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-xl flex-grow mb-5">
-              <div class="p-4 bg-white rounded-full shadow-sm mb-4 border border-gray-100 group-hover:scale-105 transition-transform">
-                <svg class="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            <div
+              class="flex flex-col items-center justify-center p-8 bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-xl flex-grow mb-5"
+            >
+              <div
+                class="p-4 bg-white rounded-full shadow-sm mb-4 border border-gray-100 group-hover:scale-105 transition-transform"
+              >
+                <svg
+                  class="w-8 h-8 text-gray-300"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  ></path>
                 </svg>
               </div>
-              <p class="text-base text-gray-700 font-semibold mb-1">No attachments found</p>
-              <p class="text-sm text-gray-500 max-w-[240px] text-center leading-relaxed">Files and documents related to this report will appear here when uploaded.</p>
+              <p class="text-base text-gray-700 font-semibold mb-1">
+                No attachments found
+              </p>
+              <p
+                class="text-sm text-gray-500 max-w-[240px] text-center leading-relaxed"
+              >
+                Files and documents related to this report will appear here when
+                uploaded.
+              </p>
             </div>
           }
 
-          @if (userRole !== 'CUSTOMER') {
+          @if (userRole !== 'CUSTOMER' && canUploadAttachments(cr.status)) {
             <div class="mt-auto border-t border-gray-100 pt-6">
-              <p class="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <p
+                class="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2"
+              >
                 Upload New File
-                <span class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">Required for approval</span>
+                <span
+                  class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200"
+                  >Required for approval</span
+                >
               </p>
 
               @if (uploadSuccess) {
-                <div class="mb-4 p-3 bg-success/10 text-success-dark border border-success/30 rounded-lg text-sm font-medium flex items-center animate-in fade-in slide-in-from-bottom-2 shadow-sm">
-                  <span class="bg-success text-white rounded-full p-0.5 mr-2 shadow-sm">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                <div
+                  class="mb-4 p-3 bg-success/10 text-success-dark border border-success/30 rounded-lg text-sm font-medium flex items-center animate-in fade-in slide-in-from-bottom-2 shadow-sm"
+                >
+                  <span
+                    class="bg-success text-white rounded-full p-0.5 mr-2 shadow-sm"
+                  >
+                    <svg
+                      class="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M5 13l4 4L19 7"
+                      ></path>
                     </svg>
                   </span>
                   Attachment successfully uploaded!
                 </div>
               }
 
-              <div class="flex flex-col sm:flex-row gap-3 items-center">
-                <div class="flex-grow w-full">
-                  <div class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg class="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
-                      </svg>
-                    </div>
-                    <input
-                      type="file"
-                      (change)="onFileSelected($event)"
-                      class="block w-full pl-10 text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 transition-all cursor-pointer bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 h-[42px] leading-[42px]"
-                      style="padding-top: 5px; padding-bottom: 5px;"
-                    />
-                  </div>
+              <div
+                class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-stretch"
+              >
+                <div class="w-full">
+                  <input
+                    type="file"
+                    (change)="onFileSelected($event)"
+                    class="block w-full text-sm text-gray-600 file:mr-3 file:h-10 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-neutral-100 file:text-neutral-700 hover:file:bg-neutral-200 transition-colors cursor-pointer bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 min-h-[42px] px-2 py-1"
+                  />
                 </div>
                 <button
                   (click)="uploadAttachment()"
@@ -477,14 +583,40 @@
                   class="w-full sm:w-auto px-6 h-[42px] bg-primary text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-primary-light hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed disabled:shadow-none transition-all flex items-center justify-center gap-2 group"
                 >
                   @if (isUploading) {
-                    <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      class="animate-spin h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Uploading...
                   } @else {
-                    <svg class="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    <svg
+                      class="w-4 h-4 group-hover:-translate-y-0.5 transition-transform"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                      ></path>
                     </svg>
                     Upload
                   }

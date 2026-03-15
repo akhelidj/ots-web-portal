@@ -50,7 +50,15 @@
             <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'summary'">
               <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             </div>
-            <span class="sm:block" [class.font-bold]="activeTab() === 'summary'">Summary</span>
+            <div class="flex items-center gap-2">
+              <span class="sm:block" [class.font-bold]="activeTab() === 'summary'">Summary</span>
+              @if (shouldPulseTab('summary')) {
+                <span class="relative flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
+                </span>
+              }
+            </div>
             
           </button>
 
@@ -64,10 +72,15 @@
             <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'serials'">
               <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
             </div>
-            <span class="sm:block" [class.font-bold]="activeTab() === 'serials'">Pipes</span>
-            @if (shouldPulseTab('serials')) {
-              <span class="absolute -top-1 right-1 h-2.5 w-2.5 rounded-full bg-accent animate-pulse"></span>
-            }
+            <div class="flex items-center gap-2">
+              <span class="sm:block" [class.font-bold]="activeTab() === 'serials'">Pipes</span>
+              @if (shouldPulseTab('serials')) {
+                <span class="relative flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
+                </span>
+              }
+            </div>
           </button>
 
           @if (canAccessBatchApprovals()) {
@@ -82,10 +95,15 @@
               <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'approvals'">
                 <svg class="w-5 h-5 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
               </div>
-              <span class="sm:block" [class.font-bold]="activeTab() === 'approvals'">Approvals</span>
-              @if (shouldPulseTab('approvals')) {
-                <span class="absolute -top-1 right-1 h-2.5 w-2.5 rounded-full bg-accent animate-pulse"></span>
-              }
+              <div class="flex items-center gap-2">
+                <span class="sm:block" [class.font-bold]="activeTab() === 'approvals'">Approvals</span>
+                @if (shouldPulseTab('approvals')) {
+                  <span class="relative flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
+                  </span>
+                }
+              </div>
             </button>
           }
 
@@ -98,7 +116,15 @@
             <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'specs'">
               <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
             </div>
-            <span class="sm:block" [class.font-bold]="activeTab() === 'specs'">Specs</span>
+            <div class="flex items-center gap-2">
+              <span class="sm:block" [class.font-bold]="activeTab() === 'specs'">Specs</span>
+              @if (shouldPulseTab('specs')) {
+                <span class="relative flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
+                </span>
+              }
+            </div>
             
           </button>
 
@@ -174,7 +200,7 @@
                 <div class="mt-8 pt-5 border-t border-gray-100">
                   <div class="flex items-center justify-between mb-3 gap-3">
                     <h3 class="text-sm font-semibold text-gray-900">Overall Inspector Comments</h3>
-                    @if (!isCustomer()) {
+                    @if (isInspectorCapable()) {
                       @if (!isEditingGlobalComment) {
                         <button
                           type="button"

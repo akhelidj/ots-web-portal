@@ -1413,20 +1413,47 @@ export class InspectionReportDetailComponent
     }
   }
 
-  public shouldPulseTab(tab: 'serials' | 'approvals'): boolean {
+  public shouldPulseTab(tab: string): boolean {
     const report = this.report();
-    if (!report) {
+    if (!report || this.isCustomer()) {
       return false;
     }
+
+    const status = report.status as string;
+    const sns = this.serials();
+    const hasUninspected = sns.length === 0 || sns.some(sn => 
+      sn.approvalStatus === SERIAL_STATUSES.NOT_INSPECTED
+    );
 
     if (tab === 'approvals') {
       return this.canAccessBatchApprovals() && this.hasPendingApprovals();
     }
 
-    return (
-      report.status === REPORT_STATUSES.IN_INSPECTION &&
-      !this.hasPendingApprovals()
-    );
+    if (tab === 'serials') {
+      if ((this.isReceiver() || this.isAdmin()) && ['DRAFT', 'RECEIVED', 'READY_FOR_CLEANING', 'READY_FOR_INSPECTION'].includes(status)) {
+        return true;
+      }
+      
+      if ((this.userRole() === APP_ROLES.INSPECTOR || this.isAdmin()) && status === REPORT_STATUSES.IN_INSPECTION) {
+        if (hasUninspected) return true;
+      }
+
+      if ((this.isSupervisor() || this.isAdmin()) && (status === REPORT_STATUSES.IN_INSPECTION || status === REPORT_STATUSES.PENDING_APPROVAL)) {
+        if (!this.hasPendingApprovals()) return true;
+      }
+      return false;
+    }
+
+    if (tab === 'summary' || tab === 'specs') {
+      if ((this.userRole() === APP_ROLES.INSPECTOR || this.isAdmin()) && status === REPORT_STATUSES.IN_INSPECTION) {
+        if (!hasUninspected && sns.length > 0) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    return false;
   }
 
   public tabTooltip(tab: 'serials' | 'approvals'): string {
