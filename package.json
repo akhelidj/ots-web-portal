@@ -1,12 +1,13 @@
 {
   "name": "@ots/source",
-  "version": "0.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "scripts": {
+    "sync:portal-version": "node scripts/sync-portal-version.mjs",
     "start:api": "nx serve api",
-    "start:portal": "nx serve portal",
+    "start:portal": "npm run sync:portal-version && nx serve portal",
     "build:api": "nx build api",
-    "build:portal": "nx build portal --configuration=production",
+    "build:portal": "npm run sync:portal-version && nx build portal --configuration=production",
     "lint": "nx run-many -t lint",
     "graph": "nx graph",
     "db:reset": "npx dotenv -e api/.env -- npx prisma db push --force-reset --schema api/prisma/schema.prisma",

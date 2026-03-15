@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-local.repo';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
+import { OutboxLocalRepo } from '@portal/core/offline/repos/outbox-local.repo';
 import {
   CHILD_REPORT_TYPES,
   ENTITY_TYPES,
@@ -16,6 +17,7 @@ export class ChildReportsService {
   private http = inject(HttpClient);
   private crRepo = inject(ChildReportLocalRepo);
   private outbox = inject(OutboxService);
+  private outboxRepo = inject(OutboxLocalRepo);
   private connectivity = inject(ConnectivityService);
 
   public readonly changes$ = this.crRepo.changes$;
@@ -234,7 +236,37 @@ export class ChildReportsService {
     inspectionReportId: string,
   ): Promise<LocalChildReport | null> {
     if (!this.isOnline) {
-      throw new Error('Child report generation requires internet connection.');
+      const localChildren =
+        await this.crRepo.listByReportId(inspectionReportId);
+      const existingRework = localChildren.find(
+        (child) => child.type === CHILD_REPORT_TYPES.REWORK,
+      );
+      if (existingRework) {
+        return existingRework;
+      }
+
+      const alreadyQueued = await this.outboxRepo.hasPendingOperation(
+        ENTITY_TYPES.CHILD_REPORT,
+        inspectionReportId,
+        'SYNC_REWORK',
+      );
+
+      if (!alreadyQueued) {
+        await this.outbox.enqueue({
+          id: crypto.randomUUID(),
+          idempotencyKey: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+          entityType: ENTITY_TYPES.CHILD_REPORT,
+          entityId: inspectionReportId,
+          operation: 'SYNC_REWORK',
+          payload: {},
+          status: 'PENDING',
+          attemptCount: 0,
+          lastError: null,
+        });
+      }
+
+      return null;
     }
 
     const serverReport = await firstValueFrom(
@@ -262,15 +294,9 @@ export class ChildReportsService {
   }
 
   public async uploadAttachment(id: string, file: File): Promise<void> {
-    const formData = new FormData();
-    formData.append('file', file);
-    await firstValueFrom(
-      this.http.post(
-        `${environment.apiUrl}/child-reports/${id}/attachments`,
-        formData,
-      ),
-    );
-    this.connectivity.markApiReachable();
+    void id;
+    void file;
+    throw new Error('Attachment upload is temporarily disabled.');
   }
 
   private isOfflineError(error: unknown): boolean {

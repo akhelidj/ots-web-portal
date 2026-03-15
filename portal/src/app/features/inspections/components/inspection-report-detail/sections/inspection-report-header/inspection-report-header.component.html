@@ -64,6 +64,29 @@
   <div
     class="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 w-full sm:w-auto sm:justify-end"
   >
+    @if (hasWorkflowActions) {
+      <button
+        (click)="onOpenWorkflow()"
+        class="w-full sm:w-auto justify-center flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-white px-4 py-2 text-sm font-semibold rounded-lg shadow transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+        title="Open Workflow Actions"
+      >
+        <svg
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+          />
+        </svg>
+        Workflow Actions
+      </button>
+    }
+
     @if (showCustomerExport) {
       <button
         (click)="onExport()"

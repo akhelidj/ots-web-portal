@@ -3,9 +3,10 @@ import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { environment } from '@app-env/environment';
 import { ToastComponent } from '@portal/shared/toast/toast.component';
+import { SystemNoticeComponent } from '@portal/shared/system-notice/system-notice.component';
 
 @Component({
-  imports: [RouterModule, ToastComponent],
+  imports: [RouterModule, ToastComponent, SystemNoticeComponent],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',

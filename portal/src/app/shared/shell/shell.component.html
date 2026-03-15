@@ -110,7 +110,12 @@
           >
             @if (isAuthenticated()) {
               <a
-                routerLink="/settings"
+                [routerLink]="['/', APP_ROUTES.HELP]"
+                class="text-sm font-medium text-neutral-300 hover:text-white transition-colors"
+                >Help</a
+              >
+              <a
+                [routerLink]="['/', APP_ROUTES.SETTINGS]"
                 class="text-sm font-medium text-neutral-300 hover:text-white transition-colors mr-3"
                 >Settings</a
               >
@@ -240,7 +245,13 @@
         @if (isAuthenticated()) {
           <div class="flex flex-col gap-2 pt-2">
             <a
-              routerLink="/settings"
+              [routerLink]="['/', APP_ROUTES.HELP]"
+              (click)="closeMobileMenu()"
+              class="btn btn-secondary btn-sm w-full"
+              >Help</a
+            >
+            <a
+              [routerLink]="['/', APP_ROUTES.SETTINGS]"
               (click)="closeMobileMenu()"
               class="btn btn-secondary btn-sm w-full"
               >Settings</a

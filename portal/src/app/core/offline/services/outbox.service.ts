@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { OutboxLocalRepo } from '@portal/core/offline/repos/outbox-local.repo';
 import { SyncDispatcherService } from './sync-dispatcher.service';
 import { SessionService } from '@portal/core/auth/services/session.service';
@@ -18,9 +18,19 @@ export class OutboxService {
   private isProcessing = false;
 
   constructor() {
-    if (this.session.isAuthenticated()) {
-      void this.rehydrateCount();
-    }
+    effect(() => {
+      const isAuthenticated = this.session.isAuthenticated();
+
+      untracked(() => {
+        if (isAuthenticated) {
+          void this.rehydrateCount();
+          return;
+        }
+
+        this.pendingCount.set(0);
+        this.hasConflict.set(false);
+      });
+    });
   }
 
   private async rehydrateCount(): Promise<void> {

@@ -1,0 +1,129 @@
+@if (notices.notice(); as notice) {
+  @if (notice.type === 'update') {
+    <div
+      class="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="system-update-title"
+    >
+      <div
+        class="w-full max-w-md rounded-2xl border border-neutral-200 bg-white shadow-2xl overflow-hidden"
+      >
+        <div
+          class="bg-gradient-to-r from-primary/10 via-white to-accent/10 px-6 py-5 border-b border-neutral-100"
+        >
+          <p
+            class="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary"
+          >
+            System Update
+          </p>
+          <h2
+            id="system-update-title"
+            class="mt-2 text-xl font-semibold text-neutral-900"
+          >
+            {{ notice.title }}
+          </h2>
+        </div>
+
+        <div class="px-6 py-5 space-y-4">
+          <p class="text-sm text-neutral-700 leading-relaxed">
+            {{ notice.message }}
+          </p>
+
+          <div
+            class="grid grid-cols-2 gap-3 rounded-xl bg-neutral-50 border border-neutral-100 p-3 text-xs"
+          >
+            <div>
+              <p
+                class="text-neutral-500 uppercase tracking-[0.08em] font-semibold"
+              >
+                Current
+              </p>
+              <p class="mt-1 font-semibold text-neutral-800">
+                v{{ notice.version }}
+              </p>
+            </div>
+            <div>
+              <p
+                class="text-neutral-500 uppercase tracking-[0.08em] font-semibold"
+              >
+                Available
+              </p>
+              <p class="mt-1 font-semibold text-neutral-800">
+                {{ notice.latestVersion || 'Latest Build' }}
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-1"
+          >
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="notices.dismissNotice()"
+            >
+              Later
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              (click)="notices.applyUpdate()"
+            >
+              Refresh Now
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div
+      class="pointer-events-none fixed inset-x-0 top-4 z-[1050] flex justify-center px-4"
+    >
+      <div
+        class="pointer-events-auto inline-flex items-center gap-3 rounded-full border px-4 py-2.5 shadow-lg backdrop-blur-sm"
+        [ngClass]="{
+          'bg-amber-50/95 border-amber-200 text-amber-900':
+            notice.type === 'offline',
+          'bg-emerald-50/95 border-emerald-200 text-emerald-900':
+            notice.type === 'online',
+        }"
+        role="status"
+        aria-live="polite"
+      >
+        <span
+          class="inline-flex h-2.5 w-2.5 rounded-full"
+          [ngClass]="{
+            'bg-amber-500': notice.type === 'offline',
+            'bg-emerald-500': notice.type === 'online',
+          }"
+        ></span>
+        <div class="flex items-center gap-2">
+          <p class="text-sm font-semibold">{{ notice.title }}</p>
+          <p class="text-xs opacity-80">{{ notice.message }}</p>
+        </div>
+        <button
+          type="button"
+          class="rounded-full p-1 transition-colors"
+          [ngClass]="{
+            'hover:bg-amber-100': notice.type === 'offline',
+            'hover:bg-emerald-100': notice.type === 'online',
+          }"
+          (click)="notices.dismissNotice()"
+          aria-label="Dismiss notice"
+        >
+          <svg
+            class="h-4 w-4"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M5.22 5.22a.75.75 0 011.06 0L10 8.94l3.72-3.72a.75.75 0 111.06 1.06L11.06 10l3.72 3.72a.75.75 0 11-1.06 1.06L10 11.06l-3.72 3.72a.75.75 0 11-1.06-1.06L8.94 10 5.22 6.28a.75.75 0 010-1.06z"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  }
+}

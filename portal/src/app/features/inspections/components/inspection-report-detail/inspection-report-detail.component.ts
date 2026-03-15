@@ -176,6 +176,25 @@ export class InspectionReportDetailComponent
   private shellScrollEl: HTMLElement | null = null;
   private readonly onShellScrollBound = () => this.onShellScroll();
 
+  public showOnboardingModal = computed(() => {
+    if (this.prefs.preferences().hasSeenOnboardingModal) {
+      return false;
+    }
+    
+    const report = this.report();
+    if (!report) {
+      return false;
+    }
+
+    if (
+      report.status === REPORT_STATUSES.APPROVED ||
+      report.status === REPORT_STATUSES.CLOSED
+    ) {
+      return false;
+    }
+
+    return true;
+  });
   public isCompactMode = computed(() => this.prefs.preferences().compactMode);
   public hasSubmittedBatches = computed(() => {
     return this.approvalBatches().length > 0;
@@ -197,6 +216,10 @@ export class InspectionReportDetailComponent
       (report) => report.type === CHILD_REPORT_TYPES.REWORK,
     ),
   );
+
+  public closeOnboardingModal(): void {
+    this.prefs.setHasSeenOnboardingModal(true);
+  }
 
   // Search Filter Signals
   public snSearchQuery = signal('');
@@ -238,6 +261,7 @@ export class InspectionReportDetailComponent
   public formConnection = '';
 
   public isEditingMeta = false;
+  public isWorkflowModalOpen = false;
   public isEditingGlobalComment = false;
 
   constructor() {
@@ -558,16 +582,13 @@ export class InspectionReportDetailComponent
   }
 
   private async refreshData() {
+    // 1. Fetch all data asynchronously without mutating component state yet
     const list = await this.irService.irRepo.list();
     const r =
       list.find((x: LocalInspectionReport) => x.id === this.reportId) || null;
-    this.report.set(r);
 
     const snList = await this.irService.getSnForReport(this.reportId);
-    this.serials.set(snList);
-
     const logs = await this.irService.getTransitionLogsLocally(this.reportId);
-    this.transitionLogs.set(logs);
 
     // Enrich logs with user names
     const enrichedLogs = [];
@@ -584,12 +605,10 @@ export class InspectionReportDetailComponent
       (a, b) =>
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     );
-    this.enrichedTransitionLogs.set(enrichedLogs);
 
     const childReports = await this.crService.getChildReportsForInspection(
       this.reportId,
     );
-    this.childReports.set(childReports);
 
     // Load batches
     const batches = await this.approvalBatchRepo.listByReportId(this.reportId);
@@ -633,10 +652,17 @@ export class InspectionReportDetailComponent
         new Date(b.batch.submittedAt).getTime() -
         new Date(a.batch.submittedAt).getTime(),
     );
-    this.approvalBatches.set(enrichedBatches);
+
+    let vResult = null;
+    let previousStatus: string | null = null;
+    let onHoldReason: string | null = null;
+    let newUiState = null;
+    let newCustomerAddress = 'N/A';
+    let newInspectedByName = 'N/A';
+    let newApprovedByName = 'N/A';
 
     if (r) {
-      const vResult = this.validationService.validate(r, snList);
+      vResult = this.validationService.validate(r, snList);
 
       const pending = await this.outboxRepo.getPendingItems();
       const conflicts = await this.outboxRepo.getConflictItems();
@@ -657,10 +683,7 @@ export class InspectionReportDetailComponent
         });
         vResult.isReady = false;
       }
-      this.validationResult = vResult;
 
-      let previousStatus: string | null = null;
-      let onHoldReason: string | null = null;
       if (r.status === REPORT_STATUSES.ON_HOLD && logs.length > 0) {
         const sortedLogs = [...logs].sort(
           (a, b) =>
@@ -675,7 +698,7 @@ export class InspectionReportDetailComponent
         }
       }
 
-      this.uiState = getInspectionReportUiState({
+      newUiState = getInspectionReportUiState({
         role: this.userRole() as AppRole,
         reportStatus: r.status as ReportStatus,
         isOffline: !this.isOnline,
@@ -686,10 +709,7 @@ export class InspectionReportDetailComponent
         version: r.version,
       });
 
-      this.allowedTransitions = this.uiState.transitionChoices;
-
       // Meta Card Calcs
-      this.customerAddress = 'N/A';
       if (r.customerId) {
         const cust = await this.customerRepo.getById(r.customerId);
         if (cust) {
@@ -699,18 +719,16 @@ export class InspectionReportDetailComponent
             cust.city,
             cust.country,
           ].filter((x) => x && x.trim().length > 0);
-          this.customerAddress = parts.length > 0 ? parts.join(', ') : 'N/A';
+          newCustomerAddress = parts.length > 0 ? parts.join(', ') : 'N/A';
         }
       }
 
-      this.inspectedByName = 'N/A';
-      this.approvedByName = 'N/A';
       if (logs.length > 0) {
         const sortedAsc = [...logs].sort(
           (a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
         );
-        // Inspected By: Last user who transitioned to IN_INSPECTION or PENDING_APPROVAL
+        // Inspected By: Last user who transitioning to IN_INSPECTION or PENDING_APPROVAL
         const inspectLog = [...sortedAsc]
           .reverse()
           .find(
@@ -720,7 +738,7 @@ export class InspectionReportDetailComponent
           );
         if (inspectLog && inspectLog.userId) {
           const u = await this.userRepo.getById(inspectLog.userId);
-          this.inspectedByName = u?.name || u?.email || 'N/A';
+          newInspectedByName = u?.name || u?.email || 'N/A';
         }
 
         // Approved By: Last user who transitioned to APPROVED
@@ -733,7 +751,7 @@ export class InspectionReportDetailComponent
           );
         if (approveLog && approveLog.userId) {
           const u = await this.userRepo.getById(approveLog.userId);
-          this.approvedByName = u?.name || u?.email || 'N/A';
+          newApprovedByName = u?.name || u?.email || 'N/A';
         } else {
           const latestApprovedBatch = enrichedBatches
             .filter((b) => b.batch.status === BATCH_STATUSES.APPROVED)
@@ -744,49 +762,71 @@ export class InspectionReportDetailComponent
             )[0];
 
           if (latestApprovedBatch?.reviewedByName) {
-            this.approvedByName = latestApprovedBatch.reviewedByName;
+            newApprovedByName = latestApprovedBatch.reviewedByName;
           }
         }
       }
+    }
 
-      // KPI Calcs
-      const total = snList.length;
-      let pass = 0;
-      let rework = 0;
-      let scrap = 0;
-      let hold = 0;
+    // KPI Calcs
+    const total = snList.length;
+    let pass = 0;
+    let rework = 0;
+    let scrap = 0;
+    let hold = 0;
 
-      const reworkList: {
-        sn: LocalSerialNumber;
-        childLinked: LocalChildReport | null;
-      }[] = [];
+    const reworkList: {
+      sn: LocalSerialNumber;
+      childLinked: LocalChildReport | null;
+    }[] = [];
 
-      for (const sn of snList) {
-        const rawDisp = this.getDisposition(sn);
-        const disp = rawDisp ? rawDisp.toUpperCase() : null;
+    for (const sn of snList) {
+      const rawDisp = this.getDisposition(sn);
+      const disp = rawDisp ? rawDisp.toUpperCase() : null;
 
-        if (disp === SERIAL_DISPOSITIONS.PASS) pass++;
-        else if (disp === SERIAL_DISPOSITIONS.REWORK) {
-          rework++;
-          const child =
-            childReports.find((cr) => cr.type === CHILD_REPORT_TYPES.REWORK) ||
-            null;
-          reworkList.push({ sn, childLinked: child });
-        } else if (disp === SERIAL_DISPOSITIONS.SCRAP) scrap++;
-        else if (disp === SERIAL_DISPOSITIONS.HOLD) hold++;
-      }
+      if (disp === SERIAL_DISPOSITIONS.PASS) pass++;
+      else if (disp === SERIAL_DISPOSITIONS.REWORK) {
+        rework++;
+        const child =
+          childReports.find((cr) => cr.type === CHILD_REPORT_TYPES.REWORK) ||
+          null;
+        reworkList.push({ sn, childLinked: child });
+      } else if (disp === SERIAL_DISPOSITIONS.SCRAP) scrap++;
+      else if (disp === SERIAL_DISPOSITIONS.HOLD) hold++;
+    }
 
+    // --- APPLY ALL STATE SYNCHRONOUSLY AT THE END ---
+    this.report.set(r);
+    this.serials.set(snList);
+    this.transitionLogs.set(logs);
+    this.enrichedTransitionLogs.set(enrichedLogs);
+    this.childReports.set(childReports);
+    this.approvalBatches.set(enrichedBatches);
+
+    if (r) {
+      this.validationResult = vResult;
+      this.uiState = newUiState;
+      this.allowedTransitions = newUiState ? newUiState.transitionChoices : [];
+      this.customerAddress = newCustomerAddress;
+      this.inspectedByName = newInspectedByName;
+      this.approvedByName = newApprovedByName;
       this.reworkSerials = reworkList;
 
       // Set default tab if not set
       if (this.activeTab() === 'summary') {
-        const role = this.userRole().toUpperCase();
-        if (role === APP_ROLES.INSPECTOR) {
-          this.activeTab.set('serials');
-        } else if (role === APP_ROLES.SUPERVISOR) {
-          this.activeTab.set(
-            this.hasPendingApprovals() ? 'approvals' : 'serials',
-          );
+        const hasRedirectedTab = sessionStorage.getItem('hasRedirectedTab');
+
+        if (!hasRedirectedTab) {
+          const role = this.userRole().toUpperCase();
+          if (role === APP_ROLES.INSPECTOR) {
+            this.activeTab.set('serials');
+            sessionStorage.setItem('hasRedirectedTab', 'true');
+          } else if (role === APP_ROLES.SUPERVISOR) {
+            this.activeTab.set(
+              this.hasPendingApprovals() ? 'approvals' : 'serials',
+            );
+            sessionStorage.setItem('hasRedirectedTab', 'true');
+          }
         }
       }
 
@@ -1412,7 +1452,23 @@ export class InspectionReportDetailComponent
     }
   }
 
+  public onTabClick(tab: 'summary' | 'serials' | 'approvals' | 'specs' | 'history') {
+    if (this.shouldPulseTab(tab)) {
+      this.prefs.addDisabledPulsingTab(tab);
+    }
+    this.activeTab.set(tab);
+  }
+
+  public acknowledgeOnboarding() {
+    this.prefs.setHasSeenOnboardingModal(true);
+  }
+
   public shouldPulseTab(tab: string): boolean {
+    const disabledTabs = this.prefs.preferences().disabledPulsingTabs || [];
+    if (disabledTabs.includes(tab)) {
+      return false;
+    }
+
     const report = this.report();
     if (!report || this.isCustomer()) {
       return false;

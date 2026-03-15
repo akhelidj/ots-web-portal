@@ -12,6 +12,7 @@ import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { SessionService } from '@portal/core/auth/services/session.service';
 import { SyncOrchestratorService } from '@portal/core/offline/services/sync-orchestrator.service';
 import { NavigationService } from '@portal/core/navigation/services/navigation.service';
+import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
 import { environment } from '@app-env/environment';
 import { AuthRequiredComponent } from '@portal/shared/components/auth-required/auth-required.component';
 
@@ -48,6 +49,7 @@ export class ShellComponent {
 
   public isDevMode = !environment.production;
   public mobileMenuOpen = signal(false);
+  public readonly APP_ROUTES = AppRoutes;
 
   constructor() {
     this.router.events.subscribe((event) => {

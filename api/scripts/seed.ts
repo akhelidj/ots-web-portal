@@ -377,7 +377,10 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
         isScrap: isScrap,
         isPremium: !isScrap && !isRework,
       },
-      remarks: '',
+      remarks: isScrap ? 'Heavy wall loss detected. Pipe failed beyond repair.' 
+              : isRework ? 'Thread damage found, requires re-threading.' 
+              : isHold ? 'Awaiting further client instructions on minor pitting.' 
+              : 'Passed all inspections.',
     };
 
     const existing = await prisma.serialNumber.findFirst({

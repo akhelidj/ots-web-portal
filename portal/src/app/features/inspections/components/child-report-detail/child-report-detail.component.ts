@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
-import { signal } from '@angular/core';
+import { signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ChildReportsService } from '@portal/features/inspections/services/child-reports.service';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 import { SessionService } from '@portal/core/auth/services/session.service';
+import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-serial-number-local.repo';
+import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
 import {
   LocalChildReport,
   LocalInspectionReport,
@@ -47,6 +49,8 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   private irService = inject(InspectionReportsService);
   private session = inject(SessionService);
   private connectivity = inject(ConnectivityService);
+  private batchSnRepo = inject(BatchSerialNumberLocalRepo);
+  private userRepo = inject(UserLocalRepo);
   private subscriptions = new Subscription();
 
   public reportId = '';
@@ -63,7 +67,54 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       approvalStatus?: string;
     }[]
   >([]);
-  public batches = signal<LocalInspectionApprovalBatch[]>([]);
+
+  public activeHistorySn = signal<{ id: string; serial: string } | null>(null);
+
+  public historyNotes = computed(() => {
+    const sn = this.activeHistorySn();
+    if (!sn) return [];
+
+    return this.batches()
+      .filter((b) => b.notes && b.serialIds.includes(sn.id))
+      .map((b) => ({
+        notes: b.notes,
+        date: b.submittedAt,
+        user: b.submittedByName,
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  });
+
+  public historySerialIds = computed(() => {
+    const ids = new Set<string>();
+
+    for (const batch of this.batches()) {
+      if (batch.status !== 'RETURNED' || !batch.notes) {
+        continue;
+      }
+      for (const id of batch.serialIds || []) {
+        ids.add(id);
+      }
+    }
+    return ids;
+  });
+
+  public openHistory(sn: { id: string; serial: string }): void {
+    this.activeHistorySn.set(sn);
+  }
+
+  public closeHistory(): void {
+    this.activeHistorySn.set(null);
+  }
+
+  public hasHistory(sn: { id: string; serial: string }): boolean {
+    return this.historySerialIds().has(sn.id);
+  }
+  public batches = signal<
+    (LocalInspectionApprovalBatch & {
+      serialIds: string[];
+      submittedByName: string;
+    })[]
+  >([]);
 
   public inspectingSnId: string | null = null;
   public inspectingSnValue = '';
@@ -92,6 +143,8 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   private isRefreshing = false;
   private refreshQueued = false;
   private isDestroyed = false;
+
+  public isWorkflowModalOpen = false;
 
   public get isOnline(): boolean {
     return this.connectivity.isOnline();
@@ -209,9 +262,29 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
         const allBatches = await this.irService[
           'approvalBatchRepo'
         ].listByReportId(cr.inspectionReportId);
-        this.batches.set(
-          allBatches.filter((b) => b.childReportId === this.reportId),
+
+        const childBatches = allBatches.filter(
+          (b) => b.childReportId === this.reportId,
         );
+
+        const enrichedBatches = await Promise.all(
+          childBatches.map(async (b) => {
+            const bsnList = await this.batchSnRepo.listByBatchId(b.id);
+            let submittedByName = 'System';
+            if (b.submittedByUserId) {
+              const u = await this.userRepo.getById(b.submittedByUserId);
+              if (u) {
+                submittedByName = u.name || u.email || 'System';
+              }
+            }
+            return {
+              ...b,
+              serialIds: bsnList.map((sn) => sn.serialNumberId),
+              submittedByName,
+            };
+          }),
+        );
+        this.batches.set(enrichedBatches);
 
         this.uiState = getChildReportUiState({
           role: this.userRole as AppRole,
@@ -221,7 +294,9 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
           syncState: cr.syncState as 'SYNCED' | 'PENDING' | 'CONFLICT',
         });
 
-        this.allowedTransitions = this.uiState.transitionChoices;
+        this.allowedTransitions = this.uiState.transitionChoices.filter(
+          (t) => t.toStatus !== 'SUBMITTED_FOR_APPROVAL',
+        );
       } else {
         this.uiState = null;
         this.allowedTransitions = [];
@@ -347,63 +422,6 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  public async approveSelected() {
-    const ids = Array.from(this.selectedSnIds());
-    if (ids.length === 0) return;
-
-    try {
-      // Find batches that contain these SNs
-      const activeBatches = this.batches().filter(
-        (b) => b.status === 'SUBMITTED',
-      );
-      for (const batch of activeBatches) {
-        const batchSns = await this.irService['batchSnRepo'].listByBatchId(
-          batch.id,
-        );
-        const snIdsInBatch = batchSns
-          .map((m) => m.serialNumberId)
-          .filter((id) => ids.includes(id));
-
-        if (snIdsInBatch.length > 0) {
-          await this.irService.approveBatch(batch.id, snIdsInBatch);
-        }
-      }
-      this.clearSelection();
-      await this.refreshData();
-    } catch (e) {
-      this.formError = (e as Error).message || 'Failed to approve items';
-    }
-  }
-
-  public async returnSelected(reason: string) {
-    const ids = Array.from(this.selectedSnIds());
-    if (ids.length === 0 || !reason) return;
-
-    try {
-      const activeBatches = this.batches().filter(
-        (b) => b.status === 'SUBMITTED',
-      );
-      for (const batch of activeBatches) {
-        const batchSns = await this.irService['batchSnRepo'].listByBatchId(
-          batch.id,
-        );
-        const snIdsInBatch = batchSns
-          .map((m) => m.serialNumberId)
-          .filter((id) => ids.includes(id));
-
-        if (snIdsInBatch.length > 0) {
-          await this.irService.returnBatch(batch.id, reason, snIdsInBatch);
-        }
-      }
-      this.clearSelection();
-      this.selectedTransition = null;
-      this.formReason = '';
-      await this.refreshData();
-    } catch (e) {
-      this.formError = (e as Error).message || 'Failed to return items';
-    }
-  }
-
   public openReasonSelect(transition: {
     toStatus: string;
     requiresReason: boolean;
@@ -468,88 +486,6 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       } else {
         this.router.navigate(['/', role, 'reports']);
       }
-    }
-  }
-
-  public formFile: File | null = null;
-  public isUploading = false;
-  public uploadSuccess = false;
-
-  public onFileSelected(event: Event) {
-    const el = event.target as HTMLInputElement;
-    if (el.files && el.files.length > 0) {
-      this.formFile = el.files[0];
-      this.uploadSuccess = false;
-    } else {
-      this.formFile = null;
-    }
-  }
-
-  public async uploadAttachment() {
-    this.formError = '';
-    this.uploadSuccess = false;
-    if (!this.formFile) {
-      this.formError = 'Please select a file to upload.';
-      return;
-    }
-
-    this.isUploading = true;
-    try {
-      await this.crService.uploadAttachment(this.reportId, this.formFile);
-      this.formFile = null;
-      this.uploadSuccess = true;
-
-      // Auto-hide success message after 3 seconds
-      setTimeout(() => (this.uploadSuccess = false), 3000);
-
-      this.refreshData();
-    } catch (error: unknown) {
-      const e = error as { error?: { message?: string }; message?: string };
-      this.formError =
-        e?.error?.message || e?.message || 'Failed to upload attachment.';
-    } finally {
-      this.isUploading = false;
-    }
-  }
-
-  public async downloadAttachment(
-    url: string,
-    filename: string,
-  ): Promise<void> {
-    if (!url) return;
-
-    // Resolve relative URL if necessary
-    let fullUrl = url;
-    if (url.startsWith('/')) {
-      try {
-        const base = new URL(environment.apiUrl);
-        fullUrl = `${base.origin}${url}`;
-      } catch {
-        // Fallback if environment.apiUrl is relative
-        fullUrl = `${environment.apiUrl.replace(/\/api$/, '')}${url}`;
-      }
-    }
-
-    try {
-      // Fetch as a blob so that the Auth Interceptor automatically attaches tokens
-      const blob = await firstValueFrom(
-        this.http.get(fullUrl, { responseType: 'blob' }),
-      );
-
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-
-      setTimeout(() => {
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
-      }, 0);
-    } catch {
-      this.formError =
-        'Failed to download attachment. It might be unavailable.';
     }
   }
 

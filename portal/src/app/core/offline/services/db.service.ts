@@ -5,14 +5,14 @@ import { Injectable } from '@angular/core';
 })
 export class DbService {
   private readonly DB_PREFIX = 'ots_';
-  private readonly DB_VERSION = 8;
+  private readonly DB_VERSION = 9;
   private dbInstance: IDBDatabase | null = null;
   private initPromise: Promise<IDBDatabase> | null = null;
   private currentTenantId: string | null = null;
 
   public async openForTenant(tenantId: string): Promise<void> {
     if (this.currentTenantId === tenantId && this.dbInstance) {
-      return; 
+      return;
     }
 
     if (this.dbInstance) {
@@ -40,15 +40,21 @@ export class DbService {
 
         let irStore: IDBObjectStore;
         if (!db.objectStoreNames.contains('inspection_reports')) {
-          irStore = db.createObjectStore('inspection_reports', { keyPath: 'id' });
+          irStore = db.createObjectStore('inspection_reports', {
+            keyPath: 'id',
+          });
         } else {
           if (!request.transaction) throw new Error('Transaction is missing');
           irStore = request.transaction.objectStore('inspection_reports');
         }
-        if (!irStore.indexNames.contains('updatedAt')) irStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-        if (!irStore.indexNames.contains('status')) irStore.createIndex('status', 'status', { unique: false });
-        if (!irStore.indexNames.contains('customerId')) irStore.createIndex('customerId', 'customerId', { unique: false });
-        if (!irStore.indexNames.contains('syncState')) irStore.createIndex('syncState', 'syncState', { unique: false });
+        if (!irStore.indexNames.contains('updatedAt'))
+          irStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+        if (!irStore.indexNames.contains('status'))
+          irStore.createIndex('status', 'status', { unique: false });
+        if (!irStore.indexNames.contains('customerId'))
+          irStore.createIndex('customerId', 'customerId', { unique: false });
+        if (!irStore.indexNames.contains('syncState'))
+          irStore.createIndex('syncState', 'syncState', { unique: false });
 
         let snStore: IDBObjectStore;
         if (!db.objectStoreNames.contains('serial_numbers')) {
@@ -57,9 +63,14 @@ export class DbService {
           if (!request.transaction) throw new Error('Transaction is missing');
           snStore = request.transaction.objectStore('serial_numbers');
         }
-        if (!snStore.indexNames.contains('inspectionReportId')) snStore.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
-        if (!snStore.indexNames.contains('value')) snStore.createIndex('value', 'value', { unique: false });
-        if (!snStore.indexNames.contains('syncState')) snStore.createIndex('syncState', 'syncState', { unique: false });
+        if (!snStore.indexNames.contains('inspectionReportId'))
+          snStore.createIndex('inspectionReportId', 'inspectionReportId', {
+            unique: false,
+          });
+        if (!snStore.indexNames.contains('value'))
+          snStore.createIndex('value', 'value', { unique: false });
+        if (!snStore.indexNames.contains('syncState'))
+          snStore.createIndex('syncState', 'syncState', { unique: false });
 
         let crStore: IDBObjectStore;
         if (!db.objectStoreNames.contains('child_reports')) {
@@ -68,14 +79,25 @@ export class DbService {
           if (!request.transaction) throw new Error('Transaction is missing');
           crStore = request.transaction.objectStore('child_reports');
         }
-        if (!crStore.indexNames.contains('inspectionReportId')) crStore.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
-        if (crStore.indexNames.contains('serialNumberId')) crStore.deleteIndex('serialNumberId');
-        if (!crStore.indexNames.contains('syncState')) crStore.createIndex('syncState', 'syncState', { unique: false });
+        if (!crStore.indexNames.contains('inspectionReportId'))
+          crStore.createIndex('inspectionReportId', 'inspectionReportId', {
+            unique: false,
+          });
+        if (crStore.indexNames.contains('serialNumberId'))
+          crStore.deleteIndex('serialNumberId');
+        if (!crStore.indexNames.contains('syncState'))
+          crStore.createIndex('syncState', 'syncState', { unique: false });
 
         if (!db.objectStoreNames.contains('transitionLogs')) {
-          const tlStore = db.createObjectStore('transitionLogs', { keyPath: 'id' });
-          tlStore.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
-          tlStore.createIndex('childReportId', 'childReportId', { unique: false });
+          const tlStore = db.createObjectStore('transitionLogs', {
+            keyPath: 'id',
+          });
+          tlStore.createIndex('inspectionReportId', 'inspectionReportId', {
+            unique: false,
+          });
+          tlStore.createIndex('childReportId', 'childReportId', {
+            unique: false,
+          });
         }
 
         if (!db.objectStoreNames.contains('outbox')) {
@@ -104,15 +126,30 @@ export class DbService {
         }
 
         if (!db.objectStoreNames.contains('inspection_approval_batches')) {
-          const store = db.createObjectStore('inspection_approval_batches', { keyPath: 'id' });
-          store.createIndex('inspectionReportId', 'inspectionReportId', { unique: false });
+          const store = db.createObjectStore('inspection_approval_batches', {
+            keyPath: 'id',
+          });
+          store.createIndex('inspectionReportId', 'inspectionReportId', {
+            unique: false,
+          });
           store.createIndex('status', 'status', { unique: false });
         }
 
-        if (!db.objectStoreNames.contains('inspection_approval_batch_members')) {
-          const store = db.createObjectStore('inspection_approval_batch_members', { keyPath: 'id' });
-          store.createIndex('inspectionApprovalBatchId', 'inspectionApprovalBatchId', { unique: false });
-          store.createIndex('serialNumberId', 'serialNumberId', { unique: false });
+        if (
+          !db.objectStoreNames.contains('inspection_approval_batch_members')
+        ) {
+          const store = db.createObjectStore(
+            'inspection_approval_batch_members',
+            { keyPath: 'id' },
+          );
+          store.createIndex(
+            'inspectionApprovalBatchId',
+            'inspectionApprovalBatchId',
+            { unique: false },
+          );
+          store.createIndex('serialNumberId', 'serialNumberId', {
+            unique: false,
+          });
         }
       };
     });
@@ -131,7 +168,9 @@ export class DbService {
 
   public async getDb(): Promise<IDBDatabase> {
     if (!this.dbInstance && !this.initPromise) {
-      throw new Error('Database is not opened for any tenant. Call openForTenant first.');
+      throw new Error(
+        'Database is not opened for any tenant. Call openForTenant first.',
+      );
     }
     if (this.initPromise) {
       return this.initPromise;

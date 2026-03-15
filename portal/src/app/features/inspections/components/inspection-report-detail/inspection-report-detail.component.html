@@ -21,7 +21,9 @@
         [showCustomerExport]="!!(uiState?.actions?.['CUSTOMER_EXPORT']?.visible || uiState?.actions?.['ADMIN_EXPORT']?.visible)"
         [canExport]="!!(uiState?.actions?.['CUSTOMER_EXPORT']?.enabled || uiState?.actions?.['ADMIN_EXPORT']?.enabled)"
         [exportDisabledReason]="uiState?.actions?.['CUSTOMER_EXPORT']?.disabledReason || uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || ''"
+        [hasWorkflowActions]="!isCustomer() && (allowedTransitions.length > 0 || canPublishReport())"
         (export)="exportReport()"
+        (openWorkflow)="isWorkflowModalOpen = true"
       />
     </div>
 
@@ -43,7 +45,7 @@
 
           <button
             #summaryTab
-            (click)="activeTab.set('summary')"
+            (click)="onTabClick('summary')"
             [class]="activeTab() === 'summary' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
             class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
           >
@@ -64,7 +66,7 @@
 
           <button
             #serialsTab
-            (click)="activeTab.set('serials')"
+            (click)="onTabClick('serials')"
             [title]="tabTooltip('serials')"
             [class]="activeTab() === 'serials' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
             class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
@@ -86,7 +88,7 @@
           @if (canAccessBatchApprovals()) {
             <button
               #approvalsTab
-              (click)="hasSubmittedBatches() ? activeTab.set('approvals') : null"
+              (click)="hasSubmittedBatches() ? onTabClick('approvals') : null"
               [disabled]="!hasSubmittedBatches()"
               [title]="hasSubmittedBatches() ? tabTooltip('approvals') : 'No approval batches submitted yet'"
               [class]="activeTab() === 'approvals' ? 'text-primary' : (hasSubmittedBatches() ? 'text-gray-500 hover:text-gray-700' : 'text-gray-300 cursor-not-allowed')"
@@ -109,7 +111,7 @@
 
           <button
             #specsTab
-            (click)="activeTab.set('specs')"
+            (click)="onTabClick('specs')"
             [class]="activeTab() === 'specs' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
             class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
           >
@@ -130,7 +132,7 @@
 
           <button
             #historyTab
-            (click)="activeTab.set('history')"
+            (click)="onTabClick('history')"
             [class]="activeTab() === 'history' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
             class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
           >
@@ -149,6 +151,17 @@
       <!-- SUMMARY TAB -->
       @if (activeTab() === 'summary') {
         <div class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          @if (isCustomer()) {
+            <app-inspection-report-kpi-overview
+              [total]="kpiTotal"
+              [passed]="kpiPassed"
+              [rework]="kpiRework"
+              [scrap]="kpiScrap"
+              [passRate]="kpiPassRate"
+              (dispositionOpen)="openKpiModal($event)"
+            />
+          }
+
           <div
             class="grid grid-cols-1 gap-6"
             [ngClass]="!isCustomer() ? 'lg:grid-cols-3' : ''"
@@ -165,7 +178,7 @@
                   <div class="flex items-center gap-3">
                     <span class="data-chip bg-primary/10 text-primary border-primary/20">{{ reportData.status }}</span>
                     @if (!isEditingMeta && isInspectorCapable() && uiState?.actions?.['IR_EDIT_META']?.visible) {
-                      <button (click)="isEditingMeta = true; activeTab.set('specs')" class="btn btn-secondary btn-sm gap-1.5 text-primary border-primary/30 hover:bg-primary/5">
+                      <button (click)="isEditingMeta = true; onTabClick('specs')" class="btn btn-secondary btn-sm gap-1.5 text-primary border-primary/30 hover:bg-primary/5">
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                         Edit Metadata
                       </button>
@@ -250,25 +263,6 @@
                 </div>
               </div>
 
-              <!-- KPIs Overview -->
-              <app-inspection-report-kpi-overview
-                [total]="kpiTotal"
-                [passed]="kpiPassed"
-                [rework]="kpiRework"
-                [scrap]="kpiScrap"
-                [passRate]="kpiPassRate"
-                (dispositionOpen)="openKpiModal($event)"
-              />
-
-              <!-- Rework Status -->
-              <app-inspection-report-rework-status
-                [report]="reportData"
-                [userRole]="userRole()"
-                [items]="reworkSerials"
-                [hasGeneratedChildReport]="hasReworkChildReport()"
-                [isGenerating]="isGeneratingChildReport()"
-                (generateChildReport)="onGenerateReworkChildReport()"
-              />
             </div>
 
             <!-- Right Column: Workflow & Validation -->
@@ -311,46 +305,35 @@
   </div>
 }
 
-              <!-- Workflow Actions (Transition Bar) -->
-              @if (!isCustomer()) {
-                <div class="page-section p-5 border-neutral-200 relative overflow-hidden">
-                  <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 px-1">Workflow Actions</h3>
-                  <app-inspection-report-transition-actions
-                    [report]="reportData"
-                    [expanded]="true"
-                    [isFixed]="false"
-                    [allowedTransitions]="allowedTransitions"
-                    [selectedTransition]="selectedTransition"
-                    [formReason]="formReason"
-                    [formError]="formError"
-                    [validationResult]="validationResult"
-                    [isOnline]="isOnline"
-                    [showExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.visible"
-                    [canExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.enabled"
-                    [exportDisabledReason]="uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || ''"
-                    [isExporting]="isExporting"
-                    [canPublish]="canPublishReport()"
-                    [isPublishing]="isPublishingReport()"
-                    (expandedChange)="isTransitionExpanded = $event"
-                    (export)="exportReport()"
-                    (publish)="onPublishReport()"
-                    (showValidationDetails)="isValidationModalOpen = true"
-                    (selectTransition)="openReasonSelect($event)"
-                    (formReasonChange)="formReason = $event"
-                    (confirmTransition)="onTransition()"
-                    (cancelTransition)="selectedTransition = null; formReason = ''"
-                  />
-                </div>
-              }
+
             </div>
             }
           </div>
+
+          @if (!isCustomer()) {
+            <app-inspection-report-kpi-overview
+              [total]="kpiTotal"
+              [passed]="kpiPassed"
+              [rework]="kpiRework"
+              [scrap]="kpiScrap"
+              [passRate]="kpiPassRate"
+              (dispositionOpen)="openKpiModal($event)"
+            />
+          }
         </div>
       }
 
       <!-- SERIALS TAB -->
       @if (activeTab() === 'serials') {
-        <div class="animate-in fade-in duration-300">
+        <div class="animate-in fade-in duration-300 space-y-6">
+          <app-inspection-report-rework-status
+            [report]="reportData"
+            [userRole]="userRole()"
+            [items]="reworkSerials"
+            [hasGeneratedChildReport]="hasReworkChildReport()"
+            [isGenerating]="isGeneratingChildReport()"
+            (generateChildReport)="onGenerateReworkChildReport()"
+          />
           <div class="flex flex-col xl:flex-row gap-6 items-start w-full">
             <app-inspection-report-serials-table
               [serials]="filteredSerials()"
@@ -557,7 +540,7 @@
     <!-- SN Inspection Side Drawer (Sheet) -->
     @if (inspectingSn) {
       <div 
-        class="fixed inset-0 z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
+        class="fixed inset-0 !h-[100dvh] w-screen z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
         (click)="closeInspectionForm()"
         (keydown.escape)="closeInspectionForm()"
         tabindex="0"
@@ -565,7 +548,7 @@
         aria-label="Close inspection form"
       >
         <div 
-          class="bg-white w-full max-w-2xl h-full flex flex-col shadow-2xl border-l border-gray-200 animate-in slide-in-from-right duration-500 overflow-hidden"
+          class="bg-white w-full max-w-2xl !h-[100dvh] flex flex-col shadow-2xl border-l border-gray-200 animate-in slide-in-from-right duration-500 overflow-hidden"
           (click)="$event.stopPropagation()"
           (keydown)="$event.stopPropagation()"
           tabindex="-1"
@@ -606,7 +589,7 @@
 
     <!-- KPI Equipment Modal -->
     @if (activeModalStatus) {
-      <div class="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+      <div class="fixed inset-0 !h-[100dvh] w-screen z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-300">
           <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
             <h3 class="text-lg font-bold text-gray-900 flex items-center gap-3">
@@ -644,7 +627,7 @@
 
     <!-- Validation Details Modal -->
     @if (isValidationModalOpen && validationResult) {
-      <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+      <div class="fixed inset-0 !h-[100dvh] w-screen z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in slide-in-from-bottom-4">
           <div class="p-6 border-b border-error/10 bg-error-light/10 flex justify-between items-center">
              <h3 class="text-lg font-bold text-error-dark flex items-center gap-3">
@@ -672,7 +655,7 @@
 
     <!-- Return Batch Modal -->
     @if (activeActionBatchId && !batchError) {
-      <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+      <div class="fixed inset-0 !h-[100dvh] w-screen z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden animate-in zoom-in-95">
           <div class="p-6 bg-error-light/10 border-b border-error/10 flex justify-between items-center">
             <h3 class="text-lg font-bold text-error-dark flex items-center gap-2">
@@ -704,7 +687,7 @@
 
     <!-- SN History Modal -->
     @if (activeHistorySn()) {
-      <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
+      <div class="fixed inset-0 !h-[100dvh] w-screen z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4">
           <div class="p-6 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
             <div>
@@ -741,6 +724,90 @@
           <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
             <button (click)="closeHistory()" class="btn btn-secondary">Close</button>
           </div>
+        </div>
+      </div>
+    }
+
+    <!-- Workflow Actions Modal -->
+    @if (isWorkflowModalOpen) {
+      <div 
+        class="fixed inset-0 !h-[100dvh] w-screen z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in"
+        (click)="isWorkflowModalOpen = false"
+        (keydown.escape)="isWorkflowModalOpen = false"
+        tabindex="0"
+        role="button"
+        aria-label="Close Workflow Modal"
+      >
+        <div 
+          class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300 cursor-default"
+          (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()"
+          tabindex="-1"
+          role="region"
+          aria-label="Workflow Actions Dialog"
+        >
+          <div class="px-6 py-4 bg-white border-b border-neutral-100 flex justify-between items-center shrink-0 shadow-sm z-10">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-3">
+              <span class="p-2 bg-accent/10 rounded-lg">
+                <svg class="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+              </span>
+              Workflow Actions
+            </h2>
+            <button (click)="isWorkflowModalOpen = false" class="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-400 hover:text-neutral-900">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
+          
+          <div class="flex-grow overflow-y-auto p-2 sm:p-4 custom-scrollbar">
+            <app-inspection-report-transition-actions
+              [report]="reportData"
+              [expanded]="true"
+              [isFixed]="false"
+              [allowedTransitions]="allowedTransitions"
+              [selectedTransition]="selectedTransition"
+              [formReason]="formReason"
+              [formError]="formError"
+              [validationResult]="validationResult"
+              [isOnline]="isOnline"
+              [showExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.visible"
+              [canExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.enabled"
+              [exportDisabledReason]="uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || ''"
+              [isExporting]="isExporting"
+              [canPublish]="canPublishReport()"
+              [isPublishing]="isPublishingReport()"
+              (expandedChange)="isTransitionExpanded = $event"
+              (export)="exportReport()"
+              (publish)="onPublishReport(); isWorkflowModalOpen = false"
+              (showValidationDetails)="isValidationModalOpen = true"
+              (selectTransition)="openReasonSelect($event)"
+              (formReasonChange)="formReason = $event"
+              (confirmTransition)="onTransition(); isWorkflowModalOpen = false"
+              (cancelTransition)="selectedTransition = null; formReason = ''"
+            />
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Onboarding Modal -->
+    @if (showOnboardingModal()) {
+      <div class="fixed inset-0 !h-[100dvh] w-screen z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col items-center text-center animate-in zoom-in-95 duration-300">
+          <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+            <span class="relative flex h-6 w-6">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-6 w-6 bg-accent"></span>
+            </span>
+          </div>
+          <h2 class="text-xl font-bold text-gray-900 mb-2">Follow the Pulse!</h2>
+          <p class="text-gray-600 mb-6 leading-relaxed">
+            Welcome to the inspection report! Keep an eye out for the pulsing orange dots. They will guide you to tabs that require your attention.
+          </p>
+          <button (click)="acknowledgeOnboarding()" class="btn btn-primary w-full py-3 text-sm font-bold shadow-md">
+            Got it, let's go!
+          </button>
         </div>
       </div>
     }

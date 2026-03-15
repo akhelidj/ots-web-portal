@@ -2,6 +2,8 @@ import { Injectable, signal, effect } from '@angular/core';
 
 export type UserPreferences = {
   compactMode: boolean;
+  hasSeenOnboardingModal: boolean;
+  disabledPulsingTabs: string[];
 };
 
 @Injectable({
@@ -12,6 +14,8 @@ export class UserPreferencesService {
 
   preferences = signal<UserPreferences>({
     compactMode: false,
+    hasSeenOnboardingModal: false,
+    disabledPulsingTabs: [],
   });
 
   constructor() {
@@ -34,6 +38,20 @@ export class UserPreferencesService {
 
   setCompactMode(enabled: boolean) {
     this.preferences.update(p => ({ ...p, compactMode: enabled }));
+  }
+
+  setHasSeenOnboardingModal(seen: boolean) {
+    this.preferences.update(p => ({ ...p, hasSeenOnboardingModal: seen }));
+  }
+
+  addDisabledPulsingTab(tab: string) {
+    this.preferences.update(p => {
+      const tabs = p.disabledPulsingTabs || [];
+      if (!tabs.includes(tab)) {
+        return { ...p, disabledPulsingTabs: [...tabs, tab] };
+      }
+      return p;
+    });
   }
 
   isCompactMode() {

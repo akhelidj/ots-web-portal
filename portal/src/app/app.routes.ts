@@ -20,6 +20,7 @@ import { LandingComponent } from '@portal/features/landing/components/landing/la
 import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
 import { AccessDeniedComponent } from '@portal/features/errors/components/access-denied/access-denied.component';
 import { ReceiverWorkspaceComponent } from '@portal/features/workspaces/receiver/receiver-workspace.component';
+import { HelpComponent } from '@portal/features/help/components/help/help.component';
 
 export const appRoutes: Route[] = [
   {
@@ -47,67 +48,84 @@ export const appRoutes: Route[] = [
         component: SettingsComponent,
         canActivate: [authGuard, mustChangePasswordGuard],
       },
-      { 
-        path: AppRoutes.ADMIN, 
+      {
+        path: AppRoutes.HELP,
+        component: HelpComponent,
+        canActivate: [authGuard, mustChangePasswordGuard],
+      },
+      {
+        path: AppRoutes.ADMIN,
         canActivate: [roleGuard],
         data: { roles: [APP_ROLES.ADMIN] },
         children: [
           { path: '', redirectTo: 'users', pathMatch: 'full' },
           { path: 'reports', component: InspectionReportListComponent },
-          { path: 'reports/create', component: CreateInspectionReportComponent },
+          {
+            path: 'reports/create',
+            component: CreateInspectionReportComponent,
+          },
           { path: 'reports/:id', component: InspectionReportDetailComponent },
           { path: 'reports/:id/child', component: ChildReportDetailComponent },
           { path: 'users', component: AdminUsersComponent },
           { path: 'customers', component: AdminCustomersComponent },
           { path: 'templates', component: AdminTemplatesComponent },
-        ]
+        ],
       },
-      { 
-        path: AppRoutes.RECEIVER, 
+      {
+        path: AppRoutes.RECEIVER,
         canActivate: [roleGuard],
         data: { roles: [APP_ROLES.RECEIVER] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
           { path: 'reports', component: ReceiverWorkspaceComponent },
-          { path: 'reports/create', component: CreateInspectionReportComponent },
+          {
+            path: 'reports/create',
+            component: CreateInspectionReportComponent,
+          },
           { path: 'reports/:id', component: InspectionReportDetailComponent },
-          { path: 'reports/:id/child', component: ChildReportDetailComponent }
-        ]
+          { path: 'reports/:id/child', component: ChildReportDetailComponent },
+        ],
       },
-      { 
-        path: AppRoutes.INSPECTOR, 
+      {
+        path: AppRoutes.INSPECTOR,
         canActivate: [roleGuard],
         data: { roles: [APP_ROLES.INSPECTOR] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
           { path: 'reports', component: InspectionReportListComponent },
-          { path: 'reports/create', component: CreateInspectionReportComponent },
+          {
+            path: 'reports/create',
+            component: CreateInspectionReportComponent,
+          },
           { path: 'reports/:id', component: InspectionReportDetailComponent },
           { path: 'reports/:id/child', component: ChildReportDetailComponent },
-        ]
+        ],
       },
-      { 
-        path: AppRoutes.SUPERVISOR, 
+      {
+        path: AppRoutes.SUPERVISOR,
         canActivate: [roleGuard],
         data: { roles: [APP_ROLES.SUPERVISOR] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
           { path: 'reports', component: SupervisorWorkspaceComponent },
-          { path: 'reports/create', component: CreateInspectionReportComponent },
+          {
+            path: 'reports/create',
+            component: CreateInspectionReportComponent,
+          },
           { path: 'reports/:id', component: InspectionReportDetailComponent },
-          { path: 'reports/:id/child', component: ChildReportDetailComponent }
-        ]
+          { path: 'reports/:id/child', component: ChildReportDetailComponent },
+        ],
       },
-      { 
-        path: AppRoutes.CUSTOMER, 
+      {
+        path: AppRoutes.CUSTOMER,
         canActivate: [roleGuard],
         data: { roles: [APP_ROLES.CUSTOMER] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
           { path: 'reports', component: CustomerWorkspaceComponent },
           { path: 'reports/:id', component: InspectionReportDetailComponent },
-          { path: 'reports/:id/child', component: ChildReportDetailComponent }
-        ]
+          { path: 'reports/:id/child', component: ChildReportDetailComponent },
+        ],
       },
     ],
   },

@@ -24,12 +24,18 @@ export class InspectionReportHeaderComponent {
   @Input() showCustomerExport = false;
   @Input() canExport = false;
   @Input() exportDisabledReason = '';
+  @Input() hasWorkflowActions = false;
 
   @Output() export = new EventEmitter<void>();
+  @Output() openWorkflow = new EventEmitter<void>();
 
   protected readonly APP_ROLES = APP_ROLES;
 
   protected onExport(): void {
     this.export.emit();
+  }
+
+  protected onOpenWorkflow(): void {
+    this.openWorkflow.emit();
   }
 }

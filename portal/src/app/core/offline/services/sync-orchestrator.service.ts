@@ -40,6 +40,10 @@ export class SyncOrchestratorService {
   });
 
   private isSyncing = false;
+  private autoSyncScheduled = false;
+  private lastAutoSyncAt = 0;
+
+  private static readonly AUTO_SYNC_COOLDOWN_MS = 2500;
 
   constructor() {
     this.initOrchestration();
@@ -50,6 +54,7 @@ export class SyncOrchestratorService {
       const isOnline = this.connectivity.isOnline();
       const isAuthenticated = this.session.isAuthenticated();
       const hasConflict = this.outbox.hasConflict();
+      const pendingCount = this.outbox.pendingCount();
 
       untracked(() => {
         if (this.isSyncing) {
@@ -66,14 +71,60 @@ export class SyncOrchestratorService {
           return;
         }
 
-        if (hasConflict || this.lastSyncError()) {
+        if (hasConflict) {
           this.syncState.set('sync-error');
           return;
         }
 
+        if (this.lastSyncError()) {
+          this.syncState.set('sync-error');
+          if (pendingCount > 0) {
+            this.scheduleAutoSync();
+          }
+          return;
+        }
+
         this.syncState.set('online');
+
+        if (pendingCount > 0) {
+          this.scheduleAutoSync();
+        }
       });
     });
+  }
+
+  private scheduleAutoSync(): void {
+    if (this.autoSyncScheduled || this.isSyncing) {
+      return;
+    }
+
+    const now = Date.now();
+    if (
+      now - this.lastAutoSyncAt <
+      SyncOrchestratorService.AUTO_SYNC_COOLDOWN_MS
+    ) {
+      return;
+    }
+
+    this.autoSyncScheduled = true;
+    window.setTimeout(() => {
+      this.autoSyncScheduled = false;
+
+      if (this.isSyncing) {
+        return;
+      }
+
+      if (!this.connectivity.isOnline() || !this.session.isAuthenticated()) {
+        return;
+      }
+
+      if (this.outbox.hasConflict() || this.outbox.pendingCount() === 0) {
+        return;
+      }
+
+      this.lastAutoSyncAt = Date.now();
+      void this.runSyncSequence();
+    }, 150);
   }
 
   public async runSyncSequence(): Promise<void> {

@@ -81,8 +81,8 @@
               <td class="table-td-strong code-text">
                 {{ item.sn.value }}
               </td>
-              <td class="px-6 py-4">
-                <span class="data-chip-warning px-2 py-0.5 text-[10px]"
+              <td class="px-4 py-3 sm:px-6 sm:py-4">
+                <span class="data-chip-warning px-2.5 py-1 text-[11px] font-bold"
                   >REWORK</span
                 >
               </td>
@@ -96,9 +96,9 @@
                     {{ reportLabel() }} - Rework
                   </a>
                 </td>
-                <td class="px-6 py-4">
+                <td class="px-4 py-3 sm:px-6 sm:py-4">
                   <span
-                    class="data-chip px-2 py-0.5 text-[10px] border-transparent"
+                    class="data-chip px-2.5 py-1 text-[11px] font-bold border-transparent"
                     [ngClass]="{
                       'bg-success-light text-success-dark':
                         item.childLinked.status === 'APPROVED' ||
@@ -110,12 +110,15 @@
                     >{{ item.childLinked.status }}</span
                   >
                 </td>
-                <td class="px-6 py-4 text-right">
+                <td class="px-4 py-3 sm:px-6 sm:py-4 text-right">
                   <a
                     [routerLink]="childRoute(item.childLinked.id)"
-                    class="text-primary hover:text-primary-light hover:underline text-xs font-bold transition-colors"
+                    class="btn btn-secondary btn-sm gap-1.5 min-w-[140px] justify-center text-xs font-semibold"
                   >
                     Open Child Report
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
                   </a>
                 </td>
               } @else {
