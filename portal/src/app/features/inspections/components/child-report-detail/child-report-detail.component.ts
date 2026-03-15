@@ -56,6 +56,18 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   public reportId = '';
   public cr = signal<LocalChildReport | null>(null);
 
+  public headerPastThreshold = signal(false);
+  public headerCondenseProgress = signal(0);
+  public shellScrollbarWidth = signal(0);
+  public isMobileTabletViewport = signal(window.innerWidth < 1024);
+
+  public isHeaderCondensed = computed(
+    () => this.isMobileTabletViewport() && this.headerPastThreshold(),
+  );
+
+  private shellScrollEl: HTMLElement | null = null;
+  private readonly onShellScrollBound = () => this.onShellScroll();
+
   public parentReport = signal<LocalInspectionReport | null>(null);
 
   public serials = signal<
@@ -168,11 +180,49 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
         }),
       );
     }
+
+    this.shellScrollEl = document.getElementById('main-content');
+    if (this.shellScrollEl) {
+      this.shellScrollEl.addEventListener('scroll', this.onShellScrollBound, {
+        passive: true,
+      });
+      this.onShellScroll();
+    }
   }
 
   ngOnDestroy(): void {
     this.isDestroyed = true;
     this.subscriptions.unsubscribe();
+    if (this.shellScrollEl) {
+      this.shellScrollEl.removeEventListener('scroll', this.onShellScrollBound);
+    }
+  }
+
+  private onShellScroll(): void {
+    if (!this.isMobileTabletViewport() || !this.shellScrollEl) {
+      this.headerPastThreshold.set(false);
+      this.headerCondenseProgress.set(0);
+      return;
+    }
+
+    const scrollTop = this.shellScrollEl.scrollTop;
+    const start = this.isMobileTabletViewport() && window.innerWidth < 640 ? 40 : 56;
+    const end = start + 50;
+    const ratio = Math.max(0, Math.min(1, (scrollTop - start) / (end - start)));
+
+    this.headerCondenseProgress.set(ratio);
+
+    if (!this.headerPastThreshold() && scrollTop > start) {
+      this.headerPastThreshold.set(true);
+    } else if (this.headerPastThreshold() && scrollTop <= start - 10) {
+      this.headerPastThreshold.set(false);
+    }
+
+    const scrollbarWidth = Math.max(
+      0,
+      this.shellScrollEl.offsetWidth - this.shellScrollEl.clientWidth,
+    );
+    this.shellScrollbarWidth.set(scrollbarWidth);
   }
 
   private queueRefresh(): void {

@@ -7,7 +7,7 @@
     <h2 class="font-semibold text-lg text-neutral-900 flex items-center gap-2">
       Equipment List
       <span
-        class="bg-neutral-100 text-neutral-700 text-xs py-0.5 px-2.5 rounded-full whitespace-nowrap"
+        class="bg-neutral-200 text-neutral-800 text-[11px] font-bold py-0.5 px-2 min-w-[20px] text-center rounded-md whitespace-nowrap"
         >{{ serials.length }}</span
       >
     </h2>
@@ -130,14 +130,15 @@
             >
               Info / Actions
             </th>
-            <th
-              scope="col"
-              rowspan="2"
-              class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 bg-gray-50 z-30 border-r border-gray-200"
-            >
-              Sync
-            </th>
             @if (!isCompactMode) {
+              <th
+                scope="col"
+                rowspan="2"
+                class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 bg-gray-50 z-30 border-r border-gray-200"
+              >
+                Sync
+              </th>
+            
               <th
                 scope="col"
                 colspan="9"
@@ -732,25 +733,25 @@
               </div>
             </td>
 
-            @if (userRole !== APP_ROLES.CUSTOMER) {
-              <td
-                class="px-2 py-3 align-top text-center border-r border-gray-100"
-              >
-                <span
-                  class="data-chip px-1.5 py-0.5 text-[9px]"
-                  [ngClass]="{
-                    'data-chip-error':
-                      sn.syncState === SYNC_STATES.CONFLICT ||
-                      sn.syncState === SYNC_STATES.ERROR,
-                    'data-chip-warning': sn.syncState === SYNC_STATES.PENDING,
-                    'data-chip-success': sn.syncState === SYNC_STATES.SYNCED,
-                  }"
-                  >{{ sn.syncState }}</span
-                >
-              </td>
-            }
-
             @if (!isCompactMode) {
+              @if (userRole !== APP_ROLES.CUSTOMER) {
+                <td
+                  class="px-2 py-3 align-top text-center border-r border-gray-100"
+                >
+                  <span
+                    class="data-chip px-1.5 py-0.5 text-[9px]"
+                    [ngClass]="{
+                      'data-chip-error':
+                        sn.syncState === SYNC_STATES.CONFLICT ||
+                        sn.syncState === SYNC_STATES.ERROR,
+                      'data-chip-warning': sn.syncState === SYNC_STATES.PENDING,
+                      'data-chip-success': sn.syncState === SYNC_STATES.SYNCED,
+                    }"
+                    >{{ sn.syncState }}</span
+                  >
+                </td>
+              }
+            
               <td class="matrix-cell-data matrix-hover-box">
                 {{ getInspectionFieldText(sn, 'box', 'minTongSpace') }}
               </td>

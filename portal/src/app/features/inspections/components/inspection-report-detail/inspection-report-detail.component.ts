@@ -318,15 +318,17 @@ export class InspectionReportDetailComponent
     }
 
     const scrollTop = this.shellScrollEl.scrollTop;
-    const start = 8;
-    const end = 88;
+    // We delay the condense start until we actually hit the top of the viewport
+    // On mobile, padding offset is ~40px. On tablet, ~56px.
+    const start = this.isMobileTabletViewport() && window.innerWidth < 640 ? 40 : 56;
+    const end = start + 50;
     const ratio = Math.max(0, Math.min(1, (scrollTop - start) / (end - start)));
 
     this.headerCondenseProgress.set(ratio);
 
     if (!this.headerPastThreshold() && scrollTop > start) {
       this.headerPastThreshold.set(true);
-    } else if (this.headerPastThreshold() && scrollTop < 2) {
+    } else if (this.headerPastThreshold() && scrollTop <= start - 10) {
       this.headerPastThreshold.set(false);
     }
 

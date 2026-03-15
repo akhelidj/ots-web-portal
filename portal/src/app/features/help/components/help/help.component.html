@@ -29,9 +29,11 @@
     </div>
   </section>
 
-  <div class="mt-12 space-y-6">
+  <div class="mt-12 flex flex-col gap-6">
     @for (section of sections(); track section.id) {
-      <ng-container *ngComponentOutlet="section.component; inputs: { role: role() }"></ng-container>
+      <div class="block">
+        <ng-container *ngComponentOutlet="section.component; inputs: { role: role() }"></ng-container>
+      </div>
     }
   </div>
 </div>

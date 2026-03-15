@@ -2,62 +2,89 @@
   <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
     <!-- Header -->
     <div
-      class="page-section p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
+      class="transition-all duration-300 ease-out"
+      [style.--shell-scrollbar-width.px]="shellScrollbarWidth()"
+      [ngClass]="
+        isHeaderCondensed()
+          ? 'sticky top-0 z-30 report-header-condensed-shell bg-stone-100/95 backdrop-blur'
+          : ''
+      "
     >
-      <div class="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
-        <button
-          (click)="goBack()"
-          class="text-neutral-500 hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-full hover:bg-neutral-100"
-        >
-          <svg
-            class="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-        </button>
-        <div class="min-w-0">
-          <h1
-            class="text-base sm:text-xl font-semibold tracking-tight text-neutral-900 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 min-w-0"
-          >
-            {{ (cr.type | titlecase) || 'Sub' }} Report:
-            <span
-              class="code-text text-neutral-500 text-sm sm:text-lg break-all leading-tight"
-              >{{
-                cr.reportNumber || (cr.id.substring(0, 8) | uppercase)
-              }}</span
-            >
-          </h1>
-          <p
-            class="text-sm font-medium text-neutral-500 mt-1 flex flex-wrap items-center gap-2"
-          >
-            <span>Parent Report:</span>
-            @if (parentReport(); as parent) {
-              <a
-                [routerLink]="getParentReportLink(parent.id)"
-                class="code-text bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200 text-primary hover:underline hover:text-primary-light transition-colors"
-                >{{ parent.poNumber }}</a
-              >
-            }
-          </p>
-        </div>
-      </div>
       <div
-        class="flex items-center gap-2 flex-wrap justify-start sm:justify-end w-full sm:w-auto"
+        class="page-section relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 transition-all duration-300 ease-out"
+        [style.padding-top.px]="16 - 4 * headerCondenseProgress()"
+        [style.padding-bottom.px]="16 - 4 * headerCondenseProgress()"
+        [style.padding-left.px]="16 - 4 * headerCondenseProgress()"
+        [style.padding-right.px]="16 - 4 * headerCondenseProgress()"
+        [ngClass]="isHeaderCondensed() ? 'rounded-none border-x-0 shadow-md' : 'p-4 sm:p-6'"
       >
-        @if (userRole !== 'CUSTOMER') {
-          <span
-            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-[0.08em] bg-neutral-100 text-neutral-700 border border-neutral-200"
+        <div class="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+          <button
+            (click)="goBack()"
+            class="text-neutral-500 hover:text-primary transition-all duration-300 flex items-center justify-center rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 shrink-0"
+            [style.width.px]="40 - 4 * headerCondenseProgress()"
+            [style.height.px]="40 - 4 * headerCondenseProgress()"
+            title="Back to parent"
           >
-            {{ cr.type }}
-          </span>
+            <svg
+              class="transition-all duration-300"
+              [style.width.px]="24 - 4 * headerCondenseProgress()"
+              [style.height.px]="24 - 4 * headerCondenseProgress()"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+          </button>
+          <div class="min-w-0">
+            <h1
+              class="font-semibold tracking-tight text-neutral-900 transition-all duration-300 truncate"
+              [style.font-size.rem]="1.5 - 0.375 * headerCondenseProgress()"
+              [style.line-height]="1.2"
+              [title]="cr.reportNumber || cr.id"
+            >
+              {{ (cr.type | titlecase) || 'Sub' }} Report: {{ cr.reportNumber || (cr.id.substring(0, 8) | uppercase) }}
+            </h1>
+
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <span class="data-chip-info text-[10px]">
+                {{ cr.status }}
+              </span>
+
+              @if (parentReport(); as parent) {
+                <a
+                  [routerLink]="getParentReportLink(parent.id)"
+                  class="inline-flex items-center rounded-md border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] font-medium text-primary hover:text-primary-light hover:underline transition-colors"
+                  title="Parent Report PO"
+                >
+                  PO: {{ parent.poNumber }}
+                </a>
+              }
+
+              <span
+                class="inline-flex items-center rounded-md border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] text-neutral-500"
+              >
+                Updated {{ cr.updatedAt | date: 'MMM d, y' }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="flex items-center gap-2 flex-wrap justify-start sm:justify-end w-full sm:w-auto"
+        >
+          @if (userRole !== 'CUSTOMER') {
+            <span
+              class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-[0.08em] bg-neutral-100 text-neutral-700 border border-neutral-200"
+            >
+              {{ cr.type }}
+            </span>
+
           @if (allowedTransitions.length > 0) {
             <button
               (click)="isWorkflowModalOpen = true"
@@ -93,6 +120,7 @@
           </span>
         }
       </div>
+    </div>
     </div>
 
     <!-- Banners -->

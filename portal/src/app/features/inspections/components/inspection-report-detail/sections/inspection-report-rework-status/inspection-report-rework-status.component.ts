@@ -28,6 +28,7 @@ export class InspectionReportReworkStatusComponent {
   @Input() items: ReworkItem[] = [];
   @Input() hasGeneratedChildReport = false;
   @Input() isGenerating = false;
+  @Input() isCompactMode = false;
 
   @Output() generateChildReport = new EventEmitter<void>();
 
@@ -59,6 +60,11 @@ export class InspectionReportReworkStatusComponent {
 
   protected childRoute(childId: string): string[] {
     return ['/', this.userRole.toLowerCase(), 'reports', childId, 'child'];
+  }
+
+  protected get existingChildReportId(): string | null {
+    const item = this.items.find(i => i.childLinked);
+    return item?.childLinked?.id ?? null;
   }
 
   protected reportLabel(): string {

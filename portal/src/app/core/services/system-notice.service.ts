@@ -32,6 +32,7 @@ export class SystemNoticeService {
   private connectivityInitialized = false;
   private connectivityTimer: number | null = null;
   private lastConnectivityNoticeAt = 0;
+  private lastConnectivityNoticeType: 'online' | 'offline' | null = null;
   private latestNotifiedHash: string | null = null;
 
   constructor() {
@@ -131,11 +132,16 @@ export class SystemNoticeService {
     }
 
     const now = Date.now();
-    if (now - this.lastConnectivityNoticeAt < CONNECTIVITY_NOTICE_COOLDOWN_MS) {
+    const isSameTypeAsPrevious = this.lastConnectivityNoticeType === type;
+    if (
+      isSameTypeAsPrevious &&
+      now - this.lastConnectivityNoticeAt < CONNECTIVITY_NOTICE_COOLDOWN_MS
+    ) {
       return;
     }
 
     this.lastConnectivityNoticeAt = now;
+    this.lastConnectivityNoticeType = type;
     this.clearConnectivityTimer();
 
     this.notice.set({
