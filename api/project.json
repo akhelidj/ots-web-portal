@@ -43,6 +43,14 @@
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
       "executor": "nx:noop"
     },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/api"],
+      "options": {
+        "jestConfig": "api/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
     "serve": {
       "continuous": true,
       "executor": "@nx/js:node",

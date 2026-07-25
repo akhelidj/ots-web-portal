@@ -70,6 +70,14 @@
     "lint": {
       "executor": "@nx/eslint:lint"
     },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/portal"],
+      "options": {
+        "jestConfig": "portal/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
