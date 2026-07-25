@@ -37,11 +37,13 @@ export class ChildReportLocalRepo {
 
   public async listByReportId(reportId: string): Promise<LocalChildReport[]> {
     const logs = await this.list();
-    return logs.filter(l => l.inspectionReportId === reportId).sort((a, b) => {
-      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-      return timeB - timeA;
-    });
+    return logs
+      .filter((l) => l.inspectionReportId === reportId)
+      .sort((a, b) => {
+        const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return timeB - timeA;
+      });
   }
 
   public async upsert(log: LocalChildReport): Promise<void> {

@@ -14,6 +14,7 @@
 
 **Command**: `npm run db:provision "Acme Corp" "admin@acme.com"`
 **Result**:
+
 ```json
 {
   "name": "Acme Corp",
@@ -25,4 +26,5 @@
   ]
 }
 ```
+
 **Conclusion**: API (Windows) successfully connected to DB (WSL), wrote data, and read key constraints. The schema now uses `InspectionReport` instead of `IR`.

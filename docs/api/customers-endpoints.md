@@ -3,6 +3,7 @@
 All endpoints are tenant-scoped and require authentication.
 
 ## Security
+
 - **Authentication:** Required (Bearer Token)
 - **Authorization:** `ADMIN` role required for all customer mutations and queries.
 - **Tenant Isolation:** All operations are strictly bound to the authenticated user's `tenantId`.
@@ -10,6 +11,7 @@ All endpoints are tenant-scoped and require authentication.
 ## Endpoints
 
 ### 1. List Customers
+
 Retrieves all customers associated with the authenticated user's tenant, sorted alphabetically by name.
 
 **Request:**
@@ -17,6 +19,7 @@ Retrieves all customers associated with the authenticated user's tenant, sorted 
 
 **Response:**
 Returns an array of customer objects.
+
 ```json
 [
   {
@@ -34,10 +37,12 @@ Returns an array of customer objects.
 ```
 
 ### 2. Create Customer
+
 Creates a new customer record. The `version` is initialized to 1.
 
 **Request:**
 `POST /customers`
+
 ```json
 {
   "name": "Acme Oilfield Services",
@@ -49,6 +54,7 @@ Creates a new customer record. The `version` is initialized to 1.
 
 **Response (201 Created):**
 Returns the created customer object.
+
 ```json
 {
   "id": "cuid...",
@@ -65,13 +71,16 @@ Returns the created customer object.
 ```
 
 **Errors:**
+
 - `409 Conflict`: A customer with the exact same name already exists in this tenant.
 
 ### 3. Update Customer
+
 Updates an existing customer's details. Enforces optimistic concurrency control.
 
 **Request:**
 `PATCH /customers/:id`
+
 ```json
 {
   "name": "Acme Global",
@@ -81,6 +90,7 @@ Updates an existing customer's details. Enforces optimistic concurrency control.
 
 **Response (200 OK):**
 Returns the updated customer object with the incremented `version`.
+
 ```json
 {
   "id": "cuid...",
@@ -92,14 +102,17 @@ Returns the updated customer object with the incremented `version`.
 ```
 
 **Errors:**
+
 - `409 Conflict`: Version mismatch. The client's provided `version` does not match the server's current version. Client must refresh and retry.
 - `404 Not Found`: Customer does not exist or belongs to a different tenant.
 
 ### 4. Toggle Active Status
+
 Activates or soft-deactivates a customer. Enforces optimistic concurrency control.
 
 **Request:**
 `PATCH /customers/:id/active`
+
 ```json
 {
   "isActive": false,
@@ -107,10 +120,12 @@ Activates or soft-deactivates a customer. Enforces optimistic concurrency contro
   "version": 2
 }
 ```
-*Note: `reason` is required when `isActive` is false.*
+
+_Note: `reason` is required when `isActive` is false._
 
 **Response (200 OK):**
 Returns the updated customer object with the incremented `version` and deactivation metadata.
+
 ```json
 {
   "id": "cuid...",
@@ -125,6 +140,7 @@ Returns the updated customer object with the incremented `version` and deactivat
 ```
 
 **Errors:**
+
 - `400 Bad Request`: Reason omitted when deactivating.
 - `409 Conflict`: Version mismatch.
 - `404 Not Found`: Customer does not exist or belongs to a different tenant.

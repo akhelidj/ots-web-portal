@@ -10,7 +10,8 @@ export class SerialNumberLocalRepo {
   private dbService = inject(DbService);
   private changesSubject = new BehaviorSubject<void>(undefined);
 
-  public readonly changes$: Observable<void> = this.changesSubject.asObservable();
+  public readonly changes$: Observable<void> =
+    this.changesSubject.asObservable();
   private readonly STORE_NAME = 'serial_numbers';
 
   async getById(id: string): Promise<LocalSerialNumber | undefined> {
@@ -99,7 +100,10 @@ export class SerialNumberLocalRepo {
     });
   }
 
-  public async remapId(oldId: string, newSerialNumber: LocalSerialNumber): Promise<void> {
+  public async remapId(
+    oldId: string,
+    newSerialNumber: LocalSerialNumber,
+  ): Promise<void> {
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.STORE_NAME, 'readwrite');
@@ -124,7 +128,7 @@ export class SerialNumberLocalRepo {
       const tx = db.transaction(this.STORE_NAME, 'readwrite');
       const store = tx.objectStore(this.STORE_NAME);
       const index = store.index('inspectionReportId');
-      
+
       const getReq = index.getAll(oldReportId);
       getReq.onsuccess = () => {
         const items = getReq.result || [];

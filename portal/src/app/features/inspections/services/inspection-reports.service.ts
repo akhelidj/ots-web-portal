@@ -326,7 +326,10 @@ export class InspectionReportsService implements DataHydrationSource {
               const { serialNumber, inspectionData, ...restS } = s;
 
               // Safeguard: Preserve local disposition/final section if server data is partial
-              let mergedInspectionJson = inspectionData as Record<string, unknown>;
+              let mergedInspectionJson = inspectionData as Record<
+                string,
+                unknown
+              >;
               if (local?.inspectionJson && inspectionData) {
                 const localFinal = local.inspectionJson['final'] as
                   | Record<string, unknown>

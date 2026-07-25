@@ -11,7 +11,7 @@ export const mustChangePasswordGuard: CanActivateFn = (route, state) => {
 
   if (mustChange) {
     if (isNavigatingToChangePassword) {
-      return true; 
+      return true;
     }
     return router.parseUrl('/change-password');
   } else {

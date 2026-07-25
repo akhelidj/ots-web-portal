@@ -180,7 +180,7 @@ export class InspectionReportDetailComponent
     if (this.prefs.preferences().hasSeenOnboardingModal) {
       return false;
     }
-    
+
     const report = this.report();
     if (!report) {
       return false;
@@ -320,7 +320,8 @@ export class InspectionReportDetailComponent
     const scrollTop = this.shellScrollEl.scrollTop;
     // We delay the condense start until we actually hit the top of the viewport
     // On mobile, padding offset is ~40px. On tablet, ~56px.
-    const start = this.isMobileTabletViewport() && window.innerWidth < 640 ? 40 : 56;
+    const start =
+      this.isMobileTabletViewport() && window.innerWidth < 640 ? 40 : 56;
     const end = start + 50;
     const ratio = Math.max(0, Math.min(1, (scrollTop - start) / (end - start)));
 
@@ -1454,7 +1455,9 @@ export class InspectionReportDetailComponent
     }
   }
 
-  public onTabClick(tab: 'summary' | 'serials' | 'approvals' | 'specs' | 'history') {
+  public onTabClick(
+    tab: 'summary' | 'serials' | 'approvals' | 'specs' | 'history',
+  ) {
     if (this.shouldPulseTab(tab)) {
       this.prefs.addDisabledPulsingTab(tab);
     }

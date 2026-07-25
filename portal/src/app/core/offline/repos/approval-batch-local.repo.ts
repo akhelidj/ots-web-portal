@@ -10,7 +10,8 @@ export class ApprovalBatchLocalRepo {
   private dbService = inject(DbService);
   private changesSubject = new BehaviorSubject<void>(undefined);
 
-  public readonly changes$: Observable<void> = this.changesSubject.asObservable();
+  public readonly changes$: Observable<void> =
+    this.changesSubject.asObservable();
   private readonly STORE_NAME = 'inspection_approval_batches';
 
   async getById(id: string): Promise<LocalInspectionApprovalBatch | undefined> {
@@ -25,7 +26,9 @@ export class ApprovalBatchLocalRepo {
     });
   }
 
-  async listByReportId(reportId: string): Promise<LocalInspectionApprovalBatch[]> {
+  async listByReportId(
+    reportId: string,
+  ): Promise<LocalInspectionApprovalBatch[]> {
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.STORE_NAME, 'readonly');
@@ -87,7 +90,10 @@ export class ApprovalBatchLocalRepo {
     });
   }
 
-  public async remapId(oldId: string, newBatch: LocalInspectionApprovalBatch): Promise<void> {
+  public async remapId(
+    oldId: string,
+    newBatch: LocalInspectionApprovalBatch,
+  ): Promise<void> {
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.STORE_NAME, 'readwrite');

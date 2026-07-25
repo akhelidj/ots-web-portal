@@ -238,7 +238,7 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
         reportNumber: 'NOBLECORP-130326-151748',
       },
     });
-    
+
     const now = new Date();
     await prisma.inspectionReportTransitionLog.createMany({
       data: [
@@ -269,8 +269,8 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
           toStatus: InspectionReportStatus.IN_INSPECTION,
           userId: inspectorUser?.id,
           timestamp: now,
-        }
-      ]
+        },
+      ],
     });
     console.log(`Created report ${report.reportNumber} with transition logs`);
   } else {
@@ -285,7 +285,9 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
       },
     });
 
-    const logCount = await prisma.inspectionReportTransitionLog.count({ where: { inspectionReportId: report.id } });
+    const logCount = await prisma.inspectionReportTransitionLog.count({
+      where: { inspectionReportId: report.id },
+    });
     if (logCount === 0) {
       const now = new Date();
       await prisma.inspectionReportTransitionLog.createMany({
@@ -317,14 +319,15 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
             toStatus: InspectionReportStatus.IN_INSPECTION,
             userId: inspectorUser?.id,
             timestamp: now,
-          }
-        ]
+          },
+        ],
       });
     }
 
-    console.log(`Report ${report.reportNumber} already exists. Ensured status IN_INSPECTION and added logs.`);
+    console.log(
+      `Report ${report.reportNumber} already exists. Ensured status IN_INSPECTION and added logs.`,
+    );
   }
-
 
   const genericBox = {
     minOD: '6 1/3"',
@@ -356,8 +359,14 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
     const isScrap = i === 13;
     const isRework = i === 5 || i === 10;
     const isHold = i === 2;
-    const disposition = isScrap ? SerialDisposition.SCRAP : isRework ? SerialDisposition.REWORK : isHold ? SerialDisposition.HOLD : SerialDisposition.PASS;
-    
+    const disposition = isScrap
+      ? SerialDisposition.SCRAP
+      : isRework
+        ? SerialDisposition.REWORK
+        : isHold
+          ? SerialDisposition.HOLD
+          : SerialDisposition.PASS;
+
     const inspectionData = {
       box: genericBox,
       pin: genericPin,
@@ -377,67 +386,71 @@ async function provisionNobleCorporation(tenant: any, passwordString: string) {
         isScrap: isScrap,
         isPremium: !isScrap && !isRework,
       },
-      remarks: isScrap ? 'Heavy wall loss detected. Pipe failed beyond repair.' 
-              : isRework ? 'Thread damage found, requires re-threading.' 
-              : isHold ? 'Awaiting further client instructions on minor pitting.' 
-              : 'Passed all inspections.',
+      remarks: isScrap
+        ? 'Heavy wall loss detected. Pipe failed beyond repair.'
+        : isRework
+          ? 'Thread damage found, requires re-threading.'
+          : isHold
+            ? 'Awaiting further client instructions on minor pitting.'
+            : 'Passed all inspections.',
     };
 
     const existing = await prisma.serialNumber.findFirst({
-        where: { tenantId: tenant.id, inspectionReportId: report.id, serial }
+      where: { tenantId: tenant.id, inspectionReportId: report.id, serial },
     });
 
     if (existing) {
-        await prisma.serialNumber.update({
-            where: { id: existing.id },
-            data: {
-                disposition: disposition,
-                approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT,
-                inspectionData
-            }
-        });
+      await prisma.serialNumber.update({
+        where: { id: existing.id },
+        data: {
+          disposition: disposition,
+          approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT,
+          inspectionData,
+        },
+      });
     } else {
-        await prisma.serialNumber.create({
-            data: {
-                serial,
-                inspectionReportId: report.id,
-                tenantId: tenant.id,
-                disposition: disposition,
-                approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT,
-                inspectionData
-            }
-        });
+      await prisma.serialNumber.create({
+        data: {
+          serial,
+          inspectionReportId: report.id,
+          tenantId: tenant.id,
+          disposition: disposition,
+          approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT,
+          inspectionData,
+        },
+      });
     }
-
   }
 
   // Cleanup ANY leftover child reports to ensure they're removed based on the latest needs
   await prisma.childReportSerialNumber.deleteMany({
-    where: { childReport: { inspectionReportId: report.id } }
+    where: { childReport: { inspectionReportId: report.id } },
   });
   await prisma.childReportTransitionLog.deleteMany({
-    where: { childReport: { inspectionReportId: report.id } }
+    where: { childReport: { inspectionReportId: report.id } },
   });
   await prisma.childReportRevision.deleteMany({
-    where: { childReport: { inspectionReportId: report.id } }
+    where: { childReport: { inspectionReportId: report.id } },
   });
   await prisma.attachment.deleteMany({
-    where: { childReport: { inspectionReportId: report.id } }
+    where: { childReport: { inspectionReportId: report.id } },
   });
   await prisma.inspectionApprovalBatchSerialNumber.deleteMany({
-    where: { batch: { inspectionReportId: report.id } }
+    where: { batch: { inspectionReportId: report.id } },
   });
   await prisma.inspectionApprovalBatch.deleteMany({
-    where: { inspectionReportId: report.id }
+    where: { inspectionReportId: report.id },
   });
   await prisma.childReport.deleteMany({
-    where: { 
-        inspectionReportId: report.id, 
-        tenantId: tenant.id,
-    }
+    where: {
+      inspectionReportId: report.id,
+      tenantId: tenant.id,
+    },
   });
 
-  console.log(`All 15 serial numbers for report ${report.reportNumber} are now synced to INSPECTED_DRAFT status.`);
+  console.log(
+    `All 15 serial numbers for report ${report.reportNumber} are now synced to INSPECTED_DRAFT status.`,
+  );
 }
 
 async function main() {

@@ -10,7 +10,8 @@ export class InspectionReportLocalRepo {
   private dbService = inject(DbService);
   private changesSubject = new BehaviorSubject<void>(undefined);
 
-  public readonly changes$: Observable<void> = this.changesSubject.asObservable();
+  public readonly changes$: Observable<void> =
+    this.changesSubject.asObservable();
   private readonly STORE_NAME = 'inspection_reports';
 
   async getById(id: string): Promise<LocalInspectionReport | undefined> {
@@ -71,7 +72,10 @@ export class InspectionReportLocalRepo {
     });
   }
 
-  async remapId(oldId: string, newReport: LocalInspectionReport): Promise<void> {
+  async remapId(
+    oldId: string,
+    newReport: LocalInspectionReport,
+  ): Promise<void> {
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.STORE_NAME, 'readwrite');

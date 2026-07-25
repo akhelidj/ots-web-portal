@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Req, UnauthorizedException, Get, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Req,
+  UnauthorizedException,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -34,7 +42,11 @@ export class AuthController {
   @Post('change-password')
   async changePassword(@Req() req, @Body() body: ChangePasswordDto) {
     const userId = req.user.userId || req.user.sub || req.user.id;
-    return this.authService.changePassword(userId, body.currentPassword, body.newPassword);
+    return this.authService.changePassword(
+      userId,
+      body.currentPassword,
+      body.newPassword,
+    );
   }
 
   @Get('me')

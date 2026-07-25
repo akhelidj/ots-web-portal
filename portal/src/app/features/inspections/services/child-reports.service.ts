@@ -295,7 +295,9 @@ export class ChildReportsService {
 
   public async uploadAttachment(id: string, file: File): Promise<void> {
     if (!this.isOnline) {
-      throw new Error('Attachment upload is currently only supported when online.');
+      throw new Error(
+        'Attachment upload is currently only supported when online.',
+      );
     }
 
     const formData = new FormData();
@@ -305,9 +307,9 @@ export class ChildReportsService {
       this.http.post<LocalChildReport>(
         `${environment.apiUrl}/child-reports/${id}/attachments`,
         formData,
-      )
+      ),
     );
-    
+
     this.connectivity.markApiReachable();
     await this.crRepo.upsert({ ...result, syncState: 'SYNCED' });
   }

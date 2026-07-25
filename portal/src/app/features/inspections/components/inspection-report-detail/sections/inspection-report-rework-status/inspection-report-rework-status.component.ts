@@ -45,8 +45,9 @@ export class InspectionReportReworkStatusComponent {
   }
 
   protected areAllSerialsApproved(): boolean {
-    return this.items.length > 0 && this.items.every(
-      (item) => item.sn.approvalStatus === 'APPROVED'
+    return (
+      this.items.length > 0 &&
+      this.items.every((item) => item.sn.approvalStatus === 'APPROVED')
     );
   }
 
@@ -63,7 +64,7 @@ export class InspectionReportReworkStatusComponent {
   }
 
   protected get existingChildReportId(): string | null {
-    const item = this.items.find(i => i.childLinked);
+    const item = this.items.find((i) => i.childLinked);
     return item?.childLinked?.id ?? null;
   }
 

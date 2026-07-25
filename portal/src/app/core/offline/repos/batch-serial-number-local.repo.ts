@@ -10,14 +10,17 @@ export class BatchSerialNumberLocalRepo {
   private dbService = inject(DbService);
   private changesSubject = new BehaviorSubject<void>(undefined);
 
-  public readonly changes$: Observable<void> = this.changesSubject.asObservable();
+  public readonly changes$: Observable<void> =
+    this.changesSubject.asObservable();
   private readonly STORE_NAME = 'inspection_approval_batch_members';
 
   async listByBatchId(batchId: string): Promise<LocalBatchSerialNumber[]> {
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.STORE_NAME, 'readonly');
-      const index = tx.objectStore(this.STORE_NAME).index('inspectionApprovalBatchId');
+      const index = tx
+        .objectStore(this.STORE_NAME)
+        .index('inspectionApprovalBatchId');
       const req = index.getAll(batchId);
 
       req.onsuccess = () => resolve(req.result || []);

@@ -1,14 +1,19 @@
 import { Component, input, computed } from '@angular/core';
 import { NgClass } from '@angular/common';
 
-export type BadgeSeverity = 'success' | 'warning' | 'error' | 'info' | 'neutral';
+export type BadgeSeverity =
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'info'
+  | 'neutral';
 
 @Component({
   selector: 'app-status-badge',
   standalone: true,
   imports: [NgClass],
   templateUrl: './status-badge.component.html',
-  styleUrl: './status-badge.component.scss'
+  styleUrl: './status-badge.component.scss',
 })
 export class StatusBadgeComponent {
   label = input.required<string>();

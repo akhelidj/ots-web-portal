@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
-import { LocalInspectionReport, LocalSerialNumber } from '@portal/core/offline/models/types';
+import {
+  LocalInspectionReport,
+  LocalSerialNumber,
+} from '@portal/core/offline/models/types';
 import { DRILL_PIPE_V1_SCHEMA } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 
 export interface ValidationIssue {
@@ -19,22 +22,27 @@ export interface ValidationResult {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ReportValidationService {
   validate(
     report: LocalInspectionReport,
-    serials: LocalSerialNumber[]
+    serials: LocalSerialNumber[],
   ): ValidationResult {
     const issues: ValidationIssue[] = [];
-    const dispositionCounts: Record<string, number> = { PASS: 0, REWORK: 0, SCRAP: 0, HOLD: 0 };
+    const dispositionCounts: Record<string, number> = {
+      PASS: 0,
+      REWORK: 0,
+      SCRAP: 0,
+      HOLD: 0,
+    };
 
     if (serials.length === 0) {
       issues.push({
         code: 'NO_SERIALS',
         level: 'BLOCKER',
         message: 'No serial numbers attached.',
-        scope: 'REPORT'
+        scope: 'REPORT',
       });
     }
 
@@ -49,30 +57,30 @@ export class ReportValidationService {
           message: `Missing EMI Result on Serial ${sn.value}.`,
           scope: 'SERIAL',
           serialId: sn.id,
-          serialLabel: sn.value
+          serialLabel: sn.value,
         });
       } else {
         if (dispositionCounts[disposition] !== undefined) {
           dispositionCounts[disposition]++;
         } else {
-           dispositionCounts[disposition] = 1;
+          dispositionCounts[disposition] = 1;
         }
       }
 
       if (report.templateKey === 'DRILL_PIPE_REPORT') {
         const missingFieldLabels: string[] = [];
-        
+
         for (const section of DRILL_PIPE_V1_SCHEMA.sections) {
-           for (const field of section.fields) {
-              if (field.required) {
-                 const val = this.getNestedValue(data, field.key);
-                 if (val === undefined || val === null || val === '') {
-                    missingFieldLabels.push(field.label);
-                 }
+          for (const field of section.fields) {
+            if (field.required) {
+              const val = this.getNestedValue(data, field.key);
+              if (val === undefined || val === null || val === '') {
+                missingFieldLabels.push(field.label);
               }
-           }
+            }
+          }
         }
-        
+
         if (missingFieldLabels.length > 0) {
           const fieldLabels = missingFieldLabels.join(', ');
           issues.push({
@@ -81,19 +89,19 @@ export class ReportValidationService {
             message: `Missing required fields on Serial ${sn.value}: ${fieldLabels}.`,
             scope: 'SERIAL',
             serialId: sn.id,
-            serialLabel: sn.value
+            serialLabel: sn.value,
           });
         }
       }
     }
 
-    const isReady = issues.filter(i => i.level === 'BLOCKER').length === 0;
+    const isReady = issues.filter((i) => i.level === 'BLOCKER').length === 0;
 
     return {
       isReady,
       issues,
       serialCount: serials.length,
-      dispositionCounts
+      dispositionCounts,
     };
   }
 
@@ -102,7 +110,12 @@ export class ReportValidationService {
     const parts = path.split('.');
     let current: unknown = obj;
     for (const part of parts) {
-      if (typeof current !== 'object' || current === null || (current as Record<string, unknown>)[part] === undefined) return undefined;
+      if (
+        typeof current !== 'object' ||
+        current === null ||
+        (current as Record<string, unknown>)[part] === undefined
+      )
+        return undefined;
       current = (current as Record<string, unknown>)[part];
     }
     return current;

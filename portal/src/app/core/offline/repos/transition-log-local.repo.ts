@@ -37,7 +37,12 @@ export class TransitionLogLocalRepo {
 
   public async listByReportId(reportId: string): Promise<LocalTransitionLog[]> {
     const logs = await this.list();
-    return logs.filter(l => l.inspectionReportId === reportId).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return logs
+      .filter((l) => l.inspectionReportId === reportId)
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
   }
 
   public async upsert(log: LocalTransitionLog): Promise<void> {

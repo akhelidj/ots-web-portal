@@ -4,6 +4,6 @@ import { Component } from '@angular/core';
   selector: 'app-page-summary',
   standalone: true,
   templateUrl: './page-summary.component.html',
-  styleUrl: './page-summary.component.scss'
+  styleUrl: './page-summary.component.scss',
 })
 export class PageSummaryComponent {}

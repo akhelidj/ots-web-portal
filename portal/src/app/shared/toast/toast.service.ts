@@ -8,7 +8,7 @@ export interface ToastMessage {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ToastService {
   public readonly toasts = signal<ToastMessage[]>([]);
@@ -31,7 +31,7 @@ export class ToastService {
   }
 
   private addToast(toast: ToastMessage) {
-    this.toasts.update(current => {
+    this.toasts.update((current) => {
       const updated = [toast, ...current];
       if (updated.length > 3) {
         updated.pop();
@@ -42,6 +42,6 @@ export class ToastService {
   }
 
   removeToast(id: number) {
-    this.toasts.update(current => current.filter(t => t.id !== id));
+    this.toasts.update((current) => current.filter((t) => t.id !== id));
   }
 }

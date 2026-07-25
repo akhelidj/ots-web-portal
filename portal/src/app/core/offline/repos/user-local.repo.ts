@@ -47,7 +47,7 @@ export class UserLocalRepo {
 
   public async bulkUpsert(users: LocalUser[]): Promise<void> {
     if (!users.length) return;
-    
+
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.STORE_NAME, 'readwrite');

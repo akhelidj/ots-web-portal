@@ -4,11 +4,11 @@ Manage Serial Numbers associated with Inspection Reports. All operations are str
 
 ## Security
 
--   **Authentication:** Required (Bearer Token)
--   **Authorization:**
-    -   Creation and Modification: `ADMIN`, `RECEIVER`
-    -   Reading: `ADMIN`, `RECEIVER`, `SUPERVISOR`, `INSPECTOR`
--   **Tenant Isolation:** All operations enforce `tenantId` boundaries. Attempting to interact with an `inspectionReportId` or `serialNumber` outside of the active tenant results in `404 Not Found`.
+- **Authentication:** Required (Bearer Token)
+- **Authorization:**
+  - Creation and Modification: `ADMIN`, `RECEIVER`
+  - Reading: `ADMIN`, `RECEIVER`, `SUPERVISOR`, `INSPECTOR`
+- **Tenant Isolation:** All operations enforce `tenantId` boundaries. Attempting to interact with an `inspectionReportId` or `serialNumber` outside of the active tenant results in `404 Not Found`.
 
 ## Endpoints
 
@@ -36,13 +36,14 @@ Returns all serial numbers attached to an Inspection Report, ordered alphanumeri
 ```
 
 **Errors:**
--   `404 Not Found`: Inspection report not found or belongs to a different tenant.
+
+- `404 Not Found`: Inspection report not found or belongs to a different tenant.
 
 ---
 
 ### 2. Bulk Create Serial Numbers
 
-Adds multiple serial numbers to an Inspection Report natively supporting bulk arrays. Trims input values and ignores blank inputs. Will fail completely returning `409 Conflict` if *any* duplicates exist within the payload or currently in the report database.
+Adds multiple serial numbers to an Inspection Report natively supporting bulk arrays. Trims input values and ignores blank inputs. Will fail completely returning `409 Conflict` if _any_ duplicates exist within the payload or currently in the report database.
 
 **Request:**
 `POST /inspection-reports/:id/serial-numbers`
@@ -74,9 +75,10 @@ Echos back the `clientRef` mappings for deterministic synchronization.
 ```
 
 **Errors:**
--   `404 Not Found`: Inspection report not found or belongs to a different tenant.
--   `400 Bad Request`: Payload missing, wrongly formatted, or contains blank serials.
--   `409 Conflict`: Uniqueness violation. Returns descriptive array.
+
+- `404 Not Found`: Inspection report not found or belongs to a different tenant.
+- `400 Bad Request`: Payload missing, wrongly formatted, or contains blank serials.
+- `409 Conflict`: Uniqueness violation. Returns descriptive array.
 
 ```json
 {
@@ -115,5 +117,6 @@ Returns the modified entity with an incremented version.
 ```
 
 **Errors:**
--   `404 Not Found`: Serial number not found in tenant.
--   `409 Conflict`: Optimistic Concurrency mismatch (expected `version` did not align). Or attempts to rename to a duplicate within the same Inspection report.
+
+- `404 Not Found`: Serial number not found in tenant.
+- `409 Conflict`: Optimistic Concurrency mismatch (expected `version` did not align). Or attempts to rename to a duplicate within the same Inspection report.

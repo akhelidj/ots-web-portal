@@ -15,16 +15,17 @@ export class ExportController {
   ) {
     const user = req.user;
     const revisionNumber = revision ? parseInt(revision, 10) : undefined;
-    
+
     if (revision && isNaN(revisionNumber)) {
       return res.status(400).send({ message: 'Invalid revision number' });
     }
 
-    const { buffer, filename, mimetype } = await this.exportService.exportInspectionReport(
-      user,
-      reportId,
-      revisionNumber,
-    );
+    const { buffer, filename, mimetype } =
+      await this.exportService.exportInspectionReport(
+        user,
+        reportId,
+        revisionNumber,
+      );
 
     res.setHeader('Content-Type', mimetype);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

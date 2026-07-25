@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsEmail, IsNumber, IsBoolean, IsNotEmpty, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  IsNumber,
+  IsBoolean,
+  IsNotEmpty,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateCustomerDto {
   @IsNumber()
@@ -44,7 +52,7 @@ export class UpdateCustomerActiveDto {
   @IsNumber()
   version: number;
 
-  @ValidateIf(o => o.isActive === false)
+  @ValidateIf((o) => o.isActive === false)
   @IsNotEmpty({ message: 'reason is required when deactivating' })
   @IsString()
   @IsOptional()

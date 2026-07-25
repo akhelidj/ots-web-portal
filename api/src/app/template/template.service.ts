@@ -120,10 +120,7 @@ export class TemplateService {
   async getTemplates(tenantId: string) {
     const templates = await this.prisma.template.findMany({
       where: { tenantId },
-      orderBy: [
-        { templateKey: 'asc' },
-        { templateVersion: 'desc' },
-      ],
+      orderBy: [{ templateKey: 'asc' }, { templateVersion: 'desc' }],
       select: {
         id: true,
         tenantId: true,
@@ -140,7 +137,11 @@ export class TemplateService {
     return templates;
   }
 
-  async deprecateTemplate(tenantId: string, templateId: string, userId: string) {
+  async deprecateTemplate(
+    tenantId: string,
+    templateId: string,
+    userId: string,
+  ) {
     return this.prisma.$transaction(async (tx) => {
       const template = await tx.template.findUnique({
         where: { id: templateId },

@@ -5,7 +5,9 @@ import { AppRole } from '@portal/core/constants/app.constants';
   selector: 'app-help-admin-operations-section',
   standalone: true,
   template: `
-    <section class="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 shadow-sm">
+    <section
+      class="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 shadow-sm"
+    >
       <p class="text-xs uppercase tracking-[0.1em] text-neutral-500">
         Administration
       </p>

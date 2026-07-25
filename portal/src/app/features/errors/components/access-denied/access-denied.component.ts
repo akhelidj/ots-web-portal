@@ -7,7 +7,7 @@ import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
   selector: 'app-access-denied',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './access-denied.component.html'
+  templateUrl: './access-denied.component.html',
 })
 export class AccessDeniedComponent {
   private router = inject(Router);

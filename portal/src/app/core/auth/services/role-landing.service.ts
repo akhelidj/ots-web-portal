@@ -3,7 +3,7 @@ import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
 import { APP_ROLES } from '@portal/core/constants/app.constants';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class RoleLandingService {
   getLandingRoute(role: string): string[] {

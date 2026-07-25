@@ -55,9 +55,15 @@ export class CustomersService {
       },
     });
 
-    await this.logAudit(tenantId, userId, customer.id, CustomerAuditAction.CREATE, {
-      ...data,
-    });
+    await this.logAudit(
+      tenantId,
+      userId,
+      customer.id,
+      CustomerAuditAction.CREATE,
+      {
+        ...data,
+      },
+    );
 
     return customer;
   }
@@ -84,7 +90,7 @@ export class CustomersService {
     const updateData = { ...data };
     delete (updateData as Record<string, unknown>).version;
 
-    const changedFields: Record<string, { old: unknown, new: unknown }> = {};
+    const changedFields: Record<string, { old: unknown; new: unknown }> = {};
     for (const [key, value] of Object.entries(updateData)) {
       const oldValue = (customer as Record<string, unknown>)[key];
       if (value !== undefined && oldValue !== value) {
@@ -137,7 +143,7 @@ export class CustomersService {
       throw new BadRequestException('Reason is required when deactivating');
     }
 
-    const changedFields: Record<string, { old: unknown, new: unknown }> = {
+    const changedFields: Record<string, { old: unknown; new: unknown }> = {
       isActive: { old: customer.isActive, new: data.isActive },
     };
 

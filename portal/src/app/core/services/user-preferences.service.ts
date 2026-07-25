@@ -32,20 +32,23 @@ export class UserPreferencesService {
 
     // Persist on change
     effect(() => {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.preferences()));
+      localStorage.setItem(
+        this.STORAGE_KEY,
+        JSON.stringify(this.preferences()),
+      );
     });
   }
 
   setCompactMode(enabled: boolean) {
-    this.preferences.update(p => ({ ...p, compactMode: enabled }));
+    this.preferences.update((p) => ({ ...p, compactMode: enabled }));
   }
 
   setHasSeenOnboardingModal(seen: boolean) {
-    this.preferences.update(p => ({ ...p, hasSeenOnboardingModal: seen }));
+    this.preferences.update((p) => ({ ...p, hasSeenOnboardingModal: seen }));
   }
 
   addDisabledPulsingTab(tab: string) {
-    this.preferences.update(p => {
+    this.preferences.update((p) => {
       const tabs = p.disabledPulsingTabs || [];
       if (!tabs.includes(tab)) {
         return { ...p, disabledPulsingTabs: [...tabs, tab] };

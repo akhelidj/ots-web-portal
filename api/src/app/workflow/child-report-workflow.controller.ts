@@ -1,4 +1,3 @@
-
 import { Controller, Post, Get, Body, Param, Req } from '@nestjs/common';
 import { ChildReportWorkflowService } from './child-report-workflow.service';
 import { ChildReportStatus } from '@prisma/client';
@@ -19,7 +18,12 @@ export class ChildReportWorkflowController {
     @Req() req: { user: any },
   ) {
     const user = req.user;
-    return this.workflowService.transition(user, id, body.toStatus, body.reason);
+    return this.workflowService.transition(
+      user,
+      id,
+      body.toStatus,
+      body.reason,
+    );
   }
 
   @Get(':id/transitions/available')

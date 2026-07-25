@@ -5,7 +5,9 @@ import { AppRole } from '@portal/core/constants/app.constants';
   selector: 'app-help-overview-section',
   standalone: true,
   template: `
-    <section class="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 shadow-sm">
+    <section
+      class="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 shadow-sm"
+    >
       <p class="text-xs uppercase tracking-[0.1em] text-neutral-500">
         Getting Started
       </p>
@@ -25,15 +27,20 @@ import { AppRole } from '@portal/core/constants/app.constants';
           </p>
           <p class="mt-1 text-neutral-600">
             @if (role === 'RECEIVER') {
-              Create new incoming reports, log serials, and transition them to inspection-ready states.
+              Create new incoming reports, log serials, and transition them to
+              inspection-ready states.
             } @else if (role === 'INSPECTOR') {
-              Perform physical inspections, log dimensions, input dispositions, and submit batches.
+              Perform physical inspections, log dimensions, input dispositions,
+              and submit batches.
             } @else if (role === 'SUPERVISOR') {
-              Review submitted batches, approve or return individual items, and publish final reports.
+              Review submitted batches, approve or return individual items, and
+              publish final reports.
             } @else if (role === 'ADMIN') {
-              Manage the entire platform, oversee tenant operations, and override workflows if needed.
+              Manage the entire platform, oversee tenant operations, and
+              override workflows if needed.
             } @else {
-              View published results, monitor key performance metrics, and export approved documents securely.
+              View published results, monitor key performance metrics, and
+              export approved documents securely.
             }
           </p>
         </div>
