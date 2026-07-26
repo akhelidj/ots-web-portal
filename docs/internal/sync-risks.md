@@ -35,6 +35,13 @@ See the full trace narrative in [report-lifecycle-trace.md](report-lifecycle-tra
   `item.status === 'CONFLICT' || item.status === 'FAILED' || item.lastError`.
   The third disjunct (`|| item.lastError`) is the over-deletion: any item carrying a
   transient error string is purged even if it is still retryable `PENDING`.
+  _Characterized by_ `clear-conflicts.characterization.spec.ts` (real
+  `fake-indexeddb` cursor sweep). Survivor matrix pinned: seeding a CONFLICT item,
+  a FAILED item, a PENDING item with a `lastError`, and a clean PENDING item, only
+  the clean PENDING item survives. The spec also pins that `clearConflicts` opens
+  transactions on the `outbox` store only — a seeded CONFLICT entity row is left
+  byte-for-byte unchanged (the queued edit is discarded, the entity row is not
+  reverted and stays `CONFLICT`).
 - **Risk #3 branch** ([outbox.service.ts:133-137](../../portal/src/app/core/offline/services/outbox.service.ts#L133)):
   a caught dispatch error sets `FAILED` only when
   `err?.status && err.status >= 400 && err.status < 500`; every other outcome
@@ -47,5 +54,6 @@ See the full trace narrative in [report-lifecycle-trace.md](report-lifecycle-tra
 - **Risk #2** — code-level unit test (`fake-indexeddb`: seed mixed statuses, call `clearConflicts`, assert exactly which survive).
 - **Risk #3** — code-level unit test for the client-side facts (key-not-sent, 5xx→`PENDING`, 4xx→`FAILED`, identical retry) via `HttpTestingController`. The end-to-end _"duplicate row actually created"_ consequence needs an integration/device scenario and is out of scope for the unit boundary.
 
-This step (first test step) implements the **risk #3 client-side** characterization tests.
-Risks #1 and #2 are indexed here and will be characterized in subsequent steps.
+Characterization status: **risk #3** (client-side) and **risk #2** are characterized
+(`sync-idempotency.characterization.spec.ts`, `clear-conflicts.characterization.spec.ts`).
+**Risk #1** remains indexed here and will be characterized in a subsequent step.
