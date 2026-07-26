@@ -28,6 +28,11 @@ import { InspectionReportsService } from './inspection-reports.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 import { InspectionReportWorkflowService } from '../workflow/inspection-report-workflow.service';
 import { RevisionService } from '../revision/revision.service';
+import {
+  seedTenant,
+  seedCustomer,
+  seedActiveTemplate,
+} from '../../../test/seed-helpers';
 
 describe('Create / template-binding path (F2.1 seam) [integration]', () => {
   let prisma: PrismaService;
@@ -59,39 +64,18 @@ describe('Create / template-binding path (F2.1 seam) [integration]', () => {
     await prisma.tenant.deleteMany();
   });
 
-  async function seedTenant(name = 'F2.1 seam tenant') {
-    return prisma.tenant.create({ data: { name } });
-  }
-
-  async function seedCustomer(tenantId: string) {
-    return prisma.customer.create({
-      data: { tenantId, name: 'Acme Drilling', code: 'ACME' },
-    });
-  }
-
-  async function seedActiveTemplate(tenantId: string, templateKey: string) {
-    return prisma.template.create({
-      data: {
-        tenantId,
-        templateKey,
-        templateVersion: 1,
-        status: 'ACTIVE',
-        fileBlob: Buffer.from(`template-blob-${templateKey}`),
-        hash: `hash-${templateKey}`,
-        changeNote: 'seed',
-        createdById: 'seed-user',
-      },
-    });
-  }
-
   describe('InspectionReportsService.createReport (live, hardcoded path)', () => {
     it('binds every created report to DRILL_PIPE_REPORT regardless of input (intentional pre-F2.1 constraint — F2.1.2 will change this)', async () => {
       // BASELINE (stable, untagged): the hardcode at inspection-reports.service.ts:125
       // is deliberate — one template today. F2.1.2 is the planned change point. This
       // is NOT a bug and must NOT be tagged to flip.
-      const tenant = await seedTenant();
-      const customer = await seedCustomer(tenant.id);
-      const template = await seedActiveTemplate(tenant.id, 'DRILL_PIPE_REPORT');
+      const tenant = await seedTenant(prisma);
+      const customer = await seedCustomer(prisma, tenant.id);
+      const template = await seedActiveTemplate(
+        prisma,
+        tenant.id,
+        'DRILL_PIPE_REPORT',
+      );
 
       const report = await reportsService.createReport(tenant.id, 'user-1', {
         customerId: customer.id,
@@ -109,9 +93,9 @@ describe('Create / template-binding path (F2.1 seam) [integration]', () => {
       // We seed ONLY a DRILL_PIPE_REPORT template. If the service honored the input
       // key it would look up 'SOME_OTHER_KEY', find no active template, and throw.
       // Instead it succeeds bound to DRILL_PIPE_REPORT — proving the input is ignored.
-      const tenant = await seedTenant();
-      const customer = await seedCustomer(tenant.id);
-      await seedActiveTemplate(tenant.id, 'DRILL_PIPE_REPORT');
+      const tenant = await seedTenant(prisma);
+      const customer = await seedCustomer(prisma, tenant.id);
+      await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT');
 
       const input = {
         customerId: customer.id,
@@ -137,9 +121,13 @@ describe('Create / template-binding path (F2.1 seam) [integration]', () => {
     // the hardcoded one above. Documented here as the seam F2.1.2 will wire.
 
     it('honors dto.templateKey — a passed key binds the report to that template', async () => {
-      const tenant = await seedTenant();
-      const customer = await seedCustomer(tenant.id);
-      const template = await seedActiveTemplate(tenant.id, 'CUSTOM_TEMPLATE');
+      const tenant = await seedTenant(prisma);
+      const customer = await seedCustomer(prisma, tenant.id);
+      const template = await seedActiveTemplate(
+        prisma,
+        tenant.id,
+        'CUSTOM_TEMPLATE',
+      );
 
       const report = await workflowService.create(
         { id: 'user-1', tenantId: tenant.id, role: UserRole.ADMIN },
@@ -159,9 +147,9 @@ describe('Create / template-binding path (F2.1 seam) [integration]', () => {
       // Further proof it keys off the passed value: with only a DRILL_PIPE_REPORT
       // template seeded, requesting a different key finds no active template and is
       // rejected (createReport, by contrast, would ignore the key entirely).
-      const tenant = await seedTenant();
-      const customer = await seedCustomer(tenant.id);
-      await seedActiveTemplate(tenant.id, 'DRILL_PIPE_REPORT');
+      const tenant = await seedTenant(prisma);
+      const customer = await seedCustomer(prisma, tenant.id);
+      await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT');
 
       await expect(
         workflowService.create(
