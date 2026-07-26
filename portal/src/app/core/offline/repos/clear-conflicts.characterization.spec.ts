@@ -21,24 +21,10 @@
  */
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
-import {
-  serialize as v8Serialize,
-  deserialize as v8Deserialize,
-} from 'node:v8';
 import { TestBed } from '@angular/core/testing';
 
-// jsdom (jest-environment-jsdom) does not expose the standard `structuredClone`
-// global, and fake-indexeddb requires it to clone values on write/read. Polyfill
-// it here (local to this IndexedDB spec) using v8 structured serialization, which
-// implements true structured-clone semantics. Guarded so a real impl always wins.
-type StructuredCloneFn = <T>(value: T) => T;
-const globalWithClone = globalThis as unknown as {
-  structuredClone?: StructuredCloneFn;
-};
-if (typeof globalWithClone.structuredClone !== 'function') {
-  globalWithClone.structuredClone = <T>(value: T): T =>
-    v8Deserialize(v8Serialize(value)) as T;
-}
+// Note: the `structuredClone` polyfill that fake-indexeddb@6 needs under jsdom now
+// lives in portal/src/test-setup.ts (shared setup), so it is not repeated here.
 
 import { OutboxItem } from '@portal/core/offline/models/types';
 import { LocalCustomer } from '@portal/core/offline/models/types';
