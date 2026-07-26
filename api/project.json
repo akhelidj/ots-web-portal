@@ -51,6 +51,15 @@
         "passWithNoTests": true
       }
     },
+    "test-integration": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/api-integration"],
+      "options": {
+        "jestConfig": "api/jest.integration.config.ts",
+        "passWithNoTests": true,
+        "runInBand": true
+      }
+    },
     "serve": {
       "continuous": true,
       "executor": "@nx/js:node",

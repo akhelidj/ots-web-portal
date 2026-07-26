@@ -26,4 +26,7 @@ export default {
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../coverage/api',
+  // Integration specs need a real test Postgres; they run under the separate
+  // `test-integration` target (jest.integration.config.ts), not this unit target.
+  testPathIgnorePatterns: ['/node_modules/', '\\.integration\\.spec\\.ts$'],
 };

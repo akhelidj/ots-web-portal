@@ -47,3 +47,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+# Committed template for the integration-test DB URL. The real api/.env.test
+# stays ignored (matched by .env.*) so no test credentials are committed.
+!.env.test.example
