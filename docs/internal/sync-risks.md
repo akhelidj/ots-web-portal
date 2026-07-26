@@ -30,6 +30,15 @@ See the full trace narrative in [report-lifecycle-trace.md](report-lifecycle-tra
 
 ### Per-risk exact conditions (verbatim from source)
 
+- **Risk #1 hydration guard** ([inspection-reports.service.ts:299/325](../../portal/src/app/features/inspections/services/inspection-reports.service.ts#L299)):
+  `pullAllAndCache` only writes server truth over a local row when
+  `!local || local.syncState === 'SYNCED'`, so a `CONFLICT` row is fetched but
+  never overwritten. No path resets it to `SYNCED`. _Characterized by_
+  `conflict-terminal.characterization.spec.ts` (real `fake-indexeddb` + real repos):
+  a seeded `CONFLICT` row is left with its local values while fresh server truth is
+  discarded. The spec also pins the dead reset path — `saveReportUpdates` PATCHing
+  with the stale local version re-409s and rethrows rather than resetting (stable;
+  documents "no reset" so a Phase 3 refactor does not mistake it for dead code).
 - **Risk #2 delete condition** ([outbox-local.repo.ts:84-88](../../portal/src/app/core/offline/repos/outbox-local.repo.ts#L84)):
   the cursor deletes when
   `item.status === 'CONFLICT' || item.status === 'FAILED' || item.lastError`.
@@ -54,6 +63,9 @@ See the full trace narrative in [report-lifecycle-trace.md](report-lifecycle-tra
 - **Risk #2** — code-level unit test (`fake-indexeddb`: seed mixed statuses, call `clearConflicts`, assert exactly which survive).
 - **Risk #3** — code-level unit test for the client-side facts (key-not-sent, 5xx→`PENDING`, 4xx→`FAILED`, identical retry) via `HttpTestingController`. The end-to-end _"duplicate row actually created"_ consequence needs an integration/device scenario and is out of scope for the unit boundary.
 
-Characterization status: **risk #3** (client-side) and **risk #2** are characterized
-(`sync-idempotency.characterization.spec.ts`, `clear-conflicts.characterization.spec.ts`).
-**Risk #1** remains indexed here and will be characterized in a subsequent step.
+Characterization status: **all three risks are characterized** — risk #1
+(`conflict-terminal.characterization.spec.ts`), risk #2
+(`clear-conflicts.characterization.spec.ts`), and risk #3 client-side
+(`sync-idempotency.characterization.spec.ts`). The only piece left to the unit
+boundary is risk #3's end-to-end "duplicate row actually created" outcome, which
+needs an integration/device scenario (see above).
