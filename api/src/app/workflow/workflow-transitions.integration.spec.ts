@@ -36,6 +36,7 @@ import {
   seedTenant,
   seedCustomer,
   seedActiveTemplate,
+  resetInspectionDomain,
 } from '../../../test/seed-helpers';
 
 describe('InspectionReport workflow state transitions (foundation baseline) [integration]', () => {
@@ -68,20 +69,7 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
     await prisma?.onModuleDestroy();
   });
 
-  // Reset tables this suite touches (transitions write transition logs + audit
-  // logs), FK-safe order.
-  beforeEach(async () => {
-    await prisma.auditLog.deleteMany();
-    await prisma.inspectionReportTransitionLog.deleteMany();
-    // Clear serials too: a prior suite (e.g. the revision-snapshot spec) may leave
-    // SerialNumber rows that FK-reference inspectionReport, which would otherwise
-    // block the delete below even though this suite creates none.
-    await prisma.serialNumber.deleteMany();
-    await prisma.inspectionReport.deleteMany();
-    await prisma.template.deleteMany();
-    await prisma.customer.deleteMany();
-    await prisma.tenant.deleteMany();
-  });
+  beforeEach(() => resetInspectionDomain(prisma));
 
   /** Create a real DRAFT report (via the live create path) at version 1. */
   async function newDraftReport() {

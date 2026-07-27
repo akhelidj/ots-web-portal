@@ -32,6 +32,7 @@ import {
   seedTenant,
   seedCustomer,
   seedActiveTemplate,
+  resetInspectionDomain,
 } from '../../../test/seed-helpers';
 
 describe('Create / template-binding path (F2.1 seam) [integration]', () => {
@@ -55,18 +56,7 @@ describe('Create / template-binding path (F2.1 seam) [integration]', () => {
     await prisma?.onModuleDestroy();
   });
 
-  // Reset the tables this suite touches between tests, FK-safe order.
-  beforeEach(async () => {
-    await prisma.auditLog.deleteMany();
-    // Clear serials too: a prior suite (e.g. the revision-snapshot spec) may leave
-    // SerialNumber rows that FK-reference inspectionReport, which would otherwise
-    // block the delete below even though this suite creates none.
-    await prisma.serialNumber.deleteMany();
-    await prisma.inspectionReport.deleteMany();
-    await prisma.template.deleteMany();
-    await prisma.customer.deleteMany();
-    await prisma.tenant.deleteMany();
-  });
+  beforeEach(() => resetInspectionDomain(prisma));
 
   describe('InspectionReportsService.createReport (live, hardcoded path)', () => {
     it('binds every created report to DRILL_PIPE_REPORT regardless of input (intentional pre-F2.1 constraint — F2.1.2 will change this)', async () => {

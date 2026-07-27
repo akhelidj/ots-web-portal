@@ -37,6 +37,7 @@ import {
   seedCustomer,
   seedActiveTemplate,
   seedApprovableSerial,
+  resetInspectionDomain,
 } from '../../../test/seed-helpers';
 
 describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
@@ -64,17 +65,7 @@ describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
     await prisma?.onModuleDestroy();
   });
 
-  // FK-safe reset. Revisions + serials + logs are children of inspectionReport.
-  beforeEach(async () => {
-    await prisma.auditLog.deleteMany();
-    await prisma.inspectionReportRevision.deleteMany();
-    await prisma.inspectionReportTransitionLog.deleteMany();
-    await prisma.serialNumber.deleteMany();
-    await prisma.inspectionReport.deleteMany();
-    await prisma.template.deleteMany();
-    await prisma.customer.deleteMany();
-    await prisma.tenant.deleteMany();
-  });
+  beforeEach(() => resetInspectionDomain(prisma));
 
   /** Create a real DRAFT report (live create path) bound to DRILL_PIPE_REPORT. */
   async function newDraftReport() {
