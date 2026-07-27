@@ -11,6 +11,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Public } from '../common/decorators/public.decorator';
+import { AuthenticatedRequest } from './authenticated-request';
 
 @Controller('auth')
 export class AuthController {
@@ -40,7 +41,10 @@ export class AuthController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post('change-password')
-  async changePassword(@Req() req, @Body() body: ChangePasswordDto) {
+  async changePassword(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: ChangePasswordDto,
+  ) {
     const userId = req.user.userId || req.user.sub || req.user.id;
     return this.authService.changePassword(
       userId,
@@ -50,7 +54,7 @@ export class AuthController {
   }
 
   @Get('me')
-  getProfile(@Req() req) {
+  getProfile(@Req() req: AuthenticatedRequest) {
     return req.user;
   }
 }

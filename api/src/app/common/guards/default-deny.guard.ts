@@ -25,7 +25,11 @@ export class DefaultDenyGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest(err, user, info) {
+  handleRequest<TUser = Express.User>(
+    err: Error | null,
+    user: TUser | false,
+    info: unknown,
+  ): TUser {
     if (err || !user) {
       throw err || new UnauthorizedException();
     }
