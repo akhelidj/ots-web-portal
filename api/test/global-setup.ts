@@ -17,7 +17,6 @@ import { TEST_DATABASE_NAME } from './integration-env';
 export default async function globalSetup(): Promise<void> {
   const schemaPath = resolve(__dirname, '..', 'prisma', 'schema.prisma');
 
-  // eslint-disable-next-line no-console
   console.log(
     `[global-setup] resetting test schema in "${TEST_DATABASE_NAME}" via prisma db push`,
   );

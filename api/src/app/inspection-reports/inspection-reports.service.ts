@@ -84,8 +84,6 @@ export class InspectionReportsService {
     userId: string,
     data: CreateInspectionReportDto,
   ) {
-    console.log('CREATE REPORT DATA:', data);
-
     // 1. Validate customer belongs to tenant
     if (!data.customerId || data.customerId.trim() === '') {
       throw new BadRequestException(

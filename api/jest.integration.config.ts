@@ -1,4 +1,3 @@
-/* eslint-disable */
 // Integration test config — runs *.integration.spec.ts against the dedicated test
 // Postgres (docker-compose.test.yml). Separate from the unit `test` target so unit
 // tests never require a database.

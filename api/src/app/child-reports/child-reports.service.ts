@@ -281,7 +281,6 @@ export class ChildReportsService {
     }
 
     const dataToUpdate: Prisma.ChildReportSerialNumberUpdateInput = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       inspectionData:
         payload.inspectionData !== undefined
           ? (payload.inspectionData as any)

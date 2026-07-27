@@ -137,7 +137,6 @@ export class ExportService {
           id: sn.id,
           serial: sn.serial,
           inspectionData: sn.inspectionData,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           disposition:
             (sn.inspectionData as any)?.final?.disposition ||
             (sn.inspectionData as any)?.disposition ||
@@ -168,7 +167,6 @@ export class ExportService {
     }
 
     // Inject User Data into Snapshot for the export mappers to compute "Inspected By" and "Approved By"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const transitionUserIds = (snapshot.transitionLogs || [])
       .map((l: any) => l.userId)
       .filter(Boolean);
@@ -442,7 +440,6 @@ export class ExportService {
     return files;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async applyMapping(
     templateKey: string,
     workbook: ExcelJS.Workbook,

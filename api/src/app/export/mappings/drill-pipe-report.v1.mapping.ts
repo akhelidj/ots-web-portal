@@ -165,13 +165,11 @@ export async function mapDrillPipeReportV1(
       ? new Date(h.createdAt).toLocaleDateString()
       : 'N/A';
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const eqNames =
     (((h.equipmentUsed || snapshot.equipmentUsed) as any[]) || [])
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((e: any) => `${e.name}${e.number ? ' #' + e.number : ''}`)
       .join(', ') || 'None specified';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mNames =
     (((h.inspectionMethod || snapshot.inspectionMethod) as any[]) || [])
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -182,29 +180,24 @@ export async function mapDrillPipeReportV1(
   let approvedByName = h.approvedByName || 'N/A';
   const transitionLogs = snapshot.transitionLogs || [];
   if (Array.isArray(transitionLogs) && transitionLogs.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const asc = [...transitionLogs].sort(
       (a: any, b: any) =>
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const inspectLog = asc.find(
       (l: any) =>
         l.toStatus === 'IN_INSPECTION' || l.toStatus === 'PENDING_APPROVAL',
     );
     if (inspectLog?.userId) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const u = (snapshot.users || []).find(
         (u: any) => u.id === inspectLog.userId,
       );
       if (u) inspectedByName = u.name || u.email;
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const approveLog = [...asc]
       .reverse()
       .find((l: any) => l.toStatus === 'APPROVED' || l.toStatus === 'CLOSED');
     if (approveLog?.userId) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const u = (snapshot.users || []).find(
         (u: any) => u.id === approveLog.userId,
       );

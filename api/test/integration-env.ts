@@ -66,7 +66,6 @@ process.env.DATABASE_URL = testDatabaseUrl;
 
 // Redacted target, so runs/CI logs show which DB was resolved without leaking creds.
 const redactedTarget = `${new URL(testDatabaseUrl).host}/${testDbName}`;
-// eslint-disable-next-line no-console
 console.log(
   `[integration-env] tests resolved to test database: ${redactedTarget}`,
 );

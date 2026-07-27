@@ -107,7 +107,6 @@ export class RevisionService {
         id: sn.id,
         serial: sn.serial,
         inspectionData: sn.inspectionData,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         disposition:
           (sn.inspectionData as any)?.final?.disposition ||
           (sn.inspectionData as any)?.disposition ||
@@ -201,7 +200,6 @@ export class RevisionService {
         linkId: s.id, // Link table ID
         serialId: s.serialNumberId,
         serial: s.serialNumber.serial,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         disposition:
           (s.serialNumber.inspectionData as any)?.final?.disposition ||
           (s.serialNumber.inspectionData as any)?.disposition ||
