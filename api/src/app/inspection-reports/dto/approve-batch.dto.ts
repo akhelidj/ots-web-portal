@@ -17,4 +17,9 @@ export class ApproveBatchDto {
   @IsString({ each: true })
   @IsOptional()
   serialNumberIds?: string[];
+
+  constructor(batchVersion: number, reportVersion: number) {
+    this.batchVersion = batchVersion;
+    this.reportVersion = reportVersion;
+  }
 }

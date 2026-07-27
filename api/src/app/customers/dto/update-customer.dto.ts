@@ -43,6 +43,10 @@ export class UpdateCustomerDto {
   @IsString()
   @IsOptional()
   country?: string;
+
+  constructor(version: number) {
+    this.version = version;
+  }
 }
 
 export class UpdateCustomerActiveDto {
@@ -57,4 +61,9 @@ export class UpdateCustomerActiveDto {
   @IsString()
   @IsOptional()
   reason?: string;
+
+  constructor(isActive: boolean, version: number) {
+    this.isActive = isActive;
+    this.version = version;
+  }
 }

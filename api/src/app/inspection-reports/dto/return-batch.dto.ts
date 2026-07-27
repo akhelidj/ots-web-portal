@@ -24,4 +24,10 @@ export class ReturnBatchDto {
   @IsString({ each: true })
   @IsOptional()
   serialNumberIds?: string[];
+
+  constructor(batchVersion: number, reportVersion: number, reason: string) {
+    this.batchVersion = batchVersion;
+    this.reportVersion = reportVersion;
+    this.reason = reason;
+  }
 }

@@ -25,4 +25,9 @@ export class CreateApprovalBatchDto {
   @IsUUID('4')
   @IsOptional()
   childReportId?: string;
+
+  constructor(serialNumberIds: string[], reportVersion: number) {
+    this.serialNumberIds = serialNumberIds;
+    this.reportVersion = reportVersion;
+  }
 }
