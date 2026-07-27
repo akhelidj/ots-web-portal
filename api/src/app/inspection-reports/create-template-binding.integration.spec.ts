@@ -58,6 +58,10 @@ describe('Create / template-binding path (F2.1 seam) [integration]', () => {
   // Reset the tables this suite touches between tests, FK-safe order.
   beforeEach(async () => {
     await prisma.auditLog.deleteMany();
+    // Clear serials too: a prior suite (e.g. the revision-snapshot spec) may leave
+    // SerialNumber rows that FK-reference inspectionReport, which would otherwise
+    // block the delete below even though this suite creates none.
+    await prisma.serialNumber.deleteMany();
     await prisma.inspectionReport.deleteMany();
     await prisma.template.deleteMany();
     await prisma.customer.deleteMany();

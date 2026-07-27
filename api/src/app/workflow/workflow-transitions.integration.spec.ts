@@ -73,6 +73,10 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
   beforeEach(async () => {
     await prisma.auditLog.deleteMany();
     await prisma.inspectionReportTransitionLog.deleteMany();
+    // Clear serials too: a prior suite (e.g. the revision-snapshot spec) may leave
+    // SerialNumber rows that FK-reference inspectionReport, which would otherwise
+    // block the delete below even though this suite creates none.
+    await prisma.serialNumber.deleteMany();
     await prisma.inspectionReport.deleteMany();
     await prisma.template.deleteMany();
     await prisma.customer.deleteMany();

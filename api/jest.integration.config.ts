@@ -34,5 +34,9 @@ export default {
   globalSetup: '<rootDir>/test/global-setup.ts',
   // A DB round-trip is slower than a unit test; give it headroom.
   testTimeout: 30000,
+  // All specs share ONE test database, so they must run serially — parallel Jest
+  // workers would race each other's table resets (e.g. one worker deleting an
+  // inspectionReport while another just inserted a serial that references it).
+  maxWorkers: 1,
   coverageDirectory: '../coverage/api-integration',
 };
