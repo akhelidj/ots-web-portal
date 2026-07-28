@@ -95,22 +95,6 @@ function rebuildSharedStrings(
 }
 
 /**
- * Replace tokens inside a single <si> block, returning the updated block.
- * Handles both simple <t>text</t> and rich text <r><t>text</t></r> nodes.
- */
-function replaceTokensInSiBlock(
-  block: string,
-  tokens: Record<string, string>,
-): string {
-  let result = block;
-  for (const [token, value] of Object.entries(tokens)) {
-    const escaped = token.replace(/[{}]/g, '\\$&');
-    result = result.replace(new RegExp(escaped, 'g'), escapeXml(value));
-  }
-  return result;
-}
-
-/**
  * Given a worksheet XML row string and the sharedStrings plain-text array,
  * collect all sharedString indices referenced by cells in this row.
  * Returns a Set<number> of indices.

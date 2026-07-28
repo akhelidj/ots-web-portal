@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TemplateValidationService } from './template-validation.service';
 import { TemplateFileStoreService } from './template-file-store.service';
 import * as crypto from 'crypto';
-import { Prisma, TemplateStatus } from '@prisma/client';
+import { TemplateStatus } from '@prisma/client';
 import 'multer';
 
 @Injectable()

@@ -594,7 +594,6 @@ export class InspectionReportsService {
 
       // Check if ALL SNs in this batch are now processed (no longer SUBMITTED_FOR_APPROVAL)
       let remainingInBatch = 0;
-      let approvedCount = 0;
 
       if (batch.childReportId) {
         remainingInBatch = await tx.childReportSerialNumber.count({
@@ -604,24 +603,11 @@ export class InspectionReportsService {
             approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL,
           },
         });
-        approvedCount = await tx.childReportSerialNumber.count({
-          where: {
-            childReportId: batch.childReportId,
-            serialNumberId: { in: allBatchSnIds },
-            approvalStatus: SerialApprovalStatus.APPROVED,
-          },
-        });
       } else {
         remainingInBatch = await tx.serialNumber.count({
           where: {
             id: { in: allBatchSnIds },
             approvalStatus: SerialApprovalStatus.SUBMITTED_FOR_APPROVAL,
-          },
-        });
-        approvedCount = await tx.serialNumber.count({
-          where: {
-            id: { in: allBatchSnIds },
-            approvalStatus: SerialApprovalStatus.APPROVED,
           },
         });
       }
