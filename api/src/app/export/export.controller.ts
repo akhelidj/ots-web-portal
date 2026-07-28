@@ -16,7 +16,7 @@ export class ExportController {
     const user = req.user;
     const revisionNumber = revision ? parseInt(revision, 10) : undefined;
 
-    if (revision && isNaN(revisionNumber)) {
+    if (revisionNumber !== undefined && isNaN(revisionNumber)) {
       return res.status(400).send({ message: 'Invalid revision number' });
     }
 
