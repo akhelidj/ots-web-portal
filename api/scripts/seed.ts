@@ -6,6 +6,7 @@ import {
   SerialDisposition,
   SerialApprovalStatus,
   InspectionReportStatus,
+  Tenant,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
@@ -109,7 +110,7 @@ async function provisionTenant(
 }
 
 async function provisionRolesForTenant(
-  tenant: any,
+  tenant: Tenant,
   domain: string,
   passwordString: string,
 ) {
@@ -159,7 +160,10 @@ async function provisionRolesForTenant(
   }
 }
 
-async function provisionNobleCorporation(tenant: any, passwordString: string) {
+async function provisionNobleCorporation(
+  tenant: Tenant,
+  passwordString: string,
+) {
   console.log(`\n--- Provisioning Noble Corporation for "${tenant.name}" ---`);
   const passwordHash = await bcrypt.hash(passwordString, 10);
 

@@ -13,6 +13,7 @@ import { UsersService } from './users.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { AuthenticatedRequest } from '../auth/authenticated-request';
 
 export interface CreateUserDto {
   email: string;
@@ -39,14 +40,17 @@ export class UsersController {
 
   @Roles(UserRole.ADMIN)
   @Get()
-  async listUsers(@Req() req: any) {
+  async listUsers(@Req() req: AuthenticatedRequest) {
     const tenantId = req.user.tenantId;
     return this.usersService.listUsers(tenantId);
   }
 
   @Roles(UserRole.ADMIN)
   @Post()
-  async createUser(@Req() req: any, @Body() data: CreateUserDto) {
+  async createUser(
+    @Req() req: AuthenticatedRequest,
+    @Body() data: CreateUserDto,
+  ) {
     const tenantId = req.user.tenantId;
     return this.usersService.createUser(tenantId, data);
   }
@@ -54,7 +58,7 @@ export class UsersController {
   @Roles(UserRole.ADMIN)
   @Patch(':id/active')
   async updateActiveStatus(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() data: UpdateUserActiveDto,
   ) {
@@ -65,7 +69,7 @@ export class UsersController {
   @Roles(UserRole.ADMIN)
   @Patch(':id')
   async updateUser(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() data: UpdateUserDto,
   ) {
@@ -75,7 +79,7 @@ export class UsersController {
 
   @Roles(UserRole.ADMIN)
   @Delete(':id')
-  async deleteUser(@Req() req: any, @Param('id') id: string) {
+  async deleteUser(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     const tenantId = req.user.tenantId;
     return this.usersService.deleteUser(tenantId, id);
   }
