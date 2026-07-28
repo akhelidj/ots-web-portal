@@ -15,6 +15,7 @@ import { SerialNumbersService } from './serial-numbers.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @UseGuards(RolesGuard)
 @Controller()
@@ -29,7 +30,10 @@ export class SerialNumbersController {
     UserRole.CUSTOMER,
   )
   @Get('inspection-reports/:id/serial-numbers')
-  async getSerialNumbers(@Req() req: any, @Param('id') reportId: string) {
+  async getSerialNumbers(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') reportId: string,
+  ) {
     return this.serialNumbersService.getSerialNumbers(req.user, reportId);
   }
 

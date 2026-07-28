@@ -1,6 +1,7 @@
 import { Controller, Post, Get, Body, Param, Req } from '@nestjs/common';
 import { ChildReportWorkflowService } from './child-report-workflow.service';
 import { ChildReportStatus } from '@prisma/client';
+import { AuthenticatedRequest } from '../auth/authenticated-request';
 
 interface TransitionRequestDto {
   toStatus: ChildReportStatus;
@@ -15,7 +16,7 @@ export class ChildReportWorkflowController {
   async transition(
     @Param('id') id: string,
     @Body() body: TransitionRequestDto,
-    @Req() req: { user: any },
+    @Req() req: AuthenticatedRequest,
   ) {
     const user = req.user;
     return this.workflowService.transition(
@@ -29,7 +30,7 @@ export class ChildReportWorkflowController {
   @Get(':id/transitions/available')
   async getAvailableTransitions(
     @Param('id') id: string,
-    @Req() req: { user: any },
+    @Req() req: AuthenticatedRequest,
   ) {
     const user = req.user;
     return this.workflowService.getAvailableTransitions(user, id);

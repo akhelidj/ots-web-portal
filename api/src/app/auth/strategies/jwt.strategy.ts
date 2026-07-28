@@ -1,7 +1,9 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { UserRole } from '@prisma/client';
+import { AuthenticatedUser } from '../authenticated-request';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -13,7 +15,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: any): Promise<AuthenticatedUser> {
+    // `payload` is an untrusted token claim (passport-jwt types it `any`), so
+    // verify `role` is a real UserRole at the trust boundary rather than passing
+    // an unvalidated string through as if it were the enum.
+    if (!Object.values(UserRole).includes(payload.role)) {
+      throw new UnauthorizedException('Invalid role claim in access token');
+    }
     return {
       id: payload.sub,
       userId: payload.sub,

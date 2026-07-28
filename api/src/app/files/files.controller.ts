@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Request, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { FilesService } from './files.service';
+import { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('api/files')
 export class FilesController {
@@ -8,7 +9,7 @@ export class FilesController {
 
   @Get('attachments/:id')
   async downloadAttachment(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Res() res: Response,
   ) {

@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { UserRole } from '@prisma/client';
 
 /**
  * Shape attached to `req.user` by the JWT strategy (`JwtStrategy.validate`)
@@ -9,7 +10,7 @@ export interface AuthenticatedUser {
   userId: string;
   email: string;
   tenantId: string;
-  role: string;
+  role: UserRole;
   customerId: string | null;
   /** Raw JWT subject; read defensively by some handlers. */
   sub?: string;
