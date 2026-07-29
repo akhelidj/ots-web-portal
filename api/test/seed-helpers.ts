@@ -9,6 +9,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { InspectionReportStatus, SerialApprovalStatus } from '@prisma/client';
 import { PrismaService } from '../src/app/prisma/prisma.service';
 
 /**
@@ -63,6 +64,35 @@ export function seedActiveTemplate(
       hash: `hash-${templateKey}`,
       changeNote: 'seed',
       createdById: 'seed-user',
+    },
+  });
+}
+
+/**
+ * Seed a bare InspectionReport in a chosen status. The template fields are plain
+ * columns (no FK to Template — only the nullable legacyTemplateVersion is a FK), so
+ * a report row stands alone without seeding a Template. Used by specs that need a
+ * report parked in a specific status (e.g. the serial-numbers edit-guard matrix,
+ * which reads inspectionReport.status). Defaults to DRAFT.
+ */
+export function seedInspectionReport(
+  prisma: PrismaService,
+  tenantId: string,
+  opts: {
+    status?: InspectionReportStatus;
+    customerId?: string;
+    poNumber?: string;
+  } = {},
+) {
+  return prisma.inspectionReport.create({
+    data: {
+      tenantId,
+      customerId: opts.customerId,
+      poNumber: opts.poNumber ?? 'PO-SEED',
+      templateKey: 'DRILL_PIPE_REPORT',
+      templateVersion: 1,
+      templateHash: 'hash-DRILL_PIPE_REPORT',
+      status: opts.status ?? InspectionReportStatus.DRAFT,
     },
   });
 }
@@ -165,6 +195,10 @@ export function seedApprovableSerial(
     // When false, all four final.* jacket-condition flags are 0 so {{jc_*}} render
     // as '' instead of 'X' (still gate-passing: the keys are present, just falsy).
     finalFlags?: boolean;
+    // Override the serial's approvalStatus (defaults to the column default
+    // NOT_INSPECTED). Lets the edit-guard spec park a serial in a specific
+    // approval state; existing callers omit it and are unaffected.
+    approvalStatus?: SerialApprovalStatus;
   } = {},
 ) {
   const inspectionData: Record<string, Record<string, unknown>> = {};
@@ -191,6 +225,7 @@ export function seedApprovableSerial(
       inspectionReportId,
       serial,
       inspectionData: inspectionData as never,
+      approvalStatus: opts.approvalStatus,
     },
   });
 }
