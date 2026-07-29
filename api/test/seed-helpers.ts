@@ -9,7 +9,13 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { InspectionReportStatus, SerialApprovalStatus } from '@prisma/client';
+import {
+  InspectionReportStatus,
+  SerialApprovalStatus,
+  ChildReportStatus,
+  ChildReportType,
+  SerialDisposition,
+} from '@prisma/client';
 import { PrismaService } from '../src/app/prisma/prisma.service';
 
 /**
@@ -226,6 +232,64 @@ export function seedApprovableSerial(
       serial,
       inspectionData: inspectionData as never,
       approvalStatus: opts.approvalStatus,
+    },
+  });
+}
+
+/**
+ * Seed a bare ChildReport under an inspection report. A ChildReport carries its own
+ * status/type/version and a unique (tenantId, inspectionReportId, type) constraint, so
+ * a report holds at most one child per type. The updateChildReportSerialNumber path
+ * (Block 3b characterization) does not gate on the child's status, so this defaults to
+ * a DRAFT REWORK child at version 1. FK-safe extension added for the child-reports
+ * spec; no existing caller is affected.
+ */
+export function seedChildReport(
+  prisma: PrismaService,
+  tenantId: string,
+  inspectionReportId: string,
+  opts: {
+    status?: ChildReportStatus;
+    type?: ChildReportType;
+    version?: number;
+  } = {},
+) {
+  return prisma.childReport.create({
+    data: {
+      tenantId,
+      inspectionReportId,
+      type: opts.type ?? ChildReportType.REWORK,
+      status: opts.status ?? ChildReportStatus.DRAFT,
+      version: opts.version ?? 1,
+    },
+  });
+}
+
+/**
+ * Seed one ChildReportSerialNumber join row — the exact entity
+ * updateChildReportSerialNumber mutates. This table has NO version column and owns its
+ * own inspectionData / disposition / approvalStatus, independent of the underlying
+ * SerialNumber. Defaults leave inspectionData null and approvalStatus at the column
+ * default NOT_INSPECTED, so a spec can drive the NOT_INSPECTED -> INSPECTED_DRAFT
+ * auto-transition. FK-safe extension added for Block 3b.
+ */
+export function seedChildReportSerial(
+  prisma: PrismaService,
+  childReportId: string,
+  serialNumberId: string,
+  opts: {
+    approvalStatus?: SerialApprovalStatus;
+    disposition?: SerialDisposition;
+    inspectionData?: Record<string, unknown>;
+  } = {},
+) {
+  return prisma.childReportSerialNumber.create({
+    data: {
+      childReportId,
+      serialNumberId,
+      approvalStatus: opts.approvalStatus,
+      disposition: opts.disposition,
+      inspectionData: opts.inspectionData as never,
     },
   });
 }
