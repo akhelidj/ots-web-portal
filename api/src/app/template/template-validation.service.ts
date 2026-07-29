@@ -15,7 +15,7 @@ const XLSX_MIME_TYPES = new Set([
 
 @Injectable()
 export class TemplateValidationService {
-  async validateTemplate(file: any): Promise<void> {
+  async validateTemplate(file: Express.Multer.File): Promise<void> {
     // 1. Extension check
     if (!file.originalname.toLowerCase().endsWith('.xlsx')) {
       throw new BadRequestException(

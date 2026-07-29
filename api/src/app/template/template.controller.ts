@@ -16,6 +16,7 @@ import { TemplateService } from './template.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { AuthenticatedRequest } from '../auth/authenticated-request';
 import 'multer'; // Ensure Express.Multer types are available
 
 @Controller('templates')
@@ -27,9 +28,9 @@ export class TemplateController {
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   async createTemplate(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: { templateKey: string; changeNote: string },
-    @UploadedFile() file: any,
+    @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
       throw new BadRequestException('File is required');
@@ -54,13 +55,16 @@ export class TemplateController {
   }
 
   @Get()
-  async getTemplates(@Req() req: any) {
+  async getTemplates(@Req() req: AuthenticatedRequest) {
     const tenantId = req.user.tenantId;
     return this.templateService.getTemplates(tenantId);
   }
 
   @Patch(':id/deprecate')
-  async deprecateTemplate(@Req() req: any, @Param('id') id: string) {
+  async deprecateTemplate(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     const tenantId = req.user.tenantId;
     const userId = req.user.userId;
     return this.templateService.deprecateTemplate(tenantId, id, userId);

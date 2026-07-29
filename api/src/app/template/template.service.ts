@@ -22,7 +22,7 @@ export class TemplateService {
   async createTemplate(
     tenantId: string,
     templateKey: string,
-    file: any,
+    file: Express.Multer.File,
     changeNote: string,
     userId: string,
   ) {
