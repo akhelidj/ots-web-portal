@@ -199,11 +199,11 @@ export class SerialNumbersService {
 
     // 2. Serial Number Approval Status lock check
     if (
-      (serialToUpdate as any).approvalStatus === 'SUBMITTED_FOR_APPROVAL' ||
-      (serialToUpdate as any).approvalStatus === 'APPROVED'
+      serialToUpdate.approvalStatus === 'SUBMITTED_FOR_APPROVAL' ||
+      serialToUpdate.approvalStatus === 'APPROVED'
     ) {
       throw new BadRequestException(
-        `Cannot edit serial numbers that are ${(serialToUpdate as any).approvalStatus}`,
+        `Cannot edit serial numbers that are ${serialToUpdate.approvalStatus}`,
       );
     }
 
@@ -264,7 +264,7 @@ export class SerialNumbersService {
       // Auto-transition to INSPECTED_DRAFT if meaningful data provided and not currently submitted/approved
       // (Lock check above ensures we aren't submitted or approved)
       // Actually we should safely check if we were previously NOT_INSPECTED
-      if ((serialToUpdate as any).approvalStatus === 'NOT_INSPECTED') {
+      if (serialToUpdate.approvalStatus === 'NOT_INSPECTED') {
         dataToUpdate.approvalStatus = 'INSPECTED_DRAFT';
       }
 
@@ -283,7 +283,7 @@ export class SerialNumbersService {
         serialNumber: serialToUpdate.serial,
         version: serialToUpdate.version,
         inspectionData: serialToUpdate.inspectionData,
-        approvalStatus: (serialToUpdate as any).approvalStatus,
+        approvalStatus: serialToUpdate.approvalStatus,
         updatedAt: serialToUpdate.updatedAt,
       };
     }
@@ -331,7 +331,7 @@ export class SerialNumbersService {
         version: updated.version,
         inspectionData: updated.inspectionData,
         disposition: updated.disposition,
-        approvalStatus: (updated as any).approvalStatus,
+        approvalStatus: updated.approvalStatus,
         updatedAt: updated.updatedAt,
       };
     });

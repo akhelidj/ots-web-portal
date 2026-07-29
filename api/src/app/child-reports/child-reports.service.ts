@@ -283,7 +283,7 @@ export class ChildReportsService {
     const dataToUpdate: Prisma.ChildReportSerialNumberUpdateInput = {
       inspectionData:
         payload.inspectionData !== undefined
-          ? (payload.inspectionData as any)
+          ? (payload.inspectionData as Prisma.InputJsonValue)
           : undefined,
     };
 
