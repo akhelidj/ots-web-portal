@@ -7,8 +7,23 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
+
+/**
+ * The authenticated user returned by `validateUser` / consumed by `login`:
+ * the Prisma user row with the tenant/customer name includes, minus the
+ * password hash (stripped before it ever leaves the service).
+ */
+type ValidatedUser = Omit<
+  Prisma.UserGetPayload<{
+    include: {
+      tenant: { select: { name: true } };
+      customer: { select: { name: true } };
+    };
+  }>,
+  'passwordHash'
+>;
 
 @Injectable()
 export class AuthService {
@@ -18,7 +33,10 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<any> {
+  async validateUser(
+    email: string,
+    pass: string,
+  ): Promise<ValidatedUser | null> {
     if (!email || !pass) {
       return null;
     }
@@ -38,7 +56,7 @@ export class AuthService {
     return null;
   }
 
-  async login(user: any) {
+  async login(user: ValidatedUser) {
     if (user.role === UserRole.CUSTOMER && !user.customerId) {
       throw new UnauthorizedException(
         'Customer access denied: Invalid user entity binding.',
