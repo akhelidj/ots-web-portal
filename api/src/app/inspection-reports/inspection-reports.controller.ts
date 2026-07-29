@@ -17,14 +17,7 @@ import { ReturnBatchDto } from './dto/return-batch.dto';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole, InspectionReportStatus } from '@prisma/client';
-
-export interface AuthRequest {
-  user: {
-    id: string;
-    tenantId: string;
-    role: UserRole;
-  };
-}
+import { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @UseGuards(RolesGuard)
 @Controller('inspection-reports')
@@ -40,7 +33,7 @@ export class InspectionReportsController {
   )
   @Get()
   async getReports(
-    @Req() req: AuthRequest,
+    @Req() req: AuthenticatedRequest,
     @Query('status') status?: InspectionReportStatus,
     @Query('q') q?: string,
     @Query('customerId') customerId?: string,
@@ -51,7 +44,7 @@ export class InspectionReportsController {
   @Roles(UserRole.ADMIN, UserRole.RECEIVER)
   @Post()
   async createReport(
-    @Req() req: AuthRequest,
+    @Req() req: AuthenticatedRequest,
     @Body() data: CreateInspectionReportDto,
   ) {
     return this.reportsService.createReport(
@@ -69,7 +62,10 @@ export class InspectionReportsController {
     UserRole.CUSTOMER,
   )
   @Get(':id')
-  async getReportById(@Req() req: AuthRequest, @Param('id') id: string) {
+  async getReportById(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     return this.reportsService.getReportById(req.user, id);
   }
 
@@ -81,7 +77,7 @@ export class InspectionReportsController {
   )
   @Patch(':id')
   async updateReport(
-    @Req() req: AuthRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: { version: number; [key: string]: unknown },
   ) {
@@ -98,7 +94,7 @@ export class InspectionReportsController {
   @Roles(UserRole.ADMIN, UserRole.INSPECTOR)
   @Post(':id/approval-batches')
   async createApprovalBatch(
-    @Req() req: AuthRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: CreateApprovalBatchDto,
   ) {
@@ -113,7 +109,7 @@ export class InspectionReportsController {
   @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
   @Post(':id/approval-batches/:batchId/approve')
   async approveBatch(
-    @Req() req: AuthRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Param('batchId') batchId: string,
     @Body() body: ApproveBatchDto,
@@ -130,7 +126,7 @@ export class InspectionReportsController {
   @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
   @Post(':id/approval-batches/:batchId/return')
   async returnBatch(
-    @Req() req: AuthRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Param('batchId') batchId: string,
     @Body() body: ReturnBatchDto,
@@ -151,7 +147,10 @@ export class InspectionReportsController {
     UserRole.INSPECTOR,
   )
   @Get(':id/approval-batches')
-  async getBatchesForReport(@Req() req: AuthRequest, @Param('id') id: string) {
+  async getBatchesForReport(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     return this.reportsService.getBatchesForReport(req.user.tenantId, id);
   }
 
@@ -163,7 +162,7 @@ export class InspectionReportsController {
   )
   @Get(':id/approval-batches/:batchId')
   async getBatchById(
-    @Req() req: AuthRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Param('batchId') batchId: string,
   ) {
@@ -178,7 +177,7 @@ export class InspectionReportsController {
   )
   @Get(':id/approval-progress')
   async getReportApprovalProgress(
-    @Req() req: AuthRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
     return this.reportsService.getReportApprovalProgress(req.user.tenantId, id);

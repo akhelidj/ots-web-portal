@@ -20,7 +20,7 @@ export class InspectionReportsService {
   constructor(private prisma: PrismaService) {}
 
   async getReports(
-    user: { tenantId: string; role: UserRole; customerId?: string },
+    user: { tenantId: string; role: UserRole; customerId?: string | null },
     status?: InspectionReportStatus,
     q?: string,
     customerId?: string,
@@ -58,7 +58,7 @@ export class InspectionReportsService {
   }
 
   async getReportById(
-    user: { tenantId: string; role: UserRole; customerId?: string },
+    user: { tenantId: string; role: UserRole; customerId?: string | null },
     id: string,
   ) {
     const where: Prisma.InspectionReportWhereInput = {
