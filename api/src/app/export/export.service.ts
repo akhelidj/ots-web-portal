@@ -17,6 +17,7 @@ import {
   ChildReportType,
   SerialDisposition,
 } from '@prisma/client';
+import { InspectionData, Snapshot } from '../common/inspection-data.types';
 
 @Injectable()
 export class ExportService {
@@ -85,8 +86,7 @@ export class ExportService {
       revisionNumber = report.revisionNumber;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let snapshot: any;
+    let snapshot: Snapshot;
 
     if (revisionNumber === 0) {
       // Build an equivalent snapshot on-the-fly from live data so export still works.
@@ -123,8 +123,10 @@ export class ExportService {
           inspectionAddress: liveReport.inspectionAddress,
           standardUsed: liveReport.standardUsed,
           inspectorComment: liveReport.inspectorComment,
-          equipmentUsed: liveReport.equipmentUsed,
-          inspectionMethod: liveReport.inspectionMethod,
+          equipmentUsed:
+            liveReport.equipmentUsed as Snapshot['header']['equipmentUsed'],
+          inspectionMethod:
+            liveReport.inspectionMethod as Snapshot['header']['inspectionMethod'],
         },
         template: {
           key: liveReport.templateKey,
@@ -132,20 +134,19 @@ export class ExportService {
           hash: liveReport.templateHash,
           versionId: liveReport.templateVersionId,
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        serialNumbers: liveReport.serialNumbers.map((sn: any) => ({
-          id: sn.id,
-          serial: sn.serial,
-          inspectionData: sn.inspectionData,
-          disposition:
-            (sn.inspectionData as any)?.final?.disposition ||
-            (sn.inspectionData as any)?.disposition ||
-            null,
-          updatedAt: sn.updatedAt,
-        })),
+        serialNumbers: liveReport.serialNumbers.map((sn) => {
+          const data = sn.inspectionData as InspectionData | null;
+          return {
+            id: sn.id,
+            serial: sn.serial,
+            inspectionData: sn.inspectionData as InspectionData,
+            disposition: data?.final?.disposition || data?.disposition || null,
+            updatedAt: sn.updatedAt,
+          };
+        }),
         childReports: liveReport.childReports,
         transitionLogs: liveReport.transitionLogs,
-      };
+      } satisfies Snapshot;
     } else {
       const revision = await this.prisma.inspectionReportRevision.findUnique({
         where: {
@@ -160,7 +161,7 @@ export class ExportService {
         throw new NotFoundException(`Revision ${revisionNumber} not found`);
       }
 
-      snapshot = revision.snapshotJson as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+      snapshot = revision.snapshotJson as unknown as Snapshot;
       if (!snapshot) {
         throw new InternalServerErrorException('Snapshot data is missing');
       }
@@ -168,8 +169,8 @@ export class ExportService {
 
     // Inject User Data into Snapshot for the export mappers to compute "Inspected By" and "Approved By"
     const transitionUserIds = (snapshot.transitionLogs || [])
-      .map((l: any) => l.userId)
-      .filter(Boolean);
+      .map((l) => l.userId)
+      .filter((id): id is string => Boolean(id));
     if (transitionUserIds.length > 0) {
       const users = await this.prisma.user.findMany({
         where: { id: { in: transitionUserIds } },
@@ -243,7 +244,7 @@ export class ExportService {
         'N/A';
     }
 
-    snapshot.header = snapshot.header || {};
+    snapshot.header = snapshot.header || ({} as Snapshot['header']);
     snapshot.header.inspectedByName = inspectedByName;
     snapshot.header.approvedByName = approvedByName;
 
@@ -290,8 +291,7 @@ export class ExportService {
       const parentSerials = [...(snapshot.serialNumbers || [])];
 
       // Order Parent export deterministic: non-REWORK first, REWORK last, original ID/Sequence order preserved
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      parentSerials.sort((a: any, b: any) => {
+      parentSerials.sort((a, b) => {
         const aDisp = (a.disposition || '').toUpperCase();
         const bDisp = (b.disposition || '').toUpperCase();
         const aIsRework = aDisp === SerialDisposition.REWORK ? 1 : 0;
@@ -316,22 +316,16 @@ export class ExportService {
 
     if (isChildApproved && childReport) {
       // Map child serials to the structure expected by applyMapping
-      const childSerials = childReport.serialNumbers.map(
-        (crsn: Record<string, unknown>) => {
-          const sn = crsn.serialNumber as {
-            serial: string;
-            updatedAt: Date;
-            id: string;
-          };
-          return {
-            id: sn.id,
-            serial: sn.serial,
-            inspectionData: crsn.inspectionData,
-            disposition: crsn.disposition,
-            updatedAt: sn.updatedAt,
-          };
-        },
-      );
+      const childSerials = childReport.serialNumbers.map((crsn) => {
+        const sn = crsn.serialNumber;
+        return {
+          id: sn.id,
+          serial: sn.serial,
+          inspectionData: crsn.inspectionData as InspectionData,
+          disposition: crsn.disposition,
+          updatedAt: sn.updatedAt,
+        };
+      });
 
       const childFiles = await this.generateExcelFiles(
         templateBuffer,
@@ -373,10 +367,8 @@ export class ExportService {
   private async generateExcelFiles(
     templateBuffer: Buffer,
     templateKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    snapshot: any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    serialNumbers: any[],
+    snapshot: Snapshot,
+    serialNumbers: Snapshot['serialNumbers'],
     baseFilename: string,
   ): Promise<{ buffer: Buffer; filename: string }[]> {
     const files: { buffer: Buffer; filename: string }[] = [];
@@ -443,8 +435,8 @@ export class ExportService {
   private async applyMapping(
     templateKey: string,
     workbook: ExcelJS.Workbook,
-    snapshot: any,
-    chunk: any[],
+    snapshot: Snapshot,
+    chunk: Snapshot['serialNumbers'],
   ): Promise<void> {
     if (templateKey === 'DRILL_PIPE_REPORT') {
       await mapDrillPipeReportV1(workbook, snapshot, chunk);
