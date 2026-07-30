@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import {
+  InspectionData,
+  Snapshot,
+  ChildSnapshot,
+  SnapshotEquipment,
+  SnapshotInspectionMethod,
+} from '../common/inspection-data.types';
 
 @Injectable()
 export class RevisionService {
@@ -94,8 +101,10 @@ export class RevisionService {
         inspectionAddress: report.inspectionAddress,
         standardUsed: report.standardUsed,
         inspectorComment: report.inspectorComment,
-        equipmentUsed: report.equipmentUsed,
-        inspectionMethod: report.inspectionMethod,
+        equipmentUsed: report.equipmentUsed as SnapshotEquipment[] | null,
+        inspectionMethod: report.inspectionMethod as
+          | SnapshotInspectionMethod[]
+          | null,
       },
       template: {
         key: report.templateKey,
@@ -103,19 +112,19 @@ export class RevisionService {
         hash: report.templateHash,
         versionId: report.templateVersionId,
       },
-      serialNumbers: report.serialNumbers.map((sn) => ({
-        id: sn.id,
-        serial: sn.serial,
-        inspectionData: sn.inspectionData,
-        disposition:
-          (sn.inspectionData as any)?.final?.disposition ||
-          (sn.inspectionData as any)?.disposition ||
-          null,
-        updatedAt: sn.updatedAt,
-      })),
+      serialNumbers: report.serialNumbers.map((sn) => {
+        const data = sn.inspectionData as InspectionData | null;
+        return {
+          id: sn.id,
+          serial: sn.serial,
+          inspectionData: sn.inspectionData as InspectionData,
+          disposition: data?.final?.disposition || data?.disposition || null,
+          updatedAt: sn.updatedAt,
+        };
+      }),
       childReports: report.childReports, // Already minimal selected above
       transitionLogs: report.transitionLogs,
-    };
+    } satisfies Snapshot;
 
     // 5. Create Revision Record
     await tx.inspectionReportRevision.create({
@@ -126,8 +135,7 @@ export class RevisionService {
         revisionReason: reason,
         revisedById: userId,
         revisedAt: new Date(), // Capture exact time of revision
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        snapshotJson: snapshotData as any, // Cast to Json (Prisma type)
+        snapshotJson: snapshotData as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -196,19 +204,19 @@ export class RevisionService {
         parentReportId: childReport.inspectionReportId,
         parentReportNumber: childReport.inspectionReport?.reportNumber,
       },
-      serialNumbers: childReport.serialNumbers.map((s) => ({
-        linkId: s.id, // Link table ID
-        serialId: s.serialNumberId,
-        serial: s.serialNumber.serial,
-        disposition:
-          (s.serialNumber.inspectionData as any)?.final?.disposition ||
-          (s.serialNumber.inspectionData as any)?.disposition ||
-          null,
-        // Child reports might have their own specific data in future,
-        // currently they just link. Inclusion of serial value is key.
-      })),
+      serialNumbers: childReport.serialNumbers.map((s) => {
+        const data = s.serialNumber.inspectionData as InspectionData | null;
+        return {
+          linkId: s.id, // Link table ID
+          serialId: s.serialNumberId,
+          serial: s.serialNumber.serial,
+          disposition: data?.final?.disposition || data?.disposition || null,
+          // Child reports might have their own specific data in future,
+          // currently they just link. Inclusion of serial value is key.
+        };
+      }),
       attachments: childReport.attachments,
-    };
+    } satisfies ChildSnapshot;
 
     await tx.childReportRevision.create({
       data: {
@@ -218,8 +226,7 @@ export class RevisionService {
         revisionReason: reason,
         revisedById: userId,
         revisedAt: new Date(),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        snapshotJson: snapshotData as any,
+        snapshotJson: snapshotData as unknown as Prisma.InputJsonValue,
       },
     });
 
