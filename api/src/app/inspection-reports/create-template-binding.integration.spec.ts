@@ -22,6 +22,7 @@
  *    So it is currently unreachable from the live app. It is the seam F2.1.2 will
  *    wire; these tests document that it already binds by the requested key.
  */
+import { BadRequestException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { InspectionReportsService } from './inspection-reports.service';
@@ -157,6 +158,29 @@ describe('Create / template-binding path (F2.1 seam) [integration]', () => {
       ).rejects.toThrow(
         /No ACTIVE template found for key: NON_EXISTENT_TEMPLATE/,
       );
+    });
+
+    it('wraps any in-transaction failure in BadRequestException("Failed to create report: …") — the :109 catch', async () => {
+      // BASELINE (stable, untagged): pins the current catch behavior at
+      // inspection-report-workflow.service.ts:109 ahead of the 3h-ii any->unknown
+      // rewrite. The pre-try guard passes (ACTIVE template exists), then the
+      // $transaction fails inside — here a non-existent customerId trips the
+      // Customer FK — so the caught error is transformed into a 400 with the
+      // "Failed to create report:" prefix (it does NOT rethrow the raw Prisma error).
+      const tenant = await seedTenant(prisma);
+      await seedActiveTemplate(prisma, tenant.id, 'CUSTOM_TEMPLATE');
+
+      const attempt = workflowService.create(
+        { id: 'user-1', tenantId: tenant.id, role: UserRole.ADMIN },
+        {
+          templateKey: 'CUSTOM_TEMPLATE',
+          poNumber: 'PO-0005',
+          customerId: '00000000-0000-0000-0000-000000000000', // no such Customer -> FK violation
+        },
+      );
+
+      await expect(attempt).rejects.toBeInstanceOf(BadRequestException);
+      await expect(attempt).rejects.toThrow(/Failed to create report:/);
     });
   });
 });

@@ -136,3 +136,37 @@ top-level `disposition`) with `// orphan:` comments naming these read sites, so 
 finding travels with the type. **Not fixed here** — the correct behavior (gate on
 `body.emiResult`, or align the client to write `final.disposition`) is an owner
 decision, not a mechanical Cast-B purge.
+
+## Block 3h — global exception filter flattens structured HttpException bodies (LOGGED, not fixed)
+
+Surfaced while characterizing the `catch (exception: any)` site ahead of the
+3h-ii `any -> unknown` typing rewrite. **API-side, not part of the portal
+offline-sync core above. Logged for the owner — deliberately NOT fixed or flipped
+in Block 3h.**
+
+The global `AllExceptionsFilter` ([main.ts:18](../../api/src/main.ts#L18)) is a
+catch-all (`@Catch()`) registered via `useGlobalFilters`, so it intercepts **every**
+exception — including `HttpException`s thrown from services — and overrides Nest's
+default handler. It builds the response from `exception.message` / `.stack` /
+`.getStatus()` and **never reads `exception.getResponse()`**. Because NestJS
+`HttpException.message` collapses a structured response object to its string
+`message` field (or a class-name fallback when `message` isn't a string), every
+structured body is flattened to `{ statusCode, message, stack }`.
+
+| Fact                                                                                                                                                                  | Anchor                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Filter reads `.message` / `.stack` / `.getStatus()`, never `.getResponse()`                                                                                           | [main.ts:25-31](../../api/src/main.ts#L25)                                                                                |
+| Registered as a global catch-all filter (intercepts service-thrown HttpExceptions)                                                                                    | [main.ts:16](../../api/src/main.ts#L16), [:38](../../api/src/main.ts#L38)                                                 |
+| PENDING_APPROVAL gate throws a structured `{code:'VALIDATION_FAILED', missingDispositionSerials, missingRequiredFields}` body                                         | [inspection-report-workflow.service.ts](../../api/src/app/workflow/inspection-report-workflow.service.ts) transition gate |
+| Consequence: in production the gate's `code` / `missingDispositionSerials` / `missingRequiredFields` are **discarded** — only the string `message` reaches the client | —                                                                                                                         |
+
+**Why the tests never caught it:** the integration suite has no HTTP/e2e harness
+(no supertest, no `NestFactory`/`createNestApplication`), so it **never registers
+this filter**. Structured `VALIDATION_FAILED` bodies survive in tests via Nest's
+_default_ handler, masking the production flattening. CLAUDE.md's "structured
+VALIDATION_FAILED 400" describes the test/default path, not the production filter.
+
+**Pinned as current fact** by `main.spec.ts` case (b2) (asserts the structured
+fields are absent after the filter runs) — a baseline, **not** a flip. The fix
+(read `.getResponse()` to preserve structured bodies) is a **deliberate behavior
+change** owned by a separate sanctioned block, not the 3h typing purge.
