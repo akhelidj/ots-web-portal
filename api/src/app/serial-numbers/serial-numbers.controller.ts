@@ -16,6 +16,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { AuthenticatedRequest } from '../auth/authenticated-request';
+import { InspectionData } from '../common/inspection-data.types';
 
 @UseGuards(RolesGuard)
 @Controller()
@@ -58,7 +59,11 @@ export class SerialNumbersController {
     @Req() req: any,
     @Param('id') id: string,
     @Body()
-    body: { serialNumber?: string; version: number; inspectionData?: any },
+    body: {
+      serialNumber?: string;
+      version: number;
+      inspectionData?: InspectionData;
+    },
   ) {
     if (body.version === undefined || body.version === null) {
       throw new BadRequestException('version is required');

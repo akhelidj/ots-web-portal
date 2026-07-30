@@ -18,6 +18,7 @@ import {
   isReasonRequiredForInspection,
 } from './workflow.policy';
 import { RevisionService } from '../revision/revision.service';
+import { InspectionData } from '../common/inspection-data.types';
 
 const DRILL_PIPE_REQUIRED_KEYS = [
   'box.minTongSpace',
@@ -347,7 +348,7 @@ export class InspectionReportWorkflowService {
       const missingRequiredFields: Record<string, string[]> = {};
 
       for (const sn of serials) {
-        const data: any = sn.inspectionData || {};
+        const data = (sn.inspectionData as InspectionData) || {};
         const disposition = data.final?.disposition || data.disposition;
 
         if (!disposition) {
@@ -356,9 +357,15 @@ export class InspectionReportWorkflowService {
 
         if (report.templateKey === 'DRILL_PIPE_REPORT') {
           const missingKeys = DRILL_PIPE_REQUIRED_KEYS.filter((rk) => {
+            // Dynamic dotted-path walk; identical semantics to `acc && acc[part]`
+            // (`a && b` === `a ? b : a`), just indexable off `unknown`.
             const val = rk
               .split('.')
-              .reduce((acc, part) => acc && acc[part], data);
+              .reduce<unknown>(
+                (acc, part) =>
+                  acc ? (acc as Record<string, unknown>)[part] : acc,
+                data as unknown,
+              );
             return val === undefined || val === null || val === '';
           });
           if (missingKeys.length > 0) {

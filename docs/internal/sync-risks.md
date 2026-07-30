@@ -99,3 +99,40 @@ Flipped assertions (now assert the FIXED behavior as fact) in
   nothing persisted.
 - **invalid emiResult** → now `rejects.toBeInstanceOf(BadRequestException)` (was a generic
   Prisma query-time throw), nothing persisted.
+
+## Block 3c — `final.disposition` semantic orphan (LOGGED, not fixed)
+
+Surfaced while authoring the shared `InspectionData` type
+(`api/src/app/common/inspection-data.types.ts`) for the Block 3 Cast-B purge.
+**API-side, not part of the portal offline-sync core above. Logged for the owner —
+no behavior change in Block 3c.**
+
+The PENDING_APPROVAL gate decides a serial's disposition-presence from
+`inspectionData.final.disposition` (falling back to a top-level
+`inspectionData.disposition`), but **neither field is written by the live client or
+the app seed** — the real disposition is carried in `inspectionData.body.emiResult`
+(the value both serial write paths actually persist to the `SerialDisposition`
+column). So the gate reads a field production never produces.
+
+| Fact                                                                                                                 | Anchor                                                                                                                                      |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate reads `data.final?.disposition \|\| data.disposition` for the missing-disposition check                         | [inspection-report-workflow.service.ts:352](../../api/src/app/workflow/inspection-report-workflow.service.ts#L352)                          |
+| Same `final.disposition \|\| disposition` read builds the snapshot's computed `disposition` sibling (parent + child) | [revision.service.ts:111](../../api/src/app/revision/revision.service.ts#L111), [:204](../../api/src/app/revision/revision.service.ts#L204) |
+| Same read in the export revision-0 live-build                                                                        | [export.service.ts:141](../../api/src/app/export/export.service.ts#L141)                                                                    |
+| Client form schema's `final` section defines only `isNew/isPremium/isC2/isScrap` — **no `disposition`**              | `portal/src/app/features/templates/schemas/drill-pipe-v1.schema.ts`                                                                         |
+| App seed writes disposition into `body.emiResult`; its `final` has no `disposition`                                  | `api/scripts/seed.ts`                                                                                                                       |
+| The **only** producer of `final.disposition` is the test fixture, written expressly to satisfy the gate              | `api/test/seed-helpers.ts`                                                                                                                  |
+
+**Consequence (needs runtime confirmation, per repo convention for unverified risks):**
+for real production data where `final.disposition` and top-level `disposition` are
+both absent, the gate's `if (!disposition) missingDispositionSerials.push(...)` arm
+would flag every serial as missing a disposition — even though `body.emiResult` is
+populated. Whether real reports reach PENDING_APPROVAL by some other means, or the
+client secretly emits `final.disposition` outside its declared schema, was not
+verified at runtime; the code-level fact (gate reads a client-unwritten field) is
+confirmed. The three orphan fields are annotated at the type definition
+(`inspection-data.types.ts`, `final.disposition` / `final.condition_notes` /
+top-level `disposition`) with `// orphan:` comments naming these read sites, so the
+finding travels with the type. **Not fixed here** — the correct behavior (gate on
+`body.emiResult`, or align the client to write `final.disposition`) is an owner
+decision, not a mechanical Cast-B purge.

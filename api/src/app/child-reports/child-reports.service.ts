@@ -12,6 +12,7 @@ import {
   SerialDisposition,
   Prisma,
 } from '@prisma/client';
+import { InspectionData } from '../common/inspection-data.types';
 
 @Injectable()
 export class ChildReportsService {
@@ -36,9 +37,8 @@ export class ChildReportsService {
     }
 
     const reworkSerials = report.serialNumbers.filter((sn) => {
-      const data = (sn.inspectionData as Record<string, unknown>) || {};
-      const bodySection = data['body'] as Record<string, unknown> | undefined;
-      const disposition = bodySection?.['emiResult'] as string;
+      const data = (sn.inspectionData as InspectionData) || {};
+      const disposition = data.body?.emiResult;
       return disposition === SerialDisposition.REWORK;
     });
 
@@ -166,7 +166,7 @@ export class ChildReportsService {
         ? cr.serialNumbers.map((sn) => ({
             id: sn.serialNumberId,
             serial: sn.serialNumber?.serial || '',
-            inspectionData: sn.inspectionData as Record<string, unknown> | null,
+            inspectionData: sn.inspectionData as InspectionData | null,
             disposition: sn.disposition,
             approvalStatus: sn.approvalStatus,
           }))
@@ -257,7 +257,7 @@ export class ChildReportsService {
     childReportId: string,
     serialNumberId: string,
     payload: {
-      inspectionData?: Record<string, unknown>;
+      inspectionData?: InspectionData;
       disposition?: SerialDisposition;
     },
   ) {
@@ -288,10 +288,8 @@ export class ChildReportsService {
     };
 
     if (payload.inspectionData) {
-      const bodySection = payload.inspectionData['body'] as
-        | Record<string, unknown>
-        | undefined;
-      const disp = bodySection?.['emiResult'] as string;
+      const bodySection = payload.inspectionData.body;
+      const disp = bodySection?.emiResult;
       if (disp) {
         // Detect the enum value honestly in-service instead of casting an
         // arbitrary string into the column. Invalid values were previously

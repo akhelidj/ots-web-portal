@@ -11,6 +11,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { InspectionData } from '../common/inspection-data.types';
 
 @Injectable()
 export class SerialNumbersService {
@@ -173,7 +174,7 @@ export class SerialNumbersService {
     tenantId: string,
     id: string,
     userId: string,
-    payload: { serialNumber?: string; inspectionData?: any },
+    payload: { serialNumber?: string; inspectionData?: InspectionData },
     version: number,
   ) {
     if (version === undefined || version === null) {
@@ -253,14 +254,13 @@ export class SerialNumbersService {
       // E.g. { ...serialToUpdate.inspectionData as object, ...payload.inspectionData }
       // But usually PATCH payload is the complete merged state from client for offline first.
       // So replacing it is correct for our outbox implementation.
-      dataToUpdate.inspectionData = payload.inspectionData;
+      dataToUpdate.inspectionData =
+        payload.inspectionData as Prisma.InputJsonValue;
 
       // Sync top-level disposition column
       if (payload.inspectionData) {
-        const bodySection = payload.inspectionData['body'] as
-          | Record<string, unknown>
-          | undefined;
-        const disp = bodySection?.['emiResult'] as string;
+        const bodySection = payload.inspectionData.body;
+        const disp = bodySection?.emiResult;
         if (disp) {
           // Detect the enum value honestly in-service instead of letting an
           // arbitrary string reach the column via a cast. Invalid values were

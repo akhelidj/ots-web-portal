@@ -15,6 +15,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import 'multer';
 import { ChildReportsService } from './child-reports.service';
 import { ChildReportStatus, SerialDisposition } from '@prisma/client';
+import { InspectionData } from '../common/inspection-data.types';
 
 export interface UploadedFileDto {
   fieldname: string;
@@ -91,7 +92,7 @@ export class ChildReportsController {
       childReportId,
       serialNumberId,
       {
-        inspectionData: body['inspectionData'] as Record<string, unknown>,
+        inspectionData: body['inspectionData'] as InspectionData,
         disposition: body['disposition'] as SerialDisposition,
       },
     );
