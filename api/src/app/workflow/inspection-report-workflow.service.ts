@@ -106,11 +106,10 @@ export class InspectionReportWorkflowService {
 
         return report;
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating InspectionReport:', error);
-      throw new BadRequestException(
-        `Failed to create report: ${error.message}`,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      throw new BadRequestException(`Failed to create report: ${message}`);
     }
   }
 
