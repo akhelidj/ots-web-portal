@@ -353,8 +353,10 @@ export class ExportService {
     // Zip multiple files (either chunks or parent+child combo)
     const zip = new JSZip();
     for (const f of allFiles) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      zip.file(f.filename, f.buffer as any);
+      zip.file(
+        f.filename,
+        f.buffer as unknown as Parameters<typeof zip.file>[1],
+      );
     }
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
     return {
@@ -380,15 +382,16 @@ export class ExportService {
 
     if (N <= 10) {
       const workbook = new ExcelJS.Workbook();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await workbook.xlsx.load(templateBuffer as any);
+      await workbook.xlsx.load(
+        templateBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
+      );
 
       try {
         await this.applyMapping(templateKey, workbook, snapshot, serialNumbers);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : undefined;
         throw new BadRequestException(
-          err.message || 'Error applying template mapping',
+          message || 'Error applying template mapping',
         );
       }
 
@@ -405,8 +408,9 @@ export class ExportService {
         const chunkSerials = serialNumbers.slice(startIndex, endIndex);
 
         const workbook = new ExcelJS.Workbook();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await workbook.xlsx.load(templateBuffer as any);
+        await workbook.xlsx.load(
+          templateBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
+        );
 
         try {
           await this.applyMapping(
@@ -415,10 +419,10 @@ export class ExportService {
             snapshot,
             chunkSerials,
           );
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : undefined;
           throw new BadRequestException(
-            `Error in part ${k}: ${err.message || 'Error applying template mapping'}`,
+            `Error in part ${k}: ${message || 'Error applying template mapping'}`,
           );
         }
 
