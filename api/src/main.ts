@@ -9,25 +9,33 @@ import {
   Catch,
   ExceptionFilter,
   ArgumentsHost,
+  HttpException,
 } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  catch(exception: any, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
 
     console.error('===== FATAL SERVER ERROR =====');
     console.error(exception);
 
-    const status = exception.getStatus ? exception.getStatus() : 500;
+    // NOTE: intentionally reads `.message`, NOT `.getResponse()` — the resulting
+    // flattening of structured HttpException bodies is a known gap logged in
+    // docs/internal/sync-risks.md ("Block 3h"), owned by a separate fix. Preserve it.
+    const status =
+      exception instanceof HttpException ? exception.getStatus() : 500;
 
     response.status(status).json({
       statusCode: status,
-      message: exception.message || 'Internal server error',
-      stack: exception.stack,
+      message:
+        exception instanceof Error
+          ? exception.message
+          : 'Internal server error',
+      stack: exception instanceof Error ? exception.stack : undefined,
     });
   }
 }
