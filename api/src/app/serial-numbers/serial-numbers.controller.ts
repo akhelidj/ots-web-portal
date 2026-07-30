@@ -41,7 +41,7 @@ export class SerialNumbersController {
   @Roles(UserRole.ADMIN, UserRole.RECEIVER)
   @Post('inspection-reports/:id/serial-numbers')
   async createSerialNumber(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') reportId: string,
     @Body() body: { items: { clientRef: string; serialNumber: string }[] },
   ) {
@@ -56,7 +56,7 @@ export class SerialNumbersController {
   @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.INSPECTOR)
   @Patch('serial-numbers/:id')
   async updateSerialNumber(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body()
     body: {
@@ -88,7 +88,10 @@ export class SerialNumbersController {
 
   @Roles(UserRole.ADMIN, UserRole.RECEIVER)
   @Delete('serial-numbers/:id')
-  async deleteSerialNumber(@Req() req: any, @Param('id') id: string) {
+  async deleteSerialNumber(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     return this.serialNumbersService.deleteSerialNumber(
       req.user.tenantId,
       id,

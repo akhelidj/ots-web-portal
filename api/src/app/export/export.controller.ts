@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query, Res, Req } from '@nestjs/common';
 import { ExportService } from './export.service';
 import { Response } from 'express';
+import { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('inspection-reports')
 export class ExportController {
@@ -8,7 +9,7 @@ export class ExportController {
 
   @Get(':id/export')
   async exportInspectionReport(
-    @Req() req: any, // Express Request with injected user
+    @Req() req: AuthenticatedRequest, // Express Request with injected user
     @Param('id') reportId: string,
     @Query('revision') revision: string,
     @Res() res: Response,

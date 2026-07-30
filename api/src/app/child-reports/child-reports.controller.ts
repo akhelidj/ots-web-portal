@@ -16,6 +16,7 @@ import 'multer';
 import { ChildReportsService } from './child-reports.service';
 import { ChildReportStatus, SerialDisposition } from '@prisma/client';
 import { InspectionData } from '../common/inspection-data.types';
+import { AuthenticatedRequest } from '../auth/authenticated-request';
 
 export interface UploadedFileDto {
   fieldname: string;
@@ -31,7 +32,10 @@ export class ChildReportsController {
   constructor(private readonly childReportsService: ChildReportsService) {}
 
   @Post('inspection-reports/:id/child-reports/sync-rework')
-  async syncReworkChildReport(@Request() req: any, @Param('id') id: string) {
+  async syncReworkChildReport(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     if (!id) {
       throw new BadRequestException(
         'Inspection Report ID is required for sync.',
@@ -45,7 +49,7 @@ export class ChildReportsController {
 
   @Get('child-reports')
   async getChildReports(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Query('inspectionReportId') reportId: string,
   ) {
     if (!reportId) {
@@ -58,13 +62,16 @@ export class ChildReportsController {
   }
 
   @Get('child-reports/:id')
-  async getChildReport(@Request() req: any, @Param('id') id: string) {
+  async getChildReport(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     return this.childReportsService.getChildReportById(req.user.tenantId, id);
   }
 
   @Patch('child-reports/:id')
   async updateChildReport(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
   ) {
@@ -82,7 +89,7 @@ export class ChildReportsController {
 
   @Patch('child-reports/:id/serial-numbers/:snId')
   async updateChildReportSerialNumber(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param('id') childReportId: string,
     @Param('snId') serialNumberId: string,
     @Body() body: Record<string, unknown>,
@@ -101,7 +108,7 @@ export class ChildReportsController {
   @Post('child-reports/:id/attachments')
   @UseInterceptors(FileInterceptor('file'))
   async uploadAttachment(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
     @UploadedFile() file: UploadedFileDto,
   ) {

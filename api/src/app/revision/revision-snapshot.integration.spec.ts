@@ -39,6 +39,7 @@ import {
   seedApprovableSerial,
   resetInspectionDomain,
 } from '../../../test/seed-helpers';
+import { Snapshot } from '../common/inspection-data.types';
 
 describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
   let prisma: PrismaService;
@@ -173,7 +174,7 @@ describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
     // Snapshot contents: header reflects the NEW (APPROVED) status, template binding
     // is captured, the seeded serial is present with its extracted disposition, and
     // the triggering transition is in the log (the log is written before the snapshot).
-    const snap = rev.snapshotJson as any;
+    const snap = rev.snapshotJson as unknown as Snapshot;
     expect(snap.header.id).toBe(reportId);
     expect(snap.header.poNumber).toBe('PO-REV');
     expect(snap.header.status).toBe(InspectionReportStatus.APPROVED);
@@ -185,7 +186,7 @@ describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
     expect(snap.serialNumbers[0].disposition).toBe('ACCEPT');
     expect(
       snap.transitionLogs.some(
-        (l: any) => l.toStatus === InspectionReportStatus.APPROVED,
+        (l) => l.toStatus === InspectionReportStatus.APPROVED,
       ),
     ).toBe(true);
   });
@@ -251,7 +252,7 @@ describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
     expect(reopenRev.revisionNumber).toBe(2);
     expect(reopenRev.revisionReason).toBe('customer disputed result');
     // Header status is the post-transition status: IN_INSPECTION.
-    expect((reopenRev.snapshotJson as any).header.status).toBe(
+    expect((reopenRev.snapshotJson as unknown as Snapshot).header.status).toBe(
       InspectionReportStatus.IN_INSPECTION,
     );
   });
