@@ -131,16 +131,14 @@ function cloneRowForNumber(templateRowXml: string, newRowNum: number): string {
 }
 
 import * as ExcelJS from 'exceljs';
+import { InspectionData, Snapshot } from '../../common/inspection-data.types';
 
 export async function mapDrillPipeReportV1(
   workbook: ExcelJS.Workbook,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  snapshot: any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  serialNumbersChunk: any[],
+  snapshot: Snapshot,
+  serialNumbersChunk: Snapshot['serialNumbers'],
 ): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const h = (snapshot.header || snapshot) as any;
+  const h = snapshot.header;
 
   // 1. Build global token map
   const reportDate = h.updatedAt
@@ -150,14 +148,12 @@ export async function mapDrillPipeReportV1(
       : 'N/A';
 
   const eqNames =
-    (((h.equipmentUsed || snapshot.equipmentUsed) as any[]) || [])
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((e: any) => `${e.name}${e.number ? ' #' + e.number : ''}`)
+    (h.equipmentUsed || [])
+      .map((e) => `${e.name}${e.number ? ' #' + e.number : ''}`)
       .join(', ') || 'None specified';
   const mNames =
-    (((h.inspectionMethod || snapshot.inspectionMethod) as any[]) || [])
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((m: any) => m.name || m)
+    (h.inspectionMethod || [])
+      .map((m) => (typeof m === 'string' ? m : m.name || m))
       .join(', ') || 'None specified';
 
   let inspectedByName = h.inspectedByName || 'N/A';
@@ -165,26 +161,23 @@ export async function mapDrillPipeReportV1(
   const transitionLogs = snapshot.transitionLogs || [];
   if (Array.isArray(transitionLogs) && transitionLogs.length > 0) {
     const asc = [...transitionLogs].sort(
-      (a: any, b: any) =>
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      (a, b) =>
+        new Date(a.timestamp ?? 0).getTime() -
+        new Date(b.timestamp ?? 0).getTime(),
     );
     const inspectLog = asc.find(
-      (l: any) =>
+      (l) =>
         l.toStatus === 'IN_INSPECTION' || l.toStatus === 'PENDING_APPROVAL',
     );
     if (inspectLog?.userId) {
-      const u = (snapshot.users || []).find(
-        (u: any) => u.id === inspectLog.userId,
-      );
+      const u = (snapshot.users || []).find((u) => u.id === inspectLog.userId);
       if (u) inspectedByName = u.name || u.email;
     }
     const approveLog = [...asc]
       .reverse()
-      .find((l: any) => l.toStatus === 'APPROVED' || l.toStatus === 'CLOSED');
+      .find((l) => l.toStatus === 'APPROVED' || l.toStatus === 'CLOSED');
     if (approveLog?.userId) {
-      const u = (snapshot.users || []).find(
-        (u: any) => u.id === approveLog.userId,
-      );
+      const u = (snapshot.users || []).find((u) => u.id === approveLog.userId);
       if (u) approvedByName = u.name || u.email;
     }
   }
@@ -205,18 +198,16 @@ export async function mapDrillPipeReportV1(
     '{{connection}}': h.connection || 'N/A',
     '{{equipment}}': eqNames,
     '{{methods}}': mNames,
-    '{{inspectorComment}}':
-      h.inspectorComment ||
-      snapshot.inspectorComment ||
-      'No comments provided.',
+    '{{inspectorComment}}': h.inspectorComment || 'No comments provided.',
     '{{inspectedBy}}': inspectedByName,
     '{{approvedBy}}': approvedByName,
   };
 
   // 2. Serialize the workbook to raw bytes, then open with JSZip
   const rawBuffer = await workbook.xlsx.writeBuffer();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const zip = await JSZip.loadAsync(rawBuffer as any);
+  const zip = await JSZip.loadAsync(
+    rawBuffer as unknown as Parameters<typeof JSZip.loadAsync>[0],
+  );
 
   const sheetPath = 'xl/worksheets/sheet1.xml';
   const ssPath = 'xl/sharedStrings.xml';
@@ -324,11 +315,11 @@ export async function mapDrillPipeReportV1(
       const sn = serialNumbersChunk[i];
       const rowNum = templateRowNumber + i;
 
-      const d = sn.inspectionData || sn.inspectionJson || {};
-      const box = d.box || {};
-      const pin = d.pin || {};
-      const body = d.body || {};
-      const final = d.final || {};
+      const d: InspectionData = sn.inspectionData || {};
+      const box: NonNullable<InspectionData['box']> = d.box || {};
+      const pin: NonNullable<InspectionData['pin']> = d.pin || {};
+      const body: NonNullable<InspectionData['body']> = d.body || {};
+      const final: NonNullable<InspectionData['final']> = d.final || {};
       const boxBvl = box.bevelDiameterMin
         ? `${box.bevelDiameterMin}-${box.bevelDiameterMax || ''}`
         : '';
@@ -340,7 +331,7 @@ export async function mapDrillPipeReportV1(
         : '';
 
       const rowTokens: Record<string, string> = {
-        '{{sn}}': sn.serial || sn.serialNumber || sn.value || '',
+        '{{sn}}': sn.serial || '',
         '{{b_ts}}': box.minTongSpace || '',
         '{{b_od}}': box.minOD || '',
         '{{b_thd}}': box.minBoxThreads || '',
@@ -434,6 +425,7 @@ export async function mapDrillPipeReportV1(
   while (workbook.worksheets.length > 0) {
     workbook.removeWorksheet(workbook.worksheets[0].id);
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await workbook.xlsx.load(finalBuffer as any);
+  await workbook.xlsx.load(
+    finalBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
+  );
 }
