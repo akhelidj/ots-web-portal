@@ -13,13 +13,11 @@
  *     valid JSON object. Mechanical drop for 3d (→ Prisma.InputJsonValue); no value can
  *     make it misbehave, so it is pinned only incidentally (every write carries it).
  *
- *   Cast B (:296) — `disp as any` into the `disposition SerialDisposition?` enum column,
- *     where `disp = inspectionData.body.emiResult` is a RAW STRING lifted out of the
- *     JSON blob. CATEGORY (b), THE LANDMINE: the string is not guaranteed to be a valid
- *     SerialDisposition member. This spec pins behavior across the real values that flow
- *     through it — valid members persist, the string 'REWORK' bypasses the top-level
- *     payload-disposition guard, and an invalid member rejects at the DB layer. 3d must
- *     treat this cast as MORE than a mechanical drop (see the flagged cases below).
+ *   Cast B (:296) — was `disp as any` into the `disposition SerialDisposition?` enum
+ *     column, where `disp = inspectionData.body.emiResult` is a RAW STRING lifted out of
+ *     the JSON blob. CATEGORY (b), THE LANDMINE. Block 3d-ii replaced the cast with a
+ *     runtime membership check and closed the child-only guard gap, so two assertions
+ *     here have since FLIPPED (see below).
  *
  * The write path also branches on real persisted state (`crsn.approvalStatus` drives a
  * NOT_INSPECTED -> INSPECTED_DRAFT auto-transition; tenant ownership is re-checked
@@ -27,10 +25,11 @@
  * rows, not just inputs. The only pure-input branch — the REWORK payload guard — fires
  * before any DB read and is exercised here too.
  *
- * BASELINE assertions of current behavior — no flip tag, NOT in docs/internal/
- * sync-risks.md. Two observations are NOT tagged but ARE flagged to the human in the
- * Block 3b report as guard-gap landmines 3d should weigh (the 'REWORK'-via-emiResult
- * bypass and the invalid-enum DB rejection).
+ * Most assertions are BASELINE (no flip tag). TWO were FLIPPED by Block 3d-ii and now
+ * assert the FIXED behavior as fact (see docs/internal/sync-risks.md, "Block 3d-ii"):
+ *   - the 'REWORK'-via-emiResult bypass is now rejected (child guard-gap closed);
+ *   - an invalid emiResult is now rejected up-front with BadRequestException in-service
+ *     (previously an opaque Prisma query-time error).
  */
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { SerialApprovalStatus, SerialDisposition } from '@prisma/client';
@@ -164,30 +163,37 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
     );
   });
 
-  describe('the emiResult -> disposition landmine (cast B, category-b)', () => {
-    it("FLAGGED: a body.emiResult of 'REWORK' bypasses the payload-disposition guard and IS written as REWORK", async () => {
-      // The top-level guard only rejects payload.disposition === REWORK. The disposition
-      // actually persisted comes from inspectionData.body.emiResult, which the guard
-      // never inspects — so REWORK smuggled through emiResult reaches the column.
-      const { tenant, serial, child } = await seedCrsnCase();
+  describe('the emiResult -> disposition landmine (cast B) — CLOSED in 3d-ii', () => {
+    it("FLIPPED (3d-ii): a body.emiResult of 'REWORK' is now REJECTED — the child guard-gap is closed", async () => {
+      // KNOWN BUG -> FIXED (docs/internal/sync-risks.md, Block 3d-ii). Previously the
+      // top-level guard only inspected payload.disposition, so REWORK smuggled through
+      // inspectionData.body.emiResult bypassed it and was written to the column. The
+      // membership check now resolves the emiResult-derived value and re-applies the
+      // same REWORK rejection. Flipped in 3d-ii.
+      const { tenant, serial, child } = await seedCrsnCase({
+        approvalStatus: SerialApprovalStatus.NOT_INSPECTED,
+      });
 
-      const result = await service.updateChildReportSerialNumber(
-        tenant.id,
-        child.id,
-        serial.id,
-        { inspectionData: { body: { emiResult: 'REWORK' } } },
-      );
+      await expect(
+        service.updateChildReportSerialNumber(tenant.id, child.id, serial.id, {
+          inspectionData: { body: { emiResult: 'REWORK' } },
+        }),
+      ).rejects.toThrow(/disposition cannot be REWORK/);
 
-      expect(crsnOf(result, serial.id)?.disposition).toBe(
-        SerialDisposition.REWORK,
-      );
+      // Rejected before the write: nothing persisted.
       const row = await readCrsn(child.id, serial.id);
-      expect(row?.disposition).toBe(SerialDisposition.REWORK);
+      expect(row?.disposition).toBeNull();
+      expect(row?.inspectionData).toBeNull();
+      expect(row?.approvalStatus).toBe(SerialApprovalStatus.NOT_INSPECTED);
     });
 
-    it('FLAGGED: a body.emiResult that is not a valid SerialDisposition rejects at the DB layer and persists nothing', async () => {
-      // The `as any` lets an arbitrary string reach the enum column; Prisma rejects it
-      // at query time. Pins that invalid emiResult is a hard failure, not a silent skip.
+    it('FLIPPED (3d-ii): an invalid body.emiResult is now rejected up-front with BadRequestException, persisting nothing', async () => {
+      // KNOWN BUG -> FIXED (docs/internal/sync-risks.md, Block 3d-ii). The `as any` let
+      // an arbitrary string reach the enum column, where Prisma rejected it at query time
+      // (opaque, server-attributed). The membership check now detects the invalid value
+      // in-service and throws BadRequestException before any write. Outcome is still
+      // "rejected + nothing persisted", now honest and client-attributable. Flipped in
+      // 3d-ii.
       const { tenant, serial, child } = await seedCrsnCase({
         approvalStatus: SerialApprovalStatus.NOT_INSPECTED,
       });
@@ -196,7 +202,7 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
         service.updateChildReportSerialNumber(tenant.id, child.id, serial.id, {
           inspectionData: { body: { emiResult: 'NONSENSE' } },
         }),
-      ).rejects.toThrow();
+      ).rejects.toBeInstanceOf(BadRequestException);
 
       // The failing update is atomic: neither disposition, inspectionData, nor the
       // approvalStatus auto-transition was committed.

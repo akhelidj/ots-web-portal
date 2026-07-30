@@ -25,7 +25,11 @@
  * docs/internal/sync-risks.md. This is a deliberate control, not a bug.
  */
 import { BadRequestException } from '@nestjs/common';
-import { InspectionReportStatus, SerialApprovalStatus } from '@prisma/client';
+import {
+  InspectionReportStatus,
+  SerialApprovalStatus,
+  SerialDisposition,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SerialNumbersService } from './serial-numbers.service';
 import {
@@ -249,6 +253,59 @@ describe('SerialNumbersService.updateSerialNumber edit-guard [integration]', () 
           serial.version,
         ),
       ).rejects.toThrow(/Inspection data is locked by report status/);
+    });
+  });
+
+  describe('parent REWORK-via-emiResult is SANCTIONED (class-C baseline — feeds syncReworkChildReport)', () => {
+    it('accepts a parent serial whose body.emiResult is REWORK and writes disposition=REWORK', async () => {
+      // BASELINE — no flip tag. Unlike the child path (which rejects REWORK), a PARENT
+      // serial marked REWORK via emiResult is the sanctioned trigger ChildReportsService
+      // .syncReworkChildReport keys on (it filters serials by body.emiResult === REWORK).
+      // The 3d-ii membership check must therefore let REWORK pass through here. This pins
+      // that acceptance so the membership change can never silently start rejecting it.
+      const { tenant, serial } = await seedGuardCase(
+        InspectionReportStatus.IN_INSPECTION,
+        SerialApprovalStatus.NOT_INSPECTED,
+      );
+
+      await service.updateSerialNumber(
+        tenant.id,
+        serial.id,
+        'user-1',
+        { inspectionData: { body: { emiResult: 'REWORK' } } },
+        serial.version,
+      );
+
+      // Assert on the persisted row (updateSerialNumber's return type is a union whose
+      // no-op branch omits `disposition`; the row is the authoritative check anyway).
+      const row = await prisma.serialNumber.findUnique({
+        where: { id: serial.id },
+      });
+      expect(row?.disposition).toBe(SerialDisposition.REWORK);
+    });
+
+    it('rejects a parent serial whose body.emiResult is not a valid disposition with BadRequestException', async () => {
+      // BASELINE for the membership check's invalid branch on the parent path: an invalid
+      // emiResult is rejected in-service (was a Prisma query-time error before 3d-ii).
+      const { tenant, serial } = await seedGuardCase(
+        InspectionReportStatus.IN_INSPECTION,
+        SerialApprovalStatus.NOT_INSPECTED,
+      );
+
+      await expect(
+        service.updateSerialNumber(
+          tenant.id,
+          serial.id,
+          'user-1',
+          { inspectionData: { body: { emiResult: 'NONSENSE' } } },
+          serial.version,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      const row = await prisma.serialNumber.findUnique({
+        where: { id: serial.id },
+      });
+      expect(row?.disposition).toBeNull();
     });
   });
 });

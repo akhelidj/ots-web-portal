@@ -293,7 +293,24 @@ export class ChildReportsService {
         | undefined;
       const disp = bodySection?.['emiResult'] as string;
       if (disp) {
-        dataToUpdate.disposition = disp as any;
+        // Detect the enum value honestly in-service instead of casting an
+        // arbitrary string into the column. Invalid values were previously
+        // rejected by Prisma at query time; reject them here up front.
+        if (
+          !Object.values(SerialDisposition).includes(disp as SerialDisposition)
+        ) {
+          throw new BadRequestException(`Invalid disposition value: ${disp}`);
+        }
+        // Guard-gap fix (3d-ii): the top-level guard at the method head only
+        // inspects payload.disposition, but the value actually persisted comes
+        // from inspectionData.body.emiResult. Re-apply the SAME REWORK rejection
+        // to the resolved value so REWORK cannot be smuggled in via emiResult.
+        if ((disp as SerialDisposition) === SerialDisposition.REWORK) {
+          throw new BadRequestException(
+            'Child Report disposition cannot be REWORK.',
+          );
+        }
+        dataToUpdate.disposition = disp as SerialDisposition;
       }
     }
 

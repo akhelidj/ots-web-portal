@@ -69,3 +69,33 @@ Characterization status: **all three risks are characterized** — risk #1
 (`sync-idempotency.characterization.spec.ts`). The only piece left to the unit
 boundary is risk #3's end-to-end "duplicate row actually created" outcome, which
 needs an integration/device scenario (see above).
+
+## Block 3d-ii — API-side `emiResult` → `disposition` fixes (FIXED)
+
+These are **API-side** (`api/src/app/`) defects surfaced while purging the
+`no-explicit-any` Cast B casts, not part of the portal offline-sync core above.
+Both were characterized as baseline in Block 3b, then **fixed and flipped in Block
+3d-ii**. The `disposition` enum column (`SerialDisposition`: PASS/REWORK/SCRAP/HOLD)
+is written in exactly two places — `serial-numbers.service.ts` (parent serial) and
+`child-reports.service.ts` (child-report serial) — each of which lifted the raw
+string `inspectionData.body.emiResult` into the enum column via `disp as any`.
+
+| Fix                                     | Was (buggy)                                                                                                                                                                                                                           | Now (fixed)                                                                                                                                                                                                                                                                                                        | Anchor                                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| **Membership check (both files)**       | `dataToUpdate.disposition = disp as any` — an arbitrary `emiResult` string reached the enum column and was rejected only by Prisma at query time (opaque, server-attributed error).                                                   | Runtime `Object.values(SerialDisposition).includes(...)` check; a valid member is assigned cast-free (`as SerialDisposition`), an invalid value throws `BadRequestException('Invalid disposition value: …')` **before any write**. Outcome preserved (invalid → still rejected), now detected honestly in-service. | `serial-numbers.service.ts` disp-sync block; `child-reports.service.ts` disp-sync block |
+| **Child REWORK guard-gap (child only)** | The top-level guard rejected only `payload.disposition === REWORK`, but the persisted value comes from `emiResult`, which the guard never inspected — so `emiResult: 'REWORK'` bypassed it and wrote REWORK to a child-report serial. | After the membership check resolves the value, a resolved `REWORK` re-throws the **same** `BadRequestException('Child Report disposition cannot be REWORK.')`. The original top-level guard stays in place (defence in depth).                                                                                     | `child-reports.service.ts` disp-sync block                                              |
+
+**Not applied to the parent path on purpose:** `serial-numbers.service.ts` has **no**
+REWORK rejection. A parent serial marked REWORK via `emiResult` is the **sanctioned
+trigger** `ChildReportsService.syncReworkChildReport` keys on (it filters parent
+serials by `body.emiResult === REWORK` to spawn the rework child report). Guarding it
+would break the entire rework workflow. This "REWORK accepted on the parent" baseline
+is pinned by `serial-numbers-edit-guard.integration.spec.ts` (class-C, no-flip).
+
+Flipped assertions (now assert the FIXED behavior as fact) in
+`child-reports-serial-update.integration.spec.ts`:
+
+- **REWORK-via-emiResult bypass** → now `rejects.toThrow(/disposition cannot be REWORK/)`,
+  nothing persisted.
+- **invalid emiResult** → now `rejects.toBeInstanceOf(BadRequestException)` (was a generic
+  Prisma query-time throw), nothing persisted.

@@ -4,7 +4,12 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { UserRole, InspectionReportStatus, Prisma } from '@prisma/client';
+import {
+  UserRole,
+  InspectionReportStatus,
+  SerialDisposition,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -257,7 +262,20 @@ export class SerialNumbersService {
           | undefined;
         const disp = bodySection?.['emiResult'] as string;
         if (disp) {
-          dataToUpdate.disposition = disp as any;
+          // Detect the enum value honestly in-service instead of letting an
+          // arbitrary string reach the column via a cast. Invalid values were
+          // previously rejected by Prisma at query time; reject them here up
+          // front. REWORK is a valid, SANCTIONED value on the parent serial —
+          // it is the trigger syncReworkChildReport keys on — so it passes
+          // through (unlike the child path, which rejects REWORK).
+          if (
+            !Object.values(SerialDisposition).includes(
+              disp as SerialDisposition,
+            )
+          ) {
+            throw new BadRequestException(`Invalid disposition value: ${disp}`);
+          }
+          dataToUpdate.disposition = disp as SerialDisposition;
         }
       }
 
