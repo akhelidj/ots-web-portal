@@ -253,9 +253,16 @@ export class InspectionReportsService implements DataHydrationSource {
         };
         await this.approvalBatchRepo.upsert(batchData);
 
-        // Upsert serial associations
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const bExt = b as any;
+        // Upsert serial associations. The GET /approval-batches response nests a
+        // `serialNumbers` array per batch (API includes it) that the transport
+        // DTO doesn't declare; reach for that honest shape at the read boundary.
+        const bExt = b as LocalInspectionApprovalBatch & {
+          serialNumbers?: {
+            id: string;
+            serialNumberId: string;
+            status?: string;
+          }[];
+        };
         if (bExt.serialNumbers && Array.isArray(bExt.serialNumbers)) {
           const associations = bExt.serialNumbers.map(
             (sn: { id: string; serialNumberId: string; status?: string }) => ({
