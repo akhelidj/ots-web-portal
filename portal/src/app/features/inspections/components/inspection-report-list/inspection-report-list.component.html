@@ -246,7 +246,9 @@
           @if (getFilteredReports(reports).length === 0) {
             <tr>
               <td
-                [attr.colspan]="isCompactMode() ? (isCustomer ? 4 : 5) : (isCustomer ? 7 : 9)"
+                [attr.colspan]="
+                  isCompactMode() ? (isCustomer ? 4 : 5) : isCustomer ? 7 : 9
+                "
                 class="p-10 text-center text-neutral-500"
               >
                 No inspection reports found for the selected filters.

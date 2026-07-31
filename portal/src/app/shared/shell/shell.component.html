@@ -174,8 +174,10 @@
   <button
     type="button"
     class="fixed inset-0 z-30 lg:hidden transition-all duration-250"
-    [class.bg-black/40]="mobileMenuOpen()"
-    [class.bg-black/0]="!mobileMenuOpen()"
+    [ngClass]="{
+      'bg-black/40': mobileMenuOpen(),
+      'bg-black/0': !mobileMenuOpen(),
+    }"
     [class.backdrop-blur-sm]="mobileMenuOpen()"
     [class.pointer-events-auto]="mobileMenuOpen()"
     [class.pointer-events-none]="!mobileMenuOpen()"
@@ -198,75 +200,72 @@
     <div
       class="max-w-7xl mx-auto w-full min-w-0 px-4 sm:px-6 py-4 space-y-4 overflow-x-hidden"
     >
-        @if (profile(); as profile) {
-          <div
-            class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2"
-          >
-            <p class="text-sm font-semibold text-neutral-900 break-all">
-              {{ profile.name || profile.email }}
-            </p>
-            <p class="text-xs text-neutral-500 mt-0.5 break-words">
-              {{ profile.role }} -
-              {{ profile.tenant?.name || profile.customer?.name || 'Internal' }}
-            </p>
-          </div>
-        }
-
-        @if (isAuthenticated() && profile(); as profile) {
-          <div class="space-y-1">
-            @for (
-              item of navigation.buildNavigation(profile.role);
-              track item.label
-            ) {
-              <a
-                [routerLink]="item.route"
-                (click)="closeMobileMenu()"
-                routerLinkActive="bg-neutral-100 text-primary"
-                [routerLinkActiveOptions]="{ exact: true }"
-                class="block rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-              >
-                {{ item.label }}
-              </a>
-            }
-          </div>
-        }
-
+      @if (profile(); as profile) {
         <div
-          class="pt-2 border-t border-neutral-200 flex items-center justify-end"
+          class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2"
         >
-          <button
-            (click)="onSyncNow()"
-            [disabled]="
-              !isAuthenticated() || !isOnline() || syncState() === 'syncing'
-            "
-            class="btn btn-secondary btn-sm"
+          <p class="text-sm font-semibold text-neutral-900 break-all">
+            {{ profile.name || profile.email }}
+          </p>
+          <p class="text-xs text-neutral-500 mt-0.5 break-words">
+            {{ profile.role }} -
+            {{ profile.tenant?.name || profile.customer?.name || 'Internal' }}
+          </p>
+        </div>
+      }
+
+      @if (isAuthenticated() && profile(); as profile) {
+        <div class="space-y-1">
+          @for (
+            item of navigation.buildNavigation(profile.role);
+            track item.label
+          ) {
+            <a
+              [routerLink]="item.route"
+              (click)="closeMobileMenu()"
+              routerLinkActive="bg-neutral-100 text-primary"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="block rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              {{ item.label }}
+            </a>
+          }
+        </div>
+      }
+
+      <div
+        class="pt-2 border-t border-neutral-200 flex items-center justify-end"
+      >
+        <button
+          (click)="onSyncNow()"
+          [disabled]="
+            !isAuthenticated() || !isOnline() || syncState() === 'syncing'
+          "
+          class="btn btn-secondary btn-sm"
+        >
+          Sync Now
+        </button>
+      </div>
+
+      @if (isAuthenticated()) {
+        <div class="flex flex-col gap-2 pt-2">
+          <a
+            [routerLink]="['/', APP_ROUTES.HELP]"
+            (click)="closeMobileMenu()"
+            class="btn btn-secondary btn-sm w-full"
+            >Help</a
           >
-            Sync Now
+          <a
+            [routerLink]="['/', APP_ROUTES.SETTINGS]"
+            (click)="closeMobileMenu()"
+            class="btn btn-secondary btn-sm w-full"
+            >Settings</a
+          >
+          <button (click)="onSignOut()" class="btn btn-secondary btn-sm w-full">
+            Sign Out
           </button>
         </div>
-
-        @if (isAuthenticated()) {
-          <div class="flex flex-col gap-2 pt-2">
-            <a
-              [routerLink]="['/', APP_ROUTES.HELP]"
-              (click)="closeMobileMenu()"
-              class="btn btn-secondary btn-sm w-full"
-              >Help</a
-            >
-            <a
-              [routerLink]="['/', APP_ROUTES.SETTINGS]"
-              (click)="closeMobileMenu()"
-              class="btn btn-secondary btn-sm w-full"
-              >Settings</a
-            >
-            <button
-              (click)="onSignOut()"
-              class="btn btn-secondary btn-sm w-full"
-            >
-              Sign Out
-            </button>
-          </div>
-        }
+      }
     </div>
   </div>
 

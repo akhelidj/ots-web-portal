@@ -16,7 +16,11 @@
         [style.padding-bottom.px]="16 - 4 * headerCondenseProgress()"
         [style.padding-left.px]="16 - 4 * headerCondenseProgress()"
         [style.padding-right.px]="16 - 4 * headerCondenseProgress()"
-        [ngClass]="isHeaderCondensed() ? 'rounded-none border-x-0 shadow-md' : 'p-4 sm:p-6'"
+        [ngClass]="
+          isHeaderCondensed()
+            ? 'rounded-none border-x-0 shadow-md'
+            : 'p-4 sm:p-6'
+        "
       >
         <div class="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
           <button
@@ -49,7 +53,8 @@
               [style.line-height]="1.2"
               [title]="cr.reportNumber || cr.id"
             >
-              {{ (cr.type | titlecase) || 'Sub' }} Report: {{ cr.reportNumber || (cr.id.substring(0, 8) | uppercase) }}
+              {{ (cr.type | titlecase) || 'Sub' }} Report:
+              {{ cr.reportNumber || (cr.id.substring(0, 8) | uppercase) }}
             </h1>
 
             <div class="mt-2 flex flex-wrap items-center gap-2">
@@ -85,42 +90,43 @@
               {{ cr.type }}
             </span>
 
-          @if (allowedTransitions.length > 0) {
-            <button
-              (click)="isWorkflowModalOpen = true"
-              class="inline-flex justify-center items-center gap-1.5 bg-accent hover:bg-accent/90 text-white px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
-              title="Open Workflow Actions"
-            >
-              <svg
-                class="h-3.5 w-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            @if (allowedTransitions.length > 0) {
+              <button
+                (click)="isWorkflowModalOpen = true"
+                class="inline-flex justify-center items-center gap-1.5 bg-accent hover:bg-accent/90 text-white px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+                title="Open Workflow Actions"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-              Actions
-            </button>
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+                Actions
+              </button>
+            }
+            <span
+              class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest"
+              [ngClass]="{
+                'bg-error-light text-error-dark':
+                  cr.syncState === 'CONFLICT' || cr.syncState === 'ERROR',
+                'bg-warning-light text-warning-dark':
+                  cr.syncState === 'PENDING',
+                'bg-success-light text-success-dark': cr.syncState === 'SYNCED',
+              }"
+            >
+              {{ cr.syncState }}
+            </span>
           }
-          <span
-            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest"
-            [ngClass]="{
-              'bg-error-light text-error-dark':
-                cr.syncState === 'CONFLICT' || cr.syncState === 'ERROR',
-              'bg-warning-light text-warning-dark': cr.syncState === 'PENDING',
-              'bg-success-light text-success-dark': cr.syncState === 'SYNCED',
-            }"
-          >
-            {{ cr.syncState }}
-          </span>
-        }
+        </div>
       </div>
-    </div>
     </div>
 
     <!-- Banners -->

@@ -1,8 +1,14 @@
-<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 identity-strip">
+<div
+  class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 identity-strip"
+>
   <div class="flex items-center gap-4">
     <ng-content select="[left-actions]"></ng-content>
     <div>
-      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">{{ title() }}</h1>
+      <h1
+        class="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900"
+      >
+        {{ title() }}
+      </h1>
       <div class="mt-1 text-sm text-neutral-500">
         <ng-content select="[subtitle]"></ng-content>
       </div>

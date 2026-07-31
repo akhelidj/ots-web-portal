@@ -23,10 +23,3 @@ package-lock.json
 
 # Prisma migrations are generated SQL — leave them byte-for-byte as emitted.
 api/prisma/migrations/
-
-# Angular component templates — Prettier's html/angular parsers cannot parse
-# Angular class-binding names that contain a Tailwind slash modifier, e.g.
-# [class.bg-black/40]="...". These throw a hard SyntaxError (parser error, not
-# a formatting diff), which would make `format:check` unusable as a gate.
-# Left to Angular tooling; TS/SCSS/JSON and plain index.html are still covered.
-portal/src/app/**/*.html

@@ -18,10 +18,26 @@
         [isOnline]="isOnline"
         [isCondensed]="isHeaderCondensed()"
         [condenseProgress]="headerCondenseProgress()"
-        [showCustomerExport]="!!(uiState?.actions?.['CUSTOMER_EXPORT']?.visible || uiState?.actions?.['ADMIN_EXPORT']?.visible)"
-        [canExport]="!!(uiState?.actions?.['CUSTOMER_EXPORT']?.enabled || uiState?.actions?.['ADMIN_EXPORT']?.enabled)"
-        [exportDisabledReason]="uiState?.actions?.['CUSTOMER_EXPORT']?.disabledReason || uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || ''"
-        [hasWorkflowActions]="!isCustomer() && (allowedTransitions.length > 0 || canPublishReport())"
+        [showCustomerExport]="
+          !!(
+            uiState?.actions?.['CUSTOMER_EXPORT']?.visible ||
+            uiState?.actions?.['ADMIN_EXPORT']?.visible
+          )
+        "
+        [canExport]="
+          !!(
+            uiState?.actions?.['CUSTOMER_EXPORT']?.enabled ||
+            uiState?.actions?.['ADMIN_EXPORT']?.enabled
+          )
+        "
+        [exportDisabledReason]="
+          uiState?.actions?.['CUSTOMER_EXPORT']?.disabledReason ||
+          uiState?.actions?.['ADMIN_EXPORT']?.disabledReason ||
+          ''
+        "
+        [hasWorkflowActions]="
+          !isCustomer() && (allowedTransitions.length > 0 || canPublishReport())
+        "
         (export)="exportReport()"
         (openWorkflow)="isWorkflowModalOpen = true"
       />
@@ -33,11 +49,16 @@
     }
 
     <!-- TAB NAVIGATION -->
-    <div class="z-30 fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] pb-safe">
+    <div
+      class="z-30 fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] pb-safe"
+    >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav class="relative flex justify-between sm:justify-center sm:gap-14" aria-label="Tabs">
+        <nav
+          class="relative flex justify-between sm:justify-center sm:gap-14"
+          aria-label="Tabs"
+        >
           <!-- Active Indicator (All sizes) -->
-          <div 
+          <div
             class="absolute bottom-0 h-0.5 bg-primary transition-all duration-300 ease-out z-10"
             [style.left.px]="activeTabPos().left"
             [style.width.px]="activeTabPos().width"
@@ -46,40 +67,93 @@
           <button
             #summaryTab
             (click)="onTabClick('summary')"
-            [class]="activeTab() === 'summary' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
+            [class]="
+              activeTab() === 'summary'
+                ? 'text-primary'
+                : 'text-gray-500 hover:text-gray-700'
+            "
             class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
           >
-            <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'summary'">
-              <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <div
+              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
+              [ngClass]="{ 'bg-primary/10': activeTab() === 'summary' }"
+            >
+              <svg
+                class="w-5 h-5 sm:w-4 sm:h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                ></path>
+              </svg>
             </div>
             <div class="flex items-center gap-2">
-              <span class="sm:block" [class.font-bold]="activeTab() === 'summary'">Summary</span>
+              <span
+                class="sm:block"
+                [class.font-bold]="activeTab() === 'summary'"
+                >Summary</span
+              >
               @if (shouldPulseTab('summary')) {
                 <span class="relative flex h-2.5 w-2.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"
+                  ></span>
+                  <span
+                    class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"
+                  ></span>
                 </span>
               }
             </div>
-            
           </button>
 
           <button
             #serialsTab
             (click)="onTabClick('serials')"
             [title]="tabTooltip('serials')"
-            [class]="activeTab() === 'serials' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
+            [class]="
+              activeTab() === 'serials'
+                ? 'text-primary'
+                : 'text-gray-500 hover:text-gray-700'
+            "
             class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
           >
-            <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'serials'">
-              <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+            <div
+              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
+              [ngClass]="{ 'bg-primary/10': activeTab() === 'serials' }"
+            >
+              <svg
+                class="w-5 h-5 sm:w-4 sm:h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                ></path>
+              </svg>
             </div>
             <div class="flex items-center gap-2">
-              <span class="sm:block" [class.font-bold]="activeTab() === 'serials'">Pipes</span>
+              <span
+                class="sm:block"
+                [class.font-bold]="activeTab() === 'serials'"
+                >Pipes</span
+              >
               @if (shouldPulseTab('serials')) {
                 <span class="relative flex h-2.5 w-2.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"
+                  ></span>
+                  <span
+                    class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"
+                  ></span>
                 </span>
               }
             </div>
@@ -90,19 +164,52 @@
               #approvalsTab
               (click)="hasSubmittedBatches() ? onTabClick('approvals') : null"
               [disabled]="!hasSubmittedBatches()"
-              [title]="hasSubmittedBatches() ? tabTooltip('approvals') : 'No approval batches submitted yet'"
-              [class]="activeTab() === 'approvals' ? 'text-primary' : (hasSubmittedBatches() ? 'text-gray-500 hover:text-gray-700' : 'text-gray-300 cursor-not-allowed')"
+              [title]="
+                hasSubmittedBatches()
+                  ? tabTooltip('approvals')
+                  : 'No approval batches submitted yet'
+              "
+              [class]="
+                activeTab() === 'approvals'
+                  ? 'text-primary'
+                  : hasSubmittedBatches()
+                    ? 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-300 cursor-not-allowed'
+              "
               class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
             >
-              <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'approvals'">
-                <svg class="w-5 h-5 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <div
+                class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
+                [ngClass]="{ 'bg-primary/10': activeTab() === 'approvals' }"
+              >
+                <svg
+                  class="w-5 h-5 sm:w-5 sm:h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
               </div>
               <div class="flex items-center gap-2">
-                <span class="sm:block" [class.font-bold]="activeTab() === 'approvals'">Approvals</span>
+                <span
+                  class="sm:block"
+                  [class.font-bold]="activeTab() === 'approvals'"
+                  >Approvals</span
+                >
                 @if (shouldPulseTab('approvals')) {
                   <span class="relative flex h-2.5 w-2.5">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
+                    <span
+                      class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"
+                    ></span>
+                    <span
+                      class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"
+                    ></span>
                   </span>
                 }
               </div>
@@ -112,35 +219,79 @@
           <button
             #specsTab
             (click)="onTabClick('specs')"
-            [class]="activeTab() === 'specs' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
+            [class]="
+              activeTab() === 'specs'
+                ? 'text-primary'
+                : 'text-gray-500 hover:text-gray-700'
+            "
             class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
           >
-            <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'specs'">
-              <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+            <div
+              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
+              [ngClass]="{ 'bg-primary/10': activeTab() === 'specs' }"
+            >
+              <svg
+                class="w-5 h-5 sm:w-4 sm:h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                ></path>
+              </svg>
             </div>
             <div class="flex items-center gap-2">
-              <span class="sm:block" [class.font-bold]="activeTab() === 'specs'">Specs</span>
+              <span class="sm:block" [class.font-bold]="activeTab() === 'specs'"
+                >Specs</span
+              >
               @if (shouldPulseTab('specs')) {
                 <span class="relative flex h-2.5 w-2.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"
+                  ></span>
+                  <span
+                    class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"
+                  ></span>
                 </span>
               }
             </div>
-            
           </button>
 
           <button
             #historyTab
             (click)="onTabClick('history')"
-            [class]="activeTab() === 'history' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'"
+            [class]="
+              activeTab() === 'history'
+                ? 'text-primary'
+                : 'text-gray-500 hover:text-gray-700'
+            "
             class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
           >
-            <div class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent" [class.bg-primary/10]="activeTab() === 'history'">
-              <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div
+              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
+              [ngClass]="{ 'bg-primary/10': activeTab() === 'history' }"
+            >
+              <svg
+                class="w-5 h-5 sm:w-4 sm:h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
             </div>
-            <span class="sm:block" [class.font-bold]="activeTab() === 'history'">Activity</span>
-            
+            <span class="sm:block" [class.font-bold]="activeTab() === 'history'"
+              >Activity</span
+            >
           </button>
         </nav>
       </div>
@@ -150,7 +301,9 @@
     <div class="flex-grow pt-8">
       <!-- SUMMARY TAB -->
       @if (activeTab() === 'summary') {
-        <div class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div
+          class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
+        >
           @if (isCustomer()) {
             <app-inspection-report-kpi-overview
               [total]="kpiTotal"
@@ -167,19 +320,60 @@
             [ngClass]="!isCustomer() ? 'lg:grid-cols-3' : ''"
           >
             <!-- Left Column: Summary & KPIs -->
-            <div class="space-y-6" [ngClass]="!isCustomer() ? 'lg:col-span-2' : ''">
+            <div
+              class="space-y-6"
+              [ngClass]="!isCustomer() ? 'lg:col-span-2' : ''"
+            >
               <!-- Executive Summary Card -->
               <div class="page-section p-6 border-neutral-200">
-                <div class="flex items-center justify-between border-b border-neutral-100 pb-3 mb-5">
-                  <h2 class="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                    <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                <div
+                  class="flex items-center justify-between border-b border-neutral-100 pb-3 mb-5"
+                >
+                  <h2
+                    class="text-lg font-semibold text-neutral-900 flex items-center gap-2"
+                  >
+                    <svg
+                      class="h-5 w-5 text-primary"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                      ></path>
+                    </svg>
                     Inspection Summary
                   </h2>
                   <div class="flex items-center gap-3">
-                    <span class="data-chip bg-primary/10 text-primary border-primary/20">{{ reportData.status }}</span>
-                    @if (!isEditingMeta && isInspectorCapable() && uiState?.actions?.['IR_EDIT_META']?.visible) {
-                      <button (click)="isEditingMeta = true; onTabClick('specs')" class="btn btn-secondary btn-sm gap-1.5 text-primary border-primary/30 hover:bg-primary/5">
-                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    <span
+                      class="data-chip bg-primary/10 text-primary border-primary/20"
+                      >{{ reportData.status }}</span
+                    >
+                    @if (
+                      !isEditingMeta &&
+                      isInspectorCapable() &&
+                      uiState?.actions?.['IR_EDIT_META']?.visible
+                    ) {
+                      <button
+                        (click)="isEditingMeta = true; onTabClick('specs')"
+                        class="btn btn-secondary btn-sm gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
+                      >
+                        <svg
+                          class="h-3.5 w-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                          ></path>
+                        </svg>
                         Edit Metadata
                       </button>
                     }
@@ -189,30 +383,48 @@
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-y-5 gap-x-4">
                   <div>
                     <span class="detail-label">Report #</span>
-                    <span class="detail-value-code tracking-widest text-primary font-bold">{{ reportData.reportNumber || (reportData.id.substring(0, 8) | uppercase) }}</span>
+                    <span
+                      class="detail-value-code tracking-widest text-primary font-bold"
+                      >{{
+                        reportData.reportNumber ||
+                          (reportData.id.substring(0, 8) | uppercase)
+                      }}</span
+                    >
                   </div>
                   <div>
                     <span class="detail-label">Date</span>
-                    <span class="detail-value">{{ reportData.updatedAt ? (reportData.updatedAt | date: 'mediumDate') : 'N/A' }}</span>
+                    <span class="detail-value">{{
+                      reportData.updatedAt
+                        ? (reportData.updatedAt | date: 'mediumDate')
+                        : 'N/A'
+                    }}</span>
                   </div>
                   <div>
                     <span class="detail-label">PO #</span>
-                    <span class="detail-value-code">{{ reportData.poNumber || 'N/A' }}</span>
+                    <span class="detail-value-code">{{
+                      reportData.poNumber || 'N/A'
+                    }}</span>
                   </div>
                   <div>
                     <span class="detail-label">Inspected By</span>
-                    <span class="detail-value font-medium">{{ inspectedByName }}</span>
+                    <span class="detail-value font-medium">{{
+                      inspectedByName
+                    }}</span>
                   </div>
                   <div>
                     <span class="detail-label">Approved By</span>
-                    <span class="detail-value font-medium">{{ approvedByName }}</span>
+                    <span class="detail-value font-medium">{{
+                      approvedByName
+                    }}</span>
                   </div>
                 </div>
 
                 <!-- Inspector Comments -->
                 <div class="mt-8 pt-5 border-t border-gray-100">
                   <div class="flex items-center justify-between mb-3 gap-3">
-                    <h3 class="text-sm font-semibold text-gray-900">Overall Inspector Comments</h3>
+                    <h3 class="text-sm font-semibold text-gray-900">
+                      Overall Inspector Comments
+                    </h3>
                     @if (isInspectorCapable() && !isSupervisor()) {
                       @if (!isEditingGlobalComment) {
                         <button
@@ -252,61 +464,110 @@
                       </div>
                     </div>
                   } @else {
-                    <div class="p-4 bg-gray-50 border border-gray-200 rounded-xl min-h-[80px] text-sm text-gray-700 whitespace-pre-wrap">
+                    <div
+                      class="p-4 bg-gray-50 border border-gray-200 rounded-xl min-h-[80px] text-sm text-gray-700 whitespace-pre-wrap"
+                    >
                       @if (reportData.inspectorComment) {
                         {{ reportData.inspectorComment }}
                       } @else {
-                        <span class="text-gray-400 italic">No comments provided for this inspection.</span>
+                        <span class="text-gray-400 italic"
+                          >No comments provided for this inspection.</span
+                        >
                       }
                     </div>
                   }
                 </div>
               </div>
-
             </div>
 
             <!-- Right Column: Workflow & Validation -->
             @if (!isCustomer()) {
-            <div class="space-y-6">
-              <!-- Validation Status Card -->
-              @if (validationResult && !isCustomer()) {
-                <div class="page-section p-5 border-neutral-200 shadow-sm">
-                  <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Workflow Validation</h3>
-                  
-                  @if (validationResult.isReady) {
-                    <div class="flex items-center gap-3 p-4 bg-success-light/20 border border-success/20 rounded-xl">
-                      <div class="p-2 bg-success rounded-lg text-white">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                      </div>
-                      <div>
-                        <span class="block text-sm font-bold text-success-dark">Validation Passed</span>
-                        <span class="block text-xs text-success-dark/70">Ready for next workflow step</span>
-                      </div>
-                    </div>
-                  } @else {
-                    <div class="flex flex-col gap-3 p-4 bg-error-light/20 border border-error/20 rounded-xl">
-                      <div class="flex items-center gap-3">
-                        <div class="p-2 bg-error rounded-lg text-white">
-                          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              <div class="space-y-6">
+                <!-- Validation Status Card -->
+                @if (validationResult && !isCustomer()) {
+                  <div class="page-section p-5 border-neutral-200 shadow-sm">
+                    <h3
+                      class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4"
+                    >
+                      Workflow Validation
+                    </h3>
+
+                    @if (validationResult.isReady) {
+                      <div
+                        class="flex items-center gap-3 p-4 bg-success-light/20 border border-success/20 rounded-xl"
+                      >
+                        <div class="p-2 bg-success rounded-lg text-white">
+                          <svg
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M5 13l4 4L19 7"
+                            ></path>
+                          </svg>
                         </div>
                         <div>
-                          <span class="block text-sm font-bold text-error-dark">Review Required</span>
-                          <span class="block text-xs text-error-dark/70">{{ validationResult.issues.length }} conditions need attention</span>
+                          <span
+                            class="block text-sm font-bold text-success-dark"
+                            >Validation Passed</span
+                          >
+                          <span class="block text-xs text-success-dark/70"
+                            >Ready for next workflow step</span
+                          >
                         </div>
                       </div>
-                      <button (click)="isValidationModalOpen = true" class="text-xs font-bold text-error hover:underline text-left ml-11">
-                        View Details →
-                      </button>
-                    </div>
-    }
+                    } @else {
+                      <div
+                        class="flex flex-col gap-3 p-4 bg-error-light/20 border border-error/20 rounded-xl"
+                      >
+                        <div class="flex items-center gap-3">
+                          <div class="p-2 bg-error rounded-lg text-white">
+                            <svg
+                              class="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                              ></path>
+                            </svg>
+                          </div>
+                          <div>
+                            <span
+                              class="block text-sm font-bold text-error-dark"
+                              >Review Required</span
+                            >
+                            <span class="block text-xs text-error-dark/70"
+                              >{{ validationResult.issues.length }} conditions
+                              need attention</span
+                            >
+                          </div>
+                        </div>
+                        <button
+                          (click)="isValidationModalOpen = true"
+                          class="text-xs font-bold text-error hover:underline text-left ml-11"
+                        >
+                          View Details →
+                        </button>
+                      </div>
+                    }
 
-    <!-- Footer spacer for sticky navigation -->
-    <div class="h-24 px-4 overflow-hidden pointer-events-none"></div>
-  </div>
-}
-
-
-            </div>
+                    <!-- Footer spacer for sticky navigation -->
+                    <div
+                      class="h-24 px-4 overflow-hidden pointer-events-none"
+                    ></div>
+                  </div>
+                }
+              </div>
             }
           </div>
 
@@ -355,7 +616,9 @@
                 )
               "
               [canEditSerial]="!!uiState?.actions?.['IR_EDIT_SERIAL']?.visible"
-              [canRemoveSerial]="!!uiState?.actions?.['IR_REMOVE_SERIAL']?.visible"
+              [canRemoveSerial]="
+                !!uiState?.actions?.['IR_REMOVE_SERIAL']?.visible
+              "
               [historySerialIds]="historySerialIds()"
               [isCompactMode]="isCompactMode()"
               (searchQueryChange)="snSearchQuery.set($event)"
@@ -404,52 +667,189 @@
           <div class="page-section p-6 border-neutral-200">
             @if (isEditingMeta) {
               <div class="space-y-8">
-                <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
-                  <h3 class="text-lg font-bold text-neutral-900">Edit Inspection Details</h3>
+                <div
+                  class="flex items-center justify-between border-b border-neutral-100 pb-3"
+                >
+                  <h3 class="text-lg font-bold text-neutral-900">
+                    Edit Inspection Details
+                  </h3>
                   <div class="flex gap-2">
-                    <button (click)="isEditingMeta = false" class="btn btn-secondary btn-sm">Cancel</button>
-                    <button (click)="saveMeta()" class="btn btn-primary btn-sm">Save Changes</button>
+                    <button
+                      (click)="isEditingMeta = false"
+                      class="btn btn-secondary btn-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button (click)="saveMeta()" class="btn btn-primary btn-sm">
+                      Save Changes
+                    </button>
                   </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div class="space-y-6">
-                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pipe Specifications</h4>
+                    <h4
+                      class="text-xs font-bold text-gray-400 uppercase tracking-widest"
+                    >
+                      Pipe Specifications
+                    </h4>
                     <div class="grid grid-cols-2 gap-4">
-                      <div><label for="grade-input" class="detail-label">Grade</label><input id="grade-input" type="text" [(ngModel)]="formGrade" class="field-control" /></div>
-                      <div><label for="range-input" class="detail-label">Range</label><input id="range-input" type="text" [(ngModel)]="formRange" class="field-control" /></div>
-                      <div><label for="weight-input" class="detail-label">Weight</label><input id="weight-input" type="text" [(ngModel)]="formWeight" class="field-control" /></div>
-                      <div><label for="nom-wt-input" class="detail-label">Nom. W.T</label><input id="nom-wt-input" type="text" [(ngModel)]="formNomWT" class="field-control" /></div>
-                      <div><label for="nom-od-input" class="detail-label">Nom OD</label><input id="nom-od-input" type="text" [(ngModel)]="formNomOD" class="field-control" /></div>
-                      <div><label for="nom-id-input" class="detail-label">Nom ID</label><input id="nom-id-input" type="text" [(ngModel)]="formNomID" class="field-control" /></div>
-                      <div class="col-span-2"><label for="connection-input" class="detail-label">Connection</label><input id="connection-input" type="text" [(ngModel)]="formConnection" class="field-control" /></div>
+                      <div>
+                        <label for="grade-input" class="detail-label"
+                          >Grade</label
+                        ><input
+                          id="grade-input"
+                          type="text"
+                          [(ngModel)]="formGrade"
+                          class="field-control"
+                        />
+                      </div>
+                      <div>
+                        <label for="range-input" class="detail-label"
+                          >Range</label
+                        ><input
+                          id="range-input"
+                          type="text"
+                          [(ngModel)]="formRange"
+                          class="field-control"
+                        />
+                      </div>
+                      <div>
+                        <label for="weight-input" class="detail-label"
+                          >Weight</label
+                        ><input
+                          id="weight-input"
+                          type="text"
+                          [(ngModel)]="formWeight"
+                          class="field-control"
+                        />
+                      </div>
+                      <div>
+                        <label for="nom-wt-input" class="detail-label"
+                          >Nom. W.T</label
+                        ><input
+                          id="nom-wt-input"
+                          type="text"
+                          [(ngModel)]="formNomWT"
+                          class="field-control"
+                        />
+                      </div>
+                      <div>
+                        <label for="nom-od-input" class="detail-label"
+                          >Nom OD</label
+                        ><input
+                          id="nom-od-input"
+                          type="text"
+                          [(ngModel)]="formNomOD"
+                          class="field-control"
+                        />
+                      </div>
+                      <div>
+                        <label for="nom-id-input" class="detail-label"
+                          >Nom ID</label
+                        ><input
+                          id="nom-id-input"
+                          type="text"
+                          [(ngModel)]="formNomID"
+                          class="field-control"
+                        />
+                      </div>
+                      <div class="col-span-2">
+                        <label for="connection-input" class="detail-label"
+                          >Connection</label
+                        ><input
+                          id="connection-input"
+                          type="text"
+                          [(ngModel)]="formConnection"
+                          class="field-control"
+                        />
+                      </div>
                     </div>
                   </div>
                   <div class="space-y-6">
-                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Job Information</h4>
+                    <h4
+                      class="text-xs font-bold text-gray-400 uppercase tracking-widest"
+                    >
+                      Job Information
+                    </h4>
                     <div class="space-y-4">
-                      <div><label for="address-input" class="detail-label">Inspection Address</label><input id="address-input" type="text" [(ngModel)]="formInspectionAddress" class="field-control" /></div>
-                      <div><label for="standard-input" class="detail-label">Standard Used</label><input id="standard-input" type="text" [(ngModel)]="formStandardUsed" class="field-control" /></div>
+                      <div>
+                        <label for="address-input" class="detail-label"
+                          >Inspection Address</label
+                        ><input
+                          id="address-input"
+                          type="text"
+                          [(ngModel)]="formInspectionAddress"
+                          class="field-control"
+                        />
+                      </div>
+                      <div>
+                        <label for="standard-input" class="detail-label"
+                          >Standard Used</label
+                        ><input
+                          id="standard-input"
+                          type="text"
+                          [(ngModel)]="formStandardUsed"
+                          class="field-control"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-gray-100">
+                <div
+                  class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-gray-100"
+                >
                   <div class="space-y-4">
                     <div class="flex justify-between items-center">
-                      <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Methods</h4>
-                      <button (click)="addMethodFormRow()" class="text-xs text-primary font-bold hover:underline">+ Add Method</button>
+                      <h4
+                        class="text-xs font-bold text-gray-400 uppercase tracking-widest"
+                      >
+                        Methods
+                      </h4>
+                      <button
+                        (click)="addMethodFormRow()"
+                        class="text-xs text-primary font-bold hover:underline"
+                      >
+                        + Add Method
+                      </button>
                     </div>
                     <div class="space-y-2">
-                      @for (m of formInspectionMethod; track $index; let i = $index) {
+                      @for (
+                        m of formInspectionMethod;
+                        track $index;
+                        let i = $index
+                      ) {
                         <div class="flex gap-2">
-                          <select [(ngModel)]="m.name" (change)="onMethodSelectChange(i)" class="field-control text-sm">
+                          <select
+                            [(ngModel)]="m.name"
+                            (change)="onMethodSelectChange(i)"
+                            class="field-control text-sm"
+                          >
                             <option value="" disabled>Select...</option>
-                            @for (opt of METHOD_OPTIONS; track opt) { <option [value]="opt">{{ opt }}</option> }
+                            @for (opt of METHOD_OPTIONS; track opt) {
+                              <option [value]="opt">{{ opt }}</option>
+                            }
                           </select>
-                          @if (m.isOther) { <input type="text" [(ngModel)]="m.name" class="field-control text-sm" /> }
-                          <button (click)="removeMethodFormRow(i)" class="text-error p-2 hover:bg-error/10 rounded-lg">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+                          @if (m.isOther) {
+                            <input
+                              type="text"
+                              [(ngModel)]="m.name"
+                              class="field-control text-sm"
+                            />
+                          }
+                          <button
+                            (click)="removeMethodFormRow(i)"
+                            class="text-error p-2 hover:bg-error/10 rounded-lg"
+                          >
+                            <svg
+                              class="w-4 h-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
                           </button>
                         </div>
                       }
@@ -457,19 +857,53 @@
                   </div>
                   <div class="space-y-4">
                     <div class="flex justify-between items-center">
-                      <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Equipment</h4>
-                      <button (click)="addEquipmentFormRow()" class="text-xs text-primary font-bold hover:underline">+ Add Equipment</button>
+                      <h4
+                        class="text-xs font-bold text-gray-400 uppercase tracking-widest"
+                      >
+                        Equipment
+                      </h4>
+                      <button
+                        (click)="addEquipmentFormRow()"
+                        class="text-xs text-primary font-bold hover:underline"
+                      >
+                        + Add Equipment
+                      </button>
                     </div>
                     <div class="space-y-2">
-                      @for (eq of formEquipmentUsed; track $index; let i = $index) {
+                      @for (
+                        eq of formEquipmentUsed;
+                        track $index;
+                        let i = $index
+                      ) {
                         <div class="flex gap-2">
-                          <select [(ngModel)]="eq.name" (change)="onEquipmentSelectChange(i)" class="field-control text-sm">
+                          <select
+                            [(ngModel)]="eq.name"
+                            (change)="onEquipmentSelectChange(i)"
+                            class="field-control text-sm"
+                          >
                             <option value="" disabled>Select...</option>
-                            @for (opt of EQUIPMENT_OPTIONS; track opt) { <option [value]="opt">{{ opt }}</option> }
+                            @for (opt of EQUIPMENT_OPTIONS; track opt) {
+                              <option [value]="opt">{{ opt }}</option>
+                            }
                           </select>
-                          <input type="text" [(ngModel)]="eq.number" placeholder="S/N" class="field-control text-sm w-24" />
-                          <button (click)="removeEquipmentFormRow(i)" class="text-error p-2 hover:bg-error/10 rounded-lg">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+                          <input
+                            type="text"
+                            [(ngModel)]="eq.number"
+                            placeholder="S/N"
+                            class="field-control text-sm w-24"
+                          />
+                          <button
+                            (click)="removeEquipmentFormRow(i)"
+                            class="text-error p-2 hover:bg-error/10 rounded-lg"
+                          >
+                            <svg
+                              class="w-4 h-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
                           </button>
                         </div>
                       }
@@ -479,11 +913,30 @@
               </div>
             } @else {
               <div class="space-y-8">
-                <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
-                  <h3 class="text-lg font-bold text-neutral-900">Pipe & Inspection Specifications</h3>
-                  @if (isInspectorCapable() && uiState?.actions?.['IR_EDIT_META']?.visible) {
-                    <button (click)="isEditingMeta = true" class="btn btn-secondary btn-sm gap-2">
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                <div
+                  class="flex items-center justify-between border-b border-neutral-100 pb-3"
+                >
+                  <h3 class="text-lg font-bold text-neutral-900">
+                    Pipe & Inspection Specifications
+                  </h3>
+                  @if (
+                    isInspectorCapable() &&
+                    uiState?.actions?.['IR_EDIT_META']?.visible
+                  ) {
+                    <button
+                      (click)="isEditingMeta = true"
+                      class="btn btn-secondary btn-sm gap-2"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        ></path>
+                      </svg>
                       Edit Info
                     </button>
                   }
@@ -491,35 +944,105 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
                   <div class="space-y-4">
-                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2">Technical Specs</h4>
+                    <h4
+                      class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2"
+                    >
+                      Technical Specs
+                    </h4>
                     <div class="space-y-3">
-                      <div class="flex justify-between"><span class="text-sm text-gray-500">Grade</span><span class="text-sm font-bold text-neutral-900">{{ reportData.grade || '-' }}</span></div>
-                      <div class="flex justify-between"><span class="text-sm text-gray-500">Range</span><span class="text-sm font-bold text-neutral-900">{{ reportData.range || '-' }}</span></div>
-                      <div class="flex justify-between"><span class="text-sm text-gray-500">Weight</span><span class="text-sm font-bold text-neutral-900">{{ reportData.weight || '-' }}</span></div>
-                      <div class="flex justify-between"><span class="text-sm text-gray-500">Nom. W.T</span><span class="text-sm font-bold text-neutral-900">{{ reportData.nomWT || '-' }}</span></div>
-                      <div class="flex justify-between"><span class="text-sm text-gray-500">Nom OD / ID</span><span class="text-sm font-bold text-neutral-900">{{ reportData.nomOD || '-' }} / {{ reportData.nomID || '-' }}</span></div>
-                      <div class="flex justify-between"><span class="text-sm text-gray-500">Connection</span><span class="text-sm font-mono font-bold text-primary">{{ reportData.connection || '-' }}</span></div>
+                      <div class="flex justify-between">
+                        <span class="text-sm text-gray-500">Grade</span
+                        ><span class="text-sm font-bold text-neutral-900">{{
+                          reportData.grade || '-'
+                        }}</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-sm text-gray-500">Range</span
+                        ><span class="text-sm font-bold text-neutral-900">{{
+                          reportData.range || '-'
+                        }}</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-sm text-gray-500">Weight</span
+                        ><span class="text-sm font-bold text-neutral-900">{{
+                          reportData.weight || '-'
+                        }}</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-sm text-gray-500">Nom. W.T</span
+                        ><span class="text-sm font-bold text-neutral-900">{{
+                          reportData.nomWT || '-'
+                        }}</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-sm text-gray-500">Nom OD / ID</span
+                        ><span class="text-sm font-bold text-neutral-900"
+                          >{{ reportData.nomOD || '-' }} /
+                          {{ reportData.nomID || '-' }}</span
+                        >
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-sm text-gray-500">Connection</span
+                        ><span
+                          class="text-sm font-mono font-bold text-primary"
+                          >{{ reportData.connection || '-' }}</span
+                        >
+                      </div>
                     </div>
                   </div>
                   <div class="space-y-4">
-                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2">Inspection Methods</h4>
+                    <h4
+                      class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2"
+                    >
+                      Inspection Methods
+                    </h4>
                     <div class="flex flex-wrap gap-2">
-                      @for (m of $any(reportData.inspectionMethod); track $index) {
-                        <span class="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-xs font-bold">{{ m.name || m }}</span>
+                      @for (
+                        m of $any(reportData.inspectionMethod);
+                        track $index
+                      ) {
+                        <span
+                          class="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-xs font-bold"
+                          >{{ m.name || m }}</span
+                        >
                       }
-                      @if (!$any(reportData.inspectionMethod)?.length) { <span class="text-sm italic text-gray-400">No methods listed</span> }
+                      @if (!$any(reportData.inspectionMethod)?.length) {
+                        <span class="text-sm italic text-gray-400"
+                          >No methods listed</span
+                        >
+                      }
                     </div>
                   </div>
                   <div class="space-y-4">
-                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2">Equipment Used</h4>
+                    <h4
+                      class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2"
+                    >
+                      Equipment Used
+                    </h4>
                     <div class="space-y-2">
-                      @for (eq of $any(reportData.equipmentUsed); track $index) {
-                        <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100">
-                          <span class="text-xs font-bold text-gray-700">{{ eq.name }}</span>
-                          @if (eq.number) { <span class="text-[10px] font-mono text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200">#{{ eq.number }}</span> }
+                      @for (
+                        eq of $any(reportData.equipmentUsed);
+                        track $index
+                      ) {
+                        <div
+                          class="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100"
+                        >
+                          <span class="text-xs font-bold text-gray-700">{{
+                            eq.name
+                          }}</span>
+                          @if (eq.number) {
+                            <span
+                              class="text-[10px] font-mono text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200"
+                              >#{{ eq.number }}</span
+                            >
+                          }
                         </div>
                       }
-                      @if (!$any(reportData.equipmentUsed)?.length) { <span class="text-sm italic text-gray-400">No equipment listed</span> }
+                      @if (!$any(reportData.equipmentUsed)?.length) {
+                        <span class="text-sm italic text-gray-400"
+                          >No equipment listed</span
+                        >
+                      }
                     </div>
                   </div>
                 </div>
@@ -531,7 +1054,9 @@
 
       @if (activeTab() === 'history') {
         <div class="animate-in fade-in duration-300">
-          <app-inspection-report-transition-history [logs]="enrichedTransitionLogs()" />
+          <app-inspection-report-transition-history
+            [logs]="enrichedTransitionLogs()"
+          />
         </div>
       }
     </div>
@@ -540,7 +1065,7 @@
 
     <!-- SN Inspection Side Drawer (Sheet) -->
     @if (inspectingSn) {
-      <div 
+      <div
         class="fixed inset-0 !h-[100dvh] w-screen z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
         (click)="closeInspectionForm()"
         (keydown.escape)="closeInspectionForm()"
@@ -548,7 +1073,7 @@
         role="button"
         aria-label="Close inspection form"
       >
-        <div 
+        <div
           class="bg-white w-full max-w-2xl !h-[100dvh] flex flex-col shadow-2xl border-l border-gray-200 animate-in slide-in-from-right duration-500 overflow-hidden"
           (click)="$event.stopPropagation()"
           (keydown)="$event.stopPropagation()"
@@ -557,29 +1082,109 @@
           aria-label="Serial Inspection Details"
         >
           <!-- Drawer Header -->
-          <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center shrink-0">
+          <div
+            class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center shrink-0"
+          >
             <div class="flex items-center gap-4">
-                <div class="p-2 bg-primary/10 rounded-xl">
-                  <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-                </div>
-                <div>
-                  <h2 class="text-lg font-bold text-gray-900 leading-tight">Inspect Serial</h2>
-                  <p class="font-mono text-sm text-primary font-bold">{{ inspectingSn.value }}</p>
-                </div>
-                <div class="flex gap-1 ml-4 border-l border-gray-200 pl-4">
-                  <button (click)="goToPrevSn()" [disabled]="!hasPrevSn" class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors" title="Previous SN"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
-                  <button (click)="goToNextSn()" [disabled]="!hasNextSn" class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors" title="Next SN"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
-                </div>
+              <div class="p-2 bg-primary/10 rounded-xl">
+                <svg
+                  class="w-6 h-6 text-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  ></path>
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-gray-900 leading-tight">
+                  Inspect Serial
+                </h2>
+                <p class="font-mono text-sm text-primary font-bold">
+                  {{ inspectingSn.value }}
+                </p>
+              </div>
+              <div class="flex gap-1 ml-4 border-l border-gray-200 pl-4">
+                <button
+                  (click)="goToPrevSn()"
+                  [disabled]="!hasPrevSn"
+                  class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors"
+                  title="Previous SN"
+                >
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 19l-7-7 7-7"
+                    ></path>
+                  </svg>
+                </button>
+                <button
+                  (click)="goToNextSn()"
+                  [disabled]="!hasNextSn"
+                  class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors"
+                  title="Next SN"
+                >
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
             </div>
-            <button (click)="closeInspectionForm()" class="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-900"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            <button
+              (click)="closeInspectionForm()"
+              class="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-900"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </button>
           </div>
 
           <!-- Drawer Body -->
-          <div class="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar bg-white">
+          <div
+            class="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar bg-white"
+          >
             <app-serial-inspection-reactive-form
               [initialData]="inspectionFormData"
               [schemaKey]="reportData.templateKey"
-              [isReadOnly]="(uiState?.fieldModes?.['inspectionData'] !== 'editable' && uiState?.fieldModes?.['disposition'] !== 'editable') || inspectingSn.approvalStatus === 'SUBMITTED_FOR_APPROVAL' || inspectingSn.approvalStatus === 'APPROVED'"
+              [isReadOnly]="
+                (uiState?.fieldModes?.['inspectionData'] !== 'editable' &&
+                  uiState?.fieldModes?.['disposition'] !== 'editable') ||
+                inspectingSn.approvalStatus === 'SUBMITTED_FOR_APPROVAL' ||
+                inspectingSn.approvalStatus === 'APPROVED'
+              "
               (saveData)="saveInspectionForm($event)"
               (formCancel)="closeInspectionForm()"
             />
@@ -590,37 +1195,63 @@
 
     <!-- KPI Equipment Modal -->
     @if (activeModalStatus) {
-      <div class="fixed inset-0 !h-[100dvh] w-screen z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-300">
-          <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+      <div
+        class="fixed inset-0 !h-[100dvh] w-screen z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300"
+      >
+        <div
+          class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-300"
+        >
+          <div
+            class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50"
+          >
             <h3 class="text-lg font-bold text-gray-900 flex items-center gap-3">
-              Equipment List: 
-              <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+              Equipment List:
+              <span
+                class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20"
+              >
                 {{ activeModalStatus }}
               </span>
             </h3>
-            <button (click)="closeKpiModal()" class="p-2 hover:bg-gray-200 rounded-full"><svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            <button
+              (click)="closeKpiModal()"
+              class="p-2 hover:bg-gray-200 rounded-full"
+            >
+              <svg
+                class="w-5 h-5 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
           </div>
           <div class="p-6 overflow-y-auto flex-grow bg-white">
             @if (modalEquipmentList.length > 0) {
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 @for (sn of modalEquipmentList; track sn.id) {
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     (click)="openInspectionForm(sn); closeKpiModal()"
                     (keydown.enter)="openInspectionForm(sn); closeKpiModal()"
                     class="p-3 bg-gray-50 border border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 hover:shadow-sm transition-all text-center"
                   >
-                    <span class="font-mono text-sm font-bold text-gray-700">{{ sn.value }}</span>
+                    <span class="font-mono text-sm font-bold text-gray-700">{{
+                      sn.value
+                    }}</span>
                   </button>
                 }
               </div>
             } @else {
-              <div class="text-center py-12 text-gray-400">No equipment found matching this status.</div>
+              <div class="text-center py-12 text-gray-400">
+                No equipment found matching this status.
+              </div>
             }
           </div>
           <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-            <button (click)="closeKpiModal()" class="btn btn-secondary btn-sm">Close</button>
+            <button (click)="closeKpiModal()" class="btn btn-secondary btn-sm">
+              Close
+            </button>
           </div>
         </div>
       </div>
@@ -628,27 +1259,70 @@
 
     <!-- Validation Details Modal -->
     @if (isValidationModalOpen && validationResult) {
-      <div class="fixed inset-0 !h-[100dvh] w-screen z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in slide-in-from-bottom-4">
-          <div class="p-6 border-b border-error/10 bg-error-light/10 flex justify-between items-center">
-             <h3 class="text-lg font-bold text-error-dark flex items-center gap-3">
-               <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-               Prerequisites for Approval
-             </h3>
-             <button (click)="isValidationModalOpen = false" class="p-2 hover:bg-error/10 rounded-full text-error-dark"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+      <div
+        class="fixed inset-0 !h-[100dvh] w-screen z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
+      >
+        <div
+          class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in slide-in-from-bottom-4"
+        >
+          <div
+            class="p-6 border-b border-error/10 bg-error-light/10 flex justify-between items-center"
+          >
+            <h3
+              class="text-lg font-bold text-error-dark flex items-center gap-3"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                ></path>
+              </svg>
+              Prerequisites for Approval
+            </h3>
+            <button
+              (click)="isValidationModalOpen = false"
+              class="p-2 hover:bg-error/10 rounded-full text-error-dark"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
           </div>
           <div class="p-8 overflow-y-auto flex-grow bg-white">
             <div class="space-y-4">
               @for (issue of validationResult.issues; track issue.message) {
-                <div class="flex items-start gap-4 p-4 bg-gray-50 border border-gray-100 rounded-xl">
-                  <div class="w-2 h-2 rounded-full bg-error mt-2 shrink-0"></div>
-                  <p class="text-sm font-medium text-gray-700 leading-relaxed">{{ issue.message }}</p>
+                <div
+                  class="flex items-start gap-4 p-4 bg-gray-50 border border-gray-100 rounded-xl"
+                >
+                  <div
+                    class="w-2 h-2 rounded-full bg-error mt-2 shrink-0"
+                  ></div>
+                  <p class="text-sm font-medium text-gray-700 leading-relaxed">
+                    {{ issue.message }}
+                  </p>
                 </div>
               }
             </div>
           </div>
           <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-end">
-            <button (click)="isValidationModalOpen = false" class="btn btn-secondary">Close</button>
+            <button
+              (click)="isValidationModalOpen = false"
+              class="btn btn-secondary"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
@@ -656,31 +1330,85 @@
 
     <!-- Return Batch Modal -->
     @if (activeActionBatchId && !batchError) {
-      <div class="fixed inset-0 !h-[100dvh] w-screen z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden animate-in zoom-in-95">
-          <div class="p-6 bg-error-light/10 border-b border-error/10 flex justify-between items-center">
-            <h3 class="text-lg font-bold text-error-dark flex items-center gap-2">
-              <svg class="w-5 h-5 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path></svg>
+      <div
+        class="fixed inset-0 !h-[100dvh] w-screen z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
+      >
+        <div
+          class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden animate-in zoom-in-95"
+        >
+          <div
+            class="p-6 bg-error-light/10 border-b border-error/10 flex justify-between items-center"
+          >
+            <h3
+              class="text-lg font-bold text-error-dark flex items-center gap-2"
+            >
+              <svg
+                class="w-5 h-5 text-error"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
+                ></path>
+              </svg>
               Return for Correction
             </h3>
-            <button (click)="closeReturnBatchModal()" class="p-2 hover:bg-error/10 rounded-full text-error-dark"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            <button
+              (click)="closeReturnBatchModal()"
+              class="p-2 hover:bg-error/10 rounded-full text-error-dark"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
           </div>
           <div class="p-8 space-y-6">
             <p class="text-gray-600 text-sm leading-relaxed">
-              You are returning 
-              <span class="font-bold text-gray-900">{{ selectedInBatch().size > 0 ? selectedInBatch().size : 'all remaining' }}</span> 
+              You are returning
+              <span class="font-bold text-gray-900">{{
+                selectedInBatch().size > 0
+                  ? selectedInBatch().size
+                  : 'all remaining'
+              }}</span>
               item(s). Please specify why further attention is required.
             </p>
             <div class="space-y-2">
-              <label for="return-notes" class="block text-xs font-bold text-gray-400 uppercase tracking-widest">Reason for Return</label>
-              <textarea id="return-notes" [(ngModel)]="returnNotes" rows="4" class="field-control w-full p-4 text-sm" placeholder="Provide clear instructions for the inspector..."></textarea>
+              <label
+                for="return-notes"
+                class="block text-xs font-bold text-gray-400 uppercase tracking-widest"
+                >Reason for Return</label
+              >
+              <textarea
+                id="return-notes"
+                [(ngModel)]="returnNotes"
+                rows="4"
+                class="field-control w-full p-4 text-sm"
+                placeholder="Provide clear instructions for the inspector..."
+              ></textarea>
             </div>
           </div>
-          <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-             <button (click)="closeReturnBatchModal()" class="btn btn-secondary">Cancel</button>
-             <button (click)="returnBatch()" [disabled]="isActioningBatch || !returnNotes.trim()" class="btn btn-error min-w-[120px]">
-               {{ isActioningBatch ? 'Processing...' : 'Confirm Return' }}
-             </button>
+          <div
+            class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3"
+          >
+            <button (click)="closeReturnBatchModal()" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button
+              (click)="returnBatch()"
+              [disabled]="isActioningBatch || !returnNotes.trim()"
+              class="btn btn-error min-w-[120px]"
+            >
+              {{ isActioningBatch ? 'Processing...' : 'Confirm Return' }}
+            </button>
           </div>
         </div>
       </div>
@@ -688,33 +1416,81 @@
 
     <!-- SN History Modal -->
     @if (activeHistorySn()) {
-      <div class="fixed inset-0 !h-[100dvh] w-screen z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4">
-          <div class="p-6 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+      <div
+        class="fixed inset-0 !h-[100dvh] w-screen z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in"
+      >
+        <div
+          class="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4"
+        >
+          <div
+            class="p-6 bg-gray-50 border-b border-gray-100 flex justify-between items-center"
+          >
             <div>
               <h3 class="text-lg font-bold text-gray-900">Return History</h3>
-              <p class="text-xs font-mono text-primary font-bold mt-1">SN: {{ activeHistorySn()?.value }}</p>
+              <p class="text-xs font-mono text-primary font-bold mt-1">
+                SN: {{ activeHistorySn()?.value }}
+              </p>
             </div>
-            <button (click)="closeHistory()" class="p-2 hover:bg-gray-200 rounded-full"><svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            <button
+              (click)="closeHistory()"
+              class="p-2 hover:bg-gray-200 rounded-full"
+            >
+              <svg
+                class="w-6 h-6 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
           </div>
           <div class="p-8 overflow-y-auto flex-grow bg-white custom-scrollbar">
             @if (historyNotes().length === 0) {
               <div class="text-center py-12 flex flex-col items-center gap-4">
-                <div class="p-4 bg-gray-50 rounded-full"><svg class="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
-                <p class="text-sm font-medium text-gray-500">No return notes found for this serial number.</p>
+                <div class="p-4 bg-gray-50 rounded-full">
+                  <svg
+                    class="w-8 h-8 text-gray-300"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    ></path>
+                  </svg>
+                </div>
+                <p class="text-sm font-medium text-gray-500">
+                  No return notes found for this serial number.
+                </p>
               </div>
             } @else {
-              <div class="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100">
+              <div
+                class="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100"
+              >
                 @for (entry of historyNotes(); track $index) {
                   <div class="relative pl-8">
-                    <div class="absolute left-0 top-1.5 w-6 h-6 rounded-full border-4 border-white bg-primary shadow-sm z-10"></div>
+                    <div
+                      class="absolute left-0 top-1.5 w-6 h-6 rounded-full border-4 border-white bg-primary shadow-sm z-10"
+                    ></div>
                     <div class="flex flex-col gap-2">
                       <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-gray-900">{{ entry.user || 'System' }}</span>
-                        <span class="text-[10px] font-bold text-gray-400">{{ entry.date | date:'MMM d, h:mm a' }}</span>
+                        <span class="text-xs font-bold text-gray-900">{{
+                          entry.user || 'System'
+                        }}</span>
+                        <span class="text-[10px] font-bold text-gray-400">{{
+                          entry.date | date: 'MMM d, h:mm a'
+                        }}</span>
                       </div>
-                      <div class="p-4 bg-gray-50 border border-gray-100 rounded-xl">
-                        <p class="text-sm text-gray-600 leading-relaxed italic">"{{ entry.notes }}"</p>
+                      <div
+                        class="p-4 bg-gray-50 border border-gray-100 rounded-xl"
+                      >
+                        <p class="text-sm text-gray-600 leading-relaxed italic">
+                          "{{ entry.notes }}"
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -723,7 +1499,9 @@
             }
           </div>
           <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
-            <button (click)="closeHistory()" class="btn btn-secondary">Close</button>
+            <button (click)="closeHistory()" class="btn btn-secondary">
+              Close
+            </button>
           </div>
         </div>
       </div>
@@ -731,7 +1509,7 @@
 
     <!-- Workflow Actions Modal -->
     @if (isWorkflowModalOpen) {
-      <div 
+      <div
         class="fixed inset-0 !h-[100dvh] w-screen z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in"
         (click)="isWorkflowModalOpen = false"
         (keydown.escape)="isWorkflowModalOpen = false"
@@ -739,7 +1517,7 @@
         role="button"
         aria-label="Close Workflow Modal"
       >
-        <div 
+        <div
           class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300 cursor-default"
           (click)="$event.stopPropagation()"
           (keydown)="$event.stopPropagation()"
@@ -747,20 +1525,47 @@
           role="region"
           aria-label="Workflow Actions Dialog"
         >
-          <div class="px-6 py-4 bg-white border-b border-neutral-100 flex justify-between items-center shrink-0 shadow-sm z-10">
+          <div
+            class="px-6 py-4 bg-white border-b border-neutral-100 flex justify-between items-center shrink-0 shadow-sm z-10"
+          >
             <h2 class="text-xl font-bold text-gray-900 flex items-center gap-3">
               <span class="p-2 bg-accent/10 rounded-lg">
-                <svg class="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                <svg
+                  class="h-6 w-6 text-accent"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  ></path>
                 </svg>
               </span>
               Workflow Actions
             </h2>
-            <button (click)="isWorkflowModalOpen = false" class="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-400 hover:text-neutral-900">
-              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <button
+              (click)="isWorkflowModalOpen = false"
+              class="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-400 hover:text-neutral-900"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
             </button>
           </div>
-          
+
           <div class="flex-grow overflow-y-auto p-2 sm:p-4 custom-scrollbar">
             <app-inspection-report-transition-actions
               [report]="reportData"
@@ -774,7 +1579,9 @@
               [isOnline]="isOnline"
               [showExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.visible"
               [canExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.enabled"
-              [exportDisabledReason]="uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || ''"
+              [exportDisabledReason]="
+                uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || ''
+              "
               [isExporting]="isExporting"
               [canPublish]="canPublishReport()"
               [isPublishing]="isPublishingReport()"
@@ -794,24 +1601,40 @@
 
     <!-- Onboarding Modal -->
     @if (showOnboardingModal()) {
-      <div class="fixed inset-0 !h-[100dvh] w-screen z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col items-center text-center animate-in zoom-in-95 duration-300">
-          <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+      <div
+        class="fixed inset-0 !h-[100dvh] w-screen z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
+      >
+        <div
+          class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col items-center text-center animate-in zoom-in-95 duration-300"
+        >
+          <div
+            class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4"
+          >
             <span class="relative flex h-6 w-6">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-6 w-6 bg-accent"></span>
+              <span
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"
+              ></span>
+              <span
+                class="relative inline-flex rounded-full h-6 w-6 bg-accent"
+              ></span>
             </span>
           </div>
-          <h2 class="text-xl font-bold text-gray-900 mb-2">Follow the Pulse!</h2>
+          <h2 class="text-xl font-bold text-gray-900 mb-2">
+            Follow the Pulse!
+          </h2>
           <p class="text-gray-600 mb-6 leading-relaxed">
-            Welcome to the inspection report! Keep an eye out for the pulsing orange dots. They will guide you to tabs that require your attention.
+            Welcome to the inspection report! Keep an eye out for the pulsing
+            orange dots. They will guide you to tabs that require your
+            attention.
           </p>
-          <button (click)="acknowledgeOnboarding()" class="btn btn-primary w-full py-3 text-sm font-bold shadow-md">
+          <button
+            (click)="acknowledgeOnboarding()"
+            class="btn btn-primary w-full py-3 text-sm font-bold shadow-md"
+          >
             Got it, let's go!
           </button>
         </div>
       </div>
     }
-
   </div>
 }

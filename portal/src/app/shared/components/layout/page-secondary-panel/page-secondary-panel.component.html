@@ -1,6 +1,12 @@
-<div class="bg-neutral-50 p-4 sm:p-5 rounded-lg border border-neutral-200 mt-8 secondary-information text-sm text-neutral-600">
+<div
+  class="bg-neutral-50 p-4 sm:p-5 rounded-lg border border-neutral-200 mt-8 secondary-information text-sm text-neutral-600"
+>
   @if (title()) {
-    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-3">{{ title() }}</h3>
+    <h3
+      class="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-3"
+    >
+      {{ title() }}
+    </h3>
   }
   <ng-content></ng-content>
 </div>
