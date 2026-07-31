@@ -109,9 +109,10 @@ export class DataHydrationService {
 
     const errors: unknown[] = [];
     await this.runSettled(
-      activeSources
-        .filter((source) => typeof source.refreshLocalCache === 'function')
-        .map((source) => source.refreshLocalCache!.bind(source)),
+      activeSources.flatMap((source) => {
+        const refresh = source.refreshLocalCache;
+        return typeof refresh === 'function' ? [refresh.bind(source)] : [];
+      }),
       errors,
     );
 

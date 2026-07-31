@@ -156,10 +156,18 @@ export class ChildReportWorkflowService {
           user.tenantId,
         );
       } else if (isReopen) {
+        // Reopen (APPROVED -> IN_INSPECTION) always requires a reason — the
+        // transition-guard above throws when it is absent — so this narrows
+        // `reason` to non-null for the compiler without altering behavior.
+        if (!reason) {
+          throw new BadRequestException(
+            'Reason is required for this transition',
+          );
+        }
         await this.revisionService.createChildReportSnapshot(
           tx,
           reportId,
-          reason!,
+          reason,
           user.id,
           user.tenantId,
         );

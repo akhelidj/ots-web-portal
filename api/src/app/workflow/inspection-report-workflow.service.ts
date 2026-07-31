@@ -473,10 +473,19 @@ export class InspectionReportWorkflowService {
           user.tenantId,
         );
       } else if (isReopen) {
+        // Every isReopen transition requires a reason
+        // (isReasonRequiredForInspection is true for each case), and the guard
+        // above throws when it is absent — so this narrows `reason` to non-null
+        // for the compiler without altering behavior.
+        if (!reason) {
+          throw new BadRequestException(
+            'Reason is required for this transition',
+          );
+        }
         await this.revisionService.createInspectionReportSnapshot(
           tx,
           reportId,
-          reason!, // Reason mandatory for reopen
+          reason,
           user.id,
           user.tenantId,
         );
