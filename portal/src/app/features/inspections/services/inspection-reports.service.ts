@@ -260,12 +260,12 @@ export class InspectionReportsService implements DataHydrationSource {
           serialNumbers?: {
             id: string;
             serialNumberId: string;
-            status?: string;
+            status?: LocalBatchSerialNumber['status'];
           }[];
         };
         if (bExt.serialNumbers && Array.isArray(bExt.serialNumbers)) {
-          const associations = bExt.serialNumbers.map(
-            (sn: { id: string; serialNumberId: string; status?: string }) => ({
+          const associations: LocalBatchSerialNumber[] = bExt.serialNumbers.map(
+            (sn) => ({
               id: sn.id,
               inspectionApprovalBatchId: b.id,
               serialNumberId: sn.serialNumberId,
