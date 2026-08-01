@@ -168,8 +168,8 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
 
     const snByReport = allSerials.reduce(
       (acc: Record<string, LocalSerialNumber[]>, sn: LocalSerialNumber) => {
-        acc[sn.inspectionReportId] = acc[sn.inspectionReportId] || [];
-        acc[sn.inspectionReportId].push(sn);
+        const bucket = (acc[sn.inspectionReportId] ||= []);
+        bucket.push(sn);
         return acc;
       },
       {},

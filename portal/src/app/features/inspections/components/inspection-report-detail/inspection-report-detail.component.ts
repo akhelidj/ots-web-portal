@@ -1038,7 +1038,8 @@ export class InspectionReportDetailComponent
     if (!currentSn || snList.length === 0) return;
     const index = snList.findIndex((s) => s.id === currentSn.id);
     if (index >= 0 && index < snList.length - 1) {
-      this.openInspectionForm(snList[index + 1]);
+      const next = snList[index + 1];
+      if (next) this.openInspectionForm(next);
     }
   }
 
@@ -1048,7 +1049,8 @@ export class InspectionReportDetailComponent
     if (!currentSn || snList.length === 0) return;
     const index = snList.findIndex((s) => s.id === currentSn.id);
     if (index > 0) {
-      this.openInspectionForm(snList[index - 1]);
+      const prev = snList[index - 1];
+      if (prev) this.openInspectionForm(prev);
     }
   }
 
@@ -1096,11 +1098,13 @@ export class InspectionReportDetailComponent
   }
 
   public onEquipmentSelectChange(index: number): void {
-    if (this.formEquipmentUsed[index].name === 'Other') {
-      this.formEquipmentUsed[index].isOther = true;
-      this.formEquipmentUsed[index].name = ''; // Clear for user to type
+    const row = this.formEquipmentUsed[index];
+    if (!row) return;
+    if (row.name === 'Other') {
+      row.isOther = true;
+      row.name = ''; // Clear for user to type
     } else {
-      this.formEquipmentUsed[index].isOther = false;
+      row.isOther = false;
     }
   }
 
@@ -1113,11 +1117,13 @@ export class InspectionReportDetailComponent
   }
 
   public onMethodSelectChange(index: number): void {
-    if (this.formInspectionMethod[index].name === 'Other') {
-      this.formInspectionMethod[index].isOther = true;
-      this.formInspectionMethod[index].name = ''; // Clear for user to type
+    const row = this.formInspectionMethod[index];
+    if (!row) return;
+    if (row.name === 'Other') {
+      row.isOther = true;
+      row.name = ''; // Clear for user to type
     } else {
-      this.formInspectionMethod[index].isOther = false;
+      row.isOther = false;
     }
   }
 
@@ -1221,9 +1227,13 @@ export class InspectionReportDetailComponent
         );
 
         if (filenameStar) {
-          filename = decodeURIComponent(filenameStar.split("''")[1]);
+          // String() preserves the prior implicit coercion: a header lacking the
+          // RFC-5987 "''" delimiter yielded the literal string "undefined" here.
+          filename = decodeURIComponent(String(filenameStar.split("''")[1]));
         } else if (filenameNormal) {
-          filename = filenameNormal.split('=')[1].replace(/["']/g, '');
+          // startsWith('filename=') guarantees split('=')[1] exists; ?? '' only
+          // satisfies the compiler and never triggers at runtime.
+          filename = (filenameNormal.split('=')[1] ?? '').replace(/["']/g, '');
         }
       }
 

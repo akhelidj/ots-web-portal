@@ -604,7 +604,8 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     const all = this.serials();
     const idx = all.findIndex((s) => s.id === this.inspectingSnId);
     if (idx > 0) {
-      this.openInspectionForm(all[idx - 1].id);
+      const prev = all[idx - 1];
+      if (prev) this.openInspectionForm(prev.id);
     }
   }
 
@@ -613,7 +614,8 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     const all = this.serials();
     const idx = all.findIndex((s) => s.id === this.inspectingSnId);
     if (idx >= 0 && idx < all.length - 1) {
-      this.openInspectionForm(all[idx + 1].id);
+      const next = all[idx + 1];
+      if (next) this.openInspectionForm(next.id);
     }
   }
 
@@ -622,6 +624,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     if (!input.files || input.files.length === 0) return;
 
     const file = input.files[0];
+    if (!file) return;
     this.isUploadingAttachment = true;
     this.formError = '';
 

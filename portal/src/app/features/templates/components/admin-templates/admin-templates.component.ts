@@ -40,7 +40,7 @@ export class AdminTemplatesComponent {
   public onFileSelected(event: Event) {
     const el = event.target as HTMLInputElement;
     if (el.files && el.files.length > 0) {
-      this.formFile = el.files[0];
+      this.formFile = el.files[0] ?? null;
     } else {
       this.formFile = null;
     }

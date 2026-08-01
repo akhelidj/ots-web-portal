@@ -133,13 +133,18 @@ export class SerialInspectionReactiveFormComponent
     value: unknown,
   ): void {
     const parts = path.split('.');
+    // split('.') always yields >= 1 element, so lastKey is always defined; the
+    // guard only narrows for the compiler and never returns at runtime.
+    const lastKey = parts[parts.length - 1];
+    if (lastKey === undefined) return;
     let current: unknown = obj;
-    for (let i = 0; i < parts.length - 1; i++) {
+    for (const key of parts.slice(0, -1)) {
       if (typeof current !== 'object' || current === null) return;
-      if (!(current as Record<string, unknown>)[parts[i]]) {
-        (current as Record<string, unknown>)[parts[i]] = {};
+      const rec = current as Record<string, unknown>;
+      if (!rec[key]) {
+        rec[key] = {};
       }
-      current = (current as Record<string, unknown>)[parts[i]];
+      current = rec[key];
     }
     if (typeof current !== 'object' || current === null) return;
 
@@ -147,11 +152,11 @@ export class SerialInspectionReactiveFormComponent
     const fieldDef = this.schema.sections
       .flatMap((s) => s.fields)
       .find((f) => f.key === path);
+    const target = current as Record<string, unknown>;
     if (fieldDef?.inputType === 'boolean' && typeof value === 'string') {
-      (current as Record<string, unknown>)[parts[parts.length - 1]] =
-        value === 'true';
+      target[lastKey] = value === 'true';
     } else {
-      (current as Record<string, unknown>)[parts[parts.length - 1]] = value;
+      target[lastKey] = value;
     }
   }
 

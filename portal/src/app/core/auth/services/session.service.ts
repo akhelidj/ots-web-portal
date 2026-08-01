@@ -53,7 +53,7 @@ export class SessionService {
       const parts = token.split('.');
       if (parts.length !== 3) return true;
 
-      const payload = JSON.parse(atob(parts[1]));
+      const payload = JSON.parse(atob(parts[1] ?? ''));
       if (!payload.exp) return false;
 
       return payload.exp * 1000 < Date.now();
