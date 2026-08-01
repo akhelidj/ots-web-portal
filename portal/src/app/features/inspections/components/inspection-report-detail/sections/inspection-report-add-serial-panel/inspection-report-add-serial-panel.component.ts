@@ -16,9 +16,9 @@ export class InspectionReportAddSerialPanelComponent {
   @Input() enabled = false;
 
   @Output() valueChange = new EventEmitter<string>();
-  @Output() submit = new EventEmitter<void>();
+  @Output() addSerials = new EventEmitter<void>();
 
   protected onSubmit(): void {
-    this.submit.emit();
+    this.addSerials.emit();
   }
 }

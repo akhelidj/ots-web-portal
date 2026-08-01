@@ -638,7 +638,7 @@
                 [value]="formBulkSerials"
                 [enabled]="!!uiState?.actions?.['IR_ADD_SERIAL']?.enabled"
                 (valueChange)="formBulkSerials = $event"
-                (submit)="onAddSerials()"
+                (addSerials)="onAddSerials()"
               />
             }
           </div>
