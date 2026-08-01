@@ -341,10 +341,11 @@ export class ExportService {
       throw new InternalServerErrorException('No files generated for export');
     }
 
-    if (allFiles.length === 1) {
+    const single = allFiles[0];
+    if (allFiles.length === 1 && single) {
       return {
-        buffer: allFiles[0].buffer,
-        filename: allFiles[0].filename,
+        buffer: single.buffer,
+        filename: single.filename,
         mimetype:
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       };

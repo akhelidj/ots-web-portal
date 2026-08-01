@@ -109,7 +109,7 @@ export class InspectionReportsService {
       // Fallback to initials
       const parts = customer.name.trim().split(/\s+/);
       if (parts.length === 1) {
-        customerPrefix = parts[0].substring(0, 3).toUpperCase();
+        customerPrefix = (parts[0] ?? '').substring(0, 3).toUpperCase();
       } else {
         customerPrefix = parts
           .map((w) => w[0])

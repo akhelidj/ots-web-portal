@@ -65,7 +65,7 @@ function parseSharedStrings(xml: string): {
   while ((m = re.exec(xml)) !== null) {
     blocks.push(m[0]);
     // Extract all text between <t>…</t> for a plain-text representation
-    const text = (m[1].match(/<t[^>]*>([\s\S]*?)<\/t>/g) || [])
+    const text = ((m[1] ?? '').match(/<t[^>]*>([\s\S]*?)<\/t>/g) || [])
       .map((t) => t.replace(/<\/?t[^>]*>/g, ''))
       .join('');
     plain.push(text);
@@ -105,8 +105,8 @@ function getSharedStringIndicesForRow(rowXml: string): Set<number> {
   const cellRe = /<c\b[^>]*\bt="s"[^>]*>([\s\S]*?)<\/c>/g;
   let m: RegExpExecArray | null;
   while ((m = cellRe.exec(rowXml)) !== null) {
-    const vMatch = m[1].match(/<v>(\d+)<\/v>/);
-    if (vMatch) indices.add(parseInt(vMatch[1], 10));
+    const vMatch = (m[1] ?? '').match(/<v>(\d+)<\/v>/);
+    if (vMatch) indices.add(parseInt(vMatch[1] ?? '', 10));
   }
   return (cellRe.lastIndex, indices);
 }
@@ -228,11 +228,11 @@ export async function mapDrillPipeReportV1(
 
   let rowMatch: RegExpExecArray | null;
   while ((rowMatch = rowRegex.exec(sheetXml)) !== null) {
-    const rowXml = rowMatch[1];
+    const rowXml = rowMatch[1] ?? '';
     const indices = getSharedStringIndicesForRow(rowXml);
     for (const idx of indices) {
       if (ssPlain[idx] && ssPlain[idx].includes('{{sn}}')) {
-        templateRowNumber = parseInt(rowMatch[2], 10);
+        templateRowNumber = parseInt(rowMatch[2] ?? '', 10);
         templateRowXml = rowXml;
         break;
       }
@@ -311,8 +311,7 @@ export async function mapDrillPipeReportV1(
     // For each SN, build cloned row XMLs with new shared string indices
     const newRowsXml: string[] = [];
 
-    for (let i = 0; i < N; i++) {
-      const sn = serialNumbersChunk[i];
+    for (const [i, sn] of serialNumbersChunk.entries()) {
       const rowNum = templateRowNumber + i;
 
       const d: InspectionData = sn.inspectionData || {};
@@ -422,8 +421,8 @@ export async function mapDrillPipeReportV1(
   });
 
   // 8. Reload into the ExcelJS workbook so ExportService can call writeBuffer() on it
-  while (workbook.worksheets.length > 0) {
-    workbook.removeWorksheet(workbook.worksheets[0].id);
+  for (const ws of [...workbook.worksheets]) {
+    workbook.removeWorksheet(ws.id);
   }
   await workbook.xlsx.load(
     finalBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
