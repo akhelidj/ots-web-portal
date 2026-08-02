@@ -1,6 +1,6 @@
 # Inspection Report Lifecycle — End-to-End Trace
 
-> **Status: verified ground-truth** (authored from a read-only code trace). Part of the `docs/internal/` namespace — kept separate from the inherited `docs/` content, which is only partially accurate. Citations are `path:line` and were correct at time of writing; verify against current code before relying on an exact line.
+> **Status: verified ground-truth** (authored from a read-only code trace). Citations are `path:line` and were correct at time of writing; verify against current code before relying on an exact line.
 
 ## Orientation: there are two write paths, chosen per-call
 
