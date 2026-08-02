@@ -1,6 +1,6 @@
 # CLAUDE.md — OTS Web Portal
 
-Working reference for this monorepo. Captures what prior discovery established so sessions don't re-derive it. Treat as ground truth for orientation; treat `docs/` as intent-to-verify (see Doc Drift). Verified documentation we author lives under `docs/internal/`.
+Working reference for this monorepo: fast orientation that points into the authoritative documentation under `docs/`. Captures what prior discovery established so sessions don't re-derive it. `docs/` — the rebuilt architecture docs, ADRs, and `KNOWN-ISSUES.md` — is the source of truth; this file orients and links into it rather than duplicating it.
 
 ## Stack & Workspace
 
@@ -23,40 +23,46 @@ Working reference for this monorepo. Captures what prior discovery established s
 ## ⚠️ Offline-Sync Core — HIGHEST-RISK SUBSYSTEM
 
 Location: `portal/src/app/core/offline/`. The most load-bearing and least-safe code in the repo.
-**Full lifecycle trace: `docs/internal/report-lifecycle-trace.md`**
+**Full lifecycle trace: [`docs/architecture/report-lifecycle.md`](docs/architecture/report-lifecycle.md)**
 
 Flow: optimistic local write (IndexedDB) → **outbox** enqueue → **SyncOrchestrator** (auto-runs on reconnect, 2.5s cooldown) → **SyncDispatcher** → API → **temporal-ID remap** → hydrate.
 
 - **Temporal-ID remap:** offline rows get temp ids (`local-ir-…`); on sync the server UUID replaces them and pending outbox items are rewritten to the real id. **Serials remap by `clientRef`** (server echoes `clientRef`→real id).
 - **Drain is FIFO** by `createdAt`; a 409 marks the entity/outbox item `CONFLICT` and **cascades** to dependents.
 
-**Three UNVERIFIED risks from the lifecycle trace — needs runtime verification. Do NOT modify sync code without a test first:**
-
-1. **Stuck CONFLICT:** no code path resets a `CONFLICT` entity row back to `SYNCED`; hydration refuses to overwrite non-`SYNCED` rows. A conflicted report may stay stale/flagged forever.
-2. **`clearConflicts` discards local edits** — it deletes the queued outbox item (server-wins, **no merge**, no diff UI). The user's offline edit is thrown away.
-3. **`idempotencyKey` is generated but never transmitted** — a 5xx that actually committed, then auto-retries, can create a **duplicate**. No server-side dedup seen on the create path.
+**Do NOT modify sync code without a test first.** Three confirmed standing defects live here — stuck `CONFLICT`, `clearConflicts` discarding local edits, and `idempotencyKey` never transmitted — documented with source anchors in [`docs/KNOWN-ISSUES.md`](docs/KNOWN-ISSUES.md) (#1–3). Read them before touching this subsystem.
 
 ## Intentional Constraints (NOT bugs — do not "fix")
 
-- **`templateKey` is deliberately hardcoded to `'DRILL_PIPE_REPORT'`** in the live create path (`InspectionReportsService.createReport`). The system supports one template today; **multi-template is planned future work**. `InspectionReportWorkflowService.create` is an **unwired** path that already honors `dto.templateKey` — the intended seam for that expansion.
+- **`templateKey` is deliberately hardcoded to `'DRILL_PIPE_REPORT'`** in the live create path (`InspectionReportsService.createReport`). The system supports one template today; **multi-template is planned future work**. `InspectionReportWorkflowService.create` is an **unwired** path that already honors `dto.templateKey` — the intended seam for that expansion. See [ADR-0009](docs/adr/0009-single-template-hardcode-seam.md).
 - **`Template` (with `fileBlob`) is authoritative.** `TemplateVersion` (with `mappingJson`) is **legacy** — surfaced only via the nullable `legacyTemplateVersion` FK. Don't build new logic on it.
 
 ## Testing / CI Reality
 
-- **Zero tests. Zero CI.** `unitTestRunner: none` / `e2eTestRunner: none` set at scaffold; `@nestjs/testing` installed but unused; no `.github/workflows`.
-- Consequence: **every change needs manual verification.** Production has real clients and no automated safety net — be conservative, especially around sync, audited workflows, and migrations.
+- **Tests exist; CI does not.** Unit (`*.spec.ts`) and integration (`*.integration.spec.ts`) suites run via `npm run test` / `test:api` / `test:portal`; API integration tests need the test Postgres (`npm run test:db:up`, then `test:api:integration`, via `docker-compose.test.yml`). Coverage is partial — concentrated on the audited, high-risk paths (revision snapshots, export, workflow transitions, offline-sync).
+- **No CI.** There are no `.github/workflows`; nothing runs the suites automatically. With real production clients and no automated gate, **every change still needs manual verification** — be conservative, especially around sync, audited workflows, and migrations.
 
 ## Conventions & Tooling
 
-- **Prefer the Graphify MCP tools over Grep/Glob for structural questions** (god nodes, dependencies, cross-boundary relationships). The graph is in `graphify-out/` — **keep it committed**; refresh with `/graphify . --update`.
 - **Use Context7** for version-accurate NestJS 11 / Angular 21 / Prisma docs when changing framework internals.
-- Match surrounding code style; this is read-then-write territory given no tests.
+- Match surrounding code style; read-then-write territory — verify manually given partial coverage and no CI.
 
-## Known Doc Drift (`docs/` is rich but partially stale)
+## Documentation
 
-Treat the inherited `docs/` as **intent-to-verify, not ground truth**, until a spec-vs-reality pass is done. (Our own verified docs go in `docs/internal/`.) Known gaps:
+Authoritative docs live under `docs/`:
 
-- `milestones.md` / `architecture/README.md` reference **T0.5.x tickets that don't exist** in `docs/tickets/`.
-- README lists npm scripts that **don't exist** (`db:provision`, `verify:auth`).
-- `architecture/pwa-offline-network-state-of-play.md` **predates current code** — several "broken" items (browser-only connectivity, missing PWA icons, `processQueue` auth bug) are already fixed; its "manual-sync V1" framing contradicts the actual auto-sync.
-- Template-binding doc reads as if create honors the requested `templateKey`; the live path hardcodes it (see Intentional Constraints).
+- [`docs/architecture/`](docs/architecture/README.md) — system design (report lifecycle, revision-snapshot engine, form schema, export mapping, template binding).
+- [`docs/adr/`](docs/adr/README.md) — standing architecture decisions and their tradeoffs.
+- [`docs/api/`](docs/api/README.md) — HTTP endpoint contracts (can drift from the controllers — no shared DTO package, see ADR-0008; verify against code when it matters).
+- [`docs/KNOWN-ISSUES.md`](docs/KNOWN-ISSUES.md) — verified standing defects and constraints.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- `graphify-out/` is committed to git — keep it committed so the graph ships with the repo.
