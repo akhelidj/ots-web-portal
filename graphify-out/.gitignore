@@ -9,3 +9,6 @@ cache/
 .graphify_semantic.json
 .graphify_analysis.json
 .graphify_chunk_*.json
+
+# Dated pre-overwrite graph backups (graphify writes one folder per day) — local safety net, not committed.
+20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/

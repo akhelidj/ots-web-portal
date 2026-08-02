@@ -1,13 +1,18 @@
-# Graph Report - .  (2026-08-01)
+# Graph Report - ots-web-portal  (2026-08-02)
 
 ## Corpus Check
-- 325 files · ~122,364 words
+- 291 files · ~125,849 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2035 nodes · 3580 edges · 214 communities (117 shown, 97 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 70 edges (avg confidence: 0.84)
-- Token cost: 388,294 input · 0 output
+- 2109 nodes · 3640 edges · 230 communities (135 shown, 95 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 58 edges (avg confidence: 0.84)
+- Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `4c577aca`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - FilesService
@@ -209,6 +214,22 @@
 - Report Banners Section Template
 - Report Header (Condensing) Section Template
 - KPI Overview (Disposition Stats) Section
+- AppService
+- Known Issues
+- ADR-0008 — No shared DTO package
+- adr/README.md
+- Disposition Stored in inspectionData.disposition
+- ADR-0001 — Revision-snapshot engine
+- ADR-0002 — Optimistic concurrency everywhere
+- ADR-0003 — Multi-tenant model (tenantId scoping, single DB gateway)
+- ADR-0004 — JWT default-deny RBAC
+- ADR-0005 — Export determinism is structural-only
+- ADR-0006 — Offline-sync core
+- ADR-0009 — Single-template hardcode with an unwired multi-template seam
+- Build / test tooling
+- Type system / upstream friction
+- @angular/common
+- fake-indexeddb
 
 ## God Nodes (most connected - your core abstractions)
 1. `InspectionReportDetailComponent` - 78 edges
@@ -246,16 +267,14 @@
 - **Symmetric frontend/backend PENDING_APPROVAL gating** — docs_architecture_inspection_form_schema_reportvalidationservice, docs_architecture_inspection_form_schema_workflowservice, claudemd_pending_approval_gate, docs_api_dispositions_validation_failed [INFERRED 0.85]
 - **Offline-first outbox sync and temporal-ID remap flow** — claudemd_offline_sync_core, claudemd_syncdispatcher, claudemd_temporal_id_remap, docs_api_serial_numbers_endpoints_clientref, docs_api_serial_number_inspection_outbox [INFERRED 0.85]
 - **Three Confirmed Offline-Sync Risks** — docs_internal_sync_risks_conflict_terminal, docs_internal_sync_risks_clearconflicts_overdelete, docs_internal_sync_risks_idempotency_not_sent [EXTRACTED 1.00]
-- **Offline-First Write Pipeline** — docs_tickets_f0_1_2_outbox_pattern, docs_internal_report_lifecycle_trace_temporal_id_remap, docs_tickets_f0_1_7_sync_orchestrator, docs_tickets_f0_2_sync_dispatcher [INFERRED 0.85]
-- **Revision Snapshot Engine Lineage** — docs_milestones_t0_5_3_revision_snapshot_engine, docs_tickets_t0_4_workflow_transition_engine_reopen_snapshot, docs_internal_report_lifecycle_trace_revision_snapshot, docs_internal_phase3_any_purge_inventory_snapshot_type [INFERRED 0.75]
 - **Page Layout Composition Slot Family** — portal_src_app_shared_components_layout_page_layout_page_layout_component_pagelayoutcomponent, portal_src_app_shared_components_layout_page_identity_page_identity_component_pageidentitycomponent, portal_src_app_shared_components_layout_page_actions_page_actions_component_pageactionscomponent, portal_src_app_shared_components_layout_page_summary_page_summary_component_pagesummarycomponent, portal_src_app_shared_components_layout_page_workspace_page_workspace_component_pageworkspacecomponent, portal_src_app_shared_components_layout_page_secondary_panel_page_secondary_panel_component_pagesecondarypanelcomponent [INFERRED 0.75]
 - **Inspection Report Detail Section Components** — portal_src_app_features_inspections_components_inspection_report_detail_inspection_report_detail_component_inspectionreportdetailcomponent, portal_src_app_features_inspections_components_inspection_report_detail_sections_inspection_report_header_component_inspectionreportheadercomponent, portal_src_app_features_inspections_components_inspection_report_detail_sections_inspection_report_serials_table_inspection_report_serials_table_component_inspectionreportserialstablecomponent, portal_src_app_features_inspections_components_inspection_report_detail_sections_inspection_report_transition_actions_component_inspectionreporttransitionactionscomponent [INFERRED 0.75]
 
-## Communities (214 total, 97 thin omitted)
+## Communities (230 total, 95 thin omitted)
 
 ### Community 0 - "FilesService"
-Cohesion: 0.06
-Nodes (24): ChildReportsController, Body, Controller, Get, Param, Patch, Post, Query (+16 more)
+Cohesion: 0.14
+Nodes (8): FilesController, Controller, Get, Param, Request, Res, FilesService, Injectable
 
 ### Community 1 - "AppRole"
 Cohesion: 0.07
@@ -266,12 +285,12 @@ Cohesion: 0.05
 Nodes (51): Offline-Sync Core Subsystem, Optimistic Concurrency Pattern, OTS Web Portal Monorepo Reference, PENDING_APPROVAL Transition Gate, PrismaService (single DB gateway), RevisionService / Revision-Snapshot Engine, SyncDispatcher, SyncOrchestrator (+43 more)
 
 ### Community 3 - "app.routes.ts"
-Cohesion: 0.07
-Nodes (23): appRoutes, authGuard(), mustChangePasswordGuard(), roleGuard(), RoleLandingService, Injectable, SessionService, Injectable (+15 more)
+Cohesion: 0.10
+Nodes (18): authGuard(), roleGuard(), RoleLandingService, Injectable, AppRoutes, LoginComponent, Component, ViewChild (+10 more)
 
 ### Community 4 - "types.ts"
-Cohesion: 0.11
-Nodes (16): LocalBatchSerialNumber, LocalInspectionReport, MetaRecord, OutboxStatus, SerialApprovalStatus, BatchSerialNumberLocalRepo, Injectable, InspectionReportLocalRepo (+8 more)
+Cohesion: 0.12
+Nodes (13): ChildReportType, LocalBatchSerialNumber, LocalChildReport, MetaRecord, OutboxStatus, SerialApprovalStatus, BatchSerialNumberLocalRepo, Injectable (+5 more)
 
 ### Community 5 - "AuthService"
 Cohesion: 0.08
@@ -279,11 +298,11 @@ Nodes (20): AuthController, Body, Controller, Get, Post, Req, UseGuards, AuthSer
 
 ### Community 6 - "inspection-report-detail.component.ts"
 Cohesion: 0.09
-Nodes (30): RFC-5987, BATCH_STATUSES, BatchStatus, CHILD_REPORT_TYPES, ENTITY_TYPES, EntityType, REPORT_STATUSES, ReportStatus (+22 more)
+Nodes (30): RFC-5987, BATCH_STATUSES, BatchStatus, CHILD_REPORT_TYPES, EntityType, REPORT_STATUSES, ReportStatus, SERIAL_DISPOSITIONS (+22 more)
 
 ### Community 7 - "template-upload.integration.spec.ts"
-Cohesion: 0.08
-Nodes (21): TemplateController, Body, Controller, Get, Param, Patch, Post, Req (+13 more)
+Cohesion: 0.15
+Nodes (11): ValidatedUser, TemplateFileStoreService, Injectable, TemplateModule, Module, TemplateService, Injectable, REAL_TEMPLATE_BYTES (+3 more)
 
 ### Community 8 - "InspectionReportDetailComponent"
 Cohesion: 0.06
@@ -294,8 +313,8 @@ Cohesion: 0.05
 Nodes (37): cache, dependsOn, inputs, defaultBase, generators, @nx/angular:application, @nx/angular:library, @nx/nest:application (+29 more)
 
 ### Community 10 - "ConnectivityService"
-Cohesion: 0.14
-Nodes (13): jwtInterceptor(), UserProfile, apiErrorInterceptor(), ConnectivityService, Injectable, HydrationOptions, DATA_HYDRATION_SOURCES, DataHydrationContext (+5 more)
+Cohesion: 0.15
+Nodes (8): UserProfile, NavigationService, Injectable, ConnectivityService, Injectable, AppSyncState, AuthRequiredComponent, Component
 
 ### Community 11 - "SystemNoticeService"
 Cohesion: 0.08
@@ -303,39 +322,39 @@ Nodes (15): App, appConfig, Component, NoticeType, SystemNotice, SystemNoticeSer
 
 ### Community 12 - "app.module.ts"
 Cohesion: 0.10
-Nodes (20): AppController, Controller, Get, AppService, Injectable, AuthModule, Module, DefaultDenyGuard (+12 more)
+Nodes (19): AuthModule, Module, ChildReportsModule, Module, DefaultDenyGuard, Injectable, InspectionReportsModule, Module (+11 more)
 
 ### Community 13 - "ChildReportDetailComponent"
 Cohesion: 0.09
 Nodes (4): getChildReportUiState(), ChildReportDetailComponent, Component, SerialInspectionReactiveFormComponent
 
 ### Community 14 - "PrismaService"
-Cohesion: 0.09
-Nodes (11): ValidatedUser, NOTE: this path is currently unreachable from any route — the workflow, CreateInspectionReportDto, IsNotEmpty, IsString, InspectionReportsService, Injectable, PrismaService (+3 more)
+Cohesion: 0.08
+Nodes (8): InspectionReportsService, Injectable, PrismaService, Injectable, SerialNumbersService, Injectable, InspectionReportWorkflowService, Injectable
 
 ### Community 15 - "LocalUser"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (8): LocalUser, Injectable, UserLocalRepo, AdminUsersComponent, Component, ViewChild, AdminUsersService, Injectable
 
 ### Community 16 - "export.integration.spec.ts"
-Cohesion: 0.17
-Nodes (23): seedCrsnCase(), allCellTexts(), approveWithSerials(), loadSheet(), newSeededDraft(), readCellText(), rowTextsFor(), serialRowOrder() (+15 more)
+Cohesion: 0.13
+Nodes (27): seedCrsnCase(), allCellTexts(), approveWithSerials(), loadSheet(), newSeededDraft(), readCellText(), rowTextsFor(), serialRowOrder() (+19 more)
 
 ### Community 17 - "export.service.ts"
 Cohesion: 0.11
 Nodes (21): Snapshot, ExportController, Controller, Get, Param, Query, Req, Res (+13 more)
 
 ### Community 19 - "inspection-report-list.component.ts"
-Cohesion: 0.10
-Nodes (13): ReportValidationService, Injectable, ValidationIssue, ValidationResult, InspectionReportTransitionActionComponent, SelectedTransition, TransitionChoice, Component (+5 more)
+Cohesion: 0.09
+Nodes (13): Injectable, UserPreferences, UserPreferencesService, ReportValidationService, Injectable, ValidationIssue, ValidationResult, InspectionReportTransitionActionComponent (+5 more)
 
 ### Community 20 - "compilerOptions"
 Cohesion: 0.07
 Nodes (27): dom, es2020, node_modules, portal/src/app/*, portal/src/environments/*, tmp, compileOnSave, compilerOptions (+19 more)
 
 ### Community 21 - "UsersService"
-Cohesion: 0.12
-Nodes (14): Body, Controller, Delete, Get, Param, Patch, Post, Req (+6 more)
+Cohesion: 0.13
+Nodes (12): Body, Controller, Delete, Get, Param, Patch, Post, Req (+4 more)
 
 ### Community 22 - "customers.controller.ts"
 Cohesion: 0.12
@@ -346,16 +365,16 @@ Cohesion: 0.14
 Nodes (12): CustomersController, Body, Controller, Delete, Get, Param, Patch, Post (+4 more)
 
 ### Community 24 - "RevisionService"
-Cohesion: 0.11
-Nodes (12): RevisionService, Injectable, ChildReportWorkflowController, TransitionRequestDto, Body, Controller, Get, Param (+4 more)
+Cohesion: 0.08
+Nodes (19): RevisionService, Injectable, ChildReportWorkflowController, TransitionRequestDto, Body, Controller, Get, Param (+11 more)
 
 ### Community 25 - "scripts"
 Cohesion: 0.08
 Nodes (24): scripts, build:api, build:deploy, build:portal, db:generate, db:migrate, db:reset, db:seed (+16 more)
 
 ### Community 26 - "prisma.service.ts"
-Cohesion: 0.16
-Nodes (12): ChildSnapshot, InspectionData, SnapshotEquipment, SnapshotInspectionMethod, SnapshotTransitionLog, AuthUser, DRILL_PIPE_REQUIRED_KEYS, allowedTransitionMap (+4 more)
+Cohesion: 0.17
+Nodes (9): UploadedFileDto, ChildReportsService, Injectable, ChildSnapshot, InspectionData, SnapshotEquipment, SnapshotInspectionMethod, SnapshotTransitionLog (+1 more)
 
 ### Community 27 - "SerialInspectionReactiveFormComponent"
 Cohesion: 0.14
@@ -375,23 +394,23 @@ Nodes (21): angularCompilerOptions, enableI18nLegacyMessageIdFormat, strictInjec
 
 ### Community 31 - "dependencies"
 Cohesion: 0.10
-Nodes (21): @angular/animations, @angular/common, @angular/platform-browser, @angular/service-worker, axios, @nestjs/common, @nestjs/core, @nestjs/jwt (+13 more)
+Nodes (21): @angular/animations, @angular-devkit/build-angular, @angular/platform-browser, @angular/service-worker, axios, @nestjs/common, @nestjs/core, @nestjs/jwt (+13 more)
 
 ### Community 32 - "OutboxItem"
-Cohesion: 0.15
+Cohesion: 0.17
 Nodes (4): OutboxItem, OutboxLocalRepo, Injectable, FakeOutboxLocalRepo
 
 ### Community 33 - "InspectionReportWorkflowService"
-Cohesion: 0.15
-Nodes (10): InspectionReportWorkflowController, TransitionRequestDto, Body, Controller, Get, Param, Post, Req (+2 more)
+Cohesion: 0.24
+Nodes (7): InspectionReportWorkflowController, Body, Controller, Get, Param, Post, Req
 
 ### Community 34 - "LocalCustomer"
-Cohesion: 0.14
-Nodes (6): LocalCustomer, CustomerLocalRepo, Injectable, Injectable, UserPreferences, UserPreferencesService
+Cohesion: 0.16
+Nodes (6): TEMPLATE_KEYS, LocalCustomer, CustomerLocalRepo, Injectable, AdminCustomersService, Injectable
 
 ### Community 35 - "child-report-detail.component.ts"
-Cohesion: 0.16
-Nodes (11): CHILD_REPORT_STATUSES, ChildReportStatus, ChildReportType, LocalChildReport, ChildReportLocalRepo, Injectable, ActionState, Banner (+3 more)
+Cohesion: 0.15
+Nodes (13): APP_ROLES, CHILD_REPORT_STATUSES, ChildReportStatus, ENTITY_TYPES, NavItem, DataHydrationSource, ActionState, Banner (+5 more)
 
 ### Community 36 - "layout/index.ts"
 Cohesion: 0.11
@@ -418,44 +437,48 @@ Cohesion: 0.13
 Nodes (14): compilerOptions, module, moduleResolution, outDir, types, extends, include, jest (+6 more)
 
 ### Community 43 - "Offline-Sync Confirmed Risks Index"
-Cohesion: 0.15
-Nodes (15): Risk #2 clearConflicts Over-Deletes, emiResult to disposition Membership Fix, AllExceptionsFilter Flattens Structured Bodies, final.disposition Semantic Orphan, Risk #3 Idempotency Key Not Sent, Offline-Sync Confirmed Risks Index, OutboxItem Interface, F0.2.4 Inspection Data Entry MVP (+7 more)
+Cohesion: 0.18
+Nodes (13): Risk #2 clearConflicts Over-Deletes, Risk #1 CONFLICT is Terminal, emiResult to disposition Membership Fix, AllExceptionsFilter Flattens Structured Bodies, Risk #3 Idempotency Key Not Sent, Offline-Sync Confirmed Risks Index, Conflict Halting on 409, Outbox Pattern (write-local-first, enqueue mutation) (+5 more)
 
 ### Community 45 - "LocalTransitionLog"
-Cohesion: 0.20
+Cohesion: 0.19
 Nodes (6): LocalTransitionLog, TransitionLogLocalRepo, Injectable, InspectionReportTransitionHistoryComponent, Component, Input
 
 ### Community 46 - "devDependencies"
 Cohesion: 0.15
-Nodes (13): dotenv-cli, fake-indexeddb, jest-preset-angular, @nx/eslint, @nx/webpack, @nx/workspace, devDependencies, dotenv-cli (+5 more)
+Nodes (13): dotenv-cli, @eslint/js, jest-preset-angular, @nx/eslint, @nx/webpack, @nx/workspace, devDependencies, dotenv-cli (+5 more)
 
 ### Community 47 - "targets"
 Cohesion: 0.17
 Nodes (11): name, projectType, dependsOn, executor, $schema, sourceRoot, tags, targets (+3 more)
 
 ### Community 48 - "Inspection Report Lifecycle Trace"
-Cohesion: 0.20
-Nodes (12): F0.2 Backend Surface Audit, InspectionReportWorkflowController, Missing GET/PATCH Endpoints, Inspection Report Lifecycle Trace, Optimistic Concurrency (read-compare-guarded-write), Temporal-ID Remapping, Atomic Temporal ID Remapping Architecture, F0.2.1 Inspection Report Creation MVP (+4 more)
+Cohesion: 0.22
+Nodes (9): F0.2 Backend Surface Audit, InspectionReportWorkflowController, Missing GET/PATCH Endpoints, Atomic Temporal ID Remapping Architecture, F0.2.1 Inspection Report Creation MVP, IR_CREATE Outbox Operation, F0.2 Inspection Report Portal Integration, InspectionReportLocalRepo / SerialNumberLocalRepo (+1 more)
 
 ### Community 49 - "Revision Snapshot on Approval/Reopen"
 Cohesion: 0.18
-Nodes (12): Snapshot / InspectionData Authored Types, PENDING_APPROVAL Validation Gate, Revision Snapshot on Approval/Reopen, T0.5.3 Revision Snapshot Engine, pendingTransitionToStatus Optimistic State, F0.2.3 Workflow Transitions UI, F0.2.5 Disposition + Pending Approval Gating, VALIDATION_FAILED 400 on Transition (+4 more)
+Nodes (11): Milestones, T0.5.1 Template Management, T0.5.2 Template Binding, T0.5.3 Revision Snapshot Engine, T0.5.4 PDF Generation Service, pendingTransitionToStatus Optimistic State, F0.2.3 Workflow Transitions UI, ON_HOLD Restore-Previous-Status Logic (+3 more)
+
+### Community 50 - "AdminCustomersService"
+Cohesion: 0.20
+Nodes (6): appRoutes, jwtInterceptor(), HydrationOptions, DATA_HYDRATION_SOURCES, DataHydrationContext, provideDataHydrationSource()
 
 ### Community 52 - "ShellComponent"
 Cohesion: 0.18
 Nodes (3): NavigationService, ShellComponent, Component
 
 ### Community 53 - "Phase 3 any-purge Inventory"
-Cohesion: 0.20
-Nodes (11): Phase 3 any-purge Inventory, AuthenticatedRequest Type, ExcelJS/JSZip Buffer Cast Friction, @types/multer Not Installed, no-explicit-any ESLint Rule, portal spec-tsconfig moduleResolution Artifact, TypeScript strict Flag Enablement, Phase 3 Strict-Flag + ESLint Fallout Inventory (+3 more)
+Cohesion: 0.18
+Nodes (12): Phase 3 any-purge Inventory, AuthenticatedRequest Type, ExcelJS/JSZip Buffer Cast Friction, @types/multer Not Installed, Snapshot / InspectionData Authored Types, no-explicit-any ESLint Rule, portal spec-tsconfig moduleResolution Artifact, TypeScript strict Flag Enablement (+4 more)
 
 ### Community 54 - "T0.2 Database Operational Baseline Plan"
 Cohesion: 0.18
 Nodes (11): AuditLog, T0.2 Database Operational Baseline Plan, Prisma + Postgres Stack, PrismaService / PrismaModule, provision-tenant.ts Script, Tenant Isolation (tenantId scoping), WSL Docker Named Volume Approach, inspectionData as JSONB (template flexibility) (+3 more)
 
 ### Community 56 - "AdminTemplatesComponent"
-Cohesion: 0.16
-Nodes (5): LoginComponent, Component, ViewChild, AdminTemplatesComponent, Component
+Cohesion: 0.19
+Nodes (4): AdminTemplatesComponent, Component, AdminTemplatesService, Injectable
 
 ### Community 57 - "InspectionReportReworkStatusComponent"
 Cohesion: 0.22
@@ -498,8 +521,8 @@ Cohesion: 0.22
 Nodes (7): ReturnBatchDto, IsArray, IsInt, IsNotEmpty, IsOptional, IsString, Min
 
 ### Community 68 - "Outbox Pattern (write-local-first, enqueue mutation)"
-Cohesion: 0.25
-Nodes (9): ConnectivityService, DbService (IndexedDB), OutboxService, PWA Offline Network State of Play, SyncOrchestratorService, Outbox Drain (FIFO + dependency gating), Risk #1 CONFLICT is Terminal, Conflict Halting on 409 (+1 more)
+Cohesion: 0.50
+Nodes (5): ConnectivityService, DbService (IndexedDB), OutboxService, PWA Offline Network State of Play, SyncOrchestratorService
 
 ### Community 69 - "T0.3 Authentication Foundation"
 Cohesion: 0.22
@@ -510,8 +533,8 @@ Cohesion: 0.22
 Nodes (9): T0.1 Baseline Hardening Plan, Default-Deny Guard, Environment Variable Config Strategy, Node.js 20.19.3 Version Lock, T0.1 Decisions, No proxy.conf (CORS mirrors production), Node 20.19.3 Nx Angular Workaround, T0.1 Changes (+1 more)
 
 ### Community 71 - "LocalInspectionApprovalBatch"
-Cohesion: 0.36
-Nodes (3): LocalInspectionApprovalBatch, ApprovalBatchLocalRepo, Injectable
+Cohesion: 0.16
+Nodes (5): LocalInspectionApprovalBatch, ApprovalBatchLocalRepo, Injectable, DbService, Injectable
 
 ### Community 72 - "development"
 Cohesion: 0.25
@@ -538,8 +561,8 @@ Cohesion: 0.29
 Nodes (7): executor, options, args, command, cwd, build, --node-env=production
 
 ### Community 80 - "F0.2.2 Serial Numbers MVP"
-Cohesion: 0.29
-Nodes (7): Characterize Before Touching Behavior, Serial Edit-Forbidden Guard (approvalStatus casts), Serial clientRef Remap, Characterization Test Pattern (assertions designed to flip), Serial BULK_CREATE (clientRef/serialNumber), F0.2.2 Serial Numbers MVP, Serial Uniqueness Constraint (tenantId/inspectionReportId/serial)
+Cohesion: 0.33
+Nodes (6): Characterize Before Touching Behavior, Serial Edit-Forbidden Guard (approvalStatus casts), Characterization Test Pattern (assertions designed to flip), Serial BULK_CREATE (clientRef/serialNumber), F0.2.2 Serial Numbers MVP, Serial Uniqueness Constraint (tenantId/inspectionReportId/serial)
 
 ### Community 81 - "portal/project.json"
 Cohesion: 0.29
@@ -554,12 +577,16 @@ Cohesion: 0.29
 Nodes (7): jestConfig, passWithNoTests, test, executor, options, outputs, {workspaceRoot}/coverage/portal
 
 ### Community 84 - "http-error.utils.ts"
-Cohesion: 0.43
-Nodes (6): ErrorPayload, ErrorPayloadObject, extractBackendErrorMessage(), extractRecordMessages(), joinMessages(), withNormalizedHttpErrorMessage()
+Cohesion: 0.36
+Nodes (7): apiErrorInterceptor(), ErrorPayload, ErrorPayloadObject, extractBackendErrorMessage(), extractRecordMessages(), joinMessages(), withNormalizedHttpErrorMessage()
 
 ### Community 86 - "InspectionReportApprovalBatchesComponent"
 Cohesion: 0.29
 Nodes (4): InspectionReportApprovalBatchesComponent, Component, Input, Output
+
+### Community 87 - "AdminTemplatesService"
+Cohesion: 0.20
+Nodes (11): ChildReportsController, Body, Controller, Get, Param, Patch, Post, Query (+3 more)
 
 ### Community 88 - "Customer role workspace (view reports,"
 Cohesion: 0.43
@@ -578,8 +605,8 @@ Cohesion: 0.53
 Nodes (5): main(), prisma, provisionNobleCorporation(), provisionRolesForTenant(), provisionTenant()
 
 ### Community 92 - "Milestones"
-Cohesion: 0.33
-Nodes (6): Hardcoded DRILL_PIPE_REPORT templateKey, Template-Version Binding Lock-In, Milestones, T0.5.1 Template Management, T0.5.2 Template Binding, T0.5.4 PDF Generation Service
+Cohesion: 0.14
+Nodes (11): TemplateController, Body, Controller, Get, Param, Patch, Post, Req (+3 more)
 
 ### Community 93 - "F0.1.4 Admin User Management MVP"
 Cohesion: 0.33
@@ -594,16 +621,16 @@ Cohesion: 0.33
 Nodes (4): InspectionReportAddSerialPanelComponent, Component, Input, Output
 
 ### Community 98 - "InspectionReportHeaderComponent"
-Cohesion: 0.33
-Nodes (4): InspectionReportHeaderComponent, Component, Input, Output
+Cohesion: 0.16
+Nodes (9): LocalInspectionReport, InspectionReportLocalRepo, Injectable, InspectionReportHeaderComponent, Component, Input, Output, expectRequest() (+1 more)
 
 ### Community 100 - "OTS Monorepo"
 Cohesion: 0.50
 Nodes (5): Postgres Service (Docker), Angular Portal, NestJS API, OTS Monorepo, Prisma ORM
 
 ### Community 101 - "SyncOrchestratorService"
-Cohesion: 0.50
-Nodes (5): Two Write Paths (online server-first / offline queue), IndexedDB Per-Tenant Partitioning (ots_{tenantId}), Stale-While-Revalidate (pullAllAndCache), SyncOrchestratorService, F0.1.7 Tenant Isolation & Online Revalidation
+Cohesion: 0.67
+Nodes (4): IndexedDB Per-Tenant Partitioning (ots_{tenantId}), Stale-While-Revalidate (pullAllAndCache), SyncOrchestratorService, F0.1.7 Tenant Isolation & Online Revalidation
 
 ### Community 102 - "package.json"
 Cohesion: 0.40
@@ -622,8 +649,8 @@ Cohesion: 0.40
 Nodes (5): production, budgets, buildTarget, fileReplacements, outputHashing
 
 ### Community 107 - "InspectionReportBannersComponent"
-Cohesion: 0.40
-Nodes (4): InspectionBanner, InspectionReportBannersComponent, Component, Input
+Cohesion: 0.12
+Nodes (15): Conflict resolution when the same report is edited offline _and_ online, Docs vs. reality — flagged for spec cross-check, Hop 10 — Approval-batch pipeline, Hop 1 — Create on device (offline), Hop 2 — IndexedDB via local repo, Hop 3 — Outbox enqueue, Hop 4 — Sync trigger, Hop 5 — Outbox drain (ordering + dependency gating) (+7 more)
 
 ### Community 108 - "status-badge.component.ts"
 Cohesion: 0.40
@@ -661,25 +688,89 @@ Nodes (3): First-Login Change Password Template, Authentication Feature Area, Lo
 Cohesion: 0.67
 Nodes (3): Report Status Workflow / Transitions, Workflow Transition Bar Section Template, Transition History Timeline Section Template
 
+### Community 128 - "@angular-devkit/build-angular"
+Cohesion: 0.21
+Nodes (3): mustChangePasswordGuard(), SessionService, Injectable
+
+### Community 143 - "@eslint/js"
+Cohesion: 0.23
+Nodes (3): InspectionReportListComponent, Component, Input
+
+### Community 214 - "AppService"
+Cohesion: 0.27
+Nodes (5): AppController, Controller, Get, AppService, Injectable
+
+### Community 215 - "Known Issues"
+Cohesion: 0.20
+Nodes (9): 1. A conflicted entity row never returns to SYNCED, 2. `clearConflicts` over-deletes and discards the local edit, 3. `idempotencyKey` is generated but never transmitted, 4. PENDING_APPROVAL gate reads a disposition field production never writes, 5. Global exception filter flattens structured HttpException bodies, 6. Environment variables are not validated at boot, API-side data / validation, Known Issues (+1 more)
+
+### Community 216 - "ADR-0008 — No shared DTO package"
+Cohesion: 0.25
+Nodes (6): ADR-0008 — No shared DTO package, Consequences, Context, Decision, API Documentation, Endpoints
+
+### Community 217 - "adr/README.md"
+Cohesion: 0.29
+Nodes (5): ADR-0007 — REWORK asymmetry, Consequences, Context, Decision, Architecture Decision Records
+
+### Community 218 - "Disposition Stored in inspectionData.disposition"
+Cohesion: 0.29
+Nodes (7): final.disposition Semantic Orphan, F0.2.4 Inspection Data Entry MVP, SerialNumber.inspectionData Json Column, SN_UPDATE_INSPECTION Operation, F0.2.5 Disposition + Pending Approval Gating, Disposition Stored in inspectionData.disposition, VALIDATION_FAILED 400 on Transition
+
+### Community 219 - "ADR-0001 — Revision-snapshot engine"
+Cohesion: 0.40
+Nodes (4): ADR-0001 — Revision-snapshot engine, Consequences, Context, Decision
+
+### Community 220 - "ADR-0002 — Optimistic concurrency everywhere"
+Cohesion: 0.40
+Nodes (4): ADR-0002 — Optimistic concurrency everywhere, Consequences, Context, Decision
+
+### Community 221 - "ADR-0003 — Multi-tenant model (tenantId scoping, single DB gateway)"
+Cohesion: 0.40
+Nodes (4): ADR-0003 — Multi-tenant model (tenantId scoping, single DB gateway), Consequences, Context, Decision
+
+### Community 222 - "ADR-0004 — JWT default-deny RBAC"
+Cohesion: 0.40
+Nodes (4): ADR-0004 — JWT default-deny RBAC, Consequences, Context, Decision
+
+### Community 223 - "ADR-0005 — Export determinism is structural-only"
+Cohesion: 0.40
+Nodes (4): ADR-0005 — Export determinism is structural-only, Consequences, Context, Decision
+
+### Community 224 - "ADR-0006 — Offline-sync core"
+Cohesion: 0.40
+Nodes (4): ADR-0006 — Offline-sync core, Consequences, Context, Decision
+
+### Community 225 - "ADR-0009 — Single-template hardcode with an unwired multi-template seam"
+Cohesion: 0.40
+Nodes (4): ADR-0009 — Single-template hardcode with an unwired multi-template seam, Consequences, Context, Decision
+
+### Community 226 - "Build / test tooling"
+Cohesion: 0.50
+Nodes (4): 10. Portal spec tsconfig cannot type-check (phantom errors), 11. Two latent type errors invisible to Jest (swc transpile, not tsc), 12. JWT secret and revision number reach strict-null-check sites as possibly-undefined, Build / test tooling
+
+### Community 227 - "Type system / upstream friction"
+Cohesion: 0.50
+Nodes (4): 7. ExcelJS / JSZip buffer loads require `as unknown as` casts, 8. `@types/multer` is not installed, 9. Prisma `JsonValue` is not directly indexable, Type system / upstream friction
+
 ## Knowledge Gaps
-- **445 isolated node(s):** `singleQuote`, `semi`, `trailingComma`, `printWidth`, `tabWidth` (+440 more)
+- **505 isolated node(s):** `1. A conflicted entity row never returns to SYNCED`, `2. `clearConflicts` over-deletes and discards the local edit`, `3. `idempotencyKey` is generated but never transmitted`, `4. PENDING_APPROVAL gate reads a disposition field production never writes`, `5. Global exception filter flattens structured HttpException bodies` (+500 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **97 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **95 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `dependencies` connect `dependencies` to `@angular-devkit/build-angular`, `@angular/forms`, `@angular/platform-browser-dynamic`, `@angular/router`, `bcrypt`, `class-transformer`, `class-validator`, `exceljs`, `form-data`, `export.service.ts`, `@nestjs/config`, `@nestjs/passport`, `passport`, `passport-jwt`, `reflect-metadata`, `rxjs`, `@types/jszip`, `package.json`, `@angular/compiler`, `@angular/core`?**
-  _High betweenness centrality (0.067) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `dependencies` to `@angular/forms`, `@angular/platform-browser-dynamic`, `@angular/router`, `bcrypt`, `class-transformer`, `class-validator`, `exceljs`, `form-data`, `export.service.ts`, `@nestjs/config`, `@nestjs/passport`, `passport`, `passport-jwt`, `reflect-metadata`, `rxjs`, `@types/jszip`, `@angular/common`, `package.json`, `@angular/compiler`, `@angular/core`?**
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
 - **Why does `jszip` connect `export.service.ts` to `dependencies`?**
-  _High betweenness centrality (0.062) - this node is a cross-community bridge._
-- **Why does `AuthenticatedRequest` connect `AuthenticatedRequest` to `FilesService`, `InspectionReportWorkflowService`, `AuthService`, `template-upload.integration.spec.ts`, `SerialNumbersController`, `export.service.ts`, `UsersService`, `customers.controller.ts`, `CustomersService`, `RevisionService`, `inspection-reports.controller.ts`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+- **Why does `AuthenticatedRequest` connect `AuthenticatedRequest` to `FilesService`, `InspectionReportWorkflowService`, `AuthService`, `SerialNumbersController`, `Milestones`, `export.service.ts`, `CustomersService`, `UsersService`, `customers.controller.ts`, `AdminTemplatesService`, `RevisionService`, `prisma.service.ts`, `inspection-reports.controller.ts`?**
+  _High betweenness centrality (0.053) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `InspectionReportDetailComponent` (e.g. with `ChildReportDetailComponent` and `InspectionReportListComponent`) actually correct?**
   _`InspectionReportDetailComponent` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `singleQuote`, `semi`, `trailingComma` to the rest of the system?**
-  _445 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `1. A conflicted entity row never returns to SYNCED`, `2. `clearConflicts` over-deletes and discards the local edit`, `3. `idempotencyKey` is generated but never transmitted` to the rest of the system?**
+  _505 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `FilesService` be split into smaller, more focused modules?**
-  _Cohesion score 0.06334841628959276 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.14285714285714285 - nodes in this community are weakly interconnected._
 - **Should `AppRole` be split into smaller, more focused modules?**
   _Cohesion score 0.06787330316742081 - nodes in this community are weakly interconnected._
