@@ -2,9 +2,8 @@
 
 Standing, verified technical issues in the OTS Web Portal. Each entry states current
 behavior as fact with source anchors (`path:line` — correct at time of writing;
-verify against current code before relying on an exact line). This file supersedes
-the process-framed `docs/internal/` inventories; only durable technical facts were
-carried over, not cleanup sequencing or counts.
+verify against current code before relying on an exact line). Only durable technical
+facts are recorded here — not cleanup sequencing or counts.
 
 ## Offline-sync core (`portal/src/app/core/offline/`)
 
