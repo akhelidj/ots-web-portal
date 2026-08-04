@@ -1,17 +1,17 @@
 /**
- * Characterization — template upload + validation (the Block 2b tripwire).
+ * Integration test — template upload + validation.
  * Runs under the `test-integration` target against the dedicated test Postgres
  * (docker-compose.test.yml → ots_test on 5433). Real PrismaService, real
  * persistence; the DB safety guard in api/test/integration-env.ts has already
  * validated DATABASE_URL before this file loads.
  *
  * WHY THIS EXISTS: the create-template-binding spec covers report→template
- * binding, NOT template upload/validation. Before Block 2c purges the template
- * module's `any` (the `file: any` upload param + validation), this pins the
- * current upload/validate behavior so the purge has a tripwire.
+ * binding, NOT template upload/validation. This pins the current upload/validate
+ * behavior. (The template module's file-upload param is untyped; see
+ * docs/KNOWN-ISSUES.md #8.)
  *
- * These are BASELINE assertions of intended behavior — no flip tag, NOT added to
- * docs/internal/sync-risks.md. They describe what the code does today:
+ * These are BASELINE assertions of intended behavior — not a known bug. They
+ * describe what the code does today:
  *   - validateTemplate gate order: extension → MIME → ExcelJS parse → worksheet
  *     count, each throwing BadRequestException with its current message;
  *   - createTemplate persists the blob to Template.fileBlob, returns metadata with
@@ -169,7 +169,7 @@ describe('Template upload / validation [integration]', () => {
       expect(Buffer.from(row.fileBlob).equals(REAL_TEMPLATE_BYTES)).toBe(true);
     });
 
-    it('versions and deprecates: a second upload of the same key becomes v2 ACTIVE and flips the prior version to DEPRECATED', async () => {
+    it('versions and deprecates: a second upload of the same key becomes version 2 ACTIVE and moves the prior version to DEPRECATED', async () => {
       // BASELINE: the version/deprecation lifecycle on re-upload.
       const tenant = await seedTenant(prisma);
 

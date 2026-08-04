@@ -1,23 +1,20 @@
 /**
- * Characterization — ChildReportsService.updateChildReportSerialNumber (Block 3b).
+ * Integration test — ChildReportsService.updateChildReportSerialNumber.
  * Runs under the `test-integration` target against the dedicated test Postgres.
  * Real PrismaService, real ChildReport / ChildReportSerialNumber rows.
  *
- * WHY THIS EXISTS: updateChildReportSerialNumber writes a child-serial join row through
- * TWO `as any` casts (child-reports.service.ts:286, :296). Block 3d will purge them, so
- * this spec pins the exact behavior each cast gates FIRST.
+ * WHY THIS EXISTS: updateChildReportSerialNumber writes a child-serial join row via
+ * two paths worth pinning:
  *
- *   Cast A (:286) — `payload.inspectionData as any` into the `inspectionData Json?`
- *     column. CATEGORY (a): a structural JSON-typing cast (Prisma's InputJsonValue is
- *     stricter than Record<string, unknown>); the value flowing through is always a
- *     valid JSON object. Mechanical drop for 3d (→ Prisma.InputJsonValue); no value can
- *     make it misbehave, so it is pinned only incidentally (every write carries it).
+ *   inspectionData (:286) — the payload JSON is written to the `inspectionData Json?`
+ *     column via Prisma's InputJsonValue (stricter than Record<string, unknown>). The
+ *     value flowing through is always a valid JSON object, so it is pinned only
+ *     incidentally (every write carries it).
  *
- *   Cast B (:296) — was `disp as any` into the `disposition SerialDisposition?` enum
- *     column, where `disp = inspectionData.body.emiResult` is a RAW STRING lifted out of
- *     the JSON blob. CATEGORY (b), THE LANDMINE. Block 3d-ii replaced the cast with a
- *     runtime membership check and closed the child-only guard gap, so two assertions
- *     here have since FLIPPED (see below).
+ *   disposition (:296) — `disp = inspectionData.body.emiResult` is a RAW STRING lifted
+ *     out of the JSON blob and resolved into the `disposition SerialDisposition?` enum
+ *     column via a runtime membership check. This is the load-bearing path (see the
+ *     REWORK guard and invalid-value rejection below).
  *
  * The write path also branches on real persisted state (`crsn.approvalStatus` drives a
  * NOT_INSPECTED -> INSPECTED_DRAFT auto-transition; tenant ownership is re-checked
@@ -25,8 +22,8 @@
  * rows, not just inputs. The only pure-input branch — the REWORK payload guard — fires
  * before any DB read and is exercised here too.
  *
- * Most assertions are BASELINE (no flip tag). TWO were FLIPPED by Block 3d-ii and now
- * assert the FIXED behavior as fact (see docs/internal/sync-risks.md, "Block 3d-ii"):
+ * Two assertions pin behavior that closed real gaps (REWORK asymmetry — see
+ * docs/adr/0007-rework-asymmetry.md):
  *   - the 'REWORK'-via-emiResult bypass is now rejected (child guard-gap closed);
  *   - an invalid emiResult is now rejected up-front with BadRequestException in-service
  *     (previously an opaque Prisma query-time error).
@@ -163,13 +160,13 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
     );
   });
 
-  describe('the emiResult -> disposition landmine (cast B) — CLOSED in 3d-ii', () => {
-    it("FLIPPED (3d-ii): a body.emiResult of 'REWORK' is now REJECTED — the child guard-gap is closed", async () => {
-      // KNOWN BUG -> FIXED (docs/internal/sync-risks.md, Block 3d-ii). Previously the
-      // top-level guard only inspected payload.disposition, so REWORK smuggled through
+  describe('the emiResult -> disposition guard (child path rejects REWORK)', () => {
+    it("a body.emiResult of 'REWORK' is REJECTED — the child guard-gap is closed", async () => {
+      // See docs/adr/0007-rework-asymmetry.md. Previously the top-level guard only
+      // inspected payload.disposition, so REWORK smuggled through
       // inspectionData.body.emiResult bypassed it and was written to the column. The
       // membership check now resolves the emiResult-derived value and re-applies the
-      // same REWORK rejection. Flipped in 3d-ii.
+      // same REWORK rejection.
       const { tenant, serial, child } = await seedCrsnCase({
         approvalStatus: SerialApprovalStatus.NOT_INSPECTED,
       });
@@ -187,13 +184,12 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
       expect(row?.approvalStatus).toBe(SerialApprovalStatus.NOT_INSPECTED);
     });
 
-    it('FLIPPED (3d-ii): an invalid body.emiResult is now rejected up-front with BadRequestException, persisting nothing', async () => {
-      // KNOWN BUG -> FIXED (docs/internal/sync-risks.md, Block 3d-ii). The `as any` let
-      // an arbitrary string reach the enum column, where Prisma rejected it at query time
-      // (opaque, server-attributed). The membership check now detects the invalid value
-      // in-service and throws BadRequestException before any write. Outcome is still
-      // "rejected + nothing persisted", now honest and client-attributable. Flipped in
-      // 3d-ii.
+    it('an invalid body.emiResult is rejected up-front with BadRequestException, persisting nothing', async () => {
+      // An untyped write once let an arbitrary string reach the enum column, where
+      // Prisma rejected it at query time (opaque, server-attributed). The membership
+      // check now detects the invalid value in-service and throws BadRequestException
+      // before any write. Outcome is still "rejected + nothing persisted", now honest
+      // and client-attributable.
       const { tenant, serial, child } = await seedCrsnCase({
         approvalStatus: SerialApprovalStatus.NOT_INSPECTED,
       });

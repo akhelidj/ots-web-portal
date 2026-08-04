@@ -1,6 +1,6 @@
 /**
- * Characterization tests — risk #3 (idempotency key generated but never sent),
- * client-side / unit-testable half. See docs/internal/sync-risks.md.
+ * Behavior-pinning tests — idempotency key generated but never sent
+ * (KNOWN-ISSUES #3), client-side / unit-testable half. See docs/KNOWN-ISSUES.md.
  *
  * These drive the REAL production path end-to-end at the client boundary:
  *   OutboxService.enqueue -> OutboxService.processQueue -> SyncDispatcherService.dispatch -> HTTP
@@ -8,14 +8,14 @@
  * single-request CREATE path (CUSTOMER:CREATE) is used — CREATE is where the
  * duplicate risk actually bites.
  *
- * WHICH ASSERTIONS ARE EXPECTED TO FLIP IN PHASE 3:
+ * WHICH ASSERTIONS PIN THE KNOWN BUG vs. STABLE BEHAVIOR:
  *   - The "key is absent from the request" assertions (test 1, and the key-absent
- *     check inside the retry test) are KNOWN-BUG pins and WILL flip once Phase 3
- *     attaches the idempotency key. They carry the CHARACTERIZATION comment.
+ *     check inside the retry test) pin the known bug (KNOWN-ISSUES #3); they will
+ *     change once the idempotency key is attached. They carry the "known bug" comment.
  *   - The status-transition assertions (5xx -> PENDING, 4xx -> FAILED) and the
- *     same-URL / same-body assertions characterize correct, stable behavior and are
- *     NOT expected to flip. Phase 3 adds a header; it does not change the queue
- *     status logic or the URL/body. Do not read those staying green as "unfixed".
+ *     same-URL / same-body assertions pin correct, stable behavior and are not
+ *     expected to change. A fix adds a header; it does not change the queue status
+ *     logic or the URL/body. Do not read those staying green as "unfixed".
  *
  * Zoneless note: this suite deliberately avoids fakeAsync/tick (which depend on
  * zone.js). It uses real async and a setTimeout(0) macrotask drain to let the
@@ -204,7 +204,7 @@ describe('Offline sync — idempotency key on the wire (risk #3, client-side)', 
     // Body is exactly the payload — the key is a sibling field on the outbox item,
     // and it is not folded into the request anywhere.
     expect(req.request.body).toEqual(item.payload);
-    // CHARACTERIZATION — pins current behavior. KNOWN BUG (risk #3), see docs/internal/sync-risks.md. Phase 3 fix will flip this.
+    // Pins current behavior. KNOWN BUG (KNOWN-ISSUES #3), see docs/KNOWN-ISSUES.md. A fix will change this.
     assertKeyAbsentFromRequest(req, IDEMPOTENCY_KEY);
 
     req.flush({ id: 'srv-cust-1', ...item.payload, version: 1 });
@@ -213,8 +213,8 @@ describe('Offline sync — idempotency key on the wire (risk #3, client-side)', 
 
   it('leaves the item PENDING (stays queued) on a 5xx response', async () => {
     // NOTE: 5xx -> PENDING is correct, stable behavior (transient errors should
-    // retry). It is NOT expected to flip in Phase 3. It is characterized here
-    // because it is the substrate the risk rides on: the retry re-sends with no key.
+    // retry). It is NOT expected to change. It is pinned here because it is the
+    // substrate the bug rides on: the retry re-sends with no key.
     const item = makeCustomerCreateItem();
     await outbox.enqueue(item);
 
@@ -233,7 +233,7 @@ describe('Offline sync — idempotency key on the wire (risk #3, client-side)', 
   });
 
   it('marks the item FAILED on a 4xx in [400,500)', async () => {
-    // Stable characterization: a 4xx is terminal -> FAILED. Not expected to flip.
+    // Stable: a 4xx is terminal -> FAILED. Not expected to change.
     const item = makeCustomerCreateItem();
     await outbox.enqueue(item);
 
@@ -275,12 +275,12 @@ describe('Offline sync — idempotency key on the wire (risk #3, client-side)', 
     await flush();
     const req2 = httpMock.expectOne(CUSTOMERS_URL);
 
-    // Stable characterization: same target, same payload (this part does NOT flip).
+    // Stable: same target, same payload (this part does NOT change).
     expect(req2.request.method).toBe('POST');
     expect(req2.request.urlWithParams).toBe(url1);
     expect(req2.request.body).toEqual(body1);
 
-    // CHARACTERIZATION — pins current behavior. KNOWN BUG (risk #3), see docs/internal/sync-risks.md. Phase 3 fix will flip this.
+    // Pins current behavior. KNOWN BUG (KNOWN-ISSUES #3), see docs/KNOWN-ISSUES.md. A fix will change this.
     // With no idempotency key on either request, a 5xx that actually committed
     // server-side would be duplicated by this identical retry.
     assertKeyAbsentFromRequest(req2, IDEMPOTENCY_KEY);

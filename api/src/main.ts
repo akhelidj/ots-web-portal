@@ -24,8 +24,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     console.error(exception);
 
     // NOTE: intentionally reads `.message`, NOT `.getResponse()` — the resulting
-    // flattening of structured HttpException bodies is a known gap logged in
-    // docs/internal/sync-risks.md ("Block 3h"), owned by a separate fix. Preserve it.
+    // flattening of structured HttpException bodies is a known gap documented in
+    // docs/KNOWN-ISSUES.md (#5), owned by a separate fix. Preserve it.
     const status =
       exception instanceof HttpException ? exception.getStatus() : 500;
 

@@ -1,6 +1,6 @@
 /**
- * Characterization tests — risk #1 (CONFLICT is terminal).
- * See docs/internal/sync-risks.md.
+ * Behavior-pinning tests — a conflicted row is terminal (KNOWN-ISSUES #1).
+ * See docs/KNOWN-ISSUES.md.
  *
  * Once a row's syncState is 'CONFLICT', no code path resets it to 'SYNCED':
  *  - hydration's guard `if (!local || local.syncState === 'SYNCED')`
@@ -14,15 +14,14 @@
  * real IndexedDB row and read it back through the real repo — the most faithful pin.
  * (structuredClone polyfill for fake-indexeddb lives in portal/src/test-setup.ts.)
  *
- * WHICH ASSERTIONS ARE EXPECTED TO FLIP IN PHASE 3:
+ * WHICH ASSERTIONS PIN THE KNOWN BUG vs. STABLE BEHAVIOR:
  *   - Test 1's "row stays CONFLICT with its local values, server truth ignored"
- *     assertions are the KNOWN-BUG pins for the stuck-CONFLICT behavior and WILL
- *     flip once Phase 3 makes a conflicted row recoverable. They carry the
- *     CHARACTERIZATION comment.
+ *     assertions pin the stuck-CONFLICT behavior (KNOWN-ISSUES #1); they will change
+ *     once a conflicted row becomes recoverable. They carry the "known bug" comment.
  *   - Test 2 documents that saveReportUpdates re-409s on a stale version and does
  *     NOT reset CONFLICT->SYNCED. That is correct optimistic concurrency (a stale
- *     PATCH *should* 409); it is a STABLE guard against a Phase 3 refactor mistaking
- *     that path for dead code, and is NOT expected to flip.
+ *     PATCH *should* 409); it is a stable guard against a refactor mistaking that
+ *     path for dead code, and is not expected to change.
  */
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
@@ -160,7 +159,7 @@ describe('Inspection reports — terminal CONFLICT state (risk #1)', () => {
 
     const after = await irRepo.getById('ir-1');
 
-    // CHARACTERIZATION — pins current behavior. KNOWN BUG (risk #1), see docs/internal/sync-risks.md. Phase 3 fix will flip this.
+    // Pins current behavior. KNOWN BUG (KNOWN-ISSUES #1), see docs/KNOWN-ISSUES.md. A fix will change this.
     // Hydration skips the conflicted row, so server truth is discarded and the row
     // is left CONFLICT with its stale local values — the "stuck CONFLICT" state.
     expect(after?.syncState).toBe('CONFLICT');
@@ -176,11 +175,11 @@ describe('Inspection reports — terminal CONFLICT state (risk #1)', () => {
   });
 
   it('saveReportUpdates on a conflicted row re-409s on the stale version and does NOT reset CONFLICT->SYNCED (stable: documents the dead reset path)', async () => {
-    // STABLE characterization — NOT expected to flip. saveReportUpdates has a
-    // syncState:'SYNCED' upsert on a successful PATCH, but after a conflict the
-    // local version is stale, so the PATCH itself 409s and rethrows before ever
-    // reaching that write. This test documents that the path's current effect is
-    // "no reset", so a Phase 3 refactor does not mistake it for dead code.
+    // STABLE — not expected to change. saveReportUpdates has a syncState:'SYNCED'
+    // upsert on a successful PATCH, but after a conflict the local version is stale,
+    // so the PATCH itself 409s and rethrows before ever reaching that write. This
+    // test documents that the path's current effect is "no reset", so a refactor
+    // does not mistake it for dead code.
     await irRepo.upsert(conflictLocal);
 
     let caught: unknown;

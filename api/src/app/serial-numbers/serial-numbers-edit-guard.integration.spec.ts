@@ -1,5 +1,5 @@
 /**
- * Characterization — serial-numbers edit-forbidden guard (Block 3a, HIGHEST STAKES).
+ * Integration test — serial-numbers edit-forbidden guard (HIGHEST STAKES).
  * Runs under the `test-integration` target against the dedicated test Postgres.
  * Real PrismaService, real rows in real approval/report states.
  *
@@ -7,7 +7,7 @@
  * authorization guard keyed on the serial's `approvalStatus`, read today through
  * six `(serialToUpdate as any).approvalStatus` casts. `approvalStatus` is in fact a
  * typed enum column (SerialApprovalStatus: NOT_INSPECTED | INSPECTED_DRAFT |
- * SUBMITTED_FOR_APPROVAL | APPROVED), so Block 3d will drop those casts. This spec
+ * SUBMITTED_FOR_APPROVAL | APPROVED). This spec
  * pins the exact allowed/forbidden boundary FIRST, so any shift in when the guard
  * fires — i.e. who may edit an in-flight/approved serial — breaks a test.
  *
@@ -21,8 +21,8 @@
  *   APPROVED/CLOSED. The boundary sits between INSPECTED_DRAFT (editable) and
  *   SUBMITTED_FOR_APPROVAL (forbidden).
  *
- * BASELINE assertions of intended authorization behavior — no flip tag, NOT in
- * docs/internal/sync-risks.md. This is a deliberate control, not a bug.
+ * BASELINE assertions of intended authorization behavior — this is a deliberate
+ * control, not a bug.
  */
 import { BadRequestException } from '@nestjs/common';
 import {
@@ -256,13 +256,14 @@ describe('SerialNumbersService.updateSerialNumber edit-guard [integration]', () 
     });
   });
 
-  describe('parent REWORK-via-emiResult is SANCTIONED (class-C baseline — feeds syncReworkChildReport)', () => {
+  describe('parent REWORK-via-emiResult is SANCTIONED (feeds syncReworkChildReport)', () => {
     it('accepts a parent serial whose body.emiResult is REWORK and writes disposition=REWORK', async () => {
-      // BASELINE — no flip tag. Unlike the child path (which rejects REWORK), a PARENT
-      // serial marked REWORK via emiResult is the sanctioned trigger ChildReportsService
-      // .syncReworkChildReport keys on (it filters serials by body.emiResult === REWORK).
-      // The 3d-ii membership check must therefore let REWORK pass through here. This pins
-      // that acceptance so the membership change can never silently start rejecting it.
+      // Unlike the child path (which rejects REWORK), a PARENT serial marked REWORK via
+      // emiResult is the sanctioned trigger ChildReportsService.syncReworkChildReport
+      // keys on (it filters serials by body.emiResult === REWORK). The disposition
+      // membership check must therefore let REWORK pass through here. This pins that
+      // acceptance so the check can never silently start rejecting it.
+      // See docs/adr/0007-rework-asymmetry.md.
       const { tenant, serial } = await seedGuardCase(
         InspectionReportStatus.IN_INSPECTION,
         SerialApprovalStatus.NOT_INSPECTED,

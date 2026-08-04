@@ -1,8 +1,7 @@
 /**
- * Characterization [unit] — AllExceptionsFilter (the global exception filter in
- * main.ts). Pins the CURRENT flatten behavior of the `catch (exception: any)`
- * site ahead of the 3h-ii `any -> unknown` typing rewrite. These are a documented
- * BASELINE the rewrite must hold — NOT flip tags.
+ * Unit test — AllExceptionsFilter (the global exception filter in main.ts). Pins
+ * the current flatten behavior of the exception-handling site. These assertions are
+ * a documented baseline the filter must hold.
  *
  * NestFactory is mocked so importing main.ts (which calls bootstrap() at module
  * load) does not spin up a real HTTP server / bind a port; only NestFactory.create
@@ -12,9 +11,9 @@
  * NOTE on case (b2): the filter reads `.message` (not `.getResponse()`), so a
  * structured HttpException body (code / missingDispositionSerials /
  * missingRequiredFields) is flattened away over the wire in production. That is a
- * KNOWN latent gap logged in docs/internal/sync-risks.md ("Block 3h — global-filter
- * flattening"); it is pinned here as current fact and is deliberately NOT fixed or
- * flipped in this block — a separate sanctioned block owns that change.
+ * known gap documented in docs/KNOWN-ISSUES.md (#5, global-filter flattening); it is
+ * pinned here as current fact and is deliberately not fixed here — a separate change
+ * owns that fix.
  */
 jest.mock('@nestjs/core', () => ({
   ...jest.requireActual('@nestjs/core'),
@@ -71,7 +70,7 @@ describe('AllExceptionsFilter (global exception filter) [unit]', () => {
     expect(typeof body.stack).toBe('string');
   });
 
-  it('(b2) BadRequestException(structured) → FLATTENED to the message string; code/missing* are DROPPED (KNOWN latent gap, sync-risks.md — pinned, not fixed here)', () => {
+  it('(b2) BadRequestException(structured) → FLATTENED to the message string; code/missing* are DROPPED (KNOWN latent gap, KNOWN-ISSUES.md #5 — pinned, not fixed here)', () => {
     const { host, status, json } = makeHost();
 
     filter.catch(
@@ -89,7 +88,7 @@ describe('AllExceptionsFilter (global exception filter) [unit]', () => {
     expect(body.statusCode).toBe(400);
     // Only the string message survives — the filter never reads .getResponse().
     expect(body.message).toBe('Cannot request approval: missing disposition');
-    // CHARACTERIZATION of the current flattening: structured fields do not survive.
+    // Pins the current flattening: structured fields do not survive.
     expect(body.code).toBeUndefined();
     expect(body.missingDispositionSerials).toBeUndefined();
     expect(body.missingRequiredFields).toBeUndefined();

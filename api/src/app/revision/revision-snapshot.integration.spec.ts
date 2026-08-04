@@ -1,14 +1,13 @@
 /**
- * Characterization — the revision-snapshot engine (RevisionService), as driven by
+ * Integration test — the revision-snapshot engine (RevisionService), as driven by
  * the workflow transition path. Runs under the `test-integration` target against
  * the dedicated test Postgres (docker-compose.test.yml → ots_test on 5433). Real
  * RevisionService, real InspectionReportWorkflowService, real persistence.
  *
  * BASELINE we are locking: snapshots fire on FIRST approval and on REOPEN, and NOT
  * on a re-approval after reopen. This is foundation behavior that must stay
- * unchanged through V2, so this is STABLE/UNTAGGED — same convention as the
- * create-path and workflow-transition specs: NOT "known bug", no flip tags, nothing
- * in docs/internal/sync-risks.md.
+ * unchanged. Stable/untagged — not a known bug. See
+ * docs/adr/0001-revision-snapshot-engine.md.
  *
  * FIRING CONDITION (traced from inspection-report-workflow.service.ts):
  *  - Snapshot writes happen only inside transition()'s transaction, at two sites
@@ -56,7 +55,7 @@ describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
 
-    // REAL RevisionService this time — its output is exactly what we characterize.
+    // REAL RevisionService this time — its output is exactly what we assert.
     const revisionService = new RevisionService(prisma);
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
     reports = new InspectionReportsService(prisma);

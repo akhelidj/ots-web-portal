@@ -1,4 +1,4 @@
-// Characterization spec for the JWT trust-boundary check shipped in da268fc.
+// Unit spec for the JWT trust-boundary check (passport validate()).
 //
 // This is the FIRST spec that exercises the real passport `validate()` path.
 // Every existing integration spec constructs services directly and never touches
@@ -10,8 +10,8 @@
 // hand-built payloads, the direct-construction analogue of the existing pattern,
 // minus the database. Lands under the DB-free `test` target (jest.config.ts).
 //
-// These are BASELINE assertions: the guard is correct as designed. No flip tag,
-// not added to sync-risks.md — this pins intended behavior, not a bug.
+// These are BASELINE assertions: the guard is correct as designed — this pins
+// intended behavior, not a bug.
 
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';

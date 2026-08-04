@@ -1,13 +1,12 @@
 /**
- * Characterization — InspectionReport workflow state machine (transitions).
+ * Integration test — InspectionReport workflow state machine (transitions).
  * Runs under the `test-integration` target against the dedicated test Postgres
  * (docker-compose.test.yml → ots_test on 5433). Real service, real persistence.
  *
  * BASELINE we are locking: the legal-transition matrix
- * (workflow.policy.ts → INSPECTION_REPORT_TRANSITIONS) must stay unchanged through
- * F2.1. A Phase 3 refactor or F2.1 change that perturbs which transitions are legal
- * should fail these tests. Stable/untagged, same convention as the create-path
- * spec — NOT "known bug", no flip tags, nothing in docs/internal/sync-risks.md.
+ * (workflow.policy.ts → INSPECTION_REPORT_TRANSITIONS) must stay unchanged. Any
+ * refactor that perturbs which transitions are legal should fail these tests.
+ * Stable/untagged — not a known bug.
  *
  * SCOPE: the transition state machine only. NOT the revision-snapshot engine (next
  * step) and NOT the PENDING_APPROVAL serial-validation gate. Reopen/first-approval
@@ -55,7 +54,7 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
     await prisma.onModuleInit();
 
     // No-op RevisionService: reopen/first-approval edges invoke it, but the
-    // snapshot engine is characterized in a separate step. We only drive the state
+    // snapshot engine is covered in a separate spec. We only drive the state
     // machine, so a no-op keeps this test strictly about legal/illegal transitions.
     const revisionStub = {
       createInspectionReportSnapshot: async () => undefined,

@@ -1,5 +1,5 @@
 /**
- * Characterization — the deterministic xlsx export path (ExportService +
+ * Integration test — the deterministic xlsx export path (ExportService +
  * mapDrillPipeReportV1). Runs under the `test-integration` target against the
  * dedicated test Postgres (docker-compose.test.yml → ots_test on 5433). Real
  * ExportService/RevisionService/workflow, real persistence, and the REAL tracked
@@ -8,9 +8,8 @@
  * BASELINE we are locking: the export's *deterministic* observable contract — the
  * return shape (filename/mimetype), approval gating, serial ordering, chunking→zip
  * boundary, revision resolution, and token substitution into cells. Foundation
- * behavior that must stay unchanged through V2. STABLE/UNTAGGED — same convention
- * as the create-path / workflow / revision specs: NOT "known bug", no flip tags,
- * nothing in docs/internal/sync-risks.md.
+ * behavior that must stay unchanged. Stable/untagged — not a known bug. See
+ * docs/adr/0005-export-determinism-structural-only.md for the determinism scoping.
  *
  * STRATEGY (confirmed): structural assertions on the DECODED workbook — never a
  * golden-file, byte, or hash comparison. The xlsx is a zip of OOXML that embeds

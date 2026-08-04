@@ -1,6 +1,6 @@
 /**
- * Characterization tests — risk #2 (`clearConflicts` over-deletion).
- * Pins the cursor sweep in outbox-local.repo.ts:74. See docs/internal/sync-risks.md.
+ * Behavior-pinning tests — `clearConflicts` over-deletion (KNOWN-ISSUES #2).
+ * Pins the cursor sweep in outbox-local.repo.ts:74. See docs/KNOWN-ISSUES.md.
  *
  * This exercises the REAL IndexedDB code path: the real DbService opens the real
  * schema against `fake-indexeddb`, and the real OutboxLocalRepo runs its actual
@@ -10,14 +10,13 @@
  * portal test-setup.ts) so no other spec runs against a patched IndexedDB global,
  * and so each test here gets a pristine IDBFactory (no cross-test DB bleed).
  *
- * WHICH ASSERTIONS ARE EXPECTED TO FLIP IN PHASE 3:
- *   - The "PENDING-with-lastError item is deleted" assertions are the risk #2
- *     over-deletion. They are KNOWN-BUG pins and WILL flip once Phase 3 narrows the
- *     delete condition (drops the `|| item.lastError` clause). They carry the
- *     CHARACTERIZATION comment.
+ * WHICH ASSERTIONS PIN THE KNOWN BUG:
+ *   - The "PENDING-with-lastError item is deleted" assertions pin the over-deletion
+ *     (KNOWN-ISSUES #2); they will change once the delete condition is narrowed
+ *     (drops the `|| item.lastError` clause). They carry the "known bug" comment.
  *   - Deleting CONFLICT/FAILED items, keeping the clean PENDING item, and leaving
- *     the entity stores untouched characterize intended/stable behavior and are
- *     NOT expected to flip.
+ *     the entity stores untouched pin intended/stable behavior and are
+ *     NOT expected to change.
  */
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
@@ -110,7 +109,7 @@ describe('OutboxLocalRepo.clearConflicts — over-deletion (risk #2)', () => {
     expect(await outboxRepo.getById('it-conflict')).toBeNull();
     expect(await outboxRepo.getById('it-failed')).toBeNull();
 
-    // CHARACTERIZATION — pins current behavior. KNOWN BUG (risk #2), see docs/internal/sync-risks.md. Phase 3 fix will flip this.
+    // Pins current behavior. KNOWN BUG (KNOWN-ISSUES #2), see docs/KNOWN-ISSUES.md. A fix will change this.
     // The retryable PENDING item is collateral damage of the `|| item.lastError` clause.
     expect(await outboxRepo.getById('it-pending-with-error')).toBeNull();
 
@@ -119,8 +118,8 @@ describe('OutboxLocalRepo.clearConflicts — over-deletion (risk #2)', () => {
     expect(survivor).not.toBeNull();
     expect(survivor?.status).toBe('PENDING');
 
-    // Current survivor set is exactly one item. (This total flips in Phase 3, when
-    // the PENDING-with-lastError item also survives.)
+    // Current survivor set is exactly one item. (This total changes once the fix
+    // lands and the PENDING-with-lastError item also survives.)
     expect(await outboxRepo.countPendingItems()).toBe(1);
   });
 
@@ -136,7 +135,7 @@ describe('OutboxLocalRepo.clearConflicts — over-deletion (risk #2)', () => {
 
     await outboxRepo.clearConflicts();
 
-    // CHARACTERIZATION — pins current behavior. KNOWN BUG (risk #2), see docs/internal/sync-risks.md. Phase 3 fix will flip this.
+    // Pins current behavior. KNOWN BUG (KNOWN-ISSUES #2), see docs/KNOWN-ISSUES.md. A fix will change this.
     expect(await outboxRepo.getById('it-pending-with-error')).toBeNull();
 
     // Sanity (stable): the error-free PENDING item is untouched, proving the
