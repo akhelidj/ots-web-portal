@@ -75,6 +75,31 @@ origins) are not checked at application startup. A missing or malformed value su
 only when first used at runtime, not as a fail-fast error at boot.
 **Note:** observation from code — not tied to any particular validation library.
 
+## Export mapping quirks
+
+These two are string-coercion artifacts of the legacy drill-pipe export mapper
+(`mappings/drill-pipe-report.v1.mapping.ts`). They are **deliberately preserved
+byte-for-byte** by the definition-driven engine mapper (Phase B2) so the engine is
+provably equivalent to legacy; they are to be corrected **post-migration as a
+separate, deliberate change** (a fix would change export output and so must not ride
+along inside an equivalence-preserving refactor). The engine's `objectListJoin` /
+`stringListJoin` transforms reproduce them exactly.
+
+### 13. `{{equipment}}` renders the literal `"undefined"` for a name-less entry
+The equipment join is `` `${e.name}${e.number ? ' #'+e.number : ''}` ``
+(`drill-pipe-report.v1.mapping.ts` `eqNames`). When an `equipmentUsed[]` entry has no
+`name`, `${e.name}` coerces `undefined` to the string `"undefined"`, so the cell reads
+e.g. `"undefined #3"` instead of omitting the name.
+**Impact:** cosmetic — a malformed equipment entry surfaces `"undefined"` in the export.
+Fix post-migration by guarding the name (`e.name ?? ''`).
+
+### 14. `{{methods}}` renders `"[object Object]"` for a name-less object entry
+The methods join is `map(m => typeof m === 'string' ? m : m.name || m).join(', ')`
+(`drill-pipe-report.v1.mapping.ts` `mNames`). An object entry lacking `name` falls
+through `m.name || m` to the object itself, which `join` coerces to `"[object Object]"`.
+**Impact:** cosmetic — a malformed method entry surfaces `"[object Object]"`.
+Fix post-migration by coercing the fallback to a string (`m.name ?? ''`).
+
 ## Type system / upstream friction
 
 ### 7. ExcelJS / JSZip buffer loads require `as unknown as` casts

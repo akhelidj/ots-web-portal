@@ -9,6 +9,7 @@ import { RevisionService } from '../revision/revision.service';
 import * as ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { mapDrillPipeReportV1 } from './mappings/drill-pipe-report.v1.mapping';
+import { engineMap, ExportDefinition } from './export-engine';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   UserRole,
@@ -278,6 +279,13 @@ export class ExportService {
 
     const templateBuffer = template.fileBlob;
 
+    // Phase B2: prefer the template's structured definition when present; else
+    // fall back to the legacy mapDrillPipeReportV1. Every template today has
+    // definitionJson = NULL, so this is behavior-preserving. The template row is
+    // already loaded above — no extra query.
+    const definition =
+      (template.definitionJson as unknown as ExportDefinition | null) ?? null;
+
     const allFiles: { buffer: Buffer; filename: string }[] = [];
     const poStr =
       report.poNumber && report.poNumber.trim().length > 0
@@ -310,6 +318,7 @@ export class ExportService {
         snapshot,
         parentSerials,
         baseParentFilename,
+        definition,
       );
       allFiles.push(...parentFiles);
     }
@@ -333,6 +342,7 @@ export class ExportService {
         snapshot,
         childSerials,
         baseChildFilename,
+        definition,
       );
       allFiles.push(...childFiles);
     }
@@ -373,22 +383,35 @@ export class ExportService {
     snapshot: Snapshot,
     serialNumbers: Snapshot['serialNumbers'],
     baseFilename: string,
+    definition: ExportDefinition | null,
   ): Promise<{ buffer: Buffer; filename: string }[]> {
     const files: { buffer: Buffer; filename: string }[] = [];
     const N = serialNumbers.length;
+
+    // Chunk size: from the definition's (single) region when present, else the
+    // legacy hardcoded 10. A null region chunkSize means "never split".
+    const chunkSize = definition
+      ? (definition.regions?.[0]?.chunkSize ?? Number.POSITIVE_INFINITY)
+      : 10;
 
     if (N === 0) {
       return files;
     }
 
-    if (N <= 10) {
+    if (N <= chunkSize) {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(
         templateBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
       );
 
       try {
-        await this.applyMapping(templateKey, workbook, snapshot, serialNumbers);
+        await this.applyMapping(
+          templateKey,
+          workbook,
+          snapshot,
+          serialNumbers,
+          definition,
+        );
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : undefined;
         throw new BadRequestException(
@@ -402,10 +425,10 @@ export class ExportService {
         filename: `${baseFilename}.xlsx`,
       });
     } else {
-      const chunks = Math.ceil(N / 10);
+      const chunks = Math.ceil(N / chunkSize);
       for (let k = 1; k <= chunks; k++) {
-        const startIndex = (k - 1) * 10;
-        const endIndex = startIndex + 10;
+        const startIndex = (k - 1) * chunkSize;
+        const endIndex = startIndex + chunkSize;
         const chunkSerials = serialNumbers.slice(startIndex, endIndex);
 
         const workbook = new ExcelJS.Workbook();
@@ -419,6 +442,7 @@ export class ExportService {
             workbook,
             snapshot,
             chunkSerials,
+            definition,
           );
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : undefined;
@@ -442,7 +466,13 @@ export class ExportService {
     workbook: ExcelJS.Workbook,
     snapshot: Snapshot,
     chunk: Snapshot['serialNumbers'],
+    definition: ExportDefinition | null,
   ): Promise<void> {
+    if (definition) {
+      await engineMap(definition, workbook, snapshot, chunk);
+      return;
+    }
+
     if (templateKey === 'DRILL_PIPE_REPORT') {
       await mapDrillPipeReportV1(workbook, snapshot, chunk);
       return;

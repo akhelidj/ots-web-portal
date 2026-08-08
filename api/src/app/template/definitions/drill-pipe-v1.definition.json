@@ -100,7 +100,7 @@
     ],
     "regions": {
       "serials": [
-        { "token": "{{sn}}", "field": "serial" },
+        { "token": "{{sn}}", "source": "rowSerial" },
         { "token": "{{b_ts}}", "field": "box.minTongSpace" },
         { "token": "{{b_od}}", "field": "box.minOD" },
         { "token": "{{b_thd}}", "field": "box.minBoxThreads" },
