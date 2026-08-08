@@ -18,42 +18,12 @@ import {
   isReasonRequiredForInspection,
 } from './workflow.policy';
 import { RevisionService } from '../revision/revision.service';
-import { InspectionData } from '../common/inspection-data.types';
-
-const DRILL_PIPE_REQUIRED_KEYS = [
-  'box.minTongSpace',
-  'box.minOD',
-  'box.minBoxThreads',
-  'box.minEccShoulder',
-  'box.maxCounterBoreDiameter',
-  'box.maxCounterBoreLength',
-  'box.bevelDiameterMin',
-  'box.bevelDiameterMax',
-  'box.condition',
-  'pin.minTongSpace',
-  'pin.minOD',
-  'pin.maxID',
-  'pin.minEccShoulder',
-  'pin.lengthPinConnMin',
-  'pin.lengthPinConnMax',
-  'pin.maxLengthPinBase',
-  'pin.bevelDiameterMin',
-  'pin.bevelDiameterMax',
-  'pin.condition',
-  'box.hardBanding',
-  'body.wallRemaining',
-  'body.odDecrease',
-  'body.emiResult',
-  'body.slipArea',
-  'body.corrosionIn',
-  'body.corrosionOut',
-  'body.ipc',
-  'body.bentJoints',
-  'final.isNew',
-  'final.isPremium',
-  'final.isC2',
-  'final.isScrap',
-];
+import {
+  legacyGate,
+  engineGate,
+  enforce,
+  GateDefinition,
+} from './approval-gate';
 
 @Injectable()
 export class InspectionReportWorkflowService {
@@ -334,56 +304,28 @@ export class InspectionReportWorkflowService {
         where: { tenantId: user.tenantId, inspectionReportId: reportId },
       });
 
-      if (serials.length === 0) {
-        throw new BadRequestException({
-          code: 'VALIDATION_FAILED',
-          message: 'Cannot request approval: No serial numbers added',
-          missingDispositionSerials: [],
-          missingRequiredFields: {},
-        });
-      }
+      // Phase B1: prefer the template's structured definition when present;
+      // otherwise fall back to the legacy hardcoded gate. Every existing template
+      // has definitionJson = NULL, so this is behavior-preserving until a
+      // definition is attached. One read-only query, only on approval requests.
+      const template = await this.prisma.template.findUnique({
+        where: {
+          tenantId_templateKey_templateVersion: {
+            tenantId: user.tenantId,
+            templateKey: report.templateKey,
+            templateVersion: report.templateVersion,
+          },
+        },
+        select: { definitionJson: true },
+      });
+      const definition =
+        (template?.definitionJson as unknown as GateDefinition | null) ?? null;
 
-      const missingDispositionSerials: string[] = [];
-      const missingRequiredFields: Record<string, string[]> = {};
+      const outcome = definition
+        ? engineGate(definition, serials)
+        : legacyGate(report.templateKey, serials);
 
-      for (const sn of serials) {
-        const data = (sn.inspectionData as InspectionData) || {};
-        const disposition = data.final?.disposition || data.disposition;
-
-        if (!disposition) {
-          missingDispositionSerials.push(sn.serial);
-        }
-
-        if (report.templateKey === 'DRILL_PIPE_REPORT') {
-          const missingKeys = DRILL_PIPE_REQUIRED_KEYS.filter((rk) => {
-            // Dynamic dotted-path walk; identical semantics to `acc && acc[part]`
-            // (`a && b` === `a ? b : a`), just indexable off `unknown`.
-            const val = rk
-              .split('.')
-              .reduce<unknown>(
-                (acc, part) =>
-                  acc ? (acc as Record<string, unknown>)[part] : acc,
-                data as unknown,
-              );
-            return val === undefined || val === null || val === '';
-          });
-          if (missingKeys.length > 0) {
-            missingRequiredFields[sn.serial] = missingKeys;
-          }
-        }
-      }
-
-      const hasValidationFailures =
-        missingDispositionSerials.length > 0 ||
-        Object.keys(missingRequiredFields).length > 0;
-      if (hasValidationFailures) {
-        throw new BadRequestException({
-          code: 'VALIDATION_FAILED',
-          message: 'Validation failed for one or more serial numbers.',
-          missingDispositionSerials,
-          missingRequiredFields,
-        });
-      }
+      enforce(outcome);
     }
 
     // 5. Governance / Logic Calculation

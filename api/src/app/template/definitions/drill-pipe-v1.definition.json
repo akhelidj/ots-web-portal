@@ -47,7 +47,6 @@
     { "key": "box.bevelDiameterMin", "label": "Bevel Diameter Min", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
     { "key": "box.bevelDiameterMax", "label": "Bevel Diameter Max", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
     { "key": "box.condition", "label": "Condition", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
-    { "key": "box.hardBanding", "label": "Hard Banding", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
 
     { "key": "pin.minTongSpace", "label": "Min Tong Space", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
     { "key": "pin.minOD", "label": "Min OD", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
@@ -59,6 +58,7 @@
     { "key": "pin.bevelDiameterMin", "label": "Bevel Diameter Min", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
     { "key": "pin.bevelDiameterMax", "label": "Bevel Diameter Max", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
     { "key": "pin.condition", "label": "Condition", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+    { "key": "box.hardBanding", "label": "Hard Banding", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
 
     { "key": "body.wallRemaining", "label": "Wall Remaining", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "body" },
     { "key": "body.odDecrease", "label": "OD Decrease", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "body" },
