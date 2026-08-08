@@ -108,6 +108,7 @@ model Template {
   fileBlob        Bytes
   hash            String
   changeNote      String
+  definitionJson  Json?
   createdAt       DateTime       @default(now())
   createdById     String
 

@@ -1,0 +1,152 @@
+{
+  "formatVersion": 1,
+  "templateKey": "DRILL_PIPE_REPORT",
+  "templateVersion": 1,
+  "displayName": "Drill Pipe Inspection Report",
+
+  "transforms": {
+    "boolCheckbox": { "kind": "booleanMap", "whenTrue": "X", "whenFalse": "", "whenNullish": "" },
+    "boolFlag": { "kind": "booleanMap", "whenTrue": "1", "whenFalse": "", "whenNullish": "" },
+    "range": { "kind": "rangeCompose", "separator": "-", "blankWhenMinEmpty": true },
+    "equipmentList": { "kind": "objectListJoin", "itemFormat": "{name}", "suffixFormat": " #{number}", "separator": ", " },
+    "methodList": { "kind": "stringListJoin", "separator": ", " }
+  },
+
+  "regions": [
+    { "id": "serials", "label": "Inspected Serials", "marker": "{{sn}}", "chunkSize": 10 }
+  ],
+
+  "disposition": {
+    "enum": ["PASS", "REWORK", "SCRAP", "HOLD"],
+    "source": ["final.disposition", "disposition"],
+    "syncedFrom": "body.emiResult",
+    "requiredForApproval": true
+  },
+
+  "fields": [
+    { "key": "poNumber", "label": "PO Number", "type": "text", "required": false, "scope": "header" },
+    { "key": "standardUsed", "label": "Standard Used", "type": "text", "required": false, "scope": "header" },
+    { "key": "inspectionAddress", "label": "Inspection Address", "type": "text", "required": false, "scope": "header" },
+    { "key": "grade", "label": "Grade", "type": "text", "required": false, "scope": "header" },
+    { "key": "range", "label": "Range", "type": "text", "required": false, "scope": "header" },
+    { "key": "weight", "label": "Weight", "type": "text", "required": false, "scope": "header" },
+    { "key": "nomWT", "label": "Nominal WT", "type": "text", "required": false, "scope": "header" },
+    { "key": "nomOD", "label": "Nominal OD", "type": "text", "required": false, "scope": "header" },
+    { "key": "nomID", "label": "Nominal ID", "type": "text", "required": false, "scope": "header" },
+    { "key": "connection", "label": "Connection", "type": "text", "required": false, "scope": "header" },
+    { "key": "inspectorComment", "label": "Inspector Comment", "type": "text", "required": false, "scope": "header" },
+    { "key": "equipmentUsed", "label": "Equipment Used", "type": "text", "required": false, "scope": "header" },
+    { "key": "inspectionMethod", "label": "Inspection Method", "type": "text", "required": false, "scope": "header" },
+
+    { "key": "box.minTongSpace", "label": "Min Tong Space", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
+    { "key": "box.minOD", "label": "Min OD", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
+    { "key": "box.minBoxThreads", "label": "Min Box Threads", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
+    { "key": "box.minEccShoulder", "label": "Min Ecc Shoulder", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
+    { "key": "box.maxCounterBoreDiameter", "label": "Max Counter Bore Diameter", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
+    { "key": "box.maxCounterBoreLength", "label": "Max Counter Bore Length", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
+    { "key": "box.bevelDiameterMin", "label": "Bevel Diameter Min", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
+    { "key": "box.bevelDiameterMax", "label": "Bevel Diameter Max", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
+    { "key": "box.condition", "label": "Condition", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
+    { "key": "box.hardBanding", "label": "Hard Banding", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
+
+    { "key": "pin.minTongSpace", "label": "Min Tong Space", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+    { "key": "pin.minOD", "label": "Min OD", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+    { "key": "pin.maxID", "label": "Max ID", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+    { "key": "pin.minEccShoulder", "label": "Min Ecc Shoulder", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+    { "key": "pin.lengthPinConnMin", "label": "Length Pin Conn Min", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+    { "key": "pin.lengthPinConnMax", "label": "Length Pin Conn Max", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+    { "key": "pin.maxLengthPinBase", "label": "Max Length Pin Base", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+    { "key": "pin.bevelDiameterMin", "label": "Bevel Diameter Min", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+    { "key": "pin.bevelDiameterMax", "label": "Bevel Diameter Max", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+    { "key": "pin.condition", "label": "Condition", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "pin" },
+
+    { "key": "body.wallRemaining", "label": "Wall Remaining", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "body" },
+    { "key": "body.odDecrease", "label": "OD Decrease", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "body" },
+    { "key": "body.emiResult", "label": "EMI Result", "type": "select", "required": true, "scope": "item", "region": "serials", "section": "body", "options": ["PASS", "REWORK", "SCRAP", "HOLD"] },
+    { "key": "body.slipArea", "label": "Slip Area", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "body" },
+    { "key": "body.corrosionIn", "label": "Corrosion Inside", "type": "boolean", "required": true, "scope": "item", "region": "serials", "section": "body" },
+    { "key": "body.corrosionOut", "label": "Corrosion Outside", "type": "boolean", "required": true, "scope": "item", "region": "serials", "section": "body" },
+    { "key": "body.ipc", "label": "IPC", "type": "boolean", "required": true, "scope": "item", "region": "serials", "section": "body" },
+    { "key": "body.bentJoints", "label": "Bent Joints", "type": "boolean", "required": true, "scope": "item", "region": "serials", "section": "body" },
+
+    { "key": "final.isNew", "label": "Is New", "type": "boolean", "required": true, "scope": "item", "region": "serials", "section": "final" },
+    { "key": "final.isPremium", "label": "Is Premium", "type": "boolean", "required": true, "scope": "item", "region": "serials", "section": "final" },
+    { "key": "final.isC2", "label": "Is C2", "type": "boolean", "required": true, "scope": "item", "region": "serials", "section": "final" },
+    { "key": "final.isScrap", "label": "Is Scrap", "type": "boolean", "required": true, "scope": "item", "region": "serials", "section": "final" },
+
+    { "key": "remarks", "label": "Remarks", "type": "text", "required": false, "scope": "item", "region": "serials", "section": "remarksSection" }
+  ],
+
+  "export": {
+    "global": [
+      { "token": "{{customer}}", "computed": "customerName", "whenEmpty": "N/A" },
+      { "token": "{{reportNumber}}", "computed": "reportNumber", "whenEmpty": "N/A" },
+      { "token": "{{reportDate}}", "computed": "reportDate", "whenEmpty": "N/A" },
+      { "token": "{{poNumber}}", "field": "poNumber", "whenEmpty": "N/A" },
+      { "token": "{{standardUsed}}", "field": "standardUsed", "whenEmpty": "N/A" },
+      { "token": "{{inspectionAddress}}", "field": "inspectionAddress", "whenEmpty": "N/A" },
+      { "token": "{{grade}}", "field": "grade", "whenEmpty": "N/A" },
+      { "token": "{{range}}", "field": "range", "whenEmpty": "N/A" },
+      { "token": "{{weight}}", "field": "weight", "whenEmpty": "N/A" },
+      { "token": "{{nomWT}}", "field": "nomWT", "whenEmpty": "N/A" },
+      { "token": "{{nomOD}}", "field": "nomOD", "whenEmpty": "N/A" },
+      { "token": "{{nomID}}", "field": "nomID", "whenEmpty": "N/A" },
+      { "token": "{{connection}}", "field": "connection", "whenEmpty": "N/A" },
+      { "token": "{{equipment}}", "field": "equipmentUsed", "transform": "equipmentList", "whenEmpty": "None specified" },
+      { "token": "{{methods}}", "field": "inspectionMethod", "transform": "methodList", "whenEmpty": "None specified" },
+      { "token": "{{inspectorComment}}", "field": "inspectorComment", "whenEmpty": "No comments provided." },
+      { "token": "{{inspectedBy}}", "computed": "inspectedBy", "whenEmpty": "N/A" },
+      { "token": "{{approvedBy}}", "computed": "approvedBy", "whenEmpty": "N/A" }
+    ],
+    "regions": {
+      "serials": [
+        { "token": "{{sn}}", "field": "serial" },
+        { "token": "{{b_ts}}", "field": "box.minTongSpace" },
+        { "token": "{{b_od}}", "field": "box.minOD" },
+        { "token": "{{b_thd}}", "field": "box.minBoxThreads" },
+        { "token": "{{b_ecc}}", "field": "box.minEccShoulder" },
+        { "token": "{{b_cbd}}", "field": "box.maxCounterBoreDiameter" },
+        { "token": "{{b_cbl}}", "field": "box.maxCounterBoreLength" },
+        { "token": "{{b_bvl}}", "compose": ["box.bevelDiameterMin", "box.bevelDiameterMax"], "transform": "range" },
+        { "token": "{{b_cond}}", "field": "box.condition" },
+        { "token": "{{b_hard}}", "field": "box.hardBanding" },
+        { "token": "{{p_ts}}", "field": "pin.minTongSpace" },
+        { "token": "{{p_od}}", "field": "pin.minOD" },
+        { "token": "{{p_id}}", "field": "pin.maxID" },
+        { "token": "{{p_ecc}}", "field": "pin.minEccShoulder" },
+        { "token": "{{p_conn}}", "compose": ["pin.lengthPinConnMin", "pin.lengthPinConnMax"], "transform": "range" },
+        { "token": "{{p_base}}", "field": "pin.maxLengthPinBase" },
+        { "token": "{{p_bvl}}", "compose": ["pin.bevelDiameterMin", "pin.bevelDiameterMax"], "transform": "range" },
+        { "token": "{{p_cond}}", "field": "pin.condition" },
+        { "token": "{{wall}}", "field": "body.wallRemaining" },
+        { "token": "{{od_decr}}", "field": "body.odDecrease" },
+        { "token": "{{emi}}", "field": "body.emiResult" },
+        { "token": "{{slip}}", "field": "body.slipArea" },
+        { "token": "{{corr_in}}", "field": "body.corrosionIn", "transform": "boolFlag" },
+        { "token": "{{corr_out}}", "field": "body.corrosionOut", "transform": "boolFlag" },
+        { "token": "{{ipc}}", "field": "body.ipc", "transform": "boolFlag" },
+        { "token": "{{bent}}", "field": "body.bentJoints", "transform": "boolFlag" },
+        { "token": "{{jc_new}}", "field": "final.isNew", "transform": "boolCheckbox" },
+        { "token": "{{jc_prem}}", "field": "final.isPremium", "transform": "boolCheckbox" },
+        { "token": "{{jc_c2}}", "field": "final.isC2", "transform": "boolCheckbox" },
+        { "token": "{{jc_scrap}}", "field": "final.isScrap", "transform": "boolCheckbox" },
+        { "token": "{{remarks}}", "coalesce": ["final.condition_notes", "final.remarks", "remarks"] }
+      ]
+    }
+  },
+
+  "rules": [
+    {
+      "id": "rework-child-on-emi",
+      "scope": "item",
+      "when": { "field": "body.emiResult", "op": "eq", "value": "REWORK" },
+      "then": {
+        "action": "upsertChildReport",
+        "childType": "REWORK",
+        "membership": "allItemsMatching",
+        "reportNumberSuffix": "_rework",
+        "forbidChildDisposition": ["REWORK"]
+      }
+    }
+  ]
+}
