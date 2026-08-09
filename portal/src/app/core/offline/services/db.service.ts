@@ -5,7 +5,14 @@ import { Injectable } from '@angular/core';
 })
 export class DbService {
   private readonly DB_PREFIX = 'ots_';
-  private readonly DB_VERSION = 9;
+  // v10 (Phase B3): purely additive — `definitionJson` is a new property on the
+  // value objects stored in the existing `inspection_reports` store. That store is
+  // keyPath-based and value-schemaless, so no object store or index is created,
+  // altered, or removed; the `onupgradeneeded` guards below are all idempotent
+  // (contains-checks), so a 9→10 upgrade makes no structural change. Records
+  // cached before the bump simply have no `definitionJson` (reads as undefined →
+  // legacy form path) and survive the upgrade untouched.
+  private readonly DB_VERSION = 10;
   private dbInstance: IDBDatabase | null = null;
   private initPromise: Promise<IDBDatabase> | null = null;
   private currentTenantId: string | null = null;

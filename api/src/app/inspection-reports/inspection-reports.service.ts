@@ -51,10 +51,45 @@ export class InspectionReportsService {
       };
     }
 
-    return this.prisma.inspectionReport.findMany({
+    const reports = await this.prisma.inspectionReport.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
     });
+
+    // Phase B3: attach each report's template definitionJson (from the Template
+    // row it pins) so the portal can drive the inspection form from it offline.
+    // definitionJson is NULL on every Template today, so every report carries
+    // null here until cutover — the portal falls back to its hardcoded schema.
+    if (reports.length === 0) {
+      return reports;
+    }
+
+    const templates = await this.prisma.template.findMany({
+      where: {
+        tenantId: user.tenantId,
+        OR: reports.map((r) => ({
+          templateKey: r.templateKey,
+          templateVersion: r.templateVersion,
+        })),
+      },
+      select: {
+        templateKey: true,
+        templateVersion: true,
+        definitionJson: true,
+      },
+    });
+    const defByKey = new Map(
+      templates.map((t) => [
+        `${t.templateKey}@${t.templateVersion}`,
+        t.definitionJson,
+      ]),
+    );
+
+    return reports.map((r) => ({
+      ...r,
+      definitionJson:
+        defByKey.get(`${r.templateKey}@${r.templateVersion}`) ?? null,
+    }));
   }
 
   async getReportById(

@@ -14,6 +14,10 @@ export interface LocalInspectionReport {
   templateKey: string;
   templateVersion: number;
   templateHash: string;
+  // Phase B3: the template's structured definition, embedded in the
+  // GET /inspection-reports payload (null for every report until cutover). Drives
+  // the definition-driven inspection form; absent/null → legacy hardcoded schema.
+  definitionJson?: unknown | null;
   version: number;
   inspectorComment?: string | null;
   inspectionAddress?: string | null;

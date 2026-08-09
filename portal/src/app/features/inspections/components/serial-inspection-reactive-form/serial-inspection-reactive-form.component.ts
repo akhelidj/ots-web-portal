@@ -19,6 +19,10 @@ import {
   FormSchema,
   DRILL_PIPE_V1_SCHEMA,
 } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
+import {
+  TemplateFormDefinition,
+  definitionToFormSchema,
+} from '@portal/features/templates/schemas/definition-to-form-schema';
 
 @Component({
   selector: 'app-serial-inspection-reactive-form',
@@ -33,6 +37,9 @@ export class SerialInspectionReactiveFormComponent
   @Input() schemaKey = 'DRILL_PIPE_REPORT';
   @Input() isReadOnly = false;
   @Input() excludedDispositions: string[] = [];
+  // Phase B3: the report's template definition (from report.definitionJson).
+  // Present → build the form from it; null/undefined → legacy hardcoded schema.
+  @Input() definition: TemplateFormDefinition | null = null;
 
   @Output() saveData = new EventEmitter<Record<string, unknown>>();
   @Output() formCancel = new EventEmitter<void>();
@@ -43,6 +50,12 @@ export class SerialInspectionReactiveFormComponent
   private fb = inject(FormBuilder);
 
   ngOnInit() {
+    // Phase B3 fallback switch: definition present → engine-built schema;
+    // otherwise the legacy hardcoded DRILL_PIPE_V1_SCHEMA (unchanged). Everything
+    // downstream (initForm and below) is untouched and consumes `this.schema`.
+    this.schema = this.definition
+      ? definitionToFormSchema(this.definition)
+      : DRILL_PIPE_V1_SCHEMA;
     this.initForm();
   }
 

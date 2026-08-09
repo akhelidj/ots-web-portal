@@ -4,6 +4,14 @@
   "templateVersion": 1,
   "displayName": "Drill Pipe Inspection Report",
 
+  "sections": [
+    { "key": "box", "title": "Box Connection" },
+    { "key": "pin", "title": "Pin Connection" },
+    { "key": "body", "title": "Body" },
+    { "key": "final", "title": "Final Disposition" },
+    { "key": "remarksSection", "title": "Additional Information" }
+  ],
+
   "transforms": {
     "boolCheckbox": { "kind": "booleanMap", "whenTrue": "X", "whenFalse": "", "whenNullish": "" },
     "boolFlag": { "kind": "booleanMap", "whenTrue": "1", "whenFalse": "", "whenNullish": "" },
