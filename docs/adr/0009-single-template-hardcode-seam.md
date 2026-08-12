@@ -30,3 +30,30 @@ real contract mismatch (the template-binding doc reads as if it's honored); and 
 create implementations exist, one dead, which is a trap for anyone who wires the wrong
 one (`workflow.create` emits no `reportNumber`). This must stay documented as intentional,
 not "fixed."
+
+## Cutover status: the engine carries 3 of the 4 hardcoded locations
+
+The definition-driven engine (`Template.definitionJson`) currently subsumes **three** of
+the four places drill-pipe behavior is hardcoded. Each has a definition-fed equivalent
+that reads the `definitionJson` column **live** (falling back to the hardcoded path while
+the column is NULL):
+
+1. **Approval gate** — `engineGate` reads `fields` / `disposition`
+   (`inspection-report-workflow.service.ts:307-329`, vs `legacyGate`).
+2. **Export** — `engineMap` reads `export` / `transforms` / `regions`
+   (`export.service.ts:282-346`, vs `mapDrillPipeReportV1`).
+3. **Portal form** — `definitionToFormSchema` reads `fields` / `sections`
+   (delivered via `getReports`, vs the hardcoded `DRILL_PIPE_V1_SCHEMA`).
+
+The **fourth** — the REWORK child-report rule — is a different case. It is *authored* in
+the definition's `rules` block (`rework-child-on-emi`: `body.emiResult == 'REWORK'` →
+upsert a `REWORK` child), but **no consumer reads that block**. `child-reports.service.ts`
+(`syncReworkChildReport`) remains the sole authority via its hardcoded
+`body.emiResult === 'REWORK'` check. The `rules` entry is descriptive intent, not a live
+input.
+
+*Consequence for Phase C:* the REWORK path is **not retireable by deletion**. Removing the
+hardcoded check without a `rules` consumer would silently drop child-report creation.
+Phase C must first **build the `rules` consumer** — with its own legacy-equivalence proof
+and mutation guards, in the pattern of the gate/export/form proofs — and only then retire
+the hardcoded path.

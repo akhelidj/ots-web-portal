@@ -143,3 +143,13 @@ Jest transpiles with swc, so neither fails tests today:
 `jwt.strategy` passes `secretOrKey: string | undefined`; `export.controller` parses a
 possibly-`NaN`/`undefined` `revisionNumber`. Genuine `strictNullChecks` cases — read
 the intended runtime contract before "fixing" either.
+
+## Definition-driven cutover (`Template.definitionJson`)
+
+### 15. REWORK rule is authored in the definition but not engine-consumed
+The definition's `rules` block authors the REWORK child-report rule
+(`rework-child-on-emi`), but no consumer reads it — `child-reports.service.ts`
+(`syncReworkChildReport`) stays the sole authority via the hardcoded
+`body.emiResult === 'REWORK'` check. See ADR-0009 ("the engine carries 3 of the 4
+hardcoded locations"); Phase C must build the `rules` consumer before the hardcoded path
+can be retired, or REWORK child creation would be silently dropped.
