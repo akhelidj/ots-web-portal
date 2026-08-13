@@ -172,9 +172,25 @@ export function engineGlobalTokens(
   return out;
 }
 
+/**
+ * The definition's single region, narrowed. Every drill-pipe definition carries
+ * exactly one region and the backfill shape guard enforces `regions` is non-empty,
+ * so `[0]` is always present. This makes that invariant explicit for the type checker
+ * (noUncheckedIndexedAccess) instead of repeating the assertion in every caller; an
+ * empty `regions` already threw at the first `region.*` access — this throws the same
+ * case with a clearer message, one step earlier.
+ */
+function firstRegion(def: ExportDefinition): ExportDefinition['regions'][number] {
+  const region = def.regions[0];
+  if (!region) {
+    throw new Error('export definition has no regions');
+  }
+  return region;
+}
+
 /** The per-row token keys for the (single) region — used for cell detection. */
 export function engineRowTokenKeys(def: ExportDefinition): string[] {
-  const region = def.regions[0];
+  const region = firstRegion(def);
   return (def.export.regions[region.id] || []).map((e) => e.token);
 }
 
@@ -184,7 +200,7 @@ export function engineRowTokens(
   snapshot: Snapshot,
   serial: Snapshot['serialNumbers'][number],
 ): Record<string, string> {
-  const region = def.regions[0];
+  const region = firstRegion(def);
   const entries = def.export.regions[region.id] || [];
   const scope = serial.inspectionData || {};
   const out: Record<string, string> = {};
@@ -204,7 +220,7 @@ export async function engineMap(
   snapshot: Snapshot,
   chunk: Snapshot['serialNumbers'],
 ): Promise<void> {
-  const region = def.regions[0];
+  const region = firstRegion(def);
   await expandRegionAndSubstitute(workbook, chunk, {
     marker: region.marker,
     rowTokenKeys: engineRowTokenKeys(def),

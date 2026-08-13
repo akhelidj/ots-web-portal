@@ -65,4 +65,4 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-- `graphify-out/` is committed to git — keep it committed so the graph ships with the repo.
+- `graphify-out/` generated artifacts (`graph.json`, `graph.html`, `GRAPH_REPORT.md`, `manifest.json`, `.graphify_labels.json`, `cost.json`) are **git-ignored, not committed** — they are machine-local and regenerable via `graphify update .`. Only `graphify-out/.gitignore` stays tracked. The graph does not ship with the repo; regenerate it locally.
