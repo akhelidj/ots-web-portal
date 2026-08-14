@@ -14,3 +14,4 @@ in force, with its context, tradeoffs, and costs. Known downsides are tracked in
 - [ADR-0007 — REWORK asymmetry](0007-rework-asymmetry.md) — parent accepts REWORK as the trigger; child rejects it.
 - [ADR-0008 — No shared DTO package](0008-no-shared-dto-package.md) — types duplicated across the HTTP contract, by choice.
 - [ADR-0009 — Single-template hardcode with the multi-template seam](0009-single-template-hardcode-seam.md) — hardcoded live path, unwired `workflow.create` seam.
+- [ADR-0010 — REWORK child-report trigger becomes definition-driven](0010-rework-rules-consumer.md) — rules interpreter reads `definition.rules`; named action owns reconciliation, unknown rules fail loud.

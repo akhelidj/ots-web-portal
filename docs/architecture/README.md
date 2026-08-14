@@ -22,6 +22,9 @@ defects and constraints, see [`../KNOWN-ISSUES.md`](../KNOWN-ISSUES.md).
 - [Template Versioning](template-versioning.md) — ⚠️ **Legacy.** Describes the
   `TemplateVersion` / `mappingJson` model; the authoritative model today is `Template` /
   `fileBlob`. Retained for historical context only.
+- [REWORK Rules Consumer](rework-rules-consumer.md) — ⚠️ **Design / not yet built.** Planned
+  rules interpreter that makes the REWORK child-report trigger definition-driven, with its
+  legacy-equivalence proof and mutation guards. Not ground truth. (See ADR-0010.)
 
 ## Superseded
 
