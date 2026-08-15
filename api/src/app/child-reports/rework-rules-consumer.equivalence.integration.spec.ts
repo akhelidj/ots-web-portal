@@ -51,11 +51,28 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { FilesService } from '../files/files.service';
 import { ChildReportsService } from './child-reports.service';
+import { ReworkRulesInterpreter } from './rework-rules.interpreter';
 import {
   resetInspectionDomain,
   seedTenant,
   seedInspectionReport,
 } from '../../../test/seed-helpers';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+/**
+ * The REAL `rules` block from the live drill-pipe definition — the interpreter's input for
+ * the proof. Loaded from disk (not a hand-written literal) so the proof exercises exactly the
+ * rule the system ships, and would break if that rule drifts from the method it mirrors.
+ */
+const DRILL_PIPE_RULES = (
+  JSON.parse(
+    readFileSync(
+      join(__dirname, '../template/definitions/drill-pipe-v1.definition.json'),
+      'utf-8',
+    ),
+  ) as { rules: unknown }
+).rules;
 
 // ---------------------------------------------------------------------------
 // Snapshot shape — exactly the dimensions rework-rules-consumer.md's proof asserts.
@@ -190,6 +207,8 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
   async function seedReworkScenario(opts: {
     reworkSerials: string[];
     passSerials?: string[];
+    /** Serials with an arbitrary (possibly falsy) body.emiResult — for coherence tests. */
+    rawSerials?: { serial: string; emiResult: unknown }[];
     reportNumber?: string | null;
   }): Promise<{ tenantId: string; reportId: string }> {
     const tenant = await seedTenant(prisma);
@@ -211,6 +230,15 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
       });
     for (const s of opts.reworkSerials) await mk(s, SerialDisposition.REWORK);
     for (const s of opts.passSerials ?? []) await mk(s, SerialDisposition.PASS);
+    for (const rs of opts.rawSerials ?? [])
+      await prisma.serialNumber.create({
+        data: {
+          tenantId: tenant.id,
+          inspectionReportId: report.id,
+          serial: rs.serial,
+          inspectionData: { body: { emiResult: rs.emiResult } } as never,
+        },
+      });
     return { tenantId: tenant.id, reportId: report.id };
   }
 
@@ -335,5 +363,472 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
     };
     const preservedDiff = diffReworkSnapshots(base, blankedA);
     expect(preservedDiff).toContain('member SN-A.preserved: true → false');
+  });
+
+  // =========================================================================
+  // STEP 3 — the equivalence PROOF. For each design-doc scenario, run BOTH the
+  // imperative syncReworkChildReport AND interpreter.syncFromRules(REAL rules) against
+  // INDEPENDENT identical seeds, snapshot each, and assert diffReworkSnapshots === [].
+  //
+  // Independent seeds are MANDATORY: the version-bump non-idempotency (CHECK 1b) means a
+  // shared second run would show version drift that is a sequencing artifact, not a real
+  // path difference (rework-rules-consumer.md open question 2). Membership keyed by serial
+  // STRING already bridges the differing serialNumber UUIDs across the two seeds.
+  //
+  // The ENTIRE scenario — including any setup syncs and cross-sync mutations — runs on the
+  // SAME path, so each proof is a true end-to-end equivalence, not just the final call. For
+  // scenarios where the child pre-exists (S3/S5/S6/S7) both paths must reproduce the
+  // unconditional version bump identically, or the diff catches it on the version dimension.
+  // =========================================================================
+  describe('method ↔ interpreter equivalence [proof]', () => {
+    let interpreter: ReworkRulesInterpreter;
+    beforeAll(() => {
+      // Constructed unwired, exactly as it lives in the tree — prisma is its only dep.
+      interpreter = new ReworkRulesInterpreter(prisma);
+    });
+
+    type Sync = (tenantId: string, reportId: string) => Promise<unknown>;
+
+    /** Overwrite one serial's body.emiResult (moves it into / out of the match set). */
+    const setEmi = (reportId: string, serial: string, emiResult: unknown) =>
+      prisma.serialNumber.updateMany({
+        where: { inspectionReportId: reportId, serial },
+        data: { inspectionData: { body: { emiResult } } as never },
+      });
+
+    const setChildStatus = (reportId: string, status: ChildReportStatus) =>
+      prisma.childReport.updateMany({
+        where: { inspectionReportId: reportId, type: ChildReportType.REWORK },
+        data: { status },
+      });
+
+    /**
+     * Give an existing child serial row real inspectionData + a disposition, so the
+     * "preserve existing rows untouched" behavior is genuinely exercised (preserved:true with
+     * a disposition), rather than every row being an indistinguishable blank.
+     */
+    async function markChildRowInspected(reportId: string, serial: string) {
+      const child = await prisma.childReport.findFirst({
+        where: { inspectionReportId: reportId, type: ChildReportType.REWORK },
+      });
+      const sn = await prisma.serialNumber.findFirst({
+        where: { inspectionReportId: reportId, serial },
+      });
+      if (!child || !sn) {
+        throw new Error('markChildRowInspected: child/serial not found');
+      }
+      await prisma.childReportSerialNumber.updateMany({
+        where: { childReportId: child.id, serialNumberId: sn.id },
+        data: {
+          inspectionData: { body: { emiResult: 'PASS' } } as never,
+          disposition: SerialDisposition.PASS,
+        },
+      });
+    }
+
+    /**
+     * Run `build` (seed + syncs) on a given path against a FRESH domain, snapshot the result,
+     * do it again on the other path against another fresh seed, and assert the two snapshots
+     * diff empty. `build` uses the `sync` it is handed for EVERY sync it performs.
+     */
+    async function proveEquivalent(
+      label: string,
+      build: (sync: Sync) => Promise<{ tenantId: string; reportId: string }>,
+    ): Promise<{ methodSnap: ReworkStateSnapshot }> {
+      await resetInspectionDomain(prisma);
+      const m = await build((t, r) => service.syncReworkChildReport(t, r));
+      const methodSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
+
+      await resetInspectionDomain(prisma);
+      const i = await build((t, r) =>
+        interpreter.syncFromRules(t, r, DRILL_PIPE_RULES),
+      );
+      const interpSnap = await snapshotReworkState(prisma, i.tenantId, i.reportId);
+
+      const diff = diffReworkSnapshots(methodSnap, interpSnap);
+      // eslint-disable-next-line no-console
+      console.log(
+        `[PROOF ${label}]` +
+          `\n  method      = ${JSON.stringify(methodSnap)}` +
+          `\n  interpreter = ${JSON.stringify(interpSnap)}` +
+          `\n  diff = ${JSON.stringify(diff)}`,
+      );
+      expect(diff).toEqual([]);
+      return { methodSnap };
+    }
+
+    it('S1 — no rework + no child ⇒ no-op, no child', async () => {
+      const { methodSnap } = await proveEquivalent('S1', async (sync) => {
+        const s = await seedReworkScenario({
+          reworkSerials: [],
+          passSerials: ['SN-A'],
+          reportNumber: 'RPT-100',
+        });
+        await sync(s.tenantId, s.reportId);
+        return s;
+      });
+      expect(methodSnap.child).toBeNull();
+    });
+
+    it('S2 — no rework + existing DRAFT child ⇒ child deleted', async () => {
+      const { methodSnap } = await proveEquivalent('S2', async (sync) => {
+        const s = await seedReworkScenario({
+          reworkSerials: ['SN-A'],
+          reportNumber: 'RPT-100',
+        });
+        await sync(s.tenantId, s.reportId); // creates DRAFT child v1
+        await setEmi(s.reportId, 'SN-A', SerialDisposition.PASS);
+        await sync(s.tenantId, s.reportId); // empty match + DRAFT ⇒ delete
+        return s;
+      });
+      expect(methodSnap.child).toBeNull();
+    });
+
+    it('S3 — no rework + existing non-DRAFT child ⇒ rows wiped, version++, child retained', async () => {
+      const { methodSnap } = await proveEquivalent('S3', async (sync) => {
+        const s = await seedReworkScenario({
+          reworkSerials: ['SN-A'],
+          reportNumber: 'RPT-100',
+        });
+        await sync(s.tenantId, s.reportId); // DRAFT v1
+        await setChildStatus(s.reportId, ChildReportStatus.APPROVED);
+        await setEmi(s.reportId, 'SN-A', SerialDisposition.PASS);
+        await sync(s.tenantId, s.reportId); // empty match + non-DRAFT ⇒ wipe rows, v++
+        return s;
+      });
+      expect(methodSnap.child?.status).toBe(ChildReportStatus.APPROVED);
+      expect(methodSnap.child?.version).toBe(2);
+      expect(methodSnap.child?.members).toEqual([]);
+    });
+
+    it('S4 — some rework + no child ⇒ child created DRAFT v1, matching rows linked', async () => {
+      const { methodSnap } = await proveEquivalent('S4', async (sync) => {
+        const s = await seedReworkScenario({
+          reworkSerials: ['SN-A', 'SN-B'],
+          passSerials: ['SN-C'],
+          reportNumber: 'RPT-100',
+        });
+        await sync(s.tenantId, s.reportId);
+        return s;
+      });
+      expect(methodSnap.child?.status).toBe(ChildReportStatus.DRAFT);
+      expect(methodSnap.child?.version).toBe(1);
+      expect(methodSnap.child?.reportNumber).toBe('RPT-100_rework');
+      expect(methodSnap.child?.members.map((m) => m.serial)).toEqual([
+        'SN-A',
+        'SN-B',
+      ]);
+    });
+
+    it('S5 — set grows ⇒ new serial added blank, existing preserved, version++', async () => {
+      const { methodSnap } = await proveEquivalent('S5', async (sync) => {
+        const s = await seedReworkScenario({
+          reworkSerials: ['SN-A'],
+          passSerials: ['SN-B'],
+          reportNumber: 'RPT-100',
+        });
+        await sync(s.tenantId, s.reportId); // child w/ SN-A (blank)
+        await markChildRowInspected(s.reportId, 'SN-A'); // SN-A now carries data
+        await setEmi(s.reportId, 'SN-B', SerialDisposition.REWORK); // grows set
+        await sync(s.tenantId, s.reportId); // add SN-B blank, preserve SN-A, v2
+        return s;
+      });
+      expect(methodSnap.child?.version).toBe(2);
+      expect(methodSnap.child?.members.map((m) => m.serial)).toEqual([
+        'SN-A',
+        'SN-B',
+      ]);
+      expect(
+        methodSnap.child?.members.find((m) => m.serial === 'SN-A')?.preserved,
+      ).toBe(true);
+      expect(
+        methodSnap.child?.members.find((m) => m.serial === 'SN-B')?.preserved,
+      ).toBe(false);
+    });
+
+    it('S6 — set shrinks ⇒ departed serial deleted, survivor preserved, version++', async () => {
+      const { methodSnap } = await proveEquivalent('S6', async (sync) => {
+        const s = await seedReworkScenario({
+          reworkSerials: ['SN-A', 'SN-B'],
+          reportNumber: 'RPT-100',
+        });
+        await sync(s.tenantId, s.reportId); // SN-A, SN-B (blank)
+        await markChildRowInspected(s.reportId, 'SN-A'); // SN-A carries data
+        await setEmi(s.reportId, 'SN-B', SerialDisposition.PASS); // SN-B leaves set
+        await sync(s.tenantId, s.reportId); // delete SN-B row, preserve SN-A, v2
+        return s;
+      });
+      expect(methodSnap.child?.version).toBe(2);
+      expect(methodSnap.child?.members.map((m) => m.serial)).toEqual(['SN-A']);
+      expect(
+        methodSnap.child?.members.find((m) => m.serial === 'SN-A')?.preserved,
+      ).toBe(true);
+    });
+
+    it('S7 — set unchanged, re-sync ⇒ unconditional version bump on BOTH paths', async () => {
+      const { methodSnap } = await proveEquivalent('S7', async (sync) => {
+        const s = await seedReworkScenario({
+          reworkSerials: ['SN-A'],
+          reportNumber: 'RPT-100',
+        });
+        await sync(s.tenantId, s.reportId); // v1
+        await sync(s.tenantId, s.reportId); // v2 (unconditional bump)
+        return s;
+      });
+      expect(methodSnap.child?.version).toBe(2);
+      expect(methodSnap.child?.members.map((m) => m.serial)).toEqual(['SN-A']);
+    });
+
+    it('S8 — parent with no reportNumber ⇒ child created with null reportNumber', async () => {
+      const { methodSnap } = await proveEquivalent('S8', async (sync) => {
+        const s = await seedReworkScenario({
+          reworkSerials: ['SN-A'],
+          reportNumber: null,
+        });
+        await sync(s.tenantId, s.reportId);
+        return s;
+      });
+      expect(methodSnap.child).not.toBeNull();
+      expect(methodSnap.child?.reportNumber).toBeNull();
+    });
+
+    it('S9 — false/0-is-valid coherence: falsy-but-present non-REWORK serial does NOT match', async () => {
+      const { methodSnap } = await proveEquivalent('S9', async (sync) => {
+        const s = await seedReworkScenario({
+          reworkSerials: ['SN-A'],
+          passSerials: ['SN-P'],
+          // Present but falsy emiResult: strict `=== REWORK` must exclude it. A truthiness
+          // shortcut would (wrongly) treat it as "no disposition" — same non-match here, but
+          // the point is both paths compare by value, not truthiness.
+          rawSerials: [{ serial: 'SN-F', emiResult: '' }],
+          reportNumber: 'RPT-100',
+        });
+        await sync(s.tenantId, s.reportId);
+        return s;
+      });
+      expect(methodSnap.child?.members.map((m) => m.serial)).toEqual(['SN-A']);
+    });
+  });
+
+  // =========================================================================
+  // STEP 4 — the MUTATION GUARD. Proves the 9-scenario proof is NON-VACUOUS: every
+  // deliberate corruption of the rule the interpreter consumes (NOT the method, seed, or
+  // diff) must make diffReworkSnapshots(method, interpreter) go non-empty on the named
+  // dimension, or the interpreter must THROW where fail-loud is required. A corruption that
+  // leaves all snapshots equivalent would mean the proof never actually read the rule — a
+  // vacuous-proof FINDING, surfaced by a failing test, never papered over.
+  //
+  // The method side is untouched throughout (it takes no rule — it IS the oracle). Only the
+  // interpreter's `rules` input is corrupted, via a deep clone of the real definition rule.
+  // =========================================================================
+  describe('mutation guard — proof non-vacuity [guard]', () => {
+    let interpreter: ReworkRulesInterpreter;
+    beforeAll(() => {
+      interpreter = new ReworkRulesInterpreter(prisma);
+    });
+
+    type Sync = (tenantId: string, reportId: string) => Promise<unknown>;
+
+    /** Shape of the single rule in the definition — for typed, `any`-free mutation. */
+    interface RawRule {
+      when: { field: string; op: string; value: unknown };
+      then: {
+        action: string;
+        childType: string;
+        membership: string;
+        reportNumberSuffix?: string;
+        forbidChildDisposition?: string[];
+      };
+    }
+
+    /** Deep-clone the REAL rules array and corrupt its one rule. */
+    function corrupt(mut: (rule: RawRule) => void): unknown {
+      const rules = JSON.parse(JSON.stringify(DRILL_PIPE_RULES)) as RawRule[];
+      mut(rules[0]);
+      return rules;
+    }
+
+    // Scenario 4 (some rework + no child) is the workhorse: it exercises match set,
+    // childType, and reportNumber in one shot, so most mutations surface there.
+    async function buildS4(sync: Sync) {
+      const s = await seedReworkScenario({
+        reworkSerials: ['SN-A', 'SN-B'],
+        passSerials: ['SN-C'],
+        reportNumber: 'RPT-100',
+      });
+      await sync(s.tenantId, s.reportId);
+      return s;
+    }
+
+    /** Method (real) vs interpreter (corrupted rule), each on its own fresh seed. */
+    async function methodVsCorrupted(
+      label: string,
+      corruptedRules: unknown,
+    ): Promise<string[]> {
+      await resetInspectionDomain(prisma);
+      const m = await buildS4((t, r) => service.syncReworkChildReport(t, r));
+      const methodSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
+
+      await resetInspectionDomain(prisma);
+      const i = await buildS4((t, r) =>
+        interpreter.syncFromRules(t, r, corruptedRules),
+      );
+      const interpSnap = await snapshotReworkState(prisma, i.tenantId, i.reportId);
+
+      const diff = diffReworkSnapshots(methodSnap, interpSnap);
+      // eslint-disable-next-line no-console
+      console.log(
+        `[MUTATION ${label}]` +
+          `\n  method      = ${JSON.stringify(methodSnap)}` +
+          `\n  interpreter = ${JSON.stringify(interpSnap)}` +
+          `\n  diff = ${JSON.stringify(diff)}`,
+      );
+      return diff;
+    }
+
+    it('M1 — when.value REWORK→PASS ⇒ interpreter matches wrong serials (membership diff)', async () => {
+      const diff = await methodVsCorrupted(
+        'M1 when.value=PASS',
+        corrupt((r) => {
+          r.when.value = 'PASS';
+        }),
+      );
+      // Interpreter now links the PASS serial (SN-C) and drops SN-A/SN-B.
+      expect(diff.length).toBeGreaterThan(0);
+      expect(diff).toEqual(
+        expect.arrayContaining([
+          'member SN-A: present → absent',
+          'member SN-B: present → absent',
+          'member SN-C: absent → present',
+        ]),
+      );
+    });
+
+    it('M2 — childType REWORK→SCRAP ⇒ REWORK child absent on interpreter side (existence diff)', async () => {
+      const diff = await methodVsCorrupted(
+        'M2 childType=SCRAP',
+        corrupt((r) => {
+          r.then.childType = 'SCRAP';
+        }),
+      );
+      // Interpreter built a SCRAP child; the REWORK-filtered snapshot sees nothing.
+      expect(diff).toContain('child existence: present → absent');
+    });
+
+    it('M3 — reportNumberSuffix dropped ⇒ NO throw (optional) + bare reportNumber (reportNumber diff)', async () => {
+      let threw = false;
+      let diff: string[] = [];
+      try {
+        diff = await methodVsCorrupted(
+          'M3 suffix dropped',
+          corrupt((r) => {
+            delete r.then.reportNumberSuffix;
+          }),
+        );
+      } catch {
+        threw = true;
+      }
+      expect(threw).toBe(false); // suffix is optional — dropping it must NOT fail loud
+      // Interpreter yields the bare parent number; method appended `_rework`.
+      expect(diff).toContain('child.reportNumber: RPT-100_rework → RPT-100');
+    });
+
+    // -- Fail-loud boundary: these corruptions must THROW, not silently diverge. The throw
+    //    happens in selectUpsertRule before any DB read, so a seeded report is incidental.
+    async function expectInterpreterThrows(
+      corruptedRules: unknown,
+      messagePattern: RegExp,
+    ) {
+      const s = await seedReworkScenario({
+        reworkSerials: ['SN-A'],
+        reportNumber: 'RPT-100',
+      });
+      await expect(
+        interpreter.syncFromRules(s.tenantId, s.reportId, corruptedRules),
+      ).rejects.toThrow(messagePattern);
+    }
+
+    it('M4 — op eq→unknown ⇒ interpreter throws (fail-loud)', async () => {
+      await resetInspectionDomain(prisma);
+      await expectInterpreterThrows(
+        corrupt((r) => {
+          r.when.op = 'neq';
+        }),
+        /unknown op/,
+      );
+      // eslint-disable-next-line no-console
+      console.log('[MUTATION M4 op=neq] threw as required (unknown op)');
+    });
+
+    it('M5 — membership→garbage ⇒ interpreter throws (fail-loud)', async () => {
+      await resetInspectionDomain(prisma);
+      await expectInterpreterThrows(
+        corrupt((r) => {
+          r.then.membership = 'garbage';
+        }),
+        /unknown membership/,
+      );
+      // eslint-disable-next-line no-console
+      console.log('[MUTATION M5 membership=garbage] threw as required');
+    });
+
+    it('M6 — action→unknown ⇒ interpreter throws (fail-loud)', async () => {
+      await resetInspectionDomain(prisma);
+      await expectInterpreterThrows(
+        corrupt((r) => {
+          r.then.action = 'frobnicate';
+        }),
+        /unknown action/,
+      );
+      // eslint-disable-next-line no-console
+      console.log('[MUTATION M6 action=frobnicate] threw as required');
+    });
+
+    it('M7 — version-bump sensitivity: a no-bump interpreter variant diverges on scenario 7', async () => {
+      // Scenario 7 (unchanged re-sync, child pre-exists) — BOTH real paths bump to v2 (proven
+      // green in S7). Here we model an interpreter VARIANT that omits the unconditional bump.
+      // Scenario 7 hits exactly the `if (existingChild) increment` branch on the 2nd sync, so
+      // reverting the single bump the real interpreter applied reproduces that variant's output
+      // bit-for-bit (only the version differs). If the diff stays green, the proof's S7 pass was
+      // incidental — it isn't: the version dimension fires.
+      await resetInspectionDomain(prisma);
+      const m = await seedReworkScenario({
+        reworkSerials: ['SN-A'],
+        reportNumber: 'RPT-100',
+      });
+      await service.syncReworkChildReport(m.tenantId, m.reportId); // v1
+      await service.syncReworkChildReport(m.tenantId, m.reportId); // v2 (bump)
+      const methodSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
+
+      await resetInspectionDomain(prisma);
+      const i = await seedReworkScenario({
+        reworkSerials: ['SN-A'],
+        reportNumber: 'RPT-100',
+      });
+      await interpreter.syncFromRules(i.tenantId, i.reportId, DRILL_PIPE_RULES); // v1
+      await interpreter.syncFromRules(i.tenantId, i.reportId, DRILL_PIPE_RULES); // v2 (bump)
+      // Model the no-bump variant: undo exactly the one re-sync bump it would have skipped.
+      await prisma.childReport.updateMany({
+        where: {
+          inspectionReportId: i.reportId,
+          type: ChildReportType.REWORK,
+        },
+        data: { version: { decrement: 1 } },
+      });
+      const noBumpSnap = await snapshotReworkState(prisma, i.tenantId, i.reportId);
+
+      const diff = diffReworkSnapshots(methodSnap, noBumpSnap);
+      // eslint-disable-next-line no-console
+      console.log(
+        `[MUTATION M7 no-bump variant]` +
+          `\n  method (real, bumps)   = ${JSON.stringify(methodSnap)}` +
+          `\n  variant (skips bump)   = ${JSON.stringify(noBumpSnap)}` +
+          `\n  diff = ${JSON.stringify(diff)}`,
+      );
+      expect(methodSnap.child?.version).toBe(2);
+      expect(noBumpSnap.child?.version).toBe(1);
+      // The version dimension the proof's S7 relies on fires exactly here.
+      expect(diff).toContain('child.version: 2 → 1');
+    });
   });
 });
