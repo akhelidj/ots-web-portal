@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilesService } from '../files/files.service';
+import { ReworkRulesInterpreter } from './rework-rules.interpreter';
 import {
   ChildReportStatus,
   ChildReportType,
@@ -19,6 +20,7 @@ export class ChildReportsService {
   constructor(
     private prisma: PrismaService,
     private filesService: FilesService,
+    private reworkRulesInterpreter: ReworkRulesInterpreter,
   ) {}
 
   async syncReworkChildReport(tenantId: string, inspectionReportId: string) {
@@ -34,6 +36,33 @@ export class ChildReportsService {
 
     if (!report) {
       throw new NotFoundException('Inspection Report not found');
+    }
+
+    // Definition gate (mirrors inspection-report-workflow.service.ts:311-326):
+    // prefer the template's structured rework rules when present; else fall back to
+    // the imperative body below. definitionJson is NULL on every template today, so
+    // this is behavior-preserving until a definition is attached. report.templateKey /
+    // templateVersion are already loaded above — one read-only query, keyed exactly as
+    // the approval gate.
+    const template = await this.prisma.template.findUnique({
+      where: {
+        tenantId_templateKey_templateVersion: {
+          tenantId,
+          templateKey: report.templateKey,
+          templateVersion: report.templateVersion,
+        },
+      },
+      select: { definitionJson: true },
+    });
+    const definition =
+      (template?.definitionJson as unknown as { rules: unknown } | null) ?? null;
+
+    if (definition) {
+      return this.reworkRulesInterpreter.syncFromRules(
+        tenantId,
+        inspectionReportId,
+        definition.rules,
+      );
     }
 
     const reworkSerials = report.serialNumbers.filter((sn) => {

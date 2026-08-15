@@ -50,6 +50,7 @@ import { RevisionService } from '../revision/revision.service';
 import { InspectionReportWorkflowService } from '../workflow/inspection-report-workflow.service';
 import { InspectionReportsService } from './inspection-reports.service';
 import { ChildReportsService } from '../child-reports/child-reports.service';
+import { ReworkRulesInterpreter } from '../child-reports/rework-rules.interpreter';
 import type { FilesService } from '../files/files.service';
 // Portal delivery-side consumer, imported directly (both modules are pure TS —
 // zero Angular imports — so swc/jest transpiles them like any other .ts file).
@@ -116,7 +117,11 @@ describe('definitionJson cutover output-neutrality [integration]', () => {
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
     reportsService = new InspectionReportsService(prisma);
     // syncReworkChildReport never touches FilesService — a stub satisfies the ctor.
-    childReports = new ChildReportsService(prisma, {} as FilesService);
+    childReports = new ChildReportsService(
+      prisma,
+      {} as FilesService,
+      new ReworkRulesInterpreter(prisma),
+    );
   });
 
   afterAll(async () => {

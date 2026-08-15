@@ -65,14 +65,13 @@ import { join } from 'path';
  * the proof. Loaded from disk (not a hand-written literal) so the proof exercises exactly the
  * rule the system ships, and would break if that rule drifts from the method it mirrors.
  */
-const DRILL_PIPE_RULES = (
-  JSON.parse(
-    readFileSync(
-      join(__dirname, '../template/definitions/drill-pipe-v1.definition.json'),
-      'utf-8',
-    ),
-  ) as { rules: unknown }
-).rules;
+const DRILL_PIPE_DEFINITION = JSON.parse(
+  readFileSync(
+    join(__dirname, '../template/definitions/drill-pipe-v1.definition.json'),
+    'utf-8',
+  ),
+) as { rules: unknown };
+const DRILL_PIPE_RULES = DRILL_PIPE_DEFINITION.rules;
 
 // ---------------------------------------------------------------------------
 // Snapshot shape — exactly the dimensions rework-rules-consumer.md's proof asserts.
@@ -188,8 +187,15 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
     // FilesService is a constructor dep syncReworkChildReport never touches; construct
-    // it without onModuleInit (which reconciles the attachment storage dir).
-    service = new ChildReportsService(prisma, new FilesService(prisma));
+    // it without onModuleInit (which reconciles the attachment storage dir). The
+    // ReworkRulesInterpreter is now a constructor dep too (the wired gate routes to it
+    // when the report's template carries a definitionJson) — supplied here with prisma,
+    // its only dep, exactly as the DI module provides it.
+    service = new ChildReportsService(
+      prisma,
+      new FilesService(prisma),
+      new ReworkRulesInterpreter(prisma),
+    );
   });
 
   afterAll(async () => {
@@ -829,6 +835,203 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
       expect(noBumpSnap.child?.version).toBe(1);
       // The version dimension the proof's S7 relies on fires exactly here.
       expect(diff).toContain('child.version: 2 → 1');
+    });
+  });
+
+  // =========================================================================
+  // STEP 5 — the WIRED GATE. The proofs above call service.syncReworkChildReport and
+  // interpreter.syncFromRules as two SEPARATE entry points; neither exercises the routing
+  // the live wiring added — the gate inside the service that reads the report's template
+  // definitionJson and CHOOSES imperative (NULL) vs interpreter (non-null). These tests drive
+  // the SERVICE method only (the real controller entry) and vary the template's definitionJson:
+  //
+  //   (a) definitionJson NULL   ⇒ gate must fall to the imperative body, INERT — result equals
+  //       the interpreter-direct oracle (imperative ≡ interpreter is already proven above, so
+  //       equality here proves the gate added nothing on the NULL path).
+  //   (b) definitionJson = REAL ⇒ gate must route to the interpreter — result equals the
+  //       interpreter-direct oracle, through the wired service rather than a direct call.
+  //   (c) ROUTING DISCRIMINATOR — (a) and (b) both equal the oracle because imperative ≡
+  //       interpreter on the real rule, so neither alone proves the interpreter was actually
+  //       consulted rather than the imperative body run by coincidence. A definitionJson whose
+  //       suffix is altered to something the hardcoded imperative body can NEVER emit forces the
+  //       distinction: only a genuine route-through yields the altered reportNumber.
+  //
+  // Create AND empty-set-delete are covered on both NULL and populated, all via the service.
+  // =========================================================================
+  describe('wired gate — definitionJson routing [gate]', () => {
+    let interpreter: ReworkRulesInterpreter;
+    beforeAll(() => {
+      interpreter = new ReworkRulesInterpreter(prisma);
+    });
+
+    type Sync = (tenantId: string, reportId: string) => Promise<unknown>;
+    type AfterSeed = (tenantId: string, reportId: string) => Promise<void>;
+
+    /** Overwrite one serial's body.emiResult (moves it into / out of the match set). */
+    const setEmi = (reportId: string, serial: string, emiResult: unknown) =>
+      prisma.serialNumber.updateMany({
+        where: { inspectionReportId: reportId, serial },
+        data: { inspectionData: { body: { emiResult } } as never },
+      });
+
+    /**
+     * Create the Template row the seeded report pins (DRILL_PIPE_REPORT@1), carrying the given
+     * definitionJson. `null` leaves the column NULL — the real pre-cutover state the gate must
+     * treat as "no definition". The gate keys on tenantId_templateKey_templateVersion only, so
+     * the blob/hash are incidental filler.
+     */
+    async function attachTemplate(
+      tenantId: string,
+      definitionJson: unknown | null,
+    ) {
+      await prisma.template.create({
+        data: {
+          tenantId,
+          templateKey: 'DRILL_PIPE_REPORT',
+          templateVersion: 1,
+          status: 'ACTIVE',
+          fileBlob: Buffer.from('gate-test'),
+          hash: 'hash-DRILL_PIPE_REPORT',
+          changeNote: 'gate-test',
+          createdById: 'seed-user',
+          definitionJson: (definitionJson ?? undefined) as never,
+        },
+      });
+    }
+
+    // Scenario builders shared by the wired-service run and the interpreter-direct oracle.
+    // `afterSeed` runs after seeding and BEFORE any sync — the wired path uses it to attach
+    // the template; the oracle omits it (the interpreter reads rules directly, no template).
+
+    /** CREATE: two rework serials + no child ⇒ DRAFT v1 child, SN-A/SN-B linked. */
+    async function buildCreate(sync: Sync, afterSeed?: AfterSeed) {
+      const s = await seedReworkScenario({
+        reworkSerials: ['SN-A', 'SN-B'],
+        passSerials: ['SN-C'],
+        reportNumber: 'RPT-100',
+      });
+      if (afterSeed) await afterSeed(s.tenantId, s.reportId);
+      await sync(s.tenantId, s.reportId);
+      return s;
+    }
+
+    /** DELETE: rework serial creates a DRAFT child, then leaves the set ⇒ child deleted. */
+    async function buildDelete(sync: Sync, afterSeed?: AfterSeed) {
+      const s = await seedReworkScenario({
+        reworkSerials: ['SN-A'],
+        reportNumber: 'RPT-100',
+      });
+      if (afterSeed) await afterSeed(s.tenantId, s.reportId);
+      await sync(s.tenantId, s.reportId); // creates DRAFT child v1
+      await setEmi(s.reportId, 'SN-A', SerialDisposition.PASS);
+      await sync(s.tenantId, s.reportId); // empty match + DRAFT ⇒ delete
+      return s;
+    }
+
+    /**
+     * Run `build` through the WIRED SERVICE with the template carrying `wiredDefinition`
+     * (null ⇒ imperative branch, real ⇒ interpreter branch), then run the SAME `build` through
+     * the interpreter directly (real rules) on an independent seed, and assert the two snapshots
+     * diff empty. Reuses the proven snapshot+diff so the gate is measured on the same dimensions.
+     */
+    async function proveGateEquivalent(
+      label: string,
+      build: (sync: Sync, afterSeed?: AfterSeed) => Promise<{
+        tenantId: string;
+        reportId: string;
+      }>,
+      wiredDefinition: unknown | null,
+    ): Promise<{ wiredSnap: ReworkStateSnapshot }> {
+      await resetInspectionDomain(prisma);
+      const m = await build(
+        (t, r) => service.syncReworkChildReport(t, r),
+        (t) => attachTemplate(t, wiredDefinition),
+      );
+      const wiredSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
+
+      await resetInspectionDomain(prisma);
+      const i = await build((t, r) =>
+        interpreter.syncFromRules(t, r, DRILL_PIPE_RULES),
+      );
+      const oracleSnap = await snapshotReworkState(prisma, i.tenantId, i.reportId);
+
+      const diff = diffReworkSnapshots(wiredSnap, oracleSnap);
+      // eslint-disable-next-line no-console
+      console.log(
+        `[GATE ${label}]` +
+          `\n  wired-service = ${JSON.stringify(wiredSnap)}` +
+          `\n  interp-oracle = ${JSON.stringify(oracleSnap)}` +
+          `\n  diff = ${JSON.stringify(diff)}`,
+      );
+      expect(diff).toEqual([]);
+      return { wiredSnap };
+    }
+
+    it('G1 — definitionJson NULL, create ⇒ imperative fallback is INERT (matches oracle)', async () => {
+      const { wiredSnap } = await proveGateEquivalent('G1 NULL create', buildCreate, null);
+      expect(wiredSnap.child?.status).toBe(ChildReportStatus.DRAFT);
+      expect(wiredSnap.child?.version).toBe(1);
+      expect(wiredSnap.child?.reportNumber).toBe('RPT-100_rework');
+      expect(wiredSnap.child?.members.map((m) => m.serial)).toEqual([
+        'SN-A',
+        'SN-B',
+      ]);
+    });
+
+    it('G2 — definitionJson NULL, empty-set delete ⇒ imperative fallback is INERT (matches oracle)', async () => {
+      const { wiredSnap } = await proveGateEquivalent('G2 NULL delete', buildDelete, null);
+      expect(wiredSnap.child).toBeNull();
+    });
+
+    it('G3 — definitionJson populated, create ⇒ gate ROUTES to interpreter (matches oracle)', async () => {
+      const { wiredSnap } = await proveGateEquivalent(
+        'G3 POP create',
+        buildCreate,
+        DRILL_PIPE_DEFINITION,
+      );
+      expect(wiredSnap.child?.status).toBe(ChildReportStatus.DRAFT);
+      expect(wiredSnap.child?.version).toBe(1);
+      expect(wiredSnap.child?.reportNumber).toBe('RPT-100_rework');
+      expect(wiredSnap.child?.members.map((m) => m.serial)).toEqual([
+        'SN-A',
+        'SN-B',
+      ]);
+    });
+
+    it('G4 — definitionJson populated, empty-set delete ⇒ gate ROUTES to interpreter (matches oracle)', async () => {
+      const { wiredSnap } = await proveGateEquivalent(
+        'G4 POP delete',
+        buildDelete,
+        DRILL_PIPE_DEFINITION,
+      );
+      expect(wiredSnap.child).toBeNull();
+    });
+
+    it('G5 — routing discriminator: a populated definition with an altered suffix yields output the imperative body CANNOT produce', async () => {
+      // If the gate fell through to the imperative body, reportNumber would be the hardcoded
+      // `RPT-100_rework`. Only a genuine route-through reads the (altered) suffix from the
+      // definition. This is the decisive proof the interpreter was actually consulted — not the
+      // imperative body producing a coincidentally-equal result.
+      await resetInspectionDomain(prisma);
+      const s = await seedReworkScenario({
+        reworkSerials: ['SN-A'],
+        reportNumber: 'RPT-100',
+      });
+      const mutated = JSON.parse(JSON.stringify(DRILL_PIPE_DEFINITION)) as {
+        rules: { then: { reportNumberSuffix?: string } }[];
+      };
+      mutated.rules[0].then.reportNumberSuffix = '_reworkGATE';
+      await attachTemplate(s.tenantId, mutated);
+
+      await service.syncReworkChildReport(s.tenantId, s.reportId);
+      const snap = await snapshotReworkState(prisma, s.tenantId, s.reportId);
+      // eslint-disable-next-line no-console
+      console.log(
+        `[GATE G5 discriminator] reportNumber = ${snap.child?.reportNumber} (imperative could only emit RPT-100_rework)`,
+      );
+
+      expect(snap.child).not.toBeNull();
+      expect(snap.child?.reportNumber).toBe('RPT-100_reworkGATE');
     });
   });
 });
