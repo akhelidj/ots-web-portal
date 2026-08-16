@@ -317,8 +317,12 @@ export class ReworkRulesInterpreter {
 
   /**
    * Response mapping — reproduced from ChildReportsService.mapChildReportResponse so this
-   * standalone unit returns the same shape as the method it mirrors. (Deliberate short-lived
-   * duplication: the two converge when the hardcoded path is retired.)
+   * consumer returns the same shape as the method it replaced. This duplication is
+   * INTENTIONAL and does NOT converge automatically now that the imperative rework body is
+   * retired: the service still keeps its own mapChildReportResponse alive for 4 other callers
+   * (getChildReports, getChildReportById, updateChildReport, updateChildReportSerialNumber).
+   * Collapsing the two copies onto one shared helper is a SEPARATE extract-to-shared-helper
+   * refactor, deliberately out of scope for this retirement.
    */
   private mapChildReportResponse(
     cr: Prisma.ChildReportGetPayload<{

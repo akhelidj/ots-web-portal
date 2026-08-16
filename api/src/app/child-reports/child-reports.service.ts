@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  PreconditionFailedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilesService } from '../files/files.service';
@@ -38,12 +39,12 @@ export class ChildReportsService {
       throw new NotFoundException('Inspection Report not found');
     }
 
-    // Definition gate (mirrors inspection-report-workflow.service.ts:311-326):
-    // prefer the template's structured rework rules when present; else fall back to
-    // the imperative body below. definitionJson is NULL on every template today, so
-    // this is behavior-preserving until a definition is attached. report.templateKey /
-    // templateVersion are already loaded above — one read-only query, keyed exactly as
-    // the approval gate.
+    // Definition gate (mirrors inspection-report-workflow.service.ts:311-326 and the
+    // approval-gate / export cutovers): the template's structured rework rules are the
+    // SOLE live path. Location 4 of the drill-pipe hardcode retirement is complete — the
+    // imperative body that used to follow was frozen as an independent oracle
+    // (api/test/rework-imperative-oracle.ts) and proven equivalent before deletion. Keyed
+    // exactly as the approval gate on tenantId_templateKey_templateVersion.
     const template = await this.prisma.template.findUnique({
       where: {
         tenantId_templateKey_templateVersion: {
@@ -65,118 +66,15 @@ export class ChildReportsService {
       );
     }
 
-    const reworkSerials = report.serialNumbers.filter((sn) => {
-      const data = (sn.inspectionData as InspectionData) || {};
-      const disposition = data.body?.emiResult;
-      return disposition === SerialDisposition.REWORK;
-    });
-
-    const existingChild = report.childReports[0];
-
-    if (reworkSerials.length === 0) {
-      if (existingChild) {
-        if (existingChild.status === ChildReportStatus.DRAFT) {
-          await this.prisma.$transaction([
-            this.prisma.childReportSerialNumber.deleteMany({
-              where: { childReportId: existingChild.id },
-            }),
-            this.prisma.childReport.delete({ where: { id: existingChild.id } }),
-          ]);
-          return null;
-        } else {
-          const [, updated] = await this.prisma.$transaction([
-            this.prisma.childReportSerialNumber.deleteMany({
-              where: { childReportId: existingChild.id },
-            }),
-            this.prisma.childReport.update({
-              where: { id: existingChild.id },
-              data: { version: { increment: 1 } },
-              include: {
-                attachments: true,
-                serialNumbers: {
-                  include: { serialNumber: true },
-                },
-              },
-            }),
-          ]);
-          return this.mapChildReportResponse(updated);
-        }
-      }
-      return null;
-    }
-
-    let crId: string;
-    if (existingChild) {
-      crId = existingChild.id;
-    } else {
-      let generatedChildReportNumber: string | undefined = undefined;
-      if (report.reportNumber) {
-        generatedChildReportNumber = `${report.reportNumber}_rework`;
-      }
-      const newCr = await this.prisma.childReport.create({
-        data: {
-          tenantId,
-          inspectionReportId,
-          reportNumber: generatedChildReportNumber,
-          type: ChildReportType.REWORK,
-          status: ChildReportStatus.DRAFT,
-          version: 1,
-        },
-      });
-      crId = newCr.id;
-    }
-
-    await this.prisma.$transaction(async (tx) => {
-      // Load existing rows so we can preserve their inspectionData and disposition
-      const existingRows = await tx.childReportSerialNumber.findMany({
-        where: { childReportId: crId },
-      });
-      const existingMap = new Map(
-        existingRows.map((r) => [r.serialNumberId, r]),
-      );
-
-      const reworkSnIds = new Set(reworkSerials.map((sn) => sn.id));
-
-      // Delete rows whose serial is no longer REWORK
-      const toDelete = existingRows.filter(
-        (r) => !reworkSnIds.has(r.serialNumberId),
-      );
-      if (toDelete.length > 0) {
-        await tx.childReportSerialNumber.deleteMany({
-          where: { id: { in: toDelete.map((r) => r.id) } },
-        });
-      }
-
-      // Create only rows that don't already exist (new additions to REWORK set)
-      const toCreate = reworkSerials.filter((sn) => !existingMap.has(sn.id));
-      if (toCreate.length > 0) {
-        await tx.childReportSerialNumber.createMany({
-          data: toCreate.map((sn) => ({
-            childReportId: crId,
-            serialNumberId: sn.id,
-            // inspectionData and disposition intentionally omitted — start blank for new serials
-          })),
-        });
-      }
-
-      if (existingChild) {
-        await tx.childReport.update({
-          where: { id: crId },
-          data: { version: { increment: 1 } },
-        });
-      }
-    });
-
-    const result = await this.prisma.childReport.findUnique({
-      where: { id: crId },
-      include: {
-        attachments: true,
-        serialNumbers: {
-          include: { serialNumber: true },
-        },
-      },
-    });
-    return this.mapChildReportResponse(result);
+    // NULL arm — defensive precondition, not a user-facing validation error. Every ACTIVE
+    // template is backfilled with definitionJson (the rework rules ride Template.definitionJson,
+    // populated at cutover), so a report whose pinned template has no definition is a server
+    // misconfiguration, not something an inspector can cause or fix. Mirrors the gate/export
+    // 412 pattern rather than the VALIDATION_FAILED 400.
+    throw new PreconditionFailedException(
+      `Template ${report.templateKey}@${report.templateVersion} has no rework rules ` +
+        `(definitionJson is null); rework sync requires a definition-bound template.`,
+    );
   }
 
   private mapChildReportResponse(

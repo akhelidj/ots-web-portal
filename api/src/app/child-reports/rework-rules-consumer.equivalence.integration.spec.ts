@@ -14,11 +14,13 @@
  *   2. diffReworkSnapshots() — a pure comparison of two such snapshots, returning a
  *      list of human-readable differences ([] === identical).
  *
- * The authority under test is the imperative syncReworkChildReport
- * (child-reports.service.ts:24-151) — the SOLE authority today (the definition's
- * `rules` block is dormant JSON with no consumer). So the proof is "an interpreter
- * reproduces this one method", not "two live paths agree"; there is nothing to diff
- * until the interpreter exists. This step proves the diff harness itself is honest.
+ * The authority under test is the FROZEN IMPERATIVE ORACLE (api/test/rework-imperative-oracle.ts)
+ * — a standalone, independent copy of the imperative syncReworkChildReport body as it stood
+ * before retirement. The live imperative body has since been deleted (location 4 of the
+ * drill-pipe hardcode retirement); the definition-driven interpreter is now the SOLE live
+ * path, and the service's NULL arm throws a 412 precondition. The oracle was proven
+ * byte-identical to the live body before deletion, so "interpreter reproduces the oracle"
+ * is exactly "interpreter reproduces the retired method". This harness proves the diff is honest.
  *
  * WHY MEMBERSHIP IS KEYED BY SERIAL STRING, NOT serialNumberId:
  * The eventual proof compares two INDEPENDENT runs against independently-seeded state
@@ -43,6 +45,7 @@
  *              syncs, plus membership and preserved-vs-blank granularity on the pure
  *              diff function.
  */
+import { PreconditionFailedException } from '@nestjs/common';
 import {
   ChildReportStatus,
   ChildReportType,
@@ -57,6 +60,7 @@ import {
   seedTenant,
   seedInspectionReport,
 } from '../../../test/seed-helpers';
+import { imperativeReworkOracle } from '../../../test/rework-imperative-oracle';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -261,7 +265,7 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
     // the deterministic version increment cannot introduce a spurious difference here.
     const runOnce = async () => {
       const { tenantId, reportId } = await seedReworkScenario({ ...RICH });
-      await service.syncReworkChildReport(tenantId, reportId);
+      await imperativeReworkOracle(prisma, tenantId, reportId);
       return snapshotReworkState(prisma, tenantId, reportId);
     };
 
@@ -291,9 +295,9 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
   it('CHECK 1b — same-report re-sync is NOT version-idempotent; diff isolates exactly the version bump', async () => {
     const { tenantId, reportId } = await seedReworkScenario({ ...RICH });
 
-    await service.syncReworkChildReport(tenantId, reportId);
+    await imperativeReworkOracle(prisma, tenantId, reportId);
     const s1 = await snapshotReworkState(prisma, tenantId, reportId);
-    await service.syncReworkChildReport(tenantId, reportId); // identical inputs
+    await imperativeReworkOracle(prisma, tenantId, reportId); // identical inputs
     const s2 = await snapshotReworkState(prisma, tenantId, reportId);
 
     const diff = diffReworkSnapshots(s1, s2);
@@ -309,20 +313,20 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
   it('CHECK 2 — different behavior ⇒ NON-EMPTY diff (child present vs absent)', async () => {
     const present = await (async () => {
       const { tenantId, reportId } = await seedReworkScenario({ ...RICH });
-      await service.syncReworkChildReport(tenantId, reportId);
+      await imperativeReworkOracle(prisma, tenantId, reportId);
       return snapshotReworkState(prisma, tenantId, reportId);
     })();
 
     await resetInspectionDomain(prisma);
 
     const absent = await (async () => {
-      // No REWORK serials ⇒ syncReworkChildReport creates no child.
+      // No REWORK serials ⇒ the oracle creates no child.
       const { tenantId, reportId } = await seedReworkScenario({
         reworkSerials: [],
         passSerials: ['SN-A', 'SN-B'],
         reportNumber: 'RPT-100',
       });
-      await service.syncReworkChildReport(tenantId, reportId);
+      await imperativeReworkOracle(prisma, tenantId, reportId);
       return snapshotReworkState(prisma, tenantId, reportId);
     })();
 
@@ -372,9 +376,11 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
   });
 
   // =========================================================================
-  // STEP 3 — the equivalence PROOF. For each design-doc scenario, run BOTH the
-  // imperative syncReworkChildReport AND interpreter.syncFromRules(REAL rules) against
+  // STEP 3 — the equivalence PROOF. For each design-doc scenario, run BOTH the frozen
+  // imperativeReworkOracle AND interpreter.syncFromRules(REAL rules) against
   // INDEPENDENT identical seeds, snapshot each, and assert diffReworkSnapshots === [].
+  // (The oracle replaces the now-retired live imperative body as the method-side authority;
+  // it was proven byte-identical to that body before deletion.)
   //
   // Independent seeds are MANDATORY: the version-bump non-idempotency (CHECK 1b) means a
   // shared second run would show version drift that is a sequencing artifact, not a real
@@ -442,7 +448,7 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
       build: (sync: Sync) => Promise<{ tenantId: string; reportId: string }>,
     ): Promise<{ methodSnap: ReworkStateSnapshot }> {
       await resetInspectionDomain(prisma);
-      const m = await build((t, r) => service.syncReworkChildReport(t, r));
+      const m = await build((t, r) => imperativeReworkOracle(prisma, t, r));
       const methodSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
 
       await resetInspectionDomain(prisma);
@@ -672,7 +678,7 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
       corruptedRules: unknown,
     ): Promise<string[]> {
       await resetInspectionDomain(prisma);
-      const m = await buildS4((t, r) => service.syncReworkChildReport(t, r));
+      const m = await buildS4((t, r) => imperativeReworkOracle(prisma, t, r));
       const methodSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
 
       await resetInspectionDomain(prisma);
@@ -802,8 +808,8 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
         reworkSerials: ['SN-A'],
         reportNumber: 'RPT-100',
       });
-      await service.syncReworkChildReport(m.tenantId, m.reportId); // v1
-      await service.syncReworkChildReport(m.tenantId, m.reportId); // v2 (bump)
+      await imperativeReworkOracle(prisma, m.tenantId, m.reportId); // v1
+      await imperativeReworkOracle(prisma, m.tenantId, m.reportId); // v2 (bump)
       const methodSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
 
       await resetInspectionDomain(prisma);
@@ -839,24 +845,19 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
   });
 
   // =========================================================================
-  // STEP 5 — the WIRED GATE. The proofs above call service.syncReworkChildReport and
-  // interpreter.syncFromRules as two SEPARATE entry points; neither exercises the routing
-  // the live wiring added — the gate inside the service that reads the report's template
-  // definitionJson and CHOOSES imperative (NULL) vs interpreter (non-null). These tests drive
-  // the SERVICE method only (the real controller entry) and vary the template's definitionJson:
+  // STEP 5 — the WIRED GATE. These tests drive the SERVICE method (the real controller entry)
+  // and vary the template's definitionJson, exercising the gate's routing after retirement:
   //
-  //   (a) definitionJson NULL   ⇒ gate must fall to the imperative body, INERT — result equals
-  //       the interpreter-direct oracle (imperative ≡ interpreter is already proven above, so
-  //       equality here proves the gate added nothing on the NULL path).
-  //   (b) definitionJson = REAL ⇒ gate must route to the interpreter — result equals the
-  //       interpreter-direct oracle, through the wired service rather than a direct call.
-  //   (c) ROUTING DISCRIMINATOR — (a) and (b) both equal the oracle because imperative ≡
-  //       interpreter on the real rule, so neither alone proves the interpreter was actually
-  //       consulted rather than the imperative body run by coincidence. A definitionJson whose
-  //       suffix is altered to something the hardcoded imperative body can NEVER emit forces the
-  //       distinction: only a genuine route-through yields the altered reportNumber.
-  //
-  // Create AND empty-set-delete are covered on both NULL and populated, all via the service.
+  //   (a) definitionJson NULL / no template row ⇒ the imperative body is RETIRED, so the gate
+  //       now THROWS a 412 PreconditionFailedException (G1 = template present with null column,
+  //       G2 = no template row at all). The new defensive contract: a report whose pinned
+  //       template carries no rework rules is a server misconfiguration, not an inspector-fixable
+  //       state, and the throw happens before any reconciliation (no child is created).
+  //   (b) definitionJson = REAL ⇒ gate routes to the interpreter — result equals the
+  //       interpreter-direct oracle, through the wired service rather than a direct call (G3/G4).
+  //   (c) ROUTING DISCRIMINATOR (G5) — a populated definition whose suffix is altered to
+  //       something the retired imperative body could NEVER emit forces the distinction: only a
+  //       genuine route-through yields the altered reportNumber.
   // =========================================================================
   describe('wired gate — definitionJson routing [gate]', () => {
     let interpreter: ReworkRulesInterpreter;
@@ -967,20 +968,33 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
       return { wiredSnap };
     }
 
-    it('G1 — definitionJson NULL, create ⇒ imperative fallback is INERT (matches oracle)', async () => {
-      const { wiredSnap } = await proveGateEquivalent('G1 NULL create', buildCreate, null);
-      expect(wiredSnap.child?.status).toBe(ChildReportStatus.DRAFT);
-      expect(wiredSnap.child?.version).toBe(1);
-      expect(wiredSnap.child?.reportNumber).toBe('RPT-100_rework');
-      expect(wiredSnap.child?.members.map((m) => m.serial)).toEqual([
-        'SN-A',
-        'SN-B',
-      ]);
+    it('G1 — definitionJson NULL (template present, null column) ⇒ service THROWS 412 (defensive contract)', async () => {
+      await resetInspectionDomain(prisma);
+      const s = await seedReworkScenario({
+        reworkSerials: ['SN-A', 'SN-B'],
+        reportNumber: 'RPT-100',
+      });
+      await attachTemplate(s.tenantId, null); // ACTIVE template, definitionJson NULL
+      await expect(
+        service.syncReworkChildReport(s.tenantId, s.reportId),
+      ).rejects.toThrow(PreconditionFailedException);
+      // The throw precedes any reconciliation — no REWORK child is created.
+      const snap = await snapshotReworkState(prisma, s.tenantId, s.reportId);
+      expect(snap.child).toBeNull();
     });
 
-    it('G2 — definitionJson NULL, empty-set delete ⇒ imperative fallback is INERT (matches oracle)', async () => {
-      const { wiredSnap } = await proveGateEquivalent('G2 NULL delete', buildDelete, null);
-      expect(wiredSnap.child).toBeNull();
+    it('G2 — no template row at all ⇒ service THROWS 412 (null definition, defensive contract)', async () => {
+      await resetInspectionDomain(prisma);
+      // seedReworkScenario attaches no Template ⇒ gate finds none ⇒ definition null ⇒ throw.
+      const s = await seedReworkScenario({
+        reworkSerials: ['SN-A'],
+        reportNumber: 'RPT-100',
+      });
+      await expect(
+        service.syncReworkChildReport(s.tenantId, s.reportId),
+      ).rejects.toThrow(/no rework rules/);
+      const snap = await snapshotReworkState(prisma, s.tenantId, s.reportId);
+      expect(snap.child).toBeNull();
     });
 
     it('G3 — definitionJson populated, create ⇒ gate ROUTES to interpreter (matches oracle)', async () => {
