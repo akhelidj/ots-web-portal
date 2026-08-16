@@ -18,8 +18,9 @@
  *   3. FORM   — the portal's delivery + adapter: GET /inspection-reports embeds
  *               definitionJson (inspection-reports.service.ts getReports), the portal runs
  *               definitionToFormSchema on it. Oracle: the adapter's output over the
- *               committed definition deep-equals the hardcoded DRILL_PIPE_V1_SCHEMA. Both
- *               portal modules are pure TS and imported directly here.
+ *               committed definition deep-equals a self-contained GOLDEN_FORM_SCHEMA
+ *               (hand-materialized locally — no cross-app import of the portal const). Only
+ *               the engine module (definitionToFormSchema) is pure TS and imported here.
  *   4. REWORK — the REWORK→child-report trigger (child-reports.service.ts
  *               syncReworkChildReport). Oracle: one REWORK serial produces exactly the
  *               expected child literal. (The imperative-vs-interpreter equivalence itself
@@ -51,10 +52,11 @@ import { InspectionReportsService } from './inspection-reports.service';
 import { ChildReportsService } from '../child-reports/child-reports.service';
 import { ReworkRulesInterpreter } from '../child-reports/rework-rules.interpreter';
 import type { FilesService } from '../files/files.service';
-// Portal delivery-side consumer, imported directly (both modules are pure TS —
-// zero Angular imports — so swc/jest transpiles them like any other .ts file).
+// Portal delivery-side consumer (the engine under test), imported directly — it is pure
+// TS (zero Angular imports), so swc/jest transpiles it like any other .ts file. The
+// hardcoded DRILL_PIPE_V1_SCHEMA is NOT imported across the app boundary; the oracle is a
+// self-contained golden materialized locally below (GOLDEN_FORM_SCHEMA).
 import { definitionToFormSchema } from '../../../../portal/src/app/features/templates/schemas/definition-to-form-schema';
-import { DRILL_PIPE_V1_SCHEMA } from '../../../../portal/src/app/features/templates/schemas/drill-pipe-v1.schema';
 import {
   seedTenant,
   seedCustomer,
@@ -362,9 +364,87 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
 
   // ============================================================================
   // 3. FORM — definitionToFormSchema(definition) deep-equals the independent
-  //           DRILL_PIPE_V1_SCHEMA, reached through the REAL delivery path (getReports
+  //           GOLDEN_FORM_SCHEMA, reached through the REAL delivery path (getReports
   //           embed + HTTP hop).
   // ============================================================================
+
+  /**
+   * Frozen, hand-materialized golden — self-contained on the api side (no cross-app
+   * import of the portal const, killing the api→portal-source relative import). Written
+   * out by hand, sharing ZERO machinery with definitionToFormSchema, so the equivalence
+   * below cannot pass vacuously. `as const` gives a local literal type without re-importing
+   * portal's FormSchema across the boundary. Independent-literal anchors kept visible:
+   * body.emiResult.options === ['PASS','REWORK','SCRAP','HOLD'] and box.hardBanding last.
+   */
+  const GOLDEN_FORM_SCHEMA = {
+    templateKey: 'DRILL_PIPE_REPORT',
+    templateVersion: 1,
+    sections: [
+      {
+        key: 'box',
+        title: 'Box Connection',
+        fields: [
+          { key: 'box.minTongSpace', label: 'Min Tong Space', inputType: 'text', required: true },
+          { key: 'box.minOD', label: 'Min OD', inputType: 'text', required: true },
+          { key: 'box.minBoxThreads', label: 'Min Box Threads', inputType: 'text', required: true },
+          { key: 'box.minEccShoulder', label: 'Min Ecc Shoulder', inputType: 'text', required: true },
+          { key: 'box.maxCounterBoreDiameter', label: 'Max Counter Bore Diameter', inputType: 'text', required: true },
+          { key: 'box.maxCounterBoreLength', label: 'Max Counter Bore Length', inputType: 'text', required: true },
+          { key: 'box.bevelDiameterMin', label: 'Bevel Diameter Min', inputType: 'text', required: true },
+          { key: 'box.bevelDiameterMax', label: 'Bevel Diameter Max', inputType: 'text', required: true },
+          { key: 'box.condition', label: 'Condition', inputType: 'text', required: true },
+          { key: 'box.hardBanding', label: 'Hard Banding', inputType: 'text', required: true },
+        ],
+      },
+      {
+        key: 'pin',
+        title: 'Pin Connection',
+        fields: [
+          { key: 'pin.minTongSpace', label: 'Min Tong Space', inputType: 'text', required: true },
+          { key: 'pin.minOD', label: 'Min OD', inputType: 'text', required: true },
+          { key: 'pin.maxID', label: 'Max ID', inputType: 'text', required: true },
+          { key: 'pin.minEccShoulder', label: 'Min Ecc Shoulder', inputType: 'text', required: true },
+          { key: 'pin.lengthPinConnMin', label: 'Length Pin Conn Min', inputType: 'text', required: true },
+          { key: 'pin.lengthPinConnMax', label: 'Length Pin Conn Max', inputType: 'text', required: true },
+          { key: 'pin.maxLengthPinBase', label: 'Max Length Pin Base', inputType: 'text', required: true },
+          { key: 'pin.bevelDiameterMin', label: 'Bevel Diameter Min', inputType: 'text', required: true },
+          { key: 'pin.bevelDiameterMax', label: 'Bevel Diameter Max', inputType: 'text', required: true },
+          { key: 'pin.condition', label: 'Condition', inputType: 'text', required: true },
+        ],
+      },
+      {
+        key: 'body',
+        title: 'Body',
+        fields: [
+          { key: 'body.wallRemaining', label: 'Wall Remaining', inputType: 'text', required: true },
+          { key: 'body.odDecrease', label: 'OD Decrease', inputType: 'text', required: true },
+          { key: 'body.emiResult', label: 'EMI Result', inputType: 'select', required: true, options: ['PASS', 'REWORK', 'SCRAP', 'HOLD'] },
+          { key: 'body.slipArea', label: 'Slip Area', inputType: 'text', required: true },
+          { key: 'body.corrosionIn', label: 'Corrosion Inside', inputType: 'boolean', required: true },
+          { key: 'body.corrosionOut', label: 'Corrosion Outside', inputType: 'boolean', required: true },
+          { key: 'body.ipc', label: 'IPC', inputType: 'boolean', required: true },
+          { key: 'body.bentJoints', label: 'Bent Joints', inputType: 'boolean', required: true },
+        ],
+      },
+      {
+        key: 'final',
+        title: 'Final Disposition',
+        fields: [
+          { key: 'final.isNew', label: 'Is New', inputType: 'boolean', required: true },
+          { key: 'final.isPremium', label: 'Is Premium', inputType: 'boolean', required: true },
+          { key: 'final.isC2', label: 'Is C2', inputType: 'boolean', required: true },
+          { key: 'final.isScrap', label: 'Is Scrap', inputType: 'boolean', required: true },
+        ],
+      },
+      {
+        key: 'remarksSection',
+        title: 'Additional Information',
+        fields: [
+          { key: 'remarks', label: 'Remarks', inputType: 'text', required: false },
+        ],
+      },
+    ],
+  } as const;
 
   /** Model the portal: seed a report, deliver it via getReports (NULL or populated),
    *  cross the wire, then build the form schema the way the component does — run the
@@ -382,14 +462,14 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
     const embedded = overTheWire[0].definitionJson;
     return embedded
       ? definitionToFormSchema(embedded as never)
-      : DRILL_PIPE_V1_SCHEMA;
+      : GOLDEN_FORM_SCHEMA;
   }
 
-  it('FORM: definitionToFormSchema of the delivered definition equals the independent DRILL_PIPE_V1_SCHEMA', async () => {
+  it('FORM: definitionToFormSchema of the delivered definition equals the independent GOLDEN_FORM_SCHEMA', async () => {
     const engine = await deliverFormSchema(DEF);
     // The independent fixed point: the adapter's output over the committed definition
-    // deep-equals the hardcoded schema. (The NULL-fallback half was cross-impl only.)
-    expect(engine).toEqual(DRILL_PIPE_V1_SCHEMA);
+    // deep-equals the self-contained golden. (The NULL-fallback half was cross-impl only.)
+    expect(engine).toEqual(GOLDEN_FORM_SCHEMA);
   });
 
   // ============================================================================
