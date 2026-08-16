@@ -1,6 +1,6 @@
 /**
  * Integration test — the deterministic xlsx export path (ExportService +
- * mapDrillPipeReportV1). Runs under the `test-integration` target against the
+ * the definition-driven engine mapper). Runs under the `test-integration` target against the
  * dedicated test Postgres (docker-compose.test.yml → ots_test on 5433). Real
  * ExportService/RevisionService/workflow, real persistence, and the REAL tracked
  * template fixture (api/scripts/valid-template.xlsx) loaded as the Template blob.
@@ -14,7 +14,7 @@
  * STRATEGY (confirmed): structural assertions on the DECODED workbook — never a
  * golden-file, byte, or hash comparison. The xlsx is a zip of OOXML that embeds
  * non-deterministic timestamps in docProps/core.xml (ExcelJS) and in per-entry ZIP
- * mod-times (JSZip zip.file without a date, mapping.ts:448-449 / export.service.ts:365),
+ * mod-times (JSZip zip.file without a date, xlsx-token-engine.ts / export.service.ts),
  * so byte/hash equality is flaky BY CONSTRUCTION. We decode and assert on values.
  *
  * DELIBERATE DETERMINISM-SCOPING (exclusions are intentional, not gaps):

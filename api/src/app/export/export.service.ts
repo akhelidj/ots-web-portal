@@ -4,11 +4,11 @@ import {
   ForbiddenException,
   BadRequestException,
   InternalServerErrorException,
+  PreconditionFailedException,
 } from '@nestjs/common';
 import { RevisionService } from '../revision/revision.service';
 import * as ExcelJS from 'exceljs';
 import JSZip from 'jszip';
-import { mapDrillPipeReportV1 } from './mappings/drill-pipe-report.v1.mapping';
 import { engineMap, ExportDefinition } from './export-engine';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -279,12 +279,23 @@ export class ExportService {
 
     const templateBuffer = template.fileBlob;
 
-    // Phase B2: prefer the template's structured definition when present; else
-    // fall back to the legacy mapDrillPipeReportV1. Every template today has
-    // definitionJson = NULL, so this is behavior-preserving. The template row is
+    // The template's structured definition drives export. The legacy hardcoded
+    // mapDrillPipeReportV1 fallback was retired once every template carried a
+    // definition (the engine mapper is proven equivalent to it, then made sole
+    // authority — see export-engine.equivalence.spec.ts). The template row is
     // already loaded above — no extra query.
     const definition =
       (template.definitionJson as unknown as ExportDefinition | null) ?? null;
+
+    // A missing definition is a template-misconfiguration, not a user-input
+    // failure — surface it as a server-side precondition, NOT a BadRequest
+    // (which would wrongly blame the caller's request). Defensive-only:
+    // unreachable for correctly-seeded templates post-cutover.
+    if (!definition) {
+      throw new PreconditionFailedException(
+        `Template ${report.templateKey}@${report.templateVersion} has no export definition`,
+      );
+    }
 
     const allFiles: { buffer: Buffer; filename: string }[] = [];
     const poStr =
@@ -314,7 +325,6 @@ export class ExportService {
 
       const parentFiles = await this.generateExcelFiles(
         templateBuffer,
-        report.templateKey,
         snapshot,
         parentSerials,
         baseParentFilename,
@@ -338,7 +348,6 @@ export class ExportService {
 
       const childFiles = await this.generateExcelFiles(
         templateBuffer,
-        report.templateKey,
         snapshot,
         childSerials,
         baseChildFilename,
@@ -379,20 +388,18 @@ export class ExportService {
 
   private async generateExcelFiles(
     templateBuffer: Buffer,
-    templateKey: string,
     snapshot: Snapshot,
     serialNumbers: Snapshot['serialNumbers'],
     baseFilename: string,
-    definition: ExportDefinition | null,
+    definition: ExportDefinition,
   ): Promise<{ buffer: Buffer; filename: string }[]> {
     const files: { buffer: Buffer; filename: string }[] = [];
     const N = serialNumbers.length;
 
-    // Chunk size: from the definition's (single) region when present, else the
-    // legacy hardcoded 10. A null region chunkSize means "never split".
-    const chunkSize = definition
-      ? (definition.regions?.[0]?.chunkSize ?? Number.POSITIVE_INFINITY)
-      : 10;
+    // Chunk size comes from the definition's (single) region. A null region
+    // chunkSize means "never split".
+    const chunkSize =
+      definition.regions?.[0]?.chunkSize ?? Number.POSITIVE_INFINITY;
 
     if (N === 0) {
       return files;
@@ -405,13 +412,7 @@ export class ExportService {
       );
 
       try {
-        await this.applyMapping(
-          templateKey,
-          workbook,
-          snapshot,
-          serialNumbers,
-          definition,
-        );
+        await this.applyMapping(workbook, snapshot, serialNumbers, definition);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : undefined;
         throw new BadRequestException(
@@ -437,13 +438,7 @@ export class ExportService {
         );
 
         try {
-          await this.applyMapping(
-            templateKey,
-            workbook,
-            snapshot,
-            chunkSerials,
-            definition,
-          );
+          await this.applyMapping(workbook, snapshot, chunkSerials, definition);
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : undefined;
           throw new BadRequestException(
@@ -462,24 +457,11 @@ export class ExportService {
   }
 
   private async applyMapping(
-    templateKey: string,
     workbook: ExcelJS.Workbook,
     snapshot: Snapshot,
     chunk: Snapshot['serialNumbers'],
-    definition: ExportDefinition | null,
+    definition: ExportDefinition,
   ): Promise<void> {
-    if (definition) {
-      await engineMap(definition, workbook, snapshot, chunk);
-      return;
-    }
-
-    if (templateKey === 'DRILL_PIPE_REPORT') {
-      await mapDrillPipeReportV1(workbook, snapshot, chunk);
-      return;
-    }
-
-    throw new BadRequestException(
-      `Mapping not defined for template key: ${templateKey}`,
-    );
+    await engineMap(definition, workbook, snapshot, chunk);
   }
 }
