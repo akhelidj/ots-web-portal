@@ -1,56 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { InspectionData } from '../common/inspection-data.types';
 
-/**
- * Required inspectionData keys for a DRILL_PIPE_REPORT serial to cross the
- * IN_INSPECTION -> PENDING_APPROVAL gate. Moved VERBATIM from
- * inspection-report-workflow.service.ts (Phase B1) so the legacy gate and the
- * definition-driven engine gate can be compared side-by-side and proven
- * equivalent.
- *
- * ORDER IS SIGNIFICANT: it is the order in which missing keys are reported to the
- * client (`missingRequiredFields[serial]`). The committed drill-pipe definition
- * (drill-pipe-v1.definition.json) lists its `required:true` item fields in this
- * exact order — note `box.hardBanding` appears after `pin.condition`, not with
- * the other box fields — so `engineGate` and `legacyGate` are byte-for-byte
- * identical.
- */
-export const DRILL_PIPE_REQUIRED_KEYS = [
-  'box.minTongSpace',
-  'box.minOD',
-  'box.minBoxThreads',
-  'box.minEccShoulder',
-  'box.maxCounterBoreDiameter',
-  'box.maxCounterBoreLength',
-  'box.bevelDiameterMin',
-  'box.bevelDiameterMax',
-  'box.condition',
-  'pin.minTongSpace',
-  'pin.minOD',
-  'pin.maxID',
-  'pin.minEccShoulder',
-  'pin.lengthPinConnMin',
-  'pin.lengthPinConnMax',
-  'pin.maxLengthPinBase',
-  'pin.bevelDiameterMin',
-  'pin.bevelDiameterMax',
-  'pin.condition',
-  'box.hardBanding',
-  'body.wallRemaining',
-  'body.odDecrease',
-  'body.emiResult',
-  'body.slipArea',
-  'body.corrosionIn',
-  'body.corrosionOut',
-  'body.ipc',
-  'body.bentJoints',
-  'final.isNew',
-  'final.isPremium',
-  'final.isC2',
-  'final.isScrap',
-];
-
-/** The minimal serial shape both gates read (Prisma `SerialNumber` satisfies it). */
+/** The minimal serial shape the gate reads (Prisma `SerialNumber` satisfies it). */
 export interface SerialRow {
   serial: string;
   inspectionData: unknown;
@@ -117,50 +68,7 @@ function finalize(
 }
 
 /**
- * Legacy gate — the pre-Phase-B1 inline PENDING_APPROVAL logic, extracted with
- * ZERO behavior change: same required-key list, same
- * `templateKey === 'DRILL_PIPE_REPORT'` guard, same `final?.disposition ||
- * disposition` coalesce, same empty check. Used when a template has no
- * `definitionJson`.
- */
-export function legacyGate(
-  templateKey: string,
-  serials: SerialRow[],
-): GateOutcome {
-  if (serials.length === 0) return { status: 'empty' };
-
-  const missingDispositionSerials: string[] = [];
-  const missingRequiredFields: Record<string, string[]> = {};
-
-  for (const sn of serials) {
-    const data = (sn.inspectionData as InspectionData) || {};
-    const disposition = data.final?.disposition || data.disposition;
-
-    if (!disposition) {
-      missingDispositionSerials.push(sn.serial);
-    }
-
-    if (templateKey === 'DRILL_PIPE_REPORT') {
-      const missingKeys = DRILL_PIPE_REQUIRED_KEYS.filter((rk) => {
-        const val = rk
-          .split('.')
-          .reduce<unknown>(
-            (acc, part) => (acc ? (acc as Record<string, unknown>)[part] : acc),
-            data as unknown,
-          );
-        return val === undefined || val === null || val === '';
-      });
-      if (missingKeys.length > 0) {
-        missingRequiredFields[sn.serial] = missingKeys;
-      }
-    }
-  }
-
-  return finalize(missingDispositionSerials, missingRequiredFields);
-}
-
-/**
- * Engine gate — derives the SAME check purely from a template definition:
+ * Engine gate — derives the check purely from a template definition:
  *   - required item fields = fields where `scope === 'item' && required === true`,
  *     in definition array order (so `missingKeys` order matches the client contract);
  *   - disposition requirement from `disposition.requiredForApproval`, read from the

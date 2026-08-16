@@ -55,10 +55,42 @@ export function seedCustomer(prisma: PrismaService, tenantId: string) {
   });
 }
 
+/**
+ * The committed drill-pipe definition (the SAME artifact the backfill writes and the
+ * engine gate/export/form consumers read). Loaded once from disk so seeders can attach
+ * it by default — post-cutover every DRILL_PIPE_REPORT template carries it, so the
+ * default gate-crossing fixture must too. `as unknown` — callers write it to a Json column.
+ */
+const DRILL_PIPE_DEFINITION: unknown = JSON.parse(
+  readFileSync(
+    resolve(__dirname, '../src/app/template/definitions/drill-pipe-v1.definition.json'),
+    'utf-8',
+  ),
+);
+
+/**
+ * Resolve the definitionJson to seed onto a template. When `opts.definitionJson` is
+ * omitted, the default depends on the key: DRILL_PIPE_REPORT gets the real committed
+ * definition (matching production post-cutover); any other key stays NULL (a non-drill-
+ * pipe template has no drill-pipe definition). Passing `{ definitionJson: null }` forces
+ * NULL explicitly — for the deliberate-NULL specs that test the missing-definition path.
+ */
+function resolveSeedDefinition(
+  templateKey: string,
+  opts?: { definitionJson?: unknown | null },
+): unknown | undefined {
+  if (opts && 'definitionJson' in opts) {
+    // Explicit choice (including null) wins. `null` → column stays NULL.
+    return opts.definitionJson ?? undefined;
+  }
+  return templateKey === 'DRILL_PIPE_REPORT' ? DRILL_PIPE_DEFINITION : undefined;
+}
+
 export function seedActiveTemplate(
   prisma: PrismaService,
   tenantId: string,
   templateKey: string,
+  opts?: { definitionJson?: unknown | null },
 ) {
   return prisma.template.create({
     data: {
@@ -70,6 +102,7 @@ export function seedActiveTemplate(
       hash: `hash-${templateKey}`,
       changeNote: 'seed',
       createdById: 'seed-user',
+      definitionJson: resolveSeedDefinition(templateKey, opts) as never,
     },
   });
 }
@@ -122,6 +155,7 @@ const REAL_DRILL_PIPE_TEMPLATE_PATH = resolve(
 export function seedRealDrillPipeTemplate(
   prisma: PrismaService,
   tenantId: string,
+  opts?: { definitionJson?: unknown | null },
 ) {
   const fileBlob = readFileSync(REAL_DRILL_PIPE_TEMPLATE_PATH);
   return prisma.template.create({
@@ -134,6 +168,7 @@ export function seedRealDrillPipeTemplate(
       hash: 'hash-DRILL_PIPE_REPORT',
       changeNote: 'seed-real-xlsx',
       createdById: 'seed-user',
+      definitionJson: resolveSeedDefinition('DRILL_PIPE_REPORT', opts) as never,
     },
   });
 }

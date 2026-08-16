@@ -1,15 +1,16 @@
 /**
- * Unit test — Phase B1 approval-gate EQUIVALENCE proof.
+ * Unit test — approval-gate correctness proof (definition-driven `engineGate`).
  *
- * Proves the definition-driven `engineGate`, fed the REAL committed drill-pipe
+ * The legacy hardcoded gate has been RETIRED; `engineGate` is now the sole
+ * implementation. This spec pins `engineGate`, fed the REAL committed drill-pipe
  * definition (api/src/app/template/definitions/drill-pipe-v1.definition.json),
- * produces results IDENTICAL to the legacy hardcoded `legacyGate` across the
- * full case matrix. "Identical" is asserted three ways per case:
- *   (a) structural   — `toEqual` on the GateOutcome (arrays compared in order);
- *   (b) byte-for-byte — `JSON.stringify` of the enforced HTTP body (catches array
- *                       order AND object-key order, which toEqual does not);
- *   (c) literal       — both equal an independent hardcoded expectation, so we
- *                       prove they agree on the CORRECT answer, not just agree.
+ * against an INDEPENDENT hardcoded expectation across the full case matrix:
+ *   structural    — `toEqual` on the GateOutcome (arrays compared in order);
+ *   byte-for-byte — `JSON.stringify` of the enforced HTTP body (catches array
+ *                   order AND object-key order, which toEqual does not).
+ * The expectation is derived from `ALL_32_KEYS_IN_ORDER`, NOT from the gate
+ * source, so it proves `engineGate` produces the CORRECT answer — this is the
+ * oracle that survived the legacy gate's retirement (formerly assertion (c)).
  *
  * The definition is LOADED FROM DISK (not a fixture) so this spec is the guardrail
  * that fails if that committed artifact ever drifts from the gate contract.
@@ -20,15 +21,12 @@ import { BadRequestException } from '@nestjs/common';
 import { SerialDisposition } from '@prisma/client';
 import { InspectionData } from '../common/inspection-data.types';
 import {
-  legacyGate,
   engineGate,
   enforce,
   GateDefinition,
   GateOutcome,
   SerialRow,
 } from './approval-gate';
-
-const KEY = 'DRILL_PIPE_REPORT';
 
 const DEFINITION = JSON.parse(
   readFileSync(
@@ -374,28 +372,28 @@ const cases: Case[] = [
   },
 ];
 
-describe('approval gate — engineGate == legacyGate for the committed drill-pipe definition', () => {
+describe('approval gate — engineGate matches the independent literal expectation for the committed drill-pipe definition', () => {
   it.each(cases)('$name', ({ serials, expected, expectedBody }) => {
-    const legacy = legacyGate(KEY, serials);
     const engine = engineGate(DEFINITION, serials);
 
-    // (a) structural equivalence between the two implementations
-    expect(engine).toEqual(legacy);
-    // (c) both agree with the independent literal expectation
-    expect(legacy).toEqual(expected);
+    // structural — engineGate agrees with the independent hardcoded expectation
+    // (the surviving oracle; legacyGate is retired, so there is no cross-impl check).
     expect(engine).toEqual(expected);
 
-    // (b) byte-for-byte identical enforced HTTP body (incl. object-key order)
-    const legacyBody = enforcedBody(legacy);
+    // byte-for-byte — enforced HTTP body against the independent literal (catches
+    // array AND object-key order, which toEqual does not).
     const engineBody = enforcedBody(engine);
-    expect(engineBody).toBe(legacyBody);
     if (expectedBody !== undefined) {
       expect(engineBody).toBe(expectedBody);
     }
   });
 });
 
-describe('mutation guard — the equivalence harness FAILS on a broken definition', () => {
+describe('mutation guard — the harness FAILS on a broken definition', () => {
+  // Non-vacuity is proven by mutant-engine vs REAL-engine (the committed
+  // definition), no legacy reference: a corruption of the definition must make
+  // engineGate(mutant) diverge from engineGate(DEFINITION), or the proof above
+  // could pass on any definition.
   const clone = (): GateDefinition =>
     JSON.parse(JSON.stringify(DEFINITION)) as GateDefinition;
 
@@ -404,12 +402,12 @@ describe('mutation guard — the equivalence harness FAILS on a broken definitio
     mutant.fields.find((f) => f.key === 'box.minOD')!.required = false;
 
     const serials = [sn('SN-1', withData((d) => delete d.box!.minOD))];
-    const legacy = legacyGate(KEY, serials);
+    const real = engineGate(DEFINITION, serials);
     const engine = engineGate(mutant, serials);
 
-    // legacy still flags box.minOD; the mutant no longer does
-    expect(engine).not.toEqual(legacy);
-    expect(enforcedBody(engine)).not.toBe(enforcedBody(legacy));
+    // the real definition still flags box.minOD; the mutant no longer does
+    expect(engine).not.toEqual(real);
+    expect(enforcedBody(engine)).not.toBe(enforcedBody(real));
   });
 
   it('(b) swapping two field positions makes missingKeys order diverge', () => {
@@ -427,11 +425,11 @@ describe('mutation guard — the equivalence harness FAILS on a broken definitio
         }),
       ),
     ];
-    const legacy = legacyGate(KEY, serials);
+    const real = engineGate(DEFINITION, serials);
     const engine = engineGate(mutant, serials);
 
-    expect(engine).not.toEqual(legacy);
-    expect(enforcedBody(engine)).not.toBe(enforcedBody(legacy));
+    expect(engine).not.toEqual(real);
+    expect(enforcedBody(engine)).not.toBe(enforcedBody(real));
   });
 
   it('(c) flipping disposition.requiredForApproval hides a missing disposition', () => {
@@ -439,10 +437,10 @@ describe('mutation guard — the equivalence harness FAILS on a broken definitio
     mutant.disposition!.requiredForApproval = false;
 
     const serials = [sn('SN-1', withData((d) => delete d.final!.disposition))];
-    const legacy = legacyGate(KEY, serials);
+    const real = engineGate(DEFINITION, serials);
     const engine = engineGate(mutant, serials);
 
-    // legacy flags the missing disposition; the mutant passes it
-    expect(engine).not.toEqual(legacy);
+    // the real definition flags the missing disposition; the mutant passes it
+    expect(engine).not.toEqual(real);
   });
 });

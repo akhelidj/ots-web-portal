@@ -91,8 +91,12 @@ describe('definitionJson cutover round-trip equivalence [integration]', () => {
     await resetInspectionDomain(prisma);
     const tenant = await seedTenant(prisma);
     tenantId = tenant.id;
-    // ACTIVE drill-pipe template (definitionJson NULL) + a report pinning it.
-    await seedActiveTemplate(prisma, tenantId, TEMPLATE_KEY);
+    // ACTIVE drill-pipe template starting with definitionJson NULL (opt out of the
+    // seeder default) — each test then writes its own definition via writeDefinition()
+    // and reads it back, so the NULL start is the roundtrip's precondition.
+    await seedActiveTemplate(prisma, tenantId, TEMPLATE_KEY, {
+      definitionJson: null,
+    });
     await seedInspectionReport(prisma, tenantId);
   });
 

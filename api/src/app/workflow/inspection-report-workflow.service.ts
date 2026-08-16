@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
   ConflictException,
+  PreconditionFailedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -18,12 +19,7 @@ import {
   isReasonRequiredForInspection,
 } from './workflow.policy';
 import { RevisionService } from '../revision/revision.service';
-import {
-  legacyGate,
-  engineGate,
-  enforce,
-  GateDefinition,
-} from './approval-gate';
+import { engineGate, enforce, GateDefinition } from './approval-gate';
 
 @Injectable()
 export class InspectionReportWorkflowService {
@@ -304,10 +300,10 @@ export class InspectionReportWorkflowService {
         where: { tenantId: user.tenantId, inspectionReportId: reportId },
       });
 
-      // Phase B1: prefer the template's structured definition when present;
-      // otherwise fall back to the legacy hardcoded gate. Every existing template
-      // has definitionJson = NULL, so this is behavior-preserving until a
-      // definition is attached. One read-only query, only on approval requests.
+      // The template's structured definition drives the gate. One read-only query,
+      // only on approval requests. The legacy hardcoded fallback was retired once
+      // every template carried a definition (the engine gate is proven equivalent
+      // to it, then made sole authority).
       const template = await this.prisma.template.findUnique({
         where: {
           tenantId_templateKey_templateVersion: {
@@ -321,11 +317,17 @@ export class InspectionReportWorkflowService {
       const definition =
         (template?.definitionJson as unknown as GateDefinition | null) ?? null;
 
-      const outcome = definition
-        ? engineGate(definition, serials)
-        : legacyGate(report.templateKey, serials);
+      // A missing definition is a template-misconfiguration, not a user-input
+      // failure — surface it as a server-side precondition, NOT the gate's
+      // VALIDATION_FAILED (which would wrongly tell the user their serials are
+      // invalid). Post-cutover this is unreachable for correctly-seeded templates.
+      if (!definition) {
+        throw new PreconditionFailedException(
+          `Template ${report.templateKey}@${report.templateVersion} has no gate definition`,
+        );
+      }
 
-      enforce(outcome);
+      enforce(engineGate(definition, serials));
     }
 
     // 5. Governance / Logic Calculation

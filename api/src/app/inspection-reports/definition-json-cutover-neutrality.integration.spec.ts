@@ -1,35 +1,34 @@
 /**
- * CUTOVER ACCEPTANCE TEST — end-to-end OUTPUT NEUTRALITY across all three consumers.
+ * ENGINE-PATH CORRECTNESS — end-to-end across all three definition consumers + REWORK.
  *
- * Step 3 (definition-json-cutover-roundtrip.integration.spec.ts) proved the committed
- * definition SURVIVES a real DB write→read on every delivery path. This is the final
- * gate: it proves the OBSERVABLE OUTPUT of all three definition consumers is identical
- * whether Template.definitionJson is NULL (→ legacy hardcoded path) or populated from
- * the committed file (→ definition engine) — exercised on a REAL, seeded drill-pipe
- * report, through the REAL wired dispatch (`definition ? engine : legacy`) that each
- * consumer already ships:
+ * The legacy hardcoded paths have been RETIRED (the definition engine is sole authority),
+ * so this no longer proves NULL-vs-populated neutrality. It now asserts the engine path's
+ * OBSERVABLE OUTPUT against an INDEPENDENT oracle for each consumer, exercised on a REAL,
+ * seeded drill-pipe report whose template carries the committed definition:
  *
- *   1. GATE   — inspection-report-workflow.service.ts:307-329
- *               (`definition ? engineGate(...) : legacyGate(...)` → enforce).
- *   2. EXPORT — export.service.ts:282-346 (definition passed into generateExcelFiles;
- *               legacy mapDrillPipeReportV1 vs engine engineMap). Compared with the B2
- *               Layer-B structural canonicalization (ExcelJS → address-keyed cell grid;
- *               ADR-0005 volatiles — docProps / ZIP timestamps — excluded by decoding).
- *   3. FORM   — the portal's own delivery + adapter: GET /inspection-reports embeds
- *               definitionJson (inspection-reports.service.ts getReports), the portal
- *               runs definitionToFormSchema on it when present, else falls back to the
- *               hardcoded DRILL_PIPE_V1_SCHEMA. Both portal modules are pure TS and are
- *               imported directly here. (This is the B3 assertion, re-run in the
- *               populated-vs-NULL frame.)
- *   4. REWORK — sanity, NOT equivalence: the REWORK→child-report trigger
- *               (child-reports.service.ts syncReworkChildReport) keys off
- *               inspectionData.body.emiResult and NEVER reads definitionJson, so the
- *               flip cannot affect it. Asserted explicitly so the cutover demonstrates
- *               REWORK is untouched by the engine flip.
+ *   1. GATE   — inspection-report-workflow.service.ts (engineGate → enforce). Oracle: a
+ *               valid fixture PASSES the gate (`{status:'pass'}`). The reject-on-missing-
+ *               required-key contract is owned by approval-gate.integration.spec.ts (exact
+ *               VALIDATION_FAILED body) and re-exercised by the mutation guard below.
+ *   2. EXPORT — export.service.ts (definition → engineMap). Oracle: the chunk-boundary
+ *               mechanism (11 serials → .zip of 2 parts), via the ADR-0005 structural
+ *               canonicalization (ExcelJS → address-keyed cell grid; docProps / ZIP
+ *               timestamps excluded by decoding). Per-cell/token/ordering correctness is
+ *               owned by export.integration.spec.ts + the Layer-A unit spec.
+ *   3. FORM   — the portal's delivery + adapter: GET /inspection-reports embeds
+ *               definitionJson (inspection-reports.service.ts getReports), the portal runs
+ *               definitionToFormSchema on it. Oracle: the adapter's output over the
+ *               committed definition deep-equals the hardcoded DRILL_PIPE_V1_SCHEMA. Both
+ *               portal modules are pure TS and imported directly here.
+ *   4. REWORK — the REWORK→child-report trigger (child-reports.service.ts
+ *               syncReworkChildReport). Oracle: one REWORK serial produces exactly the
+ *               expected child literal. (The imperative-vs-interpreter equivalence itself
+ *               is proven exhaustively in rework-rules-consumer.equivalence.integration.spec.ts.)
  *
- * MUTATION GUARD — on the gate consumer, a corrupted populated definition makes the
- * populated-vs-NULL comparison FAIL, so this proof can go red (a proof that cannot
- * fail is vacuous).
+ * MUTATION GUARD — a corrupted definition must diverge from the real one on the gate
+ * consumer (engine(DEF) rejects a missing box.minOD; engine(mutant) no longer does), so
+ * this proof can go red (a proof that cannot fail is vacuous). No NULL comparand: a NULL
+ * template now throws a 412 precondition, which driveGate would rethrow.
  *
  * Runs against the dedicated test Postgres (:5433) under maxWorkers:1. Seeds only
  * `_test` rows; NEVER touches the real dev/prod template row and commits nothing.
@@ -91,7 +90,7 @@ const REAL_FIXTURE: Array<{
   { serial: 'SN-003', opts: { disposition: SerialDisposition.REWORK } },
 ];
 
-describe('definitionJson cutover output-neutrality [integration]', () => {
+describe('engine-path gate/export/form/rework correctness + mutation guard [integration]', () => {
   let prisma: PrismaService;
   let exportService: ExportService;
   let workflow: InspectionReportWorkflowService;
@@ -146,7 +145,7 @@ describe('definitionJson cutover output-neutrality [integration]', () => {
   async function seedInInspection() {
     const tenant = await seedTenant(prisma);
     const customer = await seedCustomer(prisma, tenant.id);
-    await seedRealDrillPipeTemplate(prisma, tenant.id); // definitionJson starts NULL
+    await seedRealDrillPipeTemplate(prisma, tenant.id); // carries the committed definition by default
     const created = await reportsService.createReport(tenant.id, 'user-admin', {
       customerId: customer.id,
       poNumber: 'PO-EXPORT',
@@ -180,16 +179,16 @@ describe('definitionJson cutover output-neutrality [integration]', () => {
   }
 
   // ============================================================================
-  // 1. GATE — same approval-gate outcome (pass/fail + error body) both ways.
+  // 1. GATE — the engine gate passes a valid fixture (independent {status:'pass'} oracle).
   // ============================================================================
 
   type GateResult =
     | { status: 'pass' }
     | { status: 'fail'; body: unknown };
 
-  /** Drive the REAL gate: seed a report to IN_INSPECTION, add the given serials, set
-   *  the definition (or leave NULL), then attempt IN_INSPECTION → PENDING_APPROVAL and
-   *  capture the observable outcome (pass, or the enforced VALIDATION_FAILED body). */
+  /** Drive the REAL gate: seed a report to IN_INSPECTION, add the given serials, set the
+   *  definition (the real one or a mutant), then attempt IN_INSPECTION → PENDING_APPROVAL
+   *  and capture the observable outcome (pass, or the enforced VALIDATION_FAILED body). */
   async function driveGate(
     def: unknown,
     seedSerials: (tenantId: string, reportId: string) => Promise<void>,
@@ -229,26 +228,21 @@ describe('definitionJson cutover output-neutrality [integration]', () => {
     });
   };
 
-  it('GATE happy path: NULL (legacy) and populated (engine) both PASS identically', async () => {
-    const legacy = await driveGate(null, seedValidFixture);
+  it('GATE happy path: the engine gate PASSES a valid fixture', async () => {
     const engine = await driveGate(DEF, seedValidFixture);
-    expect(engine).toEqual(legacy);
     expect(engine).toEqual({ status: 'pass' });
   });
 
-  it('GATE rejection: missing required key rejected with an IDENTICAL error body both ways', async () => {
-    const legacy = await driveGate(null, seedMissingRequired);
-    const engine = await driveGate(DEF, seedMissingRequired);
-    expect(engine).toEqual(legacy);
-    // pin the shared rejection shape (order-sensitive: JSON.stringify)
-    expect(engine.status).toBe('fail');
-    expect(JSON.stringify((engine as { body: unknown }).body)).toBe(
-      '{"code":"VALIDATION_FAILED","message":"Validation failed for one or more serial numbers.","missingDispositionSerials":[],"missingRequiredFields":{"SN-BAD":["box.minOD"]}}',
-    );
-  });
+  // NOTE: the former "GATE rejection: identical error body both ways" test is DROPPED,
+  // not migrated. Its independent oracle (engine gate rejects a missing box.minOD with
+  // the exact VALIDATION_FAILED body, end-to-end through workflow.transition) is now
+  // fully covered by approval-gate.integration.spec.ts ("missing required field: engine
+  // path throws exact VALIDATION_FAILED 400 body"). Keeping it here would be a pure
+  // duplicate. The engine-rejects-on-missing-box.minOD behaviour is still exercised
+  // below by the re-based MUTATION GUARD (its real-definition baseline fails on it).
 
   // ============================================================================
-  // 2. EXPORT — structurally-canonical xlsx equal both ways.
+  // 2. EXPORT — the engine chunk-boundary mechanism (11 serials → .zip of 2 parts).
   // ============================================================================
 
   /** Read a cell's text, collapsing ExcelJS's richText / formula-result shapes. */
@@ -322,15 +316,13 @@ describe('definitionJson cutover output-neutrality [integration]', () => {
   const doExport = (tenantId: string, reportId: string) =>
     exportService.exportInspectionReport(viewer(tenantId), reportId);
 
-  /** Seed → approve a report with the given serials (definitionJson stays NULL), then
-   *  export it twice: once legacy (NULL), once with `def` attached (engine). Export is
-   *  read-only, so the SAME approved report is reused for both — no re-seed. */
-  async function exportLegacyVsEngine(
+  /** Seed → approve a report with the given serials (template carries the engine
+   *  definition by default), then export it once through the engine and canonicalize. */
+  async function approveAndExportCanon(
     serials: Array<{
       serial: string;
       opts?: Parameters<typeof seedApprovableSerial>[4];
     }>,
-    def: unknown = DEF,
   ) {
     const { tenantId, reportId, version } = await seedInInspection();
     for (const s of serials) {
@@ -348,36 +340,30 @@ describe('definitionJson cutover output-neutrality [integration]', () => {
       InspectionReportStatus.APPROVED,
       pending.version,
     );
-
-    const legacyRes = await doExport(tenantId, reportId); // definitionJson NULL
-    await setDefinition(tenantId, def);
-    const engineRes = await doExport(tenantId, reportId); // engine
-    return {
-      legacy: await canonExport(legacyRes),
-      engine: await canonExport(engineRes),
-    };
+    return canonExport(await doExport(tenantId, reportId));
   }
 
-  it('EXPORT real multi-serial fixture (incl. false/0 + REWORK): engine == legacy', async () => {
-    const { legacy, engine } = await exportLegacyVsEngine(REAL_FIXTURE);
-    expect(engine).toEqual(legacy);
-  });
+  // NOTE: the former "EXPORT real multi-serial fixture: engine == legacy" test is
+  // DROPPED, not migrated — its ONLY assertion was engine==legacy, with no independent
+  // oracle of its own. The engine-path behaviours it rode on (REWORK-last ordering,
+  // per-row {{sn}}/value/X-mark tokens, falsy→'' rendering) are independently asserted
+  // in export.integration.spec.ts (:314, :411/:434) and the unit Layer A spec.
 
-  it('EXPORT chunk boundary (11 serials → .zip of 2 parts): engine == legacy', async () => {
+  it('EXPORT chunk boundary (11 serials → .zip of 2 parts)', async () => {
     const eleven = Array.from({ length: 11 }, (_, i) => ({
       serial: `SN-${String(i + 1).padStart(3, '0')}`,
     }));
-    const { legacy, engine } = await exportLegacyVsEngine(eleven);
+    const engine = await approveAndExportCanon(eleven);
     expect((engine as { mimetype: string }).mimetype).toBe('application/zip');
     expect(
       Object.keys((engine as { parts: object }).parts),
     ).toHaveLength(2);
-    expect(engine).toEqual(legacy);
   });
 
   // ============================================================================
-  // 3. FORM — definitionToFormSchema(populated) deep-equals legacy DRILL_PIPE_V1_SCHEMA,
-  //           reached through the REAL delivery path (getReports embed + HTTP hop).
+  // 3. FORM — definitionToFormSchema(definition) deep-equals the independent
+  //           DRILL_PIPE_V1_SCHEMA, reached through the REAL delivery path (getReports
+  //           embed + HTTP hop).
   // ============================================================================
 
   /** Model the portal: seed a report, deliver it via getReports (NULL or populated),
@@ -399,17 +385,16 @@ describe('definitionJson cutover output-neutrality [integration]', () => {
       : DRILL_PIPE_V1_SCHEMA;
   }
 
-  it('FORM: NULL (legacy schema) == populated (definitionToFormSchema of the delivered definition)', async () => {
-    const legacy = await deliverFormSchema(null);
+  it('FORM: definitionToFormSchema of the delivered definition equals the independent DRILL_PIPE_V1_SCHEMA', async () => {
     const engine = await deliverFormSchema(DEF);
-    expect(engine).toEqual(legacy);
-    // both equal the independent fixed point (not merely each other)
+    // The independent fixed point: the adapter's output over the committed definition
+    // deep-equals the hardcoded schema. (The NULL-fallback half was cross-impl only.)
     expect(engine).toEqual(DRILL_PIPE_V1_SCHEMA);
   });
 
   // ============================================================================
-  // 4. REWORK sanity — the REWORK→child trigger is unaffected by the flip (it never
-  //    reads definitionJson). Trivially equal by construction; asserted explicitly.
+  // 4. REWORK — the REWORK→child trigger produces the expected child on the engine path
+  //    (independent child literal; the path equivalence is owned by the rework harness).
   // ============================================================================
 
   /** Seed a report with one REWORK serial (body.emiResult = REWORK — the trigger's
@@ -447,11 +432,12 @@ describe('definitionJson cutover output-neutrality [integration]', () => {
     };
   }
 
-  it('REWORK: child-report trigger produces an IDENTICAL child both ways', async () => {
-    const legacy = await driveRework(null);
+  it('REWORK: child-report trigger produces the expected child on the engine path', async () => {
     const engine = await driveRework(DEF);
-    expect(engine).toEqual(legacy);
-    // and it actually fired (guards against two vacuous nulls passing)
+    // Independent literal: the REWORK serial produces exactly this child. (The
+    // imperative-vs-interpreter equivalence itself is proven exhaustively in
+    // rework-rules-consumer.equivalence.integration.spec.ts, so the NULL comparand
+    // here was redundant.)
     expect(engine).toEqual({
       type: 'REWORK',
       status: 'DRAFT',
@@ -462,23 +448,25 @@ describe('definitionJson cutover output-neutrality [integration]', () => {
   });
 
   // ============================================================================
-  // MUTATION GUARD — a corrupted populated definition must make the populated-vs-NULL
-  // comparison FAIL, so this whole proof is capable of going red.
+  // MUTATION GUARD — a corrupted definition must diverge from the real one (engine(DEF)
+  // vs engine(mutant)) so this whole proof is capable of going red.
   // ============================================================================
 
-  it('MUTATION GUARD: a corrupted definition breaks gate neutrality (populated != NULL)', async () => {
-    // Drop box.minOD's required flag: legacy still flags it missing, the mutant engine
-    // no longer does → the two outcomes diverge, exactly what a bad backfill would do.
+  it('MUTATION GUARD: a corrupted definition diverges from the real one (engine(DEF) vs engine(mutant))', async () => {
+    // Drop box.minOD's required flag: the REAL definition still flags it missing, the
+    // mutant engine no longer does → the two outcomes diverge, exactly what a bad
+    // backfill would do. Re-based off the real definition (no NULL comparand — a NULL
+    // template now throws a 412 precondition, which driveGate would rethrow).
     const mutant = JSON.parse(JSON.stringify(DEF)) as {
       fields: Array<{ key: string; required: boolean }>;
     };
     mutant.fields.find((f) => f.key === 'box.minOD')!.required = false;
 
-    const legacy = await driveGate(null, seedMissingRequired); // fails on box.minOD
+    const real = await driveGate(DEF, seedMissingRequired); // fails on box.minOD
     const corrupted = await driveGate(mutant, seedMissingRequired); // no longer fails
 
-    expect(corrupted).not.toEqual(legacy);
-    expect(legacy.status).toBe('fail');
+    expect(corrupted).not.toEqual(real);
+    expect(real.status).toBe('fail');
     expect(corrupted.status).toBe('pass');
   });
 });

@@ -41,7 +41,11 @@ describe('getReports embeds template definitionJson [integration]', () => {
 
   it('carries definitionJson === null when the template has none (every report today)', async () => {
     const tenant = await seedTenant(prisma);
-    await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT'); // definitionJson NULL
+    // Deliberate NULL: this test asserts the null-definition delivery contract, so it
+    // opts out of the seeder's definition-carrying default.
+    await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT', {
+      definitionJson: null,
+    });
     await seedInspectionReport(prisma, tenant.id);
 
     const reports = await service.getReports(admin(tenant.id));
@@ -54,7 +58,11 @@ describe('getReports embeds template definitionJson [integration]', () => {
 
   it('carries the definitionJson once attached to the template', async () => {
     const tenant = await seedTenant(prisma);
-    await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT');
+    // Starts NULL (opt out of the default), then a definition is attached below — the
+    // "once attached" contract this test pins.
+    await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT', {
+      definitionJson: null,
+    });
     await seedInspectionReport(prisma, tenant.id);
     const definition = { formatVersion: 1, templateKey: 'DRILL_PIPE_REPORT' };
     await prisma.template.updateMany({

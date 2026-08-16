@@ -1,20 +1,20 @@
 /**
- * Layer B — Phase B2 export STRUCTURAL equivalence (integration, real template).
+ * Layer B — export engine STRUCTURAL behaviour (integration, real template).
  *
- * Exports the SAME approved report twice through the real ExportService — once with
- * the template's definitionJson NULL (→ legacy mapDrillPipeReportV1) and once with
- * the committed drill-pipe definition attached (→ engine engineMap) — and asserts
- * the two outputs are structurally identical via `canonExport`.
+ * The legacy mapper path has been RETIRED (definition-driven engine is sole authority),
+ * so this no longer proves engine==legacy. It pins the engine path end-to-end through
+ * the real ExportService: the chunking mechanism (single .xlsx vs .zip-of-parts +
+ * part filenames) and the mutation guards, which now compare engine(mutant) vs
+ * engine(real definition) — no legacy comparand.
  *
  * `canonExport` decodes the workbook(s) with ExcelJS and compares cell text keyed by
  * address, per-sheet maxRow, and merges (plus filename/mimetype and, for zips, each
  * part). Decoding NEVER reads docProps timestamps or ZIP entry metadata, so the
- * ADR-0005 volatile bits are excluded by construction; because both exports read the
- * same frozen snapshot on the same machine, reportNumber/reportDate/inspectedBy are
- * also stable and get compared. See docs/adr/0005-export-determinism-structural-only.md.
+ * ADR-0005 volatile bits are excluded by construction. See
+ * docs/adr/0005-export-determinism-structural-only.md.
  *
- * The exhaustive per-token/transform matrix lives in the unit Layer A spec; this
- * pins the row-expansion / ordering / chunking mechanism end-to-end + the four guards.
+ * Independent per-cell/ordering/token coverage lives in export.integration.spec.ts and
+ * the unit Layer A spec (export-engine.equivalence.spec.ts); this pins mechanism + guards.
  */
 import { InspectionReportStatus, UserRole } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
@@ -41,7 +41,7 @@ const DEF = JSON.parse(
   ),
 );
 
-describe('Layer B — export engine vs legacy structural equivalence [integration]', () => {
+describe('Layer B — export engine structural behaviour + mutation guards [integration]', () => {
   let prisma: PrismaService;
   let exportService: ExportService;
   let workflow: InspectionReportWorkflowService;
@@ -73,7 +73,7 @@ describe('Layer B — export engine vs legacy structural equivalence [integratio
 
   beforeEach(() => resetInspectionDomain(prisma));
 
-  // --- setup: approve a report (template definitionJson = NULL) with serials -----
+  // --- setup: approve a report (template carries the engine definition) with serials -
 
   async function approveWithSerials(
     serials: Array<{
@@ -83,7 +83,7 @@ describe('Layer B — export engine vs legacy structural equivalence [integratio
   ) {
     const tenant = await seedTenant(prisma);
     const customer = await seedCustomer(prisma, tenant.id);
-    await seedRealDrillPipeTemplate(prisma, tenant.id); // definitionJson stays NULL
+    await seedRealDrillPipeTemplate(prisma, tenant.id); // carries the engine definition by default
     const created = await reports.createReport(tenant.id, 'user-admin', {
       customerId: customer.id,
       poNumber: 'PO-EXPORT',
@@ -229,53 +229,47 @@ describe('Layer B — export engine vs legacy structural equivalence [integratio
     })) as Buffer;
   }
 
-  /** Export legacy (def NULL), attach a definition, export engine; return both canon. */
-  async function legacyVsEngine(tenantId: string, reportId: string, definition = DEF) {
-    const legacyRes = await doExport(tenantId, reportId);
-    await setDefinition(tenantId, definition);
-    const engineRes = await doExport(tenantId, reportId);
-    return {
-      legacy: await canonExport(legacyRes),
-      engine: await canonExport(engineRes),
-    };
+  /** Canonicalize one engine export of the report as it currently stands. */
+  async function exportCanon(tenantId: string, reportId: string) {
+    return canonExport(await doExport(tenantId, reportId));
   }
 
-  // --- equivalence cases --------------------------------------------------------
+  /**
+   * Re-based mutation guard: export the report with the REAL definition (already
+   * attached by the seeder) and again with a corrupted definition, and return both
+   * canons. A mutation must make the two diverge — the non-vacuity check, with no
+   * legacy comparand.
+   */
+  async function realVsMutant(
+    tenantId: string,
+    reportId: string,
+    mutant: unknown,
+  ) {
+    const real = await exportCanon(tenantId, reportId);
+    await setDefinition(tenantId, mutant);
+    const mutated = await exportCanon(tenantId, reportId);
+    return { real, mutated };
+  }
 
-  it('B1 single serial: engine == legacy', async () => {
-    const { tenant, reportId } = await approveWithSerials([{ serial: 'SN-001' }]);
-    const { legacy, engine } = await legacyVsEngine(tenant.id, reportId);
-    expect(engine).toEqual(legacy);
-  });
+  // --- mechanism (chunking) -----------------------------------------------------
 
-  it('B2 multiple serials incl. REWORK (ordering preserved): engine == legacy', async () => {
-    const { tenant, reportId } = await approveWithSerials([
-      { serial: 'SN-003', opts: { disposition: 'ACCEPT' } },
-      { serial: 'SN-001', opts: { disposition: 'ACCEPT' } },
-      { serial: 'SN-002', opts: { disposition: 'REWORK' } },
-    ]);
-    const { legacy, engine } = await legacyVsEngine(tenant.id, reportId);
-    expect(engine).toEqual(legacy);
-  });
-
-  it('B3 chunk boundary: 10 serials → single .xlsx, engine == legacy', async () => {
+  it('B3 chunk boundary: 10 serials → single .xlsx', async () => {
     const ten = Array.from({ length: 10 }, (_, i) => ({
       serial: `SN-${String(i + 1).padStart(3, '0')}`,
     }));
     const { tenant, reportId } = await approveWithSerials(ten);
-    const { legacy, engine } = await legacyVsEngine(tenant.id, reportId);
+    const engine = await exportCanon(tenant.id, reportId);
     expect((engine as { mimetype: string }).mimetype).toBe(
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
-    expect(engine).toEqual(legacy);
   });
 
-  it('B4 chunk boundary: 11 serials → .zip of 2 parts, engine == legacy', async () => {
+  it('B4 chunk boundary: 11 serials → .zip of 2 parts', async () => {
     const eleven = Array.from({ length: 11 }, (_, i) => ({
       serial: `SN-${String(i + 1).padStart(3, '0')}`,
     }));
     const { tenant, reportId } = await approveWithSerials(eleven);
-    const { legacy, engine } = await legacyVsEngine(tenant.id, reportId);
+    const engine = await exportCanon(tenant.id, reportId);
     expect((engine as { mimetype: string }).mimetype).toBe('application/zip');
     expect(Object.keys((engine as { parts: object }).parts).sort()).toEqual([
       'OTS_PO-EXPORT_' +
@@ -285,7 +279,6 @@ describe('Layer B — export engine vs legacy structural equivalence [integratio
         (await topReportNumber(prisma, reportId)) +
         '_1_part2of2.xlsx',
     ]);
-    expect(engine).toEqual(legacy);
   });
 
   // --- mutation / soundness guards ----------------------------------------------
@@ -294,8 +287,8 @@ describe('Layer B — export engine vs legacy structural equivalence [integratio
     const { tenant, reportId } = await approveWithSerials([{ serial: 'SN-001' }]);
     const mutant = JSON.parse(JSON.stringify(DEF));
     mutant.transforms.boolCheckbox.whenTrue = 'Y'; // jc_new 'X' → 'Y'
-    const { legacy, engine } = await legacyVsEngine(tenant.id, reportId, mutant);
-    expect(engine).not.toEqual(legacy);
+    const { real, mutated } = await realVsMutant(tenant.id, reportId, mutant);
+    expect(mutated).not.toEqual(real);
   });
 
   it('GUARD 2 token-mapping mutation is detected ({{b_od}} → different field)', async () => {
@@ -306,8 +299,8 @@ describe('Layer B — export engine vs legacy structural equivalence [integratio
     mutant.export.regions.serials.find(
       (e: { token: string }) => e.token === '{{b_od}}',
     ).field = 'box.minID'; // resolves empty → different cell than box.minOD
-    const { legacy, engine } = await legacyVsEngine(tenant.id, reportId, mutant);
-    expect(engine).not.toEqual(legacy);
+    const { real, mutated } = await realVsMutant(tenant.id, reportId, mutant);
+    expect(mutated).not.toEqual(real);
   });
 
   it('GUARD 3 chunkSize mutation is detected (5 → 3 parts vs 2)', async () => {
@@ -316,15 +309,15 @@ describe('Layer B — export engine vs legacy structural equivalence [integratio
     }));
     const { tenant, reportId } = await approveWithSerials(eleven);
     const mutant = JSON.parse(JSON.stringify(DEF));
-    mutant.regions[0].chunkSize = 5; // 11 → 3 parts, vs legacy 2
-    const { legacy, engine } = await legacyVsEngine(tenant.id, reportId, mutant);
-    expect(engine).not.toEqual(legacy);
+    mutant.regions[0].chunkSize = 5; // 11 → 3 parts, vs the real definition's 2
+    const { real, mutated } = await realVsMutant(tenant.id, reportId, mutant);
+    expect(mutated).not.toEqual(real);
   });
 
-  it('GUARD 4 normalization soundness: volatile-only byte diff ignored; same mapper twice → equal canon', async () => {
+  it('GUARD 4 normalization soundness: volatile-only byte diff ignored; same definition twice → equal canon', async () => {
     const { tenant, reportId } = await approveWithSerials([{ serial: 'SN-001' }]);
 
-    // (a) same mapper (legacy) twice → identical canon
+    // (a) same (engine) definition twice → identical canon
     const a = await doExport(tenant.id, reportId);
     const b = await doExport(tenant.id, reportId);
     expect(await canonExport(a)).toEqual(await canonExport(b));
