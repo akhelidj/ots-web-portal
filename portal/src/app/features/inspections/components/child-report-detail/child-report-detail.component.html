@@ -911,6 +911,7 @@
             <app-serial-inspection-reactive-form
               [initialData]="inspectionFormData"
               [schemaKey]="parentData.templateKey"
+              [definition]="parentDefinition"
               [isReadOnly]="
                 inspectingSnApprovalStatus === 'SUBMITTED_FOR_APPROVAL' ||
                 inspectingSnApprovalStatus === 'APPROVED' ||

@@ -3,7 +3,14 @@ import {
   LocalInspectionReport,
   LocalSerialNumber,
 } from '@portal/core/offline/models/types';
-import { DRILL_PIPE_V1_SCHEMA } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
+import {
+  DRILL_PIPE_V1_SCHEMA,
+  FormSchema,
+} from '@portal/features/templates/schemas/drill-pipe-v1.schema';
+import {
+  definitionToFormSchema,
+  TemplateFormDefinition,
+} from '@portal/features/templates/schemas/definition-to-form-schema';
 
 export interface ValidationIssue {
   code: string;
@@ -46,6 +53,17 @@ export class ReportValidationService {
       });
     }
 
+    // Consumer B cutover: the required-field set that gates MISSING_FIELDS readiness is
+    // derived from the report's template definitionJson when present, through the SAME
+    // definitionToFormSchema transform the inspection form uses — so validation and the
+    // form agree on what is required. Resolved once per report (identical for every
+    // serial). Soft-NULL: null/undefined/malformed definition falls back to the legacy
+    // hardcoded schema (see resolveRequiredSchema). templateKey guard unchanged.
+    const requiredSchema =
+      report.templateKey === 'DRILL_PIPE_REPORT'
+        ? this.resolveRequiredSchema(report)
+        : null;
+
     for (const sn of serials) {
       const data = sn.inspectionJson || {};
       const disposition = this.getNestedValue(data, 'body.emiResult') as string;
@@ -67,10 +85,10 @@ export class ReportValidationService {
         }
       }
 
-      if (report.templateKey === 'DRILL_PIPE_REPORT') {
+      if (requiredSchema) {
         const missingFieldLabels: string[] = [];
 
-        for (const section of DRILL_PIPE_V1_SCHEMA.sections) {
+        for (const section of requiredSchema.sections) {
           for (const field of section.fields) {
             if (field.required) {
               const val = this.getNestedValue(data, field.key);
@@ -103,6 +121,29 @@ export class ReportValidationService {
       serialCount: serials.length,
       dispositionCounts,
     };
+  }
+
+  /**
+   * Resolve the schema whose `required` fields gate MISSING_FIELDS readiness. When the
+   * report carries a template definitionJson, derive the schema through the SAME
+   * definitionToFormSchema transform the inspection form consumes, so the required set
+   * validation enforces is identical to what the form's Validators.required enforces
+   * (false-present is valid, ''-missing is a blocker — coherent on both sides).
+   *
+   * Soft-NULL, never throw: this runs in an offline-first field tool where a throw would
+   * silently break readiness or blank the UI. A null/undefined definition, or a malformed
+   * one that trips definitionToFormSchema, falls back to the legacy hardcoded schema.
+   */
+  private resolveRequiredSchema(report: LocalInspectionReport): FormSchema {
+    const definition = report.definitionJson;
+    if (definition == null) {
+      return DRILL_PIPE_V1_SCHEMA;
+    }
+    try {
+      return definitionToFormSchema(definition as TemplateFormDefinition);
+    } catch {
+      return DRILL_PIPE_V1_SCHEMA;
+    }
   }
 
   private getNestedValue(obj: Record<string, unknown>, path: string): unknown {

@@ -1179,6 +1179,7 @@
             <app-serial-inspection-reactive-form
               [initialData]="inspectionFormData"
               [schemaKey]="reportData.templateKey"
+              [definition]="reportDefinition"
               [isReadOnly]="
                 (uiState?.fieldModes?.['inspectionData'] !== 'editable' &&
                   uiState?.fieldModes?.['disposition'] !== 'editable') ||

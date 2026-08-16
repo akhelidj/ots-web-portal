@@ -62,6 +62,7 @@ import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.rep
 import { ApprovalBatchLocalRepo } from '@portal/core/offline/repos/approval-batch-local.repo';
 import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-serial-number-local.repo';
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
+import { TemplateFormDefinition } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { InspectionReportHeaderComponent } from './sections/inspection-report-header/inspection-report-header.component';
 import { InspectionReportBannersComponent } from './sections/inspection-report-banners/inspection-report-banners.component';
 import { InspectionReportTransitionActionComponent } from './sections/inspection-report-transition-bar/inspection-report-transition-bar.component';
@@ -119,6 +120,16 @@ export class InspectionReportDetailComponent
 
   public reportId = '';
   public report = signal<LocalInspectionReport | null>(null);
+
+  /**
+   * Typed accessor for the inspection form's `[definition]` binding. The stored
+   * `definitionJson` is `unknown | null` on LocalInspectionReport; the form input is
+   * `TemplateFormDefinition | null`. Cast here rather than widening the input, keeping
+   * the input's type honest. Null (pre-cutover) → the form's legacy hardcoded schema.
+   */
+  public get reportDefinition(): TemplateFormDefinition | null {
+    return (this.report()?.definitionJson ?? null) as TemplateFormDefinition | null;
+  }
   public serials = signal<LocalSerialNumber[]>([]);
   public transitionLogs = signal<LocalTransitionLog[]>([]);
   public enrichedTransitionLogs = signal<

@@ -28,6 +28,7 @@ import {
 } from '@portal/core/constants/app.constants';
 import { environment } from '@app-env/environment';
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
+import { TemplateFormDefinition } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 
 @Component({
@@ -69,6 +70,16 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   private readonly onShellScrollBound = () => this.onShellScroll();
 
   public parentReport = signal<LocalInspectionReport | null>(null);
+
+  /**
+   * Typed accessor for the inspection form's `[definition]` binding. The child form is
+   * driven by the PARENT report's template, so its definition source is the parent's
+   * `definitionJson` (`unknown | null`), cast to the form input's `TemplateFormDefinition
+   * | null` here rather than widening the input. Null (pre-cutover) → legacy schema.
+   */
+  public get parentDefinition(): TemplateFormDefinition | null {
+    return (this.parentReport()?.definitionJson ?? null) as TemplateFormDefinition | null;
+  }
 
   public serials = signal<
     {
