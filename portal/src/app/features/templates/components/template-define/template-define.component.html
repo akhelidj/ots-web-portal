@@ -1,0 +1,243 @@
+<div class="max-w-7xl mx-auto py-4 sm:py-6 space-y-6">
+  <div class="page-section p-5 sm:p-6">
+    <button
+      (click)="backToList()"
+      class="text-sm text-primary hover:underline mb-2"
+    >
+      ← Back to templates
+    </button>
+    <h1
+      class="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900"
+    >
+      Define Template Form
+    </h1>
+    <p class="mt-2 text-sm text-neutral-500">
+      Describe each token the workbook contains, mark the one repeating serial
+      row, then save. The server validates the whole definition and reports any
+      problem below.
+    </p>
+  </div>
+
+  @if (isLoading) {
+    <div class="page-section p-6 text-sm text-neutral-500">Loading tokens…</div>
+  } @else if (loadError) {
+    <div
+      class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
+    >
+      <p class="text-sm font-medium">{{ loadError }}</p>
+    </div>
+  } @else {
+    <!-- Region + marker declaration -->
+    <div class="page-section p-5 sm:p-6 space-y-4">
+      <h2 class="font-semibold text-lg text-neutral-900">Repeating Region</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label
+            for="define-display-name"
+            class="block text-sm font-semibold text-gray-700 mb-1"
+            >Display Name</label
+          >
+          <input
+            id="define-display-name"
+            type="text"
+            [(ngModel)]="displayName"
+            class="field-control"
+            placeholder="e.g. Casing Inspection Report"
+          />
+        </div>
+        <div>
+          <label
+            for="define-marker"
+            class="block text-sm font-semibold text-gray-700 mb-1"
+            >Serial Marker Token <span class="text-error">*</span></label
+          >
+          <select
+            id="define-marker"
+            [(ngModel)]="markerToken"
+            (ngModelChange)="onMarkerChange()"
+            class="field-control"
+          >
+            <option [value]="''">Select the repeating-row token…</option>
+            @for (row of rows; track row.token) {
+              <option [value]="row.token">{{ row.token }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label
+            for="define-region-id"
+            class="block text-sm font-semibold text-gray-700 mb-1"
+            >Region Id <span class="text-error">*</span></label
+          >
+          <input
+            id="define-region-id"
+            type="text"
+            [(ngModel)]="regionId"
+            class="field-control"
+          />
+        </div>
+        <div>
+          <label
+            for="define-region-label"
+            class="block text-sm font-semibold text-gray-700 mb-1"
+            >Region Label</label
+          >
+          <input
+            id="define-region-label"
+            type="text"
+            [(ngModel)]="regionLabel"
+            class="field-control"
+            placeholder="e.g. Inspected Serials"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-token describe rows -->
+    <div class="page-section overflow-x-auto">
+      <table class="table-base divide-y divide-gray-200 w-full">
+        <thead class="table-head">
+          <tr>
+            <th scope="col" class="table-th">Include</th>
+            <th scope="col" class="table-th">Token</th>
+            <th scope="col" class="table-th">Label</th>
+            <th scope="col" class="table-th">Type</th>
+            <th scope="col" class="table-th">Required</th>
+            <th scope="col" class="table-th">Scope</th>
+            <th scope="col" class="table-th">Section</th>
+            <th scope="col" class="table-th">Options</th>
+          </tr>
+        </thead>
+        <tbody class="table-body divide-y divide-gray-100">
+          @for (row of rows; track row.token; let i = $index) {
+            <tr
+              class="align-top"
+              [ngClass]="{ 'opacity-40': isMarker(row) }"
+            >
+              <td class="table-td">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="row.include"
+                  [disabled]="isMarker(row)"
+                  [attr.aria-label]="'Include ' + row.token"
+                  [attr.data-testid]="'include-' + row.token"
+                />
+              </td>
+              <td class="table-td-strong code-text whitespace-nowrap">
+                {{ row.token }}
+                @if (isMarker(row)) {
+                  <span
+                    class="ml-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-primary/10 text-primary"
+                    >marker</span
+                  >
+                }
+              </td>
+              <td class="table-td">
+                <input
+                  type="text"
+                  [(ngModel)]="row.label"
+                  [disabled]="isMarker(row) || !row.include"
+                  class="field-control min-w-[10rem]"
+                  [attr.data-testid]="'label-' + row.token"
+                />
+              </td>
+              <td class="table-td">
+                <select
+                  [(ngModel)]="row.type"
+                  [disabled]="isMarker(row) || !row.include"
+                  class="field-control"
+                  [attr.data-testid]="'type-' + row.token"
+                >
+                  @for (t of fieldTypes; track t) {
+                    <option [value]="t">{{ t }}</option>
+                  }
+                </select>
+              </td>
+              <td class="table-td text-center">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="row.required"
+                  [disabled]="isMarker(row) || !row.include"
+                  [attr.aria-label]="'Required ' + row.token"
+                />
+              </td>
+              <td class="table-td">
+                <select
+                  [(ngModel)]="row.scope"
+                  [disabled]="isMarker(row) || !row.include"
+                  class="field-control"
+                  [attr.data-testid]="'scope-' + row.token"
+                >
+                  <option value="header">header</option>
+                  <option value="item">item</option>
+                </select>
+              </td>
+              <td class="table-td">
+                <input
+                  type="text"
+                  [(ngModel)]="row.section"
+                  [disabled]="isMarker(row) || !row.include"
+                  class="field-control min-w-[8rem]"
+                  placeholder="optional"
+                />
+              </td>
+              <td class="table-td">
+                @if (row.type === 'select' && row.include && !isMarker(row)) {
+                  <input
+                    type="text"
+                    [(ngModel)]="row.optionsText"
+                    class="field-control min-w-[10rem]"
+                    placeholder="PASS, REWORK, SCRAP"
+                    [attr.data-testid]="'options-' + row.token"
+                  />
+                } @else {
+                  <span class="text-xs text-gray-400">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (submitError) {
+      <div
+        data-testid="submit-error"
+        class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
+      >
+        @if (failedCheck) {
+          <p class="text-xs font-bold uppercase tracking-wider mb-1">
+            Rejected check: {{ failedCheck }}
+          </p>
+        }
+        <p class="text-sm font-medium">{{ submitError }}</p>
+      </div>
+    }
+
+    @if (success) {
+      <div
+        data-testid="submit-success"
+        class="bg-success-light border-l-4 border-success text-success-dark p-4 rounded-md shadow-sm"
+      >
+        <p class="text-sm font-medium">
+          Definition saved. This template is now defined and can be used for
+          reports.
+        </p>
+      </div>
+    }
+
+    <div class="flex justify-end gap-3">
+      <button (click)="backToList()" class="btn btn-secondary" type="button">
+        Cancel
+      </button>
+      <button
+        (click)="submit()"
+        [disabled]="isSubmitting"
+        class="btn btn-primary"
+        type="button"
+      >
+        {{ isSubmitting ? 'Saving…' : 'Save Definition' }}
+      </button>
+    </div>
+  }
+</div>

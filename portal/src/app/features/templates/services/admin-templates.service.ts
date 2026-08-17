@@ -19,6 +19,42 @@ export interface AdminTemplateItem {
   createdById: string;
 }
 
+/** One extracted `{{token}}` from `GET /templates/:id/tokens`. Mirrors the API's
+ *  ExtractedToken (no shared DTO package — see ADR-0008). */
+export interface ExtractedToken {
+  token: string;
+  cell: string;
+  row: number;
+}
+
+/** Portal-side mirror of the API's ops field type. `date` is renderable (Phase D 2b). */
+export type OpsFieldType = 'text' | 'number' | 'boolean' | 'select' | 'date';
+
+/** One ops-described field for `PUT /templates/:id/definition`. Mirrors OpsTokenField. */
+export interface OpsTokenField {
+  token: string;
+  label: string;
+  type: OpsFieldType;
+  required: boolean;
+  scope: 'header' | 'item';
+  section?: string;
+  options?: string[];
+}
+
+/** The request body for `PUT /templates/:id/definition`. Mirrors the API's
+ *  DefineTemplateDto — the front/back HTTP contract, duplicated by design. The UI does
+ *  NOT author `computed`/`disposition`/transforms; the server gate is the sole authority
+ *  on validity, and this ships only what the describe screen collects. */
+export interface DefineTemplateDto {
+  displayName?: string;
+  region: {
+    id: string;
+    label?: string;
+    marker: string;
+  };
+  fields: OpsTokenField[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -62,6 +98,26 @@ export class AdminTemplatesService implements DataHydrationSource {
       this.http.post(`${environment.apiUrl}/templates`, formData),
     );
     await this.fetchAll();
+  }
+
+  /** Read-only: the workbook's extracted tokens, for the describe screen. */
+  public async getTokens(id: string): Promise<ExtractedToken[]> {
+    return firstValueFrom(
+      this.http.get<ExtractedToken[]>(
+        `${environment.apiUrl}/templates/${id}/tokens`,
+      ),
+    );
+  }
+
+  /** Submit the ops-authored description. Resolves on 200 (definition written);
+   *  rejects with the server's per-check reason on a 4xx gate rejection. */
+  public async defineTemplate(
+    id: string,
+    dto: DefineTemplateDto,
+  ): Promise<unknown> {
+    return firstValueFrom(
+      this.http.put(`${environment.apiUrl}/templates/${id}/definition`, dto),
+    );
   }
 
   public async deprecateTemplate(id: string): Promise<void> {

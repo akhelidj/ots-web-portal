@@ -1,6 +1,7 @@
 import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AdminTemplatesService } from '@portal/features/templates/services/admin-templates.service';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
@@ -8,7 +9,7 @@ import { UserPreferencesService } from '@portal/core/services/user-preferences.s
 @Component({
   selector: 'app-admin-templates',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './admin-templates.component.html',
 })
 export class AdminTemplatesComponent {

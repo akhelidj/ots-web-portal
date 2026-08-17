@@ -4,6 +4,7 @@ import { ShellComponent } from '@portal/shared/shell/shell.component';
 import { AdminUsersComponent } from '@portal/features/users/components/admin-users/admin-users.component';
 import { AdminCustomersComponent } from '@portal/features/customers/components/admin-customers/admin-customers.component';
 import { AdminTemplatesComponent } from '@portal/features/templates/components/admin-templates/admin-templates.component';
+import { TemplateDefineComponent } from '@portal/features/templates/components/template-define/template-define.component';
 import { SupervisorWorkspaceComponent } from '@portal/features/workspaces/supervisor/supervisor-workspace.component';
 import { InspectionReportListComponent } from '@portal/features/inspections/components/inspection-report-list/inspection-report-list.component';
 import { CreateInspectionReportComponent } from '@portal/features/inspections/components/create-inspection-report/create-inspection-report.component';
@@ -70,6 +71,10 @@ export const appRoutes: Route[] = [
           { path: 'users', component: AdminUsersComponent },
           { path: 'customers', component: AdminCustomersComponent },
           { path: 'templates', component: AdminTemplatesComponent },
+          {
+            path: 'templates/:id/define',
+            component: TemplateDefineComponent,
+          },
         ],
       },
       {
