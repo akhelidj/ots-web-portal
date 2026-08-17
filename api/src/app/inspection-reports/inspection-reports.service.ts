@@ -173,6 +173,18 @@ export class InspectionReportsService {
       );
     }
 
+    // Phase D guard — "undefined = not usable": a template whose definitionJson is
+    // NULL has no validated field/export/gate definition and MUST NOT be a report
+    // target (a report bound to it would drive nothing). Drill pipe is backfilled
+    // (non-null) so it stays usable; this only blocks freshly-uploaded, not-yet-
+    // defined templates. Scoped to this LIVE create path only — the unwired
+    // InspectionReportWorkflowService.create seam (ADR-0009) is out of scope for 2a.
+    if (template.definitionJson == null) {
+      throw new BadRequestException(
+        `Template ${template.templateKey}@${template.templateVersion} has no definition yet and cannot be used to create reports.`,
+      );
+    }
+
     // 3. Generate Report Number (PREFIX-YYMMDD-HHMMSS)
     const now = new Date();
     const yy = String(now.getFullYear()).slice(-2);

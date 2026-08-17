@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Patch,
+  Put,
   Param,
   Body,
   UseInterceptors,
@@ -14,6 +15,8 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TemplateService } from './template.service';
 import { TemplateTokensService } from './template-tokens.service';
+import { TemplateDefinitionService } from './template-definition.service';
+import { DefineTemplateDto } from './definition-authoring.types';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
@@ -27,6 +30,7 @@ export class TemplateController {
   constructor(
     private readonly templateService: TemplateService,
     private readonly templateTokensService: TemplateTokensService,
+    private readonly templateDefinitionService: TemplateDefinitionService,
   ) {}
 
   @Post()
@@ -73,6 +77,19 @@ export class TemplateController {
   ) {
     const tenantId = req.user.tenantId;
     return this.templateTokensService.getTokens(tenantId, id);
+  }
+
+  // Writes definitionJson from an ops-authored description IF it passes the
+  // write-time validation gate (seven checks incl. an engine dry-run). Rejects the
+  // whole definition atomically otherwise. Never touches fileBlob/hash/version.
+  @Put(':id/definition')
+  async defineTemplate(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: DefineTemplateDto,
+  ) {
+    const tenantId = req.user.tenantId;
+    return this.templateDefinitionService.defineTemplate(tenantId, id, dto);
   }
 
   @Patch(':id/deprecate')

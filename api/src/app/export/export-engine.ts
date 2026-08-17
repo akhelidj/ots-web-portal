@@ -59,6 +59,14 @@ const COMPUTED: Record<string, (snapshot: Snapshot) => unknown> = {
   approvedBy: (s) => deriveActors(s).approvedBy,
 };
 
+/**
+ * The implemented computed-token names — the allow-list an ops-authored definition
+ * may reference. Exported (additive; no behavior change) so write-time validation
+ * constrains to the ACTUAL engine registry rather than a hand-copied list that
+ * could drift. This is the single source of truth for "which `computed` names exist".
+ */
+export const COMPUTED_NAMES: readonly string[] = Object.keys(COMPUTED);
+
 /** Dotted-path read, null-safe on missing intermediates. */
 function walkPath(obj: unknown, path: string): unknown {
   return path

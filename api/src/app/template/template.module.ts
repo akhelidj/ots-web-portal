@@ -4,6 +4,7 @@ import { TemplateService } from './template.service';
 import { TemplateValidationService } from './template-validation.service';
 import { TemplateFileStoreService } from './template-file-store.service';
 import { TemplateTokensService } from './template-tokens.service';
+import { TemplateDefinitionService } from './template-definition.service';
 import { XlsNormalizerService } from './xls-normalizer.service';
 import { TokenExtractorService } from './token-extractor.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,6 +16,7 @@ import { PrismaService } from '../prisma/prisma.service';
     TemplateValidationService,
     TemplateFileStoreService,
     TemplateTokensService,
+    TemplateDefinitionService,
     XlsNormalizerService,
     TokenExtractorService,
     PrismaService,
