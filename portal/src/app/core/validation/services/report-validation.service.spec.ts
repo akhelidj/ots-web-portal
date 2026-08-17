@@ -7,10 +7,15 @@ import {
 
 /**
  * Consumer B (readiness/MISSING_FIELDS) definitionJson cutover. The required-field set is
- * now derived from the report's definitionJson through the SAME definitionToFormSchema
- * transform the form uses, with a soft-NULL fallback to DRILL_PIPE_V1_SCHEMA. These tests
- * prove: (a) the definition arm actually drives validation, (b) null falls back to legacy
- * unchanged, (c) a malformed definition never throws and falls back to legacy.
+ * derived from the report's definitionJson through the SAME definitionToFormSchema
+ * transform the form uses. These tests prove: (a) the definition arm actually drives
+ * validation; (b) a null definition enforces NO required-field set (soft-null, NOT the
+ * drill-pipe schema — Phase D step 2b empty-state); (c) a malformed definition never
+ * throws and likewise enforces no required-field set.
+ *
+ * MUTATION GUARD (b)/(c): were resolveRequiredSchema to fall back to DRILL_PIPE_V1_SCHEMA
+ * (the retired Phase C behavior) instead of null, these would see MISSING_FIELDS naming
+ * drill-pipe fields (e.g. "Min OD") and go RED — so the soft-null assertion is non-vacuous.
  */
 
 const BASE_REPORT: LocalInspectionReport = {
@@ -107,26 +112,23 @@ describe('ReportValidationService — definitionJson cutover (Consumer B)', () =
     expect(result.isReady).toBe(false);
   });
 
-  it('(b) falls back to DRILL_PIPE_V1_SCHEMA when definitionJson is null', () => {
+  it('(b) enforces NO required-field set when definitionJson is null (soft-null, not drill-pipe)', () => {
     const report = { ...BASE_REPORT, definitionJson: null };
 
-    // Fully inspected against the legacy schema ⇒ ready, no MISSING_FIELDS.
-    const complete = service.validate(report, [
-      makeSerial(fullyInspectedLegacy()),
-    ]);
-    expect(complete.issues.some((i) => i.code === 'MISSING_FIELDS')).toBe(false);
-    expect(complete.isReady).toBe(true);
-
-    // Drop one legacy-required field ⇒ legacy schema flags it by its legacy label.
+    // A serial missing every legacy drill-pipe field, but carrying a disposition so the
+    // only candidate blocker would be MISSING_FIELDS. With no usable definition there is
+    // no required set ⇒ NO MISSING_FIELDS, and crucially no drill-pipe label leaks in.
     const data = fullyInspectedLegacy();
     delete (data['box'] as Record<string, unknown>)['minOD'];
-    const missingOne = service.validate(report, [makeSerial(data)]);
-    const missing = missingOne.issues.find((i) => i.code === 'MISSING_FIELDS');
-    expect(missing).toBeDefined();
-    expect(missing!.message).toContain('Min OD');
+    const result = service.validate(report, [makeSerial(data)]);
+
+    const missing = result.issues.find((i) => i.code === 'MISSING_FIELDS');
+    expect(missing).toBeUndefined();
+    // Non-vacuity: the retired drill-pipe fallback would have flagged "Min OD" here.
+    expect(JSON.stringify(result.issues)).not.toContain('Min OD');
   });
 
-  it('(c) does not throw on malformed definitionJson and falls back to legacy', () => {
+  it('(c) does not throw on malformed definitionJson and enforces no required-field set', () => {
     const garbageValues: unknown[] = [
       { nonsense: true }, // object without a fields[] array
       'not-a-definition', // primitive
@@ -134,7 +136,8 @@ describe('ReportValidationService — definitionJson cutover (Consumer B)', () =
       42,
     ];
 
-    // Drop a legacy-required field so the legacy fallback has something to flag.
+    // A serial missing a legacy-required field: the retired drill-pipe fallback would
+    // have flagged it. Soft-null ⇒ no throw, no MISSING_FIELDS, no drill-pipe leak.
     const data = fullyInspectedLegacy();
     delete (data['box'] as Record<string, unknown>)['minOD'];
 
@@ -145,10 +148,9 @@ describe('ReportValidationService — definitionJson cutover (Consumer B)', () =
         result = service.validate(report, [makeSerial(data)]);
       }).not.toThrow();
 
-      // Fell back to legacy ⇒ still flags the dropped legacy-required field.
       const missing = result.issues.find((i) => i.code === 'MISSING_FIELDS');
-      expect(missing).toBeDefined();
-      expect(missing!.message).toContain('Min OD');
+      expect(missing).toBeUndefined();
+      expect(JSON.stringify(result.issues)).not.toContain('Min OD');
     }
   });
 });

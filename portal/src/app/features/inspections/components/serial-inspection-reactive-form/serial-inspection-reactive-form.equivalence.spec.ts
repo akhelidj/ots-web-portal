@@ -1,18 +1,27 @@
 /**
- * Layer B — Phase B3 form-BUILD equivalence (portal component).
+ * Layer B — form-BUILD equivalence (portal component).
  *
  * Builds the real SerialInspectionReactiveFormComponent two ways from the SAME
  * initialData — once with `definition` set to the committed drill-pipe definition
- * (engine path) and once with no definition (legacy hardcoded schema) — and proves
- * the built reactive form is equivalent: same control set, same validator behavior
- * (incl. the false-is-valid boolean gotcha), same emiResult options, same submit
- * shape. A mutation guard proves the comparison detects divergence.
+ * (engine path) and once from the hand-authored DRILL_PIPE_V1_SCHEMA (legacy
+ * reference) — and proves the built reactive form is equivalent: same control set,
+ * same validator behavior (incl. the false-is-valid boolean gotcha), same emiResult
+ * options, same submit shape. A mutation guard proves the comparison detects divergence.
+ *
+ * NOTE (Phase D step 2b): the legacy reference is now injected directly, not obtained
+ * via a null `definition`. A null/malformed definition no longer falls back to the
+ * drill-pipe schema — it drives an explicit empty-state (see the date-and-empty-state
+ * spec). This spec keeps proving the engine build reproduces the hand-authored schema.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { TestBed } from '@angular/core/testing';
 import { SerialInspectionReactiveFormComponent } from './serial-inspection-reactive-form.component';
 import { TemplateFormDefinition } from '@portal/features/templates/schemas/definition-to-form-schema';
+import {
+  DRILL_PIPE_V1_SCHEMA,
+  FormSchema,
+} from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 
 function loadRealDefinition(): TemplateFormDefinition {
   const rel = 'api/src/app/template/definitions/drill-pipe-v1.definition.json';
@@ -78,7 +87,7 @@ describe('Layer B — engine-built form == legacy-built form (drill pipe)', () =
   });
 
   function build(
-    definition: TemplateFormDefinition | null,
+    definition: TemplateFormDefinition,
     initialData: Record<string, unknown> = {},
   ): SerialInspectionReactiveFormComponent {
     const fixture = TestBed.createComponent(
@@ -89,6 +98,28 @@ describe('Layer B — engine-built form == legacy-built form (drill pipe)', () =
     c.initialData = initialData;
     c.ngOnInit();
     return c;
+  }
+
+  /**
+   * The legacy reference: build the form from the hand-authored DRILL_PIPE_V1_SCHEMA
+   * directly, bypassing the definition-driven ngOnInit path. This keeps the oracle a
+   * genuinely independent hand-authored schema (not the engine transform under test),
+   * now that a null definition drives the empty-state instead of the drill-pipe schema.
+   */
+  function buildLegacy(
+    initialData: Record<string, unknown> = {},
+  ): SerialInspectionReactiveFormComponent {
+    const fixture = TestBed.createComponent(
+      SerialInspectionReactiveFormComponent,
+    );
+    const c = fixture.componentInstance as SerialInspectionReactiveFormComponent & {
+      schema: FormSchema;
+      initForm(): void;
+    };
+    c.initialData = initialData;
+    c.schema = DRILL_PIPE_V1_SCHEMA;
+    c.initForm();
+    return c as SerialInspectionReactiveFormComponent;
   }
 
   /** Map of control name → invalid-when-empty (i.e. carries Validators.required). */
@@ -104,19 +135,19 @@ describe('Layer B — engine-built form == legacy-built form (drill pipe)', () =
 
   it('builds the identical control set', () => {
     const engine = build(DEF);
-    const legacy = build(null);
+    const legacy = buildLegacy();
     expect(Object.keys(engine.formGroup.controls).sort()).toEqual(
       Object.keys(legacy.formGroup.controls).sort(),
     );
   });
 
   it('applies Validators.required to the identical set of controls', () => {
-    expect(requiredMap(build(DEF))).toEqual(requiredMap(build(null)));
+    expect(requiredMap(build(DEF))).toEqual(requiredMap(buildLegacy()));
   });
 
   it('GOTCHA: false satisfies required on a boolean control (both paths)', () => {
     const engine = build(DEF);
-    const legacy = build(null);
+    const legacy = buildLegacy();
     for (const c of [engine, legacy]) {
       const ipc = c.formGroup.get('body_ipc')!;
       ipc.setValue(false);
@@ -134,7 +165,7 @@ describe('Layer B — engine-built form == legacy-built form (drill pipe)', () =
 
   it('exposes identical emiResult options (incl. excludedDispositions)', () => {
     const engine = build(DEF);
-    const legacy = build(null);
+    const legacy = buildLegacy();
     const emiField = (c: SerialInspectionReactiveFormComponent) =>
       c.schema.sections
         .flatMap((s) => s.fields)
@@ -153,7 +184,7 @@ describe('Layer B — engine-built form == legacy-built form (drill pipe)', () =
 
   it('emits the identical nested submit payload', () => {
     const engine = build(DEF, structuredClone(FULL_DATA));
-    const legacy = build(null, structuredClone(FULL_DATA));
+    const legacy = buildLegacy(structuredClone(FULL_DATA));
 
     let engineOut: unknown;
     let legacyOut: unknown;
@@ -173,7 +204,7 @@ describe('Layer B — engine-built form == legacy-built form (drill pipe)', () =
       const mutant = clone();
       mutant.fields.find((f) => f.key === 'box.minOD')!.required = false;
       const engine = build(mutant);
-      const legacy = build(null);
+      const legacy = buildLegacy();
 
       const e = engine.formGroup.get('box_minOD')!;
       const l = legacy.formGroup.get('box_minOD')!;

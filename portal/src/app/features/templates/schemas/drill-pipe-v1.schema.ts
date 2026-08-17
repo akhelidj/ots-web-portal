@@ -1,4 +1,4 @@
-export type FieldInputType = 'text' | 'number' | 'boolean' | 'select';
+export type FieldInputType = 'text' | 'number' | 'boolean' | 'select' | 'date';
 
 export interface FieldSchema {
   key: string; // e.g. "box.minTongSpace" or "final.disposition"

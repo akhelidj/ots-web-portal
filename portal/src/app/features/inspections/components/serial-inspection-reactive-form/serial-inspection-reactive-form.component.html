@@ -1,3 +1,17 @@
+@if (schemaUnavailable) {
+  <div
+    data-testid="form-unavailable"
+    class="bg-warning-light border-l-4 border-warning text-warning-dark p-5 rounded-md shadow-sm"
+  >
+    <p class="text-sm font-medium">
+      This report’s template has no usable form definition yet.
+    </p>
+    <p class="mt-1 text-sm">
+      An administrator must define this template before its inspection form can be
+      shown.
+    </p>
+  </div>
+} @else {
 <form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="space-y-5">
   <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
     @for (section of schema.sections; track section.key) {
@@ -72,6 +86,20 @@
                 </select>
               }
 
+              @if (field.inputType === 'date') {
+                <input
+                  type="date"
+                  [id]="getInternalKey(field.key)"
+                  [formControlName]="getInternalKey(field.key)"
+                  class="field-control disabled:bg-neutral-100 disabled:text-neutral-500"
+                  [ngClass]="{
+                    'border-error focus:border-error focus:ring-error':
+                      formGroup.get(getInternalKey(field.key))?.invalid &&
+                      formGroup.get(getInternalKey(field.key))?.touched,
+                  }"
+                />
+              }
+
               @if (
                 formGroup.get(getInternalKey(field.key))?.invalid &&
                 formGroup.get(getInternalKey(field.key))?.touched
@@ -102,3 +130,4 @@
     }
   </div>
 </form>
+}

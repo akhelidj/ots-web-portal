@@ -3,10 +3,7 @@ import {
   LocalInspectionReport,
   LocalSerialNumber,
 } from '@portal/core/offline/models/types';
-import {
-  DRILL_PIPE_V1_SCHEMA,
-  FormSchema,
-} from '@portal/features/templates/schemas/drill-pipe-v1.schema';
+import { FormSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
   definitionToFormSchema,
   TemplateFormDefinition,
@@ -53,12 +50,14 @@ export class ReportValidationService {
       });
     }
 
-    // Consumer B cutover: the required-field set that gates MISSING_FIELDS readiness is
-    // derived from the report's template definitionJson when present, through the SAME
-    // definitionToFormSchema transform the inspection form uses — so validation and the
-    // form agree on what is required. Resolved once per report (identical for every
-    // serial). Soft-NULL: null/undefined/malformed definition falls back to the legacy
-    // hardcoded schema (see resolveRequiredSchema). templateKey guard unchanged.
+    // The required-field set that gates MISSING_FIELDS readiness is derived from the
+    // report's template definitionJson through the SAME definitionToFormSchema transform
+    // the inspection form uses — so validation and the form agree on what is required.
+    // Resolved once per report (identical for every serial). Soft-NULL: a null/undefined/
+    // malformed definition resolves to `null` (no required-field enforcement), NEVER the
+    // drill-pipe schema — enforcing another tool's required fields on a definition-less
+    // report is a correctness bug (mirrors the form's empty-state). templateKey guard
+    // unchanged; a drill-pipe report carries a non-null definition and is unaffected.
     const requiredSchema =
       report.templateKey === 'DRILL_PIPE_REPORT'
         ? this.resolveRequiredSchema(report)
@@ -132,17 +131,19 @@ export class ReportValidationService {
    *
    * Soft-NULL, never throw: this runs in an offline-first field tool where a throw would
    * silently break readiness or blank the UI. A null/undefined definition, or a malformed
-   * one that trips definitionToFormSchema, falls back to the legacy hardcoded schema.
+   * one that trips definitionToFormSchema, resolves to `null` — NO required-field
+   * enforcement — never the drill-pipe schema. The caller skips the MISSING_FIELDS walk
+   * when this is null, mirroring the form's empty-state for a definition-less report.
    */
-  private resolveRequiredSchema(report: LocalInspectionReport): FormSchema {
+  private resolveRequiredSchema(report: LocalInspectionReport): FormSchema | null {
     const definition = report.definitionJson;
     if (definition == null) {
-      return DRILL_PIPE_V1_SCHEMA;
+      return null;
     }
     try {
       return definitionToFormSchema(definition as TemplateFormDefinition);
     } catch {
-      return DRILL_PIPE_V1_SCHEMA;
+      return null;
     }
   }
 

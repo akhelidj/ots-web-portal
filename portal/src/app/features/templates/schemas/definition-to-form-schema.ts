@@ -15,7 +15,7 @@ import {
 export interface DefinitionField {
   key: string;
   label: string;
-  type: FieldInputType | 'date';
+  type: FieldInputType;
   required: boolean;
   scope: 'header' | 'item';
   region?: string;

@@ -15,14 +15,23 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import {
-  FormSchema,
-  DRILL_PIPE_V1_SCHEMA,
-} from '@portal/features/templates/schemas/drill-pipe-v1.schema';
+import { FormSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
   TemplateFormDefinition,
   definitionToFormSchema,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
+
+/**
+ * An inert schema for a report whose template has NO usable definition. It carries
+ * no sections, so the form renders nothing and `schemaUnavailable` drives an explicit
+ * empty-state — never the drill-pipe schema (that would render the wrong tool's form
+ * for a non-drill-pipe report). See the fallback switch in ngOnInit.
+ */
+const EMPTY_SCHEMA: FormSchema = {
+  templateKey: '',
+  templateVersion: 0,
+  sections: [],
+};
 
 @Component({
   selector: 'app-serial-inspection-reactive-form',
@@ -44,19 +53,38 @@ export class SerialInspectionReactiveFormComponent
   @Output() saveData = new EventEmitter<Record<string, unknown>>();
   @Output() formCancel = new EventEmitter<void>();
 
-  public schema: FormSchema = DRILL_PIPE_V1_SCHEMA; // For MVP, we hardcode to Drill Pipe V1
+  public schema: FormSchema = EMPTY_SCHEMA;
+  /** True when the report has no usable definition → render the explicit empty-state. */
+  public schemaUnavailable = false;
   public formGroup!: FormGroup;
 
   private fb = inject(FormBuilder);
 
   ngOnInit() {
-    // Phase B3 fallback switch: definition present → engine-built schema;
-    // otherwise the legacy hardcoded DRILL_PIPE_V1_SCHEMA (unchanged). Everything
-    // downstream (initForm and below) is untouched and consumes `this.schema`.
-    this.schema = this.definition
-      ? definitionToFormSchema(this.definition)
-      : DRILL_PIPE_V1_SCHEMA;
+    // Phase D step 2b fallback switch: a present, well-formed definition → the
+    // engine-built schema; a null/undefined/malformed definition → the inert
+    // EMPTY_SCHEMA + an explicit empty-state. It NEVER falls back to the drill-pipe
+    // schema: doing so would render the wrong tool's form for a definition-less
+    // report. Soft-NULL, never throws (a throw here would blank a field inspector's
+    // form). A drill-pipe report carries a non-null definition, so it takes the
+    // engine path and is unaffected.
+    this.schema = this.resolveSchema();
     this.initForm();
+  }
+
+  private resolveSchema(): FormSchema {
+    if (!this.definition) {
+      this.schemaUnavailable = true;
+      return EMPTY_SCHEMA;
+    }
+    try {
+      const schema = definitionToFormSchema(this.definition);
+      this.schemaUnavailable = false;
+      return schema;
+    } catch {
+      this.schemaUnavailable = true;
+      return EMPTY_SCHEMA;
+    }
   }
 
   ngOnChanges(changes: SimpleChanges) {
