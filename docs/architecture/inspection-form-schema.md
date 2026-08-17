@@ -36,7 +36,7 @@ This standalone generic Angular component dynamically parses a specified `FormSc
 
 ### 3. Frontend Gating Logic (`ReportValidationService`)
 
-To determine if an `IN_INSPECTION` report is eligible for passing to `PENDING_APPROVAL`, the `ReportValidationService` leverages the schema shape (`DRILL_PIPE_V1_SCHEMA`) to calculate completion logic across all serial numbers.
+To determine if an `IN_INSPECTION` report is eligible for passing to `PENDING_APPROVAL`, the `ReportValidationService` derives the required-field set from the report's `definitionJson` (via `definitionToFormSchema`, the same transform the inspection form uses) and calculates completion logic across all serial numbers. It falls back to the hardcoded `DRILL_PIPE_V1_SCHEMA` only when `definitionJson` is null/absent (soft-NULL, never throws).
 
 It iterates through all `required` paths locally during offline operations to prompt users with instant UI feedback if any fields are missing.
 

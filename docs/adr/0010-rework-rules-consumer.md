@@ -2,17 +2,22 @@
 
 **Status:** Accepted (standing decision)
 
+> **Update (a031969 — Phase C complete):** the plan below has shipped. The rules
+> interpreter landed in 0a34b12 and the imperative body was retired in a031969, frozen as an
+> equivalence oracle in test scope (`api/test/rework-imperative-oracle.ts`). The Context
+> below describing the hardcoded body as the live sole authority is historical.
+
 ## Context
 
-The REWORK child-report trigger is the **fourth and last** of the hardcoded
+The REWORK child-report trigger was the **fourth and last** of the hardcoded
 drill-pipe behaviors identified in [ADR-0009](0009-single-template-hardcode-seam.md).
 The other three (approval gate, export, portal form) already read `Template.definitionJson`
-live. The fourth does not: the rule is *authored* in the definition's `rules` block
-(`rework-child-on-emi`: `body.emiResult == 'REWORK'` → upsert a `REWORK` child), but **no
-consumer reads that block**. `child-reports.service.ts` (`syncReworkChildReport`) remains
-the sole authority via its hardcoded `body.emiResult === 'REWORK'` check. Because there is
-no consumer, the hardcoded path is **not retireable by deletion** — removing it without a
-`rules` consumer would silently drop child-report creation.
+live. The fourth did not: the rule is *authored* in the definition's `rules` block
+(`rework-child-on-emi`: `body.emiResult == 'REWORK'` → upsert a `REWORK` child), but at the
+time **no consumer read that block**. `child-reports.service.ts` (`syncReworkChildReport`)
+was the sole authority via its hardcoded `body.emiResult === 'REWORK'` check. Because there
+was no consumer, the hardcoded path was **not retireable by deletion** — removing it without
+a `rules` consumer would have silently dropped child-report creation.
 
 This ADR records the decision to build that consumer: a **rules interpreter** that reads
 `definition.rules` and drives location 4. The design and its legacy-equivalence proof are
@@ -52,9 +57,10 @@ REWORK rejection guard is unchanged and remains authoritative.
 
 ## Consequences
 
-The REWORK trigger joins the other three locations as a live consumer of `definitionJson`,
-so the definition becomes the single authored source for all four drill-pipe behaviors, and
-the hardcoded path becomes retireable once the equivalence proof lands. The interpreter's
+The REWORK trigger joined the other three locations as a live consumer of `definitionJson`,
+so the definition is now the single authored source for all four drill-pipe behaviors, and
+the hardcoded path was retired once the equivalence proof landed (a031969) — the imperative
+body is now a frozen equivalence oracle in test scope, not a live path. The interpreter's
 reconciliation contract is fixed by the action name, keeping the `rules` format minimal, and
 authoring mistakes surface immediately rather than degrading to legacy behavior.
 

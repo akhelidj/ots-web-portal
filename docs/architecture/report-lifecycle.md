@@ -87,7 +87,7 @@ Once the report has a real id, edits/transitions sync. `INSPECTION_REPORT:TRANSI
 
 - **Version check** (`:203-205`) → 409 on mismatch.
 - **Role/matrix** enforcement via `INSPECTION_REPORT_TRANSITIONS` + special ON_HOLD restore logic (`:207-260`).
-- **PENDING_APPROVAL validation gate** (`:270-315`): requires ≥1 serial, each with a disposition, and for `DRILL_PIPE_REPORT` all 30 `DRILL_PIPE_REQUIRED_KEYS` present (`:18-28, :295-303`); otherwise a structured `VALIDATION_FAILED` 400.
+- **PENDING_APPROVAL validation gate** (`:270-315`): requires ≥1 serial, each with a disposition, and for `DRILL_PIPE_REPORT` all required inspection fields present — the required-key set now comes from the definition-driven engine gate (`engineGate` reading `definitionJson`), not a hardcoded constant; otherwise a structured `VALIDATION_FAILED` 400.
 - **Atomic commit** via guarded `updateMany where version` (`:354-365`), then transition-log + audit-log rows.
 - **Revision snapshot** on first approval or reopen (`:389-405`) → `RevisionService.createInspectionReportSnapshot` (`api/src/app/revision/revision.service.ts:20`): builds a deterministic `snapshotJson` (sorted serials/child reports/logs, `:32-46, :69-109`), writes an immutable `InspectionReportRevision` with `revisionNumber = current+1` (`:112-123`), and bumps the parent's `revisionNumber` (`:128-131`).
 

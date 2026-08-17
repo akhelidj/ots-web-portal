@@ -15,10 +15,13 @@ three hardcoded locations.
 
 **Key asymmetry vs locations 1–3.** The gate, export, and form cutovers each had *two live
 paths* (legacy + engine) whose outputs could be diffed against each other on real traffic.
-Location 4 has **no second live path**: `definition.rules` is **dormant JSON** — authored but
-read by no consumer — and `syncReworkChildReport` is the **sole authority**. The proof is
-therefore *"the interpreter reproduces the one method,"* not *"two live paths agree."* There
-is nothing to diff until the interpreter exists; the method itself is the oracle.
+Location 4 had **no second live path**: `definition.rules` was **dormant JSON** — authored
+but read by no consumer — and `syncReworkChildReport` was the **sole authority**. The proof
+was therefore *"the interpreter reproduces the one method,"* not *"two live paths agree."*
+Post-retirement (a031969), the interpreter is the **sole live path**; the imperative logic
+survives only as a **frozen equivalence oracle** in test scope
+(`api/test/rework-imperative-oracle.ts`), which is the comparand the interpreter is proven
+against — the method itself is that oracle.
 
 ## `upsertChildReport` — fixed semantics
 
@@ -64,9 +67,11 @@ than degrading silently.
 
 ## Equivalence proof design
 
-A harness runs **both** the imperative method (`syncReworkChildReport`) and the interpreter
-against **the same seeded DB state**, across a scenario matrix, and asserts **identical
-resulting DB state**. Asserted dimensions:
+A harness runs **both** the frozen imperative oracle (`imperativeReworkOracle`, the retired
+`syncReworkChildReport` body preserved verbatim in test scope) and the interpreter against
+**independent identical seeded DB state**, across a scenario matrix, and asserts **identical
+resulting DB state**. (Before retirement the method side was the live `syncReworkChildReport`;
+the oracle was proven byte-identical to it before deletion.) Asserted dimensions:
 
 - child **existence** (created / deleted / absent),
 - child **status** (`DRAFT` / non-`DRAFT`),
@@ -113,8 +118,8 @@ reportNumber, or membership) so the equivalence assertion goes red.
   Zero `upsertChildReport` rules = tool type has no rework child reports (valid).
   Two-or-more = fail loud for now; multi-child semantics deferred until a real multi-rule
   tool type exists to design against.
-- **Invocation point during the proof.** The proof calls **both** the imperative method and
-  the interpreter and compares results. Confirm there is **no shared mutable state bleed**
-  when both run against the same DB — e.g. run each against an independent seeded state
+- **Invocation point during the proof.** The proof calls **both** the frozen imperative
+  oracle and the interpreter and compares results. Confirm there is **no shared mutable state
+  bleed** when both run against the same DB — e.g. run each against an independent seeded state
   (separate transaction / reset between runs), since the first invocation mutates the child
   and serial rows the second would read.

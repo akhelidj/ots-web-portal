@@ -146,10 +146,16 @@ the intended runtime contract before "fixing" either.
 
 ## Definition-driven cutover (`Template.definitionJson`)
 
-### 15. REWORK rule is authored in the definition but not engine-consumed
-The definition's `rules` block authors the REWORK child-report rule
-(`rework-child-on-emi`), but no consumer reads it — `child-reports.service.ts`
-(`syncReworkChildReport`) stays the sole authority via the hardcoded
-`body.emiResult === 'REWORK'` check. See ADR-0009 ("the engine carries 3 of the 4
-hardcoded locations"); Phase C must build the `rules` consumer before the hardcoded path
-can be retired, or REWORK child creation would be silently dropped.
+### 15. REWORK rule authored in the definition but not engine-consumed — RESOLVED (a031969)
+**Update (a031969 — Phase C complete):** resolved. The `rules` consumer
+(`ReworkRulesInterpreter`, 0a34b12) now reads `rework-child-on-emi` and drives child-report
+creation; the imperative `syncReworkChildReport` body was retired (a031969), frozen as an
+equivalence oracle in test scope (`api/test/rework-imperative-oracle.ts`). The historical
+description follows.
+
+Originally: the definition's `rules` block authored the REWORK child-report rule
+(`rework-child-on-emi`), but no consumer read it — `child-reports.service.ts`
+(`syncReworkChildReport`) was the sole authority via the hardcoded
+`body.emiResult === 'REWORK'` check. Per ADR-0009, Phase C first built the `rules` consumer
+before the hardcoded path could be retired, or REWORK child creation would have been
+silently dropped.

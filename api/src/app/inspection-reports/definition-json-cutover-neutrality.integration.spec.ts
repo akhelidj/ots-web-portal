@@ -448,7 +448,8 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
 
   /** Model the portal: seed a report, deliver it via getReports (NULL or populated),
    *  cross the wire, then build the form schema the way the component does — run the
-   *  adapter when a definition is embedded, else fall back to the hardcoded schema. */
+   *  adapter when a definition is embedded, else fall back to the frozen GOLDEN_FORM_SCHEMA
+   *  (a dead branch in-test — `def` is always non-null here). */
   async function deliverFormSchema(def: unknown) {
     const tenant = await seedTenant(prisma);
     await seedRealDrillPipeTemplate(prisma, tenant.id);

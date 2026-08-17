@@ -64,5 +64,7 @@ Rules:
 - For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost) — but **not right after a commit** (see the post-commit note below).
+- **The post-commit hook does a FULL rebuild** (code and markdown/docs included), so running graphify manually right after a commit is redundant — don't. Let the hook finish; if you need to confirm, check that `built_at_commit` in `graphify-out/graph.json` matches HEAD.
+- **Docs/markdown rebuilds need the graphify skill, not the bare CLI.** A bare `graphify . --update` over docs fails with "no LLM API key" (prose extraction needs an extractor). Run it through the installed **graphify skill** instead — there, Claude Code is the extractor via subagents, so no API key is required.
 - `graphify-out/` generated artifacts (`graph.json`, `graph.html`, `GRAPH_REPORT.md`, `manifest.json`, `.graphify_labels.json`, `cost.json`) are **git-ignored, not committed** — they are machine-local and regenerable via `graphify update .`. Only `graphify-out/.gitignore` stays tracked. The graph does not ship with the repo; regenerate it locally.

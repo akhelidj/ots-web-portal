@@ -31,29 +31,38 @@ create implementations exist, one dead, which is a trap for anyone who wires the
 one (`workflow.create` emits no `reportNumber`). This must stay documented as intentional,
 not "fixed."
 
-## Cutover status: the engine carries 3 of the 4 hardcoded locations
+## Cutover status: the engine carries 4 of 4 hardcoded locations (complete)
 
-The definition-driven engine (`Template.definitionJson`) currently subsumes **three** of
-the four places drill-pipe behavior is hardcoded. Each has a definition-fed equivalent
-that reads the `definitionJson` column **live** (falling back to the hardcoded path while
-the column is NULL):
+> **Update (a031969 — Phase C complete):** all four hardcoded drill-pipe sites are now
+> retired; the text below describing them as live-with-a-legacy-fallback is historical.
+> The `definitionJson` engine is the sole live path for the gate, export, form, and REWORK
+> behaviors. `legacyGate` and `mapDrillPipeReportV1` no longer exist in the codebase;
+> `DRILL_PIPE_V1_SCHEMA` survives only as the portal's soft-NULL form/validation fallback,
+> and the imperative REWORK body survives only as a frozen equivalence oracle in test scope
+> (`api/test/rework-imperative-oracle.ts`). The templateKey hardcode in the **Decision**
+> above is a separate, still-standing constraint and is unaffected.
+
+The definition-driven engine (`Template.definitionJson`) subsumed **all four** places
+drill-pipe behavior was hardcoded. Each gained a definition-fed equivalent that reads the
+`definitionJson` column live; the legacy paths have since been retired (they fell back to
+the hardcoded path only while the column was NULL, which no longer occurs for backfilled
+ACTIVE templates):
 
 1. **Approval gate** — `engineGate` reads `fields` / `disposition`
-   (`inspection-report-workflow.service.ts:307-329`, vs `legacyGate`).
+   (`inspection-report-workflow.service.ts:307-329`); the legacy `legacyGate` was retired.
 2. **Export** — `engineMap` reads `export` / `transforms` / `regions`
-   (`export.service.ts:282-346`, vs `mapDrillPipeReportV1`).
+   (`export.service.ts:282-346`); the legacy `mapDrillPipeReportV1` was retired.
 3. **Portal form** — `definitionToFormSchema` reads `fields` / `sections`
-   (delivered via `getReports`, vs the hardcoded `DRILL_PIPE_V1_SCHEMA`).
+   (delivered via `getReports`); the hardcoded `DRILL_PIPE_V1_SCHEMA` remains only as the
+   soft-NULL fallback.
 
-The **fourth** — the REWORK child-report rule — is a different case. It is *authored* in
+The **fourth** — the REWORK child-report rule — was a different case. It is *authored* in
 the definition's `rules` block (`rework-child-on-emi`: `body.emiResult == 'REWORK'` →
-upsert a `REWORK` child), but **no consumer reads that block**. `child-reports.service.ts`
-(`syncReworkChildReport`) remains the sole authority via its hardcoded
-`body.emiResult === 'REWORK'` check. The `rules` entry is descriptive intent, not a live
-input.
-
-*Consequence for Phase C:* the REWORK path is **not retireable by deletion**. Removing the
-hardcoded check without a `rules` consumer would silently drop child-report creation.
-Phase C must first **build the `rules` consumer** — with its own legacy-equivalence proof
-and mutation guards, in the pattern of the gate/export/form proofs — and only then retire
-the hardcoded path.
+upsert a `REWORK` child). Originally **no consumer read that block** and
+`child-reports.service.ts` (`syncReworkChildReport`) was the sole authority via its
+hardcoded `body.emiResult === 'REWORK'` check, so the path was **not retireable by
+deletion** — removing the check without a consumer would have silently dropped child-report
+creation. Phase C therefore first **built the `rules` consumer** (`ReworkRulesInterpreter`,
+0a34b12) — with its own legacy-equivalence proof and mutation guards, in the pattern of the
+gate/export/form proofs — and only then retired the imperative body (a031969), freezing it
+as an independent equivalence oracle in test scope.
