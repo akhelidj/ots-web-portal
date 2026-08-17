@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TemplateService } from './template.service';
+import { TemplateTokensService } from './template-tokens.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
@@ -23,7 +24,10 @@ import 'multer'; // Ensure Express.Multer types are available
 @UseGuards(RolesGuard)
 @Roles(UserRole.ADMIN)
 export class TemplateController {
-  constructor(private readonly templateService: TemplateService) {}
+  constructor(
+    private readonly templateService: TemplateService,
+    private readonly templateTokensService: TemplateTokensService,
+  ) {}
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
@@ -58,6 +62,17 @@ export class TemplateController {
   async getTemplates(@Req() req: AuthenticatedRequest) {
     const tenantId = req.user.tenantId;
     return this.templateService.getTemplates(tenantId);
+  }
+
+  // Read-only: loads the row's fileBlob, normalizes (.xls → .xlsx at read time),
+  // extracts the workbook's {{tokens}}. Writes nothing. Admin-only (class guards).
+  @Get(':id/tokens')
+  async getTemplateTokens(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    const tenantId = req.user.tenantId;
+    return this.templateTokensService.getTokens(tenantId, id);
   }
 
   @Patch(':id/deprecate')

@@ -3,6 +3,9 @@ import { TemplateController } from './template.controller';
 import { TemplateService } from './template.service';
 import { TemplateValidationService } from './template-validation.service';
 import { TemplateFileStoreService } from './template-file-store.service';
+import { TemplateTokensService } from './template-tokens.service';
+import { XlsNormalizerService } from './xls-normalizer.service';
+import { TokenExtractorService } from './token-extractor.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Module({
@@ -11,6 +14,9 @@ import { PrismaService } from '../prisma/prisma.service';
     TemplateService,
     TemplateValidationService,
     TemplateFileStoreService,
+    TemplateTokensService,
+    XlsNormalizerService,
+    TokenExtractorService,
     PrismaService,
   ],
 })
