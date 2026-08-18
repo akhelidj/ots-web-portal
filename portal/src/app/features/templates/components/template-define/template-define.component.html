@@ -18,13 +18,13 @@
     </p>
   </div>
 
-  @if (isLoading) {
+  @if (isLoading()) {
     <div class="page-section p-6 text-sm text-neutral-500">Loading tokens…</div>
-  } @else if (loadError) {
+  } @else if (loadError()) {
     <div
       class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
     >
-      <p class="text-sm font-medium">{{ loadError }}</p>
+      <p class="text-sm font-medium">{{ loadError() }}</p>
     </div>
   } @else {
     <!-- Region + marker declaration -->
@@ -58,7 +58,7 @@
             class="field-control"
           >
             <option [value]="''">Select the repeating-row token…</option>
-            @for (row of rows; track row.token) {
+            @for (row of rows(); track row.token) {
               <option [value]="row.token">{{ row.token }}</option>
             }
           </select>
@@ -109,7 +109,7 @@
           </tr>
         </thead>
         <tbody class="table-body divide-y divide-gray-100">
-          @for (row of rows; track row.token; let i = $index) {
+          @for (row of rows(); track row.token; let i = $index) {
             <tr
               class="align-top"
               [ngClass]="{ 'opacity-40': isMarker(row) }"
@@ -200,21 +200,21 @@
       </table>
     </div>
 
-    @if (submitError) {
+    @if (submitError()) {
       <div
         data-testid="submit-error"
         class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
       >
-        @if (failedCheck) {
+        @if (failedCheck()) {
           <p class="text-xs font-bold uppercase tracking-wider mb-1">
-            Rejected check: {{ failedCheck }}
+            Rejected check: {{ failedCheck() }}
           </p>
         }
-        <p class="text-sm font-medium">{{ submitError }}</p>
+        <p class="text-sm font-medium">{{ submitError() }}</p>
       </div>
     }
 
-    @if (success) {
+    @if (success()) {
       <div
         data-testid="submit-success"
         class="bg-success-light border-l-4 border-success text-success-dark p-4 rounded-md shadow-sm"
@@ -232,11 +232,11 @@
       </button>
       <button
         (click)="submit()"
-        [disabled]="isSubmitting"
+        [disabled]="isSubmitting()"
         class="btn btn-primary"
         type="button"
       >
-        {{ isSubmitting ? 'Saving…' : 'Save Definition' }}
+        {{ isSubmitting() ? 'Saving…' : 'Save Definition' }}
       </button>
     </div>
   }

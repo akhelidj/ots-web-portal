@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -63,23 +63,30 @@ export class TemplateDefineComponent implements OnInit {
   public readonly fieldTypes = FIELD_TYPES;
 
   public templateId = '';
-  public rows: DescribeRow[] = [];
 
-  // Region / marker declaration.
+  // The app is ZONELESS: no zone.js drives change detection. State the template
+  // branches on and that is mutated AFTER an await (the token load, the submit result)
+  // must be a signal, or the view never re-renders when the async work settles — the
+  // exact bug that left this screen stuck on "Loading tokens…" after a 200. The
+  // `[(ngModel)]` fields below stay plain: they change via DOM events, which already
+  // notify the zoneless scheduler (and two-way binding needs a plain field, not a signal).
+  public readonly rows = signal<DescribeRow[]>([]);
+
+  // Region / marker declaration ([(ngModel)] two-way — plain, event-driven).
   public displayName = '';
   public regionId = 'serials';
   public regionLabel = '';
   /** The token literal chosen as the repeating serial marker (region.marker). */
   public markerToken = '';
 
-  // UI state.
-  public isLoading = true;
-  public isSubmitting = false;
-  public loadError = '';
+  // UI state (signals — set after async work, read by the template).
+  public readonly isLoading = signal(true);
+  public readonly isSubmitting = signal(false);
+  public readonly loadError = signal('');
   /** The gate's per-check reason (from a 4xx). */
-  public submitError = '';
-  public failedCheck = '';
-  public success = false;
+  public readonly submitError = signal('');
+  public readonly failedCheck = signal('');
+  public readonly success = signal(false);
 
   async ngOnInit(): Promise<void> {
     this.templateId = this.route.snapshot.paramMap.get('id') ?? '';
@@ -87,18 +94,17 @@ export class TemplateDefineComponent implements OnInit {
   }
 
   public async load(): Promise<void> {
-    this.isLoading = true;
-    this.loadError = '';
+    this.isLoading.set(true);
+    this.loadError.set('');
     try {
       const tokens = await this.templatesService.getTokens(this.templateId);
-      this.rows = this.toRows(tokens);
+      this.rows.set(this.toRows(tokens));
     } catch (e: unknown) {
-      this.loadError = this.errorMessage(
-        e,
-        'Failed to load template tokens. Are you online?',
+      this.loadError.set(
+        this.errorMessage(e, 'Failed to load template tokens. Are you online?'),
       );
     } finally {
-      this.isLoading = false;
+      this.isLoading.set(false);
     }
   }
 
@@ -126,8 +132,8 @@ export class TemplateDefineComponent implements OnInit {
 
   /** Choosing a marker excludes that token from the described fields. */
   public onMarkerChange(): void {
-    this.submitError = '';
-    this.failedCheck = '';
+    this.submitError.set('');
+    this.failedCheck.set('');
   }
 
   public isMarker(row: DescribeRow): boolean {
@@ -136,7 +142,7 @@ export class TemplateDefineComponent implements OnInit {
 
   /** The rows that will be sent as described fields (included, not the marker). */
   public describedRows(): DescribeRow[] {
-    return this.rows.filter((r) => r.include && !this.isMarker(r));
+    return this.rows().filter((r) => r.include && !this.isMarker(r));
   }
 
   /** Assemble the request body from the current form state. Pure. */
@@ -178,40 +184,41 @@ export class TemplateDefineComponent implements OnInit {
   }
 
   public async submit(): Promise<void> {
-    this.submitError = '';
-    this.failedCheck = '';
-    this.success = false;
+    this.submitError.set('');
+    this.failedCheck.set('');
+    this.success.set(false);
 
     // Light client-side niceties only — NOT a reimplementation of the server gate.
     if (!this.markerToken) {
-      this.submitError =
-        'Choose which token marks a repeating serial row (the region marker).';
+      this.submitError.set(
+        'Choose which token marks a repeating serial row (the region marker).',
+      );
       return;
     }
     if (!this.regionId.trim()) {
-      this.submitError = 'Give the repeating region an id.';
+      this.submitError.set('Give the repeating region an id.');
       return;
     }
     const described = this.describedRows();
     if (described.length === 0) {
-      this.submitError = 'Describe at least one field before saving.';
+      this.submitError.set('Describe at least one field before saving.');
       return;
     }
     if (described.some((r) => !r.label.trim())) {
-      this.submitError = 'Every included field needs a label.';
+      this.submitError.set('Every included field needs a label.');
       return;
     }
 
-    this.isSubmitting = true;
+    this.isSubmitting.set(true);
     try {
       await this.templatesService.defineTemplate(this.templateId, this.buildDto());
-      this.success = true;
+      this.success.set(true);
     } catch (e: unknown) {
       const body = (e as { error?: { check?: string; message?: string } })?.error;
-      this.failedCheck = body?.check ?? '';
-      this.submitError = this.errorMessage(e, 'Failed to save the definition.');
+      this.failedCheck.set(body?.check ?? '');
+      this.submitError.set(this.errorMessage(e, 'Failed to save the definition.'));
     } finally {
-      this.isSubmitting = false;
+      this.isSubmitting.set(false);
     }
   }
 

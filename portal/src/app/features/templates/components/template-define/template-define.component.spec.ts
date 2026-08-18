@@ -80,8 +80,8 @@ describe('TemplateDefineComponent — describe screen', () => {
     c.regionLabel = 'Inspected Serials';
     c.markerToken = '{{sn}}';
 
-    const set = (token: string, patch: Partial<(typeof c.rows)[number]>) =>
-      Object.assign(c.rows.find((r) => r.token === token)!, patch);
+    const set = (token: string, patch: Partial<ReturnType<typeof c.rows>[number]>) =>
+      Object.assign(c.rows().find((r) => r.token === token)!, patch);
 
     set('{{poNumber}}', { label: 'PO Number', type: 'text', scope: 'header' });
     set('{{reportDate}}', { label: 'Report Date', type: 'date', scope: 'header' });
@@ -104,7 +104,7 @@ describe('TemplateDefineComponent — describe screen', () => {
     c.templateId = 't1';
     await c.load();
     expect(getTokens).toHaveBeenCalledWith('t1');
-    expect(c.rows.map((r) => r.token)).toEqual(FIXTURE_TOKENS.map((t) => t.token));
+    expect(c.rows().map((r) => r.token)).toEqual(FIXTURE_TOKENS.map((t) => t.token));
   });
 
   it('assembles the gate-accepted DTO and submits it on success', async () => {
@@ -117,8 +117,8 @@ describe('TemplateDefineComponent — describe screen', () => {
 
     await c.submit();
     expect(defineTemplate).toHaveBeenCalledWith('t1', EXPECTED_DTO);
-    expect(c.success).toBe(true);
-    expect(c.submitError).toBe('');
+    expect(c.success()).toBe(true);
+    expect(c.submitError()).toBe('');
   });
 
   it('surfaces the server’s per-check rejection inline; nothing marked written', async () => {
@@ -135,19 +135,19 @@ describe('TemplateDefineComponent — describe screen', () => {
     });
 
     await c.submit();
-    expect(c.failedCheck).toBe('select-options');
-    expect(c.submitError).toContain('must declare non-empty options');
-    expect(c.success).toBe(false);
+    expect(c.failedCheck()).toBe('select-options');
+    expect(c.submitError()).toContain('must declare non-empty options');
+    expect(c.success()).toBe(false);
   });
 
   it('nicety: refuses to submit an included field with an empty label', async () => {
     const c = make();
     await describeValid(c);
-    c.rows.find((r) => r.token === '{{b_od}}')!.label = '   ';
+    c.rows().find((r) => r.token === '{{b_od}}')!.label = '   ';
 
     await c.submit();
     expect(defineTemplate).not.toHaveBeenCalled();
-    expect(c.submitError).toContain('label');
+    expect(c.submitError()).toContain('label');
   });
 
   it('nicety: refuses to submit without a chosen serial marker', async () => {
@@ -157,6 +157,6 @@ describe('TemplateDefineComponent — describe screen', () => {
 
     await c.submit();
     expect(defineTemplate).not.toHaveBeenCalled();
-    expect(c.submitError).toContain('marker');
+    expect(c.submitError()).toContain('marker');
   });
 });
