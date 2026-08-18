@@ -181,24 +181,25 @@ export function engineGlobalTokens(
 }
 
 /**
- * The definition's single region, narrowed. Every drill-pipe definition carries
- * exactly one region and the backfill shape guard enforces `regions` is non-empty,
- * so `[0]` is always present. This makes that invariant explicit for the type checker
- * (noUncheckedIndexedAccess) instead of repeating the assertion in every caller; an
- * empty `regions` already threw at the first `region.*` access — this throws the same
- * case with a clearer message, one step earlier.
+ * The definition's repeating region, or `null` when there is none.
+ *
+ * A single-region (drill-pipe) definition carries exactly one region, so `[0]` is
+ * present and every existing caller behaves exactly as before. A FLAT (region-less)
+ * definition — Phase D flat templates — carries `regions: []`; this returns `null`
+ * and the row readers below become no-ops, while `engineMap` takes a dedicated
+ * header-only path. Returning `null` (instead of the former throw) is what makes the
+ * engine general rather than drill-pipe-shaped; see phase-d-flat-templates-design.md.
  */
-function firstRegion(def: ExportDefinition): ExportDefinition['regions'][number] {
-  const region = def.regions[0];
-  if (!region) {
-    throw new Error('export definition has no regions');
-  }
-  return region;
+function optionalRegion(
+  def: ExportDefinition,
+): ExportDefinition['regions'][number] | null {
+  return def.regions[0] ?? null;
 }
 
 /** The per-row token keys for the (single) region — used for cell detection. */
 export function engineRowTokenKeys(def: ExportDefinition): string[] {
-  const region = firstRegion(def);
+  const region = optionalRegion(def);
+  if (!region) return []; // flat: no repeating region → no per-row token keys
   return (def.export.regions[region.id] || []).map((e) => e.token);
 }
 
@@ -208,7 +209,8 @@ export function engineRowTokens(
   snapshot: Snapshot,
   serial: Snapshot['serialNumbers'][number],
 ): Record<string, string> {
-  const region = firstRegion(def);
+  const region = optionalRegion(def);
+  if (!region) return {}; // flat: no repeating region → no per-row tokens
   const entries = def.export.regions[region.id] || [];
   const scope = serial.inspectionData || {};
   const out: Record<string, string> = {};
@@ -228,7 +230,27 @@ export async function engineMap(
   snapshot: Snapshot,
   chunk: Snapshot['serialNumbers'],
 ): Promise<void> {
-  const region = firstRegion(def);
+  const region = optionalRegion(def);
+
+  if (!region) {
+    // FLAT (region-less) export. There is no marker row to clone, so resolve only
+    // the global/header token map and drive the SAME shared machinery with an EMPTY
+    // chunk. `expandRegionAndSubstitute` already guards its row-cloning behind
+    // `templateRowNumber !== -1 && chunk.length > 0` (xlsx-token-engine.ts), so an
+    // empty chunk skips the byte-emitting regex row-clone path entirely and only the
+    // global substitution (step 6) runs — no new lines in that fragile code. The
+    // empty chunk (NOT merely an empty marker, which `.includes('')` would match on
+    // every cell) is what makes the skip unconditional. See phase-d-flat-templates
+    // -design.md §0/§1.
+    await expandRegionAndSubstitute(workbook, [], {
+      marker: '',
+      rowTokenKeys: [],
+      globalTokens: engineGlobalTokens(def, snapshot),
+      rowTokensFor: () => ({}),
+    });
+    return;
+  }
+
   await expandRegionAndSubstitute(workbook, chunk, {
     marker: region.marker,
     rowTokenKeys: engineRowTokenKeys(def),

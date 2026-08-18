@@ -396,6 +396,35 @@ export class ExportService {
     const files: { buffer: Buffer; filename: string }[] = [];
     const N = serialNumbers.length;
 
+    // FLAT (region-less) definition — Phase D flat templates. There is no repeating
+    // region, so the output is one fixed-layout, header-only file: no chunking, and no
+    // zero-serial early return (a flat report is "one serial's worth of header data",
+    // so it always yields exactly one file). Region definitions carry regions.length
+    // === 1 and never enter this branch, so the region path below is byte-unchanged.
+    // Nothing can author regions: [] yet (the builder always emits one region and the
+    // validator rejects any other count), so this is unreachable in production this
+    // step — engine mechanism only. See phase-d-flat-templates-design.md §1.
+    if (!definition.regions || definition.regions.length === 0) {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(
+        templateBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
+      );
+      try {
+        await this.applyMapping(workbook, snapshot, serialNumbers, definition);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : undefined;
+        throw new BadRequestException(
+          message || 'Error applying template mapping',
+        );
+      }
+      const outBuffer = await workbook.xlsx.writeBuffer();
+      files.push({
+        buffer: Buffer.from(outBuffer),
+        filename: `${baseFilename}.xlsx`,
+      });
+      return files;
+    }
+
     // Chunk size comes from the definition's (single) region. A null region
     // chunkSize means "never split".
     const chunkSize =
