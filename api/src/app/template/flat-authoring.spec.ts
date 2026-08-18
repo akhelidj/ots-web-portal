@@ -83,9 +83,13 @@ describe('Flat authoring — build', () => {
     expect(def.regions).toEqual([]); // no repeating region
     expect(def.export.regions).toEqual({}); // no row-token export
 
-    // Header field → plain global (resolved from snapshot.header).
-    expect(def.export.global).toContainEqual({ token: '{{poNumber}}', field: 'poNumber' });
-    // Item field → global with source:'record' (resolved from the record's inspectionData).
+    // FLAT: every field (header + item scope) → global with source:'record', resolved
+    // from the record's inspectionData (step 3b — the report IS one record).
+    expect(def.export.global).toContainEqual({
+      token: '{{poNumber}}',
+      field: 'poNumber',
+      source: 'record',
+    });
     expect(def.export.global).toContainEqual({
       token: '{{casingWeight}}',
       field: 'casingWeight',
@@ -128,12 +132,15 @@ describe('Flat authoring — ties into step-1 engine', () => {
     const buffer = await flatWorkbookBuffer();
     const before = maxRowOf(await canon(buffer));
 
-    const snapshot = recordSnapshot({ casingWeight: '42.7' } as InspectionData, {
+    // Both fields live in the record's inspectionData now (step 3b). snapshot.header
+    // keeps its default poNumber ('PO-FROZEN'); the record value must win.
+    const snapshot = recordSnapshot({
       poNumber: 'PO-9',
-    });
+      casingWeight: '42.7',
+    } as InspectionData);
     const sheets = await runEngine(buffer, def, snapshot, snapshot.serialNumbers);
 
-    expect(sheets[0].cells['B2']).toBe('PO-9'); // header token from snapshot.header
+    expect(sheets[0].cells['B2']).toBe('PO-9'); // flat header token from inspectionData (3b)
     expect(sheets[0].cells['D4']).toBe('42.7'); // record token from inspectionData
     expect(maxRowOf(sheets)).toBe(before); // no clone — flat signature
   });

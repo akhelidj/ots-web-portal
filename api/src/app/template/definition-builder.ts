@@ -87,15 +87,22 @@ export function buildDefinition(
   }
   const sections = sectionKeys.map((key) => ({ key, title: key }));
 
-  // Header fields → global (from snapshot.header). For a FLAT template the item
-  // fields ALSO go global, but with `source: 'record'` so the engine resolves each
-  // one from the record serial's inspectionData (fork #2) — placed at a fixed cell,
-  // not a cloned row. For a region template item fields go to the region export
-  // instead (below), so this flat branch adds nothing and the global export is
-  // byte-identical to before.
+  // Header fields → global. For a REGION template they read from snapshot.header (a
+  // plain `field` — header fields genuinely span serials). For a FLAT template there is
+  // no "elsewhere": the report IS one record, so EVERY field the inspector fills lives
+  // on that record — header fields ALSO carry `source: 'record'` and resolve from the
+  // record serial's inspectionData (step 3b). This closes the round-trip: step-3's form
+  // renders every flat field and saves it into inspectionData, so export must read it
+  // back from there, not from snapshot.header. Item fields likewise go global with
+  // `source: 'record'` for flat (for a region template they live in export.regions
+  // below, so this whole block stays byte-identical to before for region definitions).
   const globalExport: CandidateExportEntry[] = [
     ...(dto.computed ?? []).map((c) => ({ token: c.token, computed: c.computed })),
-    ...headerFields.map((f) => ({ token: f.token, field: strip(f.token) })),
+    ...headerFields.map((f) => ({
+      token: f.token,
+      field: strip(f.token),
+      ...(dto.region ? {} : { source: 'record' }),
+    })),
     ...(dto.region
       ? []
       : itemFields.map((f) => ({
