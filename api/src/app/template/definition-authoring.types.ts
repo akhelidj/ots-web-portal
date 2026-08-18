@@ -43,8 +43,13 @@ export interface OpsComputedToken {
 /** The full request body for `PUT /templates/:id/definition`. */
 export interface DefineTemplateDto {
   displayName?: string;
-  /** Exactly one repeating region. */
-  region: {
+  /**
+   * The repeating region, or omitted for a FLAT template. Present → the report has
+   * repeating serial rows (a marker whose row is cloned per serial). Omitted → a flat,
+   * region-less template: one record, header/record fields at fixed cells, no repeating
+   * rows. Zero or one region only (never more). See phase-d-flat-templates-design.md.
+   */
+  region?: {
     id: string;
     label?: string;
     /** The token whose row repeats per serial, e.g. `"{{sn}}"`. Must exist in the sheet. */

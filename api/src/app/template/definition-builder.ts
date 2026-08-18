@@ -35,9 +35,12 @@ export function buildDefinition(
   if (!dto || typeof dto !== 'object') {
     throw new BadRequestException('A definition body is required.');
   }
-  if (!dto.region || typeof dto.region.marker !== 'string' || !dto.region.id) {
+  // A region is OPTIONAL (flat templates omit it). But if one IS supplied it must be
+  // well-formed — an id and a marker token — else it is a structural error. A region
+  // without a marker is rejected here, before any semantic check.
+  if (dto.region && (typeof dto.region.marker !== 'string' || !dto.region.id)) {
     throw new BadRequestException(
-      'A single repeating region with an id and a marker token is required.',
+      'A repeating region needs an id and a marker token.',
     );
   }
   if (!Array.isArray(dto.fields)) {
@@ -69,7 +72,7 @@ export function buildDefinition(
     type: f.type,
     required: f.required,
     scope: f.scope,
-    ...(f.scope === 'item' ? { region: dto.region.id } : {}),
+    ...(f.scope === 'item' && dto.region ? { region: dto.region.id } : {}),
     ...(f.section ? { section: f.section } : {}),
     ...(f.options ? { options: f.options } : {}),
   }));
@@ -84,15 +87,44 @@ export function buildDefinition(
   }
   const sections = sectionKeys.map((key) => ({ key, title: key }));
 
+  // Header fields → global (from snapshot.header). For a FLAT template the item
+  // fields ALSO go global, but with `source: 'record'` so the engine resolves each
+  // one from the record serial's inspectionData (fork #2) — placed at a fixed cell,
+  // not a cloned row. For a region template item fields go to the region export
+  // instead (below), so this flat branch adds nothing and the global export is
+  // byte-identical to before.
   const globalExport: CandidateExportEntry[] = [
     ...(dto.computed ?? []).map((c) => ({ token: c.token, computed: c.computed })),
     ...headerFields.map((f) => ({ token: f.token, field: strip(f.token) })),
+    ...(dto.region
+      ? []
+      : itemFields.map((f) => ({
+          token: f.token,
+          field: strip(f.token),
+          source: 'record',
+        }))),
   ];
 
-  const regionExport: CandidateExportEntry[] = [
-    { token: dto.region.marker, source: 'rowSerial' },
-    ...itemFields.map((f) => ({ token: f.token, field: strip(f.token) })),
-  ];
+  // Region present → exactly today's single region + its marker/row export.
+  // Region absent (flat) → `regions: []` and no row-token export entries.
+  const regions = dto.region
+    ? [
+        {
+          id: dto.region.id,
+          label: dto.region.label ?? dto.region.id,
+          marker: dto.region.marker,
+          chunkSize: dto.region.chunkSize ?? null,
+        },
+      ]
+    : [];
+  const exportRegions: Record<string, CandidateExportEntry[]> = dto.region
+    ? {
+        [dto.region.id]: [
+          { token: dto.region.marker, source: 'rowSerial' },
+          ...itemFields.map((f) => ({ token: f.token, field: strip(f.token) })),
+        ],
+      }
+    : {};
 
   return {
     formatVersion: 1,
@@ -101,14 +133,7 @@ export function buildDefinition(
     displayName: dto.displayName ?? meta.templateKey,
     sections,
     transforms: {},
-    regions: [
-      {
-        id: dto.region.id,
-        label: dto.region.label ?? dto.region.id,
-        marker: dto.region.marker,
-        chunkSize: dto.region.chunkSize ?? null,
-      },
-    ],
+    regions,
     ...(dto.disposition
       ? {
           disposition: {
@@ -120,7 +145,7 @@ export function buildDefinition(
     fields,
     export: {
       global: globalExport,
-      regions: { [dto.region.id]: regionExport },
+      regions: exportRegions,
     },
     rules: [],
   };

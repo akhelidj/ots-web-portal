@@ -1,0 +1,104 @@
+{
+  "formatVersion": 1,
+  "templateKey": "DRILL_PIPE_REPORT",
+  "templateVersion": 1,
+  "displayName": "Casing Report",
+  "sections": [
+    {
+      "key": "Box",
+      "title": "Box"
+    },
+    {
+      "key": "Body",
+      "title": "Body"
+    }
+  ],
+  "transforms": {},
+  "regions": [
+    {
+      "id": "serials",
+      "label": "Inspected Serials",
+      "marker": "{{sn}}",
+      "chunkSize": 10
+    }
+  ],
+  "disposition": {
+    "source": [
+      "emi"
+    ],
+    "requiredForApproval": true
+  },
+  "fields": [
+    {
+      "key": "poNumber",
+      "label": "PO Number",
+      "type": "text",
+      "required": false,
+      "scope": "header"
+    },
+    {
+      "key": "reportDate",
+      "label": "Report Date",
+      "type": "date",
+      "required": false,
+      "scope": "header"
+    },
+    {
+      "key": "b_od",
+      "label": "Box Min OD",
+      "type": "text",
+      "required": true,
+      "scope": "item",
+      "region": "serials",
+      "section": "Box"
+    },
+    {
+      "key": "emi",
+      "label": "EMI Result",
+      "type": "select",
+      "required": true,
+      "scope": "item",
+      "region": "serials",
+      "section": "Body",
+      "options": [
+        "PASS",
+        "REWORK",
+        "SCRAP",
+        "HOLD"
+      ]
+    }
+  ],
+  "export": {
+    "global": [
+      {
+        "token": "{{customer}}",
+        "computed": "customerName"
+      },
+      {
+        "token": "{{poNumber}}",
+        "field": "poNumber"
+      },
+      {
+        "token": "{{reportDate}}",
+        "field": "reportDate"
+      }
+    ],
+    "regions": {
+      "serials": [
+        {
+          "token": "{{sn}}",
+          "source": "rowSerial"
+        },
+        {
+          "token": "{{b_od}}",
+          "field": "b_od"
+        },
+        {
+          "token": "{{emi}}",
+          "field": "emi"
+        }
+      ]
+    }
+  },
+  "rules": []
+}

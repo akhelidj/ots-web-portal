@@ -28,7 +28,11 @@ export interface ExportEntry {
   computed?: string;
   /** literal value */
   const?: string;
-  /** reserved row-metadata source; currently only 'rowSerial' (sn.serial) */
+  /**
+   * Row/record-metadata source. `'rowSerial'` → the serial number (sn.serial);
+   * `'record'` → a flat template's record field, read from the record serial's
+   * inspectionData by `field` (fork #2).
+   */
   source?: string;
   /** named transform from definition.transforms */
   transform?: string;
@@ -151,6 +155,13 @@ function resolveValue(
     raw = COMPUTED[entry.computed]?.(snapshot);
   } else if (entry.source === 'rowSerial') {
     raw = serial?.serial;
+  } else if (entry.source === 'record') {
+    // FLAT templates (fork #2): a record field's value lives in the single record
+    // serial's inspectionData, read by its dotted key — the same value store the
+    // region row path reads, but placed at a FIXED cell (global), not a cloned row.
+    // The record serial is threaded in as `serial` by engineFlatTokens. See
+    // phase-d-flat-templates-design.md §1c.
+    raw = walkPath(serial?.inspectionData, entry.field ?? '');
   } else if (entry.coalesce) {
     raw = entry.coalesce.map((p) => walkPath(scope, p)).find((v) => Boolean(v));
   } else if (entry.compose) {
@@ -176,6 +187,27 @@ export function engineGlobalTokens(
   const out: Record<string, string> = {};
   for (const entry of def.export.global) {
     out[entry.token] = resolveValue(def, entry, snapshot.header, snapshot, undefined);
+  }
+  return out;
+}
+
+/**
+ * Resolve the token map for a FLAT (region-less) definition. Identical to
+ * engineGlobalTokens EXCEPT the single record serial is threaded through, so
+ * `source: 'record'` entries resolve their value from the record's inspectionData
+ * (fork #2). Header/computed/const/rowSerial entries resolve exactly as before —
+ * passing the record as `serial` does not affect a `field` walk over `snapshot.header`
+ * — so this subsumes engineGlobalTokens for any definition with no record entries.
+ * The whole map is written to fixed cells (no row cloning) by the flat engineMap path.
+ */
+export function engineFlatTokens(
+  def: ExportDefinition,
+  snapshot: Snapshot,
+  record: Snapshot['serialNumbers'][number] | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const entry of def.export.global) {
+    out[entry.token] = resolveValue(def, entry, snapshot.header, snapshot, record);
   }
   return out;
 }
@@ -241,11 +273,13 @@ export async function engineMap(
     // global substitution (step 6) runs — no new lines in that fragile code. The
     // empty chunk (NOT merely an empty marker, which `.includes('')` would match on
     // every cell) is what makes the skip unconditional. See phase-d-flat-templates
-    // -design.md §0/§1.
+    // -design.md §0/§1. The single record serial (flat = one serial) is threaded
+    // into engineFlatTokens so `source: 'record'` fields resolve from its
+    // inspectionData (fork #2); header/computed tokens resolve as usual.
     await expandRegionAndSubstitute(workbook, [], {
       marker: '',
       rowTokenKeys: [],
-      globalTokens: engineGlobalTokens(def, snapshot),
+      globalTokens: engineFlatTokens(def, snapshot, chunk[0]),
       rowTokensFor: () => ({}),
     });
     return;

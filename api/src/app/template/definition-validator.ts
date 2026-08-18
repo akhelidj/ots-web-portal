@@ -1,5 +1,6 @@
 import {
   engineGlobalTokens,
+  engineFlatTokens,
   engineRowTokens,
   engineRowTokenKeys,
   COMPUTED_NAMES,
@@ -89,12 +90,14 @@ export function validateDefinition(
   candidate: CandidateDefinition,
   extractedTokens: ReadonlySet<string>,
 ): ValidationOutcome {
-  // 6 — exactly one repeating region (engine reads only regions[0]; 0 or 2+ unsupported).
-  if (!Array.isArray(candidate.regions) || candidate.regions.length !== 1) {
+  // 6 — zero or one repeating region. Flat templates carry `regions: []` (engine flat
+  // path); region templates carry exactly one (engine reads regions[0]). Two or more is
+  // still unsupported — the engine only ever consults the first.
+  if (!Array.isArray(candidate.regions) || candidate.regions.length > 1) {
     return {
       ok: false,
       check: 'single-region',
-      reason: `Exactly one repeating region is supported; got ${
+      reason: `At most one repeating region is supported; got ${
         candidate.regions?.length ?? 0
       }.`,
     };
@@ -155,10 +158,15 @@ export function validateDefinition(
   }
 
   // 7 — engine dry-run: the same readers export + gate use at runtime. Any throw
-  // (missing region, unknown/unsupported transform, …) refuses the whole candidate.
+  // (unknown/unsupported transform, …) refuses the whole candidate. Both shapes are
+  // exercised: the region readers (no-ops on a flat candidate) AND the flat token
+  // resolver (engineFlatTokens — the exact path the flat export runs, threading the
+  // dry-run record so `source: 'record'` fields resolve). The engine is the oracle:
+  // a candidate the flat/region engine would reject here cannot be written.
   try {
     const exportDef = candidate as unknown as ExportDefinition;
     engineGlobalTokens(exportDef, DRY_RUN_SNAPSHOT);
+    engineFlatTokens(exportDef, DRY_RUN_SNAPSHOT, DRY_RUN_SERIAL);
     engineRowTokenKeys(exportDef);
     engineRowTokens(exportDef, DRY_RUN_SNAPSHOT, DRY_RUN_SERIAL);
     engineGate(candidate as unknown as GateDefinition, [
