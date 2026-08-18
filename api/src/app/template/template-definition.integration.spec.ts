@@ -236,6 +236,7 @@ describe('Template definition write path [integration]', () => {
         reportsService.createReport(tenant.id, 'user-1', {
           customerId: customer.id,
           poNumber: 'PO-NULLDEF',
+          templateKey: 'DRILL_PIPE_REPORT',
         }),
       ).rejects.toThrow(/has no definition yet/);
 
@@ -254,6 +255,7 @@ describe('Template definition write path [integration]', () => {
       const report = await reportsService.createReport(tenant.id, 'user-1', {
         customerId: customer.id,
         poNumber: 'PO-HASDEF',
+        templateKey: 'DRILL_PIPE_REPORT',
       });
       expect(report.templateKey).toBe('DRILL_PIPE_REPORT');
     });

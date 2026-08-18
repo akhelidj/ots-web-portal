@@ -78,6 +78,7 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
     const report = await reports.createReport(tenant.id, 'user-admin', {
       customerId: customer.id,
       poNumber: 'PO-WF',
+      templateKey: 'DRILL_PIPE_REPORT',
     });
     return { tenant, report };
   }

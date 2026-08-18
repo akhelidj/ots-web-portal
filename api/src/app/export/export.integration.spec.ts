@@ -113,6 +113,7 @@ describe('Deterministic xlsx export (foundation baseline) [integration]', () => 
     const created = await reports.createReport(tenant.id, 'user-admin', {
       customerId: customer.id,
       poNumber: 'PO-EXPORT',
+      templateKey: 'DRILL_PIPE_REPORT',
     });
     // Pin reportNumber (create path timestamps it) + distinctive header values, all
     // BEFORE approval so the first-approval snapshot captures them. Does not touch

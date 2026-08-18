@@ -79,6 +79,7 @@ describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
     const report = await reports.createReport(tenant.id, 'user-admin', {
       customerId: customer.id,
       poNumber: 'PO-REV',
+      templateKey: 'DRILL_PIPE_REPORT',
     });
     return { tenant, customer, template, report };
   }

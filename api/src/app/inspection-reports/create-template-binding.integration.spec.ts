@@ -5,28 +5,27 @@
  * persistence; the DB safety guard in api/test/integration-env.ts has already
  * validated DATABASE_URL before this file loads.
  *
- * These are a documented BASELINE, not a bug hunt. The two create paths diverge:
+ * The two create paths:
  *
- *  - InspectionReportsService.createReport (the LIVE, controller-reachable path)
- *    hardcodes templateKey = 'DRILL_PIPE_REPORT' (inspection-reports.service.ts:125)
- *    and its DTO has no templateKey field at all. Binding every report to
- *    DRILL_PIPE_REPORT is an INTENTIONAL constraint (single template today);
- *    multi-template is planned future work. See
- *    docs/adr/0009-single-template-hardcode-seam.md. These tests are therefore
- *    stable/untagged — not a known bug, not expected to change.
+ *  - InspectionReportsService.createReport (the LIVE, controller-reachable path) NOW
+ *    honors the caller's templateKey (Phase D flat step 5 — the consumption picker).
+ *    CreateInspectionReportDto carries templateKey; createReport resolves the newest
+ *    ACTIVE version of THAT key and binds the report to it, with the definitionJson
+ *    guard as backstop. This retires the former DRILL_PIPE_REPORT hardcode. These tests
+ *    prove the live path is multi-template: drill pipe still works, a non-drill-pipe
+ *    defined template binds, and unknown / undefined keys are rejected.
  *
  *  - InspectionReportWorkflowService.create (inspection-report-workflow.service.ts:60)
- *    already honors dto.templateKey, but is UNWIRED: the only workflow controller
- *    (InspectionReportWorkflowController) exposes transition / available-transitions
- *    / transitions — no route calls create — and no other controller references it.
- *    So it is currently unreachable from the live app. It is the multi-template seam
- *    (ADR-0009); these tests document that it already binds by the requested key.
+ *    also honors dto.templateKey, but is UNWIRED: the only workflow controller exposes
+ *    transition / available-transitions / transitions — no route calls create. So it is
+ *    currently unreachable from the live app. The live picker path above is the wired
+ *    multi-template path; this seam (ADR-0009) is documented here as still honoring the
+ *    requested key.
  */
 import { BadRequestException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { InspectionReportsService } from './inspection-reports.service';
-import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 import { InspectionReportWorkflowService } from '../workflow/inspection-report-workflow.service';
 import { RevisionService } from '../revision/revision.service';
 import {
@@ -59,11 +58,10 @@ describe('Create / template-binding path (multi-template seam) [integration]', (
 
   beforeEach(() => resetInspectionDomain(prisma));
 
-  describe('InspectionReportsService.createReport (live, hardcoded path)', () => {
-    it('binds every created report to DRILL_PIPE_REPORT regardless of input (intentional constraint — multi-template is planned future work)', async () => {
-      // BASELINE (stable, untagged): the hardcode at inspection-reports.service.ts:125
-      // is deliberate — one template today; multi-template is planned future work.
-      // This is NOT a bug.
+  describe('InspectionReportsService.createReport (live picker path)', () => {
+    it('drill-pipe UNCHANGED: creating a DRILL_PIPE_REPORT still binds to that template', async () => {
+      // The existing drill-pipe flow must behave exactly as before now that the key is
+      // chosen rather than hardcoded — the picker sends 'DRILL_PIPE_REPORT'.
       const tenant = await seedTenant(prisma);
       const customer = await seedCustomer(prisma, tenant.id);
       const template = await seedActiveTemplate(
@@ -75,6 +73,7 @@ describe('Create / template-binding path (multi-template seam) [integration]', (
       const report = await reportsService.createReport(tenant.id, 'user-1', {
         customerId: customer.id,
         poNumber: 'PO-0001',
+        templateKey: 'DRILL_PIPE_REPORT',
       });
 
       expect(report.templateKey).toBe('DRILL_PIPE_REPORT');
@@ -82,31 +81,86 @@ describe('Create / template-binding path (multi-template seam) [integration]', (
       expect(report.templateHash).toBe(template.hash);
     });
 
-    it('ignores any templateKey supplied on the create input — the value is hardcoded, the DTO has no templateKey field (baseline; multi-template change point)', async () => {
-      // BASELINE (stable, untagged): CreateInspectionReportDto exposes only
-      // customerId + poNumber, and createReport never reads an incoming templateKey.
-      // We seed ONLY a DRILL_PIPE_REPORT template. If the service honored the input
-      // key it would look up 'SOME_OTHER_KEY', find no active template, and throw.
-      // Instead it succeeds bound to DRILL_PIPE_REPORT — proving the input is ignored.
+    it('DECISIVE (finish line): a report is created against a NON-drill-pipe DEFINED template', async () => {
+      // The proof this whole engagement builds to: report creation is no longer
+      // drill-pipe-locked. Seed BOTH a drill-pipe template AND a defined non-drill-pipe
+      // one; request the non-drill-pipe key; the report must bind to THAT template — not
+      // fall back to drill pipe.
+      const tenant = await seedTenant(prisma);
+      const customer = await seedCustomer(prisma, tenant.id);
+      await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT');
+      const flat = await seedActiveTemplate(prisma, tenant.id, 'CASING_FLAT', {
+        definitionJson: {
+          formatVersion: 1,
+          templateKey: 'CASING_FLAT',
+          templateVersion: 1,
+          regions: [],
+          fields: [],
+          export: { global: [], regions: {} },
+        },
+      });
+
+      const report = await reportsService.createReport(tenant.id, 'user-1', {
+        customerId: customer.id,
+        poNumber: 'PO-FLAT-1',
+        templateKey: 'CASING_FLAT',
+      });
+
+      expect(report.templateKey).toBe('CASING_FLAT'); // bound to the CHOSEN template
+      expect(report.templateKey).not.toBe('DRILL_PIPE_REPORT'); // not a drill-pipe fallback
+      expect(report.templateVersion).toBe(flat.templateVersion);
+      expect(report.templateHash).toBe(flat.hash);
+    });
+
+    it('rejects an unknown templateKey — clear 400, nothing created', async () => {
       const tenant = await seedTenant(prisma);
       const customer = await seedCustomer(prisma, tenant.id);
       await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT');
 
-      const input = {
-        customerId: customer.id,
-        poNumber: 'PO-0002',
-        // Not part of CreateInspectionReportDto — present only to show it is ignored.
-        templateKey: 'SOME_OTHER_KEY',
-      } as CreateInspectionReportDto & { templateKey: string };
+      await expect(
+        reportsService.createReport(tenant.id, 'user-1', {
+          customerId: customer.id,
+          poNumber: 'PO-UNKNOWN',
+          templateKey: 'NO_SUCH_TEMPLATE',
+        }),
+      ).rejects.toThrow(/No active template found for NO_SUCH_TEMPLATE/);
 
-      const report = await reportsService.createReport(
-        tenant.id,
-        'user-1',
-        input,
-      );
+      const count = await prisma.inspectionReport.count({
+        where: { tenantId: tenant.id },
+      });
+      expect(count).toBe(0); // nothing persisted
+    });
 
-      expect(report.templateKey).toBe('DRILL_PIPE_REPORT');
-      expect(report.templateKey).not.toBe('SOME_OTHER_KEY');
+    it('GUARD BACKSTOP: rejects a key whose ACTIVE template has no definition', async () => {
+      // The picker only offers defined templates, but a caller can name an undefined key
+      // directly — the definitionJson guard is the defense-in-depth backstop.
+      const tenant = await seedTenant(prisma);
+      const customer = await seedCustomer(prisma, tenant.id);
+      await seedActiveTemplate(prisma, tenant.id, 'UNDEFINED_TEMPLATE', {
+        definitionJson: null, // ACTIVE but no definition
+      });
+
+      await expect(
+        reportsService.createReport(tenant.id, 'user-1', {
+          customerId: customer.id,
+          poNumber: 'PO-UNDEF',
+          templateKey: 'UNDEFINED_TEMPLATE',
+        }),
+      ).rejects.toThrow(/has no definition yet and cannot be used/);
+    });
+
+    it('rejects a missing/empty templateKey with a clear 400', async () => {
+      const tenant = await seedTenant(prisma);
+      const customer = await seedCustomer(prisma, tenant.id);
+      await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT');
+
+      await expect(
+        reportsService.createReport(tenant.id, 'user-1', {
+          customerId: customer.id,
+          poNumber: 'PO-NOKEY',
+          templateKey: '   ',
+        }),
+      ).rejects.toThrow(/templateKey is required/);
     });
   });
 

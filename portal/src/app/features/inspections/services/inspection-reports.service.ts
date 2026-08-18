@@ -34,6 +34,15 @@ import {
   DataHydrationSource,
 } from '@portal/core/offline/services/data-hydration.token';
 
+/** One selectable template for the create-report picker. Mirrors the API's minimal
+ *  available-templates shape (no fileBlob, no definition contents) — front/back contract
+ *  duplicated by design (ADR-0008). */
+export interface AvailableTemplate {
+  templateKey: string;
+  templateVersion: number;
+  displayName: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -401,6 +410,22 @@ export class InspectionReportsService implements DataHydrationSource {
       );
       throw e;
     }
+  }
+
+  /**
+   * The consumption picker's source: templates a report can be created against —
+   * defined+active only, tenant-wide (the server enforces the filter). Online-only: a
+   * report is created online in the live path, and picking a template needs the current
+   * server list; if the fetch fails we surface an empty list (the picker shows nothing
+   * to choose, rather than a stale hardcode). Mirrors GET /inspection-reports/
+   * available-templates.
+   */
+  public async getAvailableTemplates(): Promise<AvailableTemplate[]> {
+    return firstValueFrom(
+      this.http.get<AvailableTemplate[]>(
+        `${environment.apiUrl}/inspection-reports/available-templates`,
+      ),
+    );
   }
 
   public async createReport(payload: {

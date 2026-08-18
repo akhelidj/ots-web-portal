@@ -41,6 +41,15 @@ export class InspectionReportsController {
     return this.reportsService.getReports(req.user, status, q, customerId);
   }
 
+  // The consumption picker's source. Declared BEFORE @Get(':id') so the literal path
+  // is not captured as an :id param. ADMIN + RECEIVER are the report-creating roles;
+  // RECEIVER has no other way to list templates (TemplateController is admin-only).
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER)
+  @Get('available-templates')
+  async getAvailableTemplates(@Req() req: AuthenticatedRequest) {
+    return this.reportsService.getAvailableTemplates(req.user.tenantId);
+  }
+
   @Roles(UserRole.ADMIN, UserRole.RECEIVER)
   @Post()
   async createReport(

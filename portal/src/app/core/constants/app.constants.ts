@@ -43,11 +43,9 @@ export const CHILD_REPORT_TYPES = {
 export type ChildReportType =
   (typeof CHILD_REPORT_TYPES)[keyof typeof CHILD_REPORT_TYPES];
 
-export const TEMPLATE_KEYS = {
-  DRILL_PIPE_REPORT: 'DRILL_PIPE_REPORT',
-} as const;
-
-export type TemplateKey = (typeof TEMPLATE_KEYS)[keyof typeof TEMPLATE_KEYS];
+// TEMPLATE_KEYS / TemplateKey retired in Phase D flat step 5 (consumption picker):
+// report creation is no longer locked to a single hardcoded key — the create screen
+// picks any defined+active template from GET /inspection-reports/available-templates.
 
 export const ENTITY_TYPES = {
   CUSTOMER: 'CUSTOMER',

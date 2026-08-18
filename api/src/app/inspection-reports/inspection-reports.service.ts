@@ -15,6 +15,21 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 
+/**
+ * A human-readable label for a templateKey, derived PURELY from the scalar key —
+ * `DRILL_PIPE_REPORT` → `Drill Pipe Report`. The nicer displayName lives inside
+ * definitionJson, but the available-templates projection deliberately does not select
+ * that column (no leaking definition contents), so the picker label is computed from
+ * the key we already have. Presentation only; the picker binds on templateKey.
+ */
+function prettifyTemplateKey(templateKey: string): string {
+  return templateKey
+    .split(/[_\s]+/)
+    .filter((w) => w.length > 0)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
 @Injectable()
 export class InspectionReportsService {
   constructor(private prisma: PrismaService) {}
@@ -92,6 +107,45 @@ export class InspectionReportsService {
     }));
   }
 
+  /**
+   * The consumption picker's source: every template a report can be created against —
+   * ACTIVE AND defined (`definitionJson != null`), newest version per templateKey. The
+   * "available = uploaded AND defined" rule is enforced as a server-side WHERE, not a
+   * client filter, so an undefined or deprecated template can never be offered. Returns
+   * a MINIMAL shape only — never fileBlob, never the definitionJson contents (they are
+   * not even selected). Tenant-wide; no role/customer scoping (none exists on Template).
+   */
+  async getAvailableTemplates(tenantId: string) {
+    const templates = await this.prisma.template.findMany({
+      where: {
+        tenantId,
+        status: 'ACTIVE',
+        // "defined": definitionJson is not database-NULL. This filter is the enforced
+        // availability rule — load-bearing, proven by the filter integration spec.
+        NOT: { definitionJson: { equals: Prisma.DbNull } },
+      },
+      orderBy: [{ templateKey: 'asc' }, { templateVersion: 'desc' }],
+      select: {
+        templateKey: true,
+        templateVersion: true,
+        // Deliberately NO fileBlob and NO definitionJson — minimal, non-leaking shape.
+      },
+    });
+
+    // Newest version per key (ordered templateVersion desc within key → first wins).
+    const newestByKey = new Map<string, { templateKey: string; templateVersion: number }>();
+    for (const t of templates) {
+      if (!newestByKey.has(t.templateKey)) {
+        newestByKey.set(t.templateKey, t);
+      }
+    }
+    return [...newestByKey.values()].map((t) => ({
+      templateKey: t.templateKey,
+      templateVersion: t.templateVersion,
+      displayName: prettifyTemplateKey(t.templateKey),
+    }));
+  }
+
   async getReportById(
     user: { tenantId: string; role: UserRole; customerId?: string | null },
     id: string,
@@ -154,8 +208,16 @@ export class InspectionReportsService {
       }
     }
 
-    // 2. Resolve template binding (DRILL_PIPE_REPORT v1 scope)
-    const templateKey = 'DRILL_PIPE_REPORT';
+    // 2. Resolve template binding by the CHOSEN templateKey (multi-template — the
+    // consumption picker). The caller (portal picker) supplies the key of a defined+
+    // active template; we bind the report to the newest ACTIVE version of that key.
+    // No longer hardcoded to DRILL_PIPE_REPORT.
+    const templateKey = data.templateKey?.trim();
+    if (!templateKey) {
+      throw new BadRequestException(
+        'templateKey is required to create a report.',
+      );
+    }
     const template = await this.prisma.template.findFirst({
       where: {
         tenantId,
@@ -175,10 +237,12 @@ export class InspectionReportsService {
 
     // Phase D guard — "undefined = not usable": a template whose definitionJson is
     // NULL has no validated field/export/gate definition and MUST NOT be a report
-    // target (a report bound to it would drive nothing). Drill pipe is backfilled
-    // (non-null) so it stays usable; this only blocks freshly-uploaded, not-yet-
-    // defined templates. Scoped to this LIVE create path only — the unwired
-    // InspectionReportWorkflowService.create seam (ADR-0009) is out of scope for 2a.
+    // target (a report bound to it would drive nothing). Now that createReport honors
+    // the caller's templateKey (the consumption picker), this guard is genuinely
+    // load-bearing defense-in-depth: the picker only offers defined templates, but a
+    // caller could name an undefined key directly — this rejects it. The picker's
+    // available-templates filter (ACTIVE AND definitionJson != null) is the primary
+    // gate; this is the backstop.
     if (template.definitionJson == null) {
       throw new BadRequestException(
         `Template ${template.templateKey}@${template.templateVersion} has no definition yet and cannot be used to create reports.`,

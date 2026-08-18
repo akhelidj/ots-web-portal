@@ -87,6 +87,7 @@ describe('Layer B — export engine structural behaviour + mutation guards [inte
     const created = await reports.createReport(tenant.id, 'user-admin', {
       customerId: customer.id,
       poNumber: 'PO-EXPORT',
+      templateKey: 'DRILL_PIPE_REPORT',
     });
     const a = admin(tenant.id);
     let r = await workflow.transition(

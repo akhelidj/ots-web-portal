@@ -151,6 +151,7 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
     const created = await reportsService.createReport(tenant.id, 'user-admin', {
       customerId: customer.id,
       poNumber: 'PO-EXPORT',
+      templateKey: 'DRILL_PIPE_REPORT',
     });
     const a = actor(tenant.id);
     let r = await workflow.transition(
