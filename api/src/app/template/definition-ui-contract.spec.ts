@@ -48,6 +48,22 @@ function uiDto(): DefineTemplateDto {
   };
 }
 
+/**
+ * The body the describe screen emits with the "repeating rows?" toggle OFF: a FLAT
+ * template. `region` is OMITTED (no marker), and the fields describe the same real tokens
+ * as fixed-cell record data. This is exactly what `buildDto()` produces in flat mode.
+ */
+function flatUiDto(): DefineTemplateDto {
+  return {
+    displayName: 'Flat Casing Report',
+    fields: [
+      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header' },
+      { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header' },
+      { token: '{{b_od}}', label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' },
+    ],
+  };
+}
+
 describe('describe-screen DTO ⇄ 2a gate contract', () => {
   let extractedTokens: Set<string>;
 
@@ -82,5 +98,19 @@ describe('describe-screen DTO ⇄ 2a gate contract', () => {
     if (outcome.ok) throw new Error('expected rejection');
     expect(outcome.check).toBe('select-options');
     expect(outcome.reason).toContain('must declare non-empty options');
+  });
+
+  // Step 4: the FLAT describe-screen body (toggle off → no region) is a body the gate
+  // accepts. This is the server half of the flat authoring flow — the portal spec proves
+  // the UI emits a region-less DTO; this proves the real builder + validator accept it and
+  // build it as `regions: []`.
+  it('ACCEPTS a region-less (flat) body the describe screen emits with the toggle off', () => {
+    const dto = flatUiDto();
+    expect(dto.region).toBeUndefined(); // flat: the UI omitted the region entirely
+
+    const candidate = buildDefinition(META, dto);
+    expect(candidate.regions).toEqual([]); // built as a flat definition — no repeating row
+    expect(candidate.export.regions).toEqual({}); // no row-token export
+    expect(validateDefinition(candidate, extractedTokens)).toEqual({ ok: true });
   });
 });

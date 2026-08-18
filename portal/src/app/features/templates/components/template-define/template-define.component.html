@@ -27,6 +27,30 @@
       <p class="text-sm font-medium">{{ loadError() }}</p>
     </div>
   } @else {
+    <!-- Layout: does this template have repeating rows? (flat vs region discriminator) -->
+    <div class="page-section p-5 sm:p-6">
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          [(ngModel)]="hasRepeatingRows"
+          data-testid="has-repeating-rows"
+          class="h-4 w-4"
+        />
+        <span class="text-sm font-semibold text-gray-700"
+          >Does this template have repeating rows?</span
+        >
+      </label>
+      <p class="mt-2 text-sm text-neutral-500">
+        @if (hasRepeatingRows) {
+          On — the report has a repeating serial row. Mark the row token below.
+        } @else {
+          Off — a single record (flat). Just describe the fields; there is no
+          serial marker or per-row scope.
+        }
+      </p>
+    </div>
+
+    @if (hasRepeatingRows) {
     <!-- Region + marker declaration -->
     <div class="page-section p-5 sm:p-6 space-y-4">
       <h2 class="font-semibold text-lg text-neutral-900">Repeating Region</h2>
@@ -92,6 +116,7 @@
         </div>
       </div>
     </div>
+    }
 
     <!-- Per-token describe rows -->
     <div class="page-section overflow-x-auto">
@@ -103,7 +128,9 @@
             <th scope="col" class="table-th">Label</th>
             <th scope="col" class="table-th">Type</th>
             <th scope="col" class="table-th">Required</th>
-            <th scope="col" class="table-th">Scope</th>
+            @if (hasRepeatingRows) {
+              <th scope="col" class="table-th">Scope</th>
+            }
             <th scope="col" class="table-th">Section</th>
             <th scope="col" class="table-th">Options</th>
           </tr>
@@ -161,17 +188,19 @@
                   [attr.aria-label]="'Required ' + row.token"
                 />
               </td>
-              <td class="table-td">
-                <select
-                  [(ngModel)]="row.scope"
-                  [disabled]="isMarker(row) || !row.include"
-                  class="field-control"
-                  [attr.data-testid]="'scope-' + row.token"
-                >
-                  <option value="header">header</option>
-                  <option value="item">item</option>
-                </select>
-              </td>
+              @if (hasRepeatingRows) {
+                <td class="table-td">
+                  <select
+                    [(ngModel)]="row.scope"
+                    [disabled]="isMarker(row) || !row.include"
+                    class="field-control"
+                    [attr.data-testid]="'scope-' + row.token"
+                  >
+                    <option value="header">header</option>
+                    <option value="item">item</option>
+                  </select>
+                </td>
+              }
               <td class="table-td">
                 <input
                   type="text"
@@ -232,7 +261,7 @@
       </button>
       <button
         (click)="submit()"
-        [disabled]="isSubmitting()"
+        [disabled]="isSubmitting() || !canSave()"
         class="btn btn-primary"
         type="button"
       >

@@ -47,7 +47,9 @@ export interface OpsTokenField {
  *  on validity, and this ships only what the describe screen collects. */
 export interface DefineTemplateDto {
   displayName?: string;
-  region: {
+  /** The repeating region — present for a REGION template, OMITTED for a FLAT one (the
+   *  server then builds `regions: []`). Mirrors the API's optional `region`. */
+  region?: {
     id: string;
     label?: string;
     marker: string;

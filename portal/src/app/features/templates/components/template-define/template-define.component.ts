@@ -72,6 +72,14 @@ export class TemplateDefineComponent implements OnInit {
   // notify the zoneless scheduler (and two-way binding needs a plain field, not a signal).
   public readonly rows = signal<DescribeRow[]>([]);
 
+  // The explicit flat-vs-region discriminator. Ops DECLARES the layout — the app does
+  // NOT infer it from tokens. OFF (default) = flat (a single record, no repeating rows →
+  // the DTO omits `region`, which the server builds as `regions: []`); ON = region (the
+  // report has repeating serial rows). A plain [(ngModel)] field, not a signal: it is
+  // mutated by a DOM checkbox event, which already notifies the zoneless scheduler, so CD
+  // re-runs and the @if branches re-evaluate (same rationale as the other ngModel fields).
+  public hasRepeatingRows = false;
+
   // Region / marker declaration ([(ngModel)] two-way — plain, event-driven).
   public displayName = '';
   public regionId = 'serials';
@@ -137,12 +145,35 @@ export class TemplateDefineComponent implements OnInit {
   }
 
   public isMarker(row: DescribeRow): boolean {
-    return row.token === this.markerToken;
+    // Only a REGION template has a marker. In flat mode there is no repeating row, so no
+    // token is the marker — every included row is a described field (even if a stale
+    // markerToken lingered from a region-mode toggle).
+    return this.hasRepeatingRows && row.token === this.markerToken;
   }
 
   /** The rows that will be sent as described fields (included, not the marker). */
   public describedRows(): DescribeRow[] {
     return this.rows().filter((r) => r.include && !this.isMarker(r));
+  }
+
+  /**
+   * The client-checkable minimum for a Save — the SAME light niceties `submit()` enforces,
+   * used to disable the button so an author never spends a click learning the form is
+   * already invalid (mirrors the inspection form's `[disabled]="formGroup.invalid"`). The
+   * SERVER gate stays the sole authority on the seven semantic checks; this only guards
+   * what the client can already see is wrong. Mode-aware: region mode additionally needs a
+   * marker and a region id; flat mode does not (marker is irrelevant when there are no
+   * repeating rows).
+   */
+  public canSave(): boolean {
+    const described = this.describedRows();
+    if (described.length === 0) return false;
+    if (described.some((r) => !r.label.trim())) return false;
+    if (this.hasRepeatingRows) {
+      if (!this.markerToken) return false;
+      if (!this.regionId.trim()) return false;
+    }
+    return true;
   }
 
   /** Assemble the request body from the current form state. Pure. */
@@ -167,18 +198,20 @@ export class TemplateDefineComponent implements OnInit {
       return field;
     });
 
-    const dto: DefineTemplateDto = {
-      region: {
-        id: this.regionId.trim(),
-        marker: this.markerToken,
-      },
-      fields,
-    };
+    const dto: DefineTemplateDto = { fields };
     if (this.displayName.trim()) {
       dto.displayName = this.displayName.trim();
     }
-    if (this.regionLabel.trim()) {
-      dto.region.label = this.regionLabel.trim();
+    // FLAT (toggle off): omit `region` entirely → the server builds `regions: []` and
+    // every field resolves as record data. REGION (toggle on): today's region+marker.
+    if (this.hasRepeatingRows) {
+      dto.region = {
+        id: this.regionId.trim(),
+        marker: this.markerToken,
+      };
+      if (this.regionLabel.trim()) {
+        dto.region.label = this.regionLabel.trim();
+      }
     }
     return dto;
   }
@@ -188,16 +221,19 @@ export class TemplateDefineComponent implements OnInit {
     this.failedCheck.set('');
     this.success.set(false);
 
-    // Light client-side niceties only — NOT a reimplementation of the server gate.
-    if (!this.markerToken) {
-      this.submitError.set(
-        'Choose which token marks a repeating serial row (the region marker).',
-      );
-      return;
-    }
-    if (!this.regionId.trim()) {
-      this.submitError.set('Give the repeating region an id.');
-      return;
+    // Light client-side niceties only — NOT a reimplementation of the server gate. The
+    // marker/region checks apply ONLY in region mode; in flat mode there is no marker.
+    if (this.hasRepeatingRows) {
+      if (!this.markerToken) {
+        this.submitError.set(
+          'Choose which token marks a repeating serial row (the region marker).',
+        );
+        return;
+      }
+      if (!this.regionId.trim()) {
+        this.submitError.set('Give the repeating region an id.');
+        return;
+      }
     }
     const described = this.describedRows();
     if (described.length === 0) {
