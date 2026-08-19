@@ -133,3 +133,65 @@ export function definitionToFormSchema(
     sections,
   };
 }
+
+/**
+ * Adapt the HEADER-scope slice of a definition into a FormSchema — the report-level
+ * fields the Specs tab renders (grade, range, connection, …), the counterpart to the
+ * item-scope form `definitionToFormSchema` builds for the serial drawer.
+ *
+ * Unlike the region branch of `definitionToFormSchema` (which keeps ONLY declared,
+ * populated sections and so silently drops section-less fields), this ALWAYS appends the
+ * leftover groups — drill-pipe header fields are section-less, so dropping them would
+ * render a blank Specs tab. Declared sections come first (definition order); any group
+ * whose section key was not declared (e.g. the section-less `''` group) follows, in
+ * first-seen order, so no header field is lost.
+ *
+ * Scope filter is the ONLY difference from the item path; grouping/labels/options are
+ * identical, so the two surfaces stay visually consistent.
+ */
+export function definitionToHeaderFormSchema(
+  definition: TemplateFormDefinition,
+): FormSchema {
+  const headerFields = definition.fields.filter((f) => f.scope === 'header');
+
+  const bySection = new Map<string, FieldSchema[]>();
+  for (const f of headerFields) {
+    const sectionKey = f.section ?? '';
+    const fields = bySection.get(sectionKey) ?? [];
+    const field: FieldSchema = {
+      key: f.key,
+      label: f.label,
+      inputType: f.type as FieldInputType,
+      required: f.required,
+    };
+    if (f.options) {
+      field.options = f.options;
+    }
+    fields.push(field);
+    bySection.set(sectionKey, fields);
+  }
+
+  const orderedSectionKeys = (definition.sections ?? []).map((s) => s.key);
+  const titleByKey = new Map(
+    (definition.sections ?? []).map((s) => [s.key, s.title]),
+  );
+
+  const declaredKeys = orderedSectionKeys.filter((key) => bySection.has(key));
+  const leftoverKeys = [...bySection.keys()].filter(
+    (key) => !orderedSectionKeys.includes(key),
+  );
+
+  const sections: SectionSchema[] = [...declaredKeys, ...leftoverKeys].map(
+    (key) => ({
+      key,
+      title: titleByKey.get(key) ?? key,
+      fields: bySection.get(key) ?? [],
+    }),
+  );
+
+  return {
+    templateKey: definition.templateKey,
+    templateVersion: definition.templateVersion,
+    sections,
+  };
+}

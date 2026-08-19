@@ -942,110 +942,14 @@
                   }
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-                  <div class="space-y-4">
-                    <h4
-                      class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2"
-                    >
-                      Technical Specs
-                    </h4>
-                    <div class="space-y-3">
-                      <div class="flex justify-between">
-                        <span class="text-sm text-gray-500">Grade</span
-                        ><span class="text-sm font-bold text-neutral-900">{{
-                          reportData.grade || '-'
-                        }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span class="text-sm text-gray-500">Range</span
-                        ><span class="text-sm font-bold text-neutral-900">{{
-                          reportData.range || '-'
-                        }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span class="text-sm text-gray-500">Weight</span
-                        ><span class="text-sm font-bold text-neutral-900">{{
-                          reportData.weight || '-'
-                        }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span class="text-sm text-gray-500">Nom. W.T</span
-                        ><span class="text-sm font-bold text-neutral-900">{{
-                          reportData.nomWT || '-'
-                        }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span class="text-sm text-gray-500">Nom OD / ID</span
-                        ><span class="text-sm font-bold text-neutral-900"
-                          >{{ reportData.nomOD || '-' }} /
-                          {{ reportData.nomID || '-' }}</span
-                        >
-                      </div>
-                      <div class="flex justify-between">
-                        <span class="text-sm text-gray-500">Connection</span
-                        ><span
-                          class="text-sm font-mono font-bold text-primary"
-                          >{{ reportData.connection || '-' }}</span
-                        >
-                      </div>
-                    </div>
-                  </div>
-                  <div class="space-y-4">
-                    <h4
-                      class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2"
-                    >
-                      Inspection Methods
-                    </h4>
-                    <div class="flex flex-wrap gap-2">
-                      @for (
-                        m of $any(reportData.inspectionMethod);
-                        track $index
-                      ) {
-                        <span
-                          class="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-xs font-bold"
-                          >{{ m.name || m }}</span
-                        >
-                      }
-                      @if (!$any(reportData.inspectionMethod)?.length) {
-                        <span class="text-sm italic text-gray-400"
-                          >No methods listed</span
-                        >
-                      }
-                    </div>
-                  </div>
-                  <div class="space-y-4">
-                    <h4
-                      class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2"
-                    >
-                      Equipment Used
-                    </h4>
-                    <div class="space-y-2">
-                      @for (
-                        eq of $any(reportData.equipmentUsed);
-                        track $index
-                      ) {
-                        <div
-                          class="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100"
-                        >
-                          <span class="text-xs font-bold text-gray-700">{{
-                            eq.name
-                          }}</span>
-                          @if (eq.number) {
-                            <span
-                              class="text-[10px] font-mono text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200"
-                              >#{{ eq.number }}</span
-                            >
-                          }
-                        </div>
-                      }
-                      @if (!$any(reportData.equipmentUsed)?.length) {
-                        <span class="text-sm italic text-gray-400"
-                          >No equipment listed</span
-                        >
-                      }
-                    </div>
-                  </div>
-                </div>
+                <!-- Header-scope fields, rendered generically from the template
+                     definition (no longer hardcoded to drill pipe). The hardcoded
+                     `saveMeta` edit form above stays until the write path moves (next
+                     step); this read-only view is now definition-driven. -->
+                <app-inspection-report-header-fields
+                  [definition]="reportDefinition"
+                  [data]="$any(reportData)"
+                />
               </div>
             }
           </div>

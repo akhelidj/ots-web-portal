@@ -64,6 +64,7 @@ import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-ser
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
 import { TemplateFormDefinition } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { InspectionReportHeaderComponent } from './sections/inspection-report-header/inspection-report-header.component';
+import { InspectionReportHeaderFieldsComponent } from './sections/inspection-report-header-fields/inspection-report-header-fields.component';
 import { InspectionReportBannersComponent } from './sections/inspection-report-banners/inspection-report-banners.component';
 import { InspectionReportTransitionActionComponent } from './sections/inspection-report-transition-bar/inspection-report-transition-bar.component';
 import { InspectionReportKpiOverviewComponent } from './sections/inspection-report-kpi-overview/inspection-report-kpi-overview.component';
@@ -90,6 +91,7 @@ import { InspectionReportSerialsTableComponent } from './sections/inspection-rep
     InspectionReportApprovalBatchesComponent,
     InspectionReportTransitionHistoryComponent,
     InspectionReportSerialsTableComponent,
+    InspectionReportHeaderFieldsComponent,
   ],
   templateUrl: './inspection-report-detail.component.html',
 })

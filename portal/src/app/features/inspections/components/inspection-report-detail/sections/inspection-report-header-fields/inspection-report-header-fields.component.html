@@ -1,0 +1,45 @@
+@if (schemaUnavailable()) {
+  <div
+    data-testid="header-fields-unavailable"
+    class="bg-warning-light border-l-4 border-warning text-warning-dark p-5 rounded-md shadow-sm"
+  >
+    <p class="text-sm font-medium">
+      This report’s template has no usable field definition yet.
+    </p>
+    <p class="mt-1 text-sm">
+      An administrator must define this template before its header fields can be
+      shown.
+    </p>
+  </div>
+} @else {
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+    @for (section of schema()!.sections; track section.key) {
+      @if (section.fields.length > 0) {
+        <div class="space-y-4" [attr.data-testid]="'header-section-' + section.key">
+          @if (section.title) {
+            <h4
+              class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2"
+            >
+              {{ section.title }}
+            </h4>
+          }
+          <div class="space-y-3">
+            @for (field of section.fields; track field.key) {
+              <div
+                class="flex justify-between gap-4"
+                [attr.data-testid]="'header-field-' + field.key"
+              >
+                <span class="text-sm text-gray-500">{{ field.label }}</span>
+                <span
+                  class="text-sm font-bold text-neutral-900 text-right"
+                  [attr.data-testid]="'header-value-' + field.key"
+                  >{{ displayValue(field.key) }}</span
+                >
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+}
