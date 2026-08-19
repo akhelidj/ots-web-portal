@@ -14,8 +14,9 @@ import {
  * so the Specs tab is no longer hardcoded to drill pipe: any defined template's header
  * fields render here.
  *
- * Presentational only. This step renders + views; the save path (still the hardcoded
- * `saveMeta` edit form) is retired in the next step.
+ * Presentational only — the read half of the Specs tab. Its editable counterpart
+ * is `InspectionReportHeaderEditComponent`, which writes the generic `headerData`
+ * store (Phase D step 2 retired the hardcoded `saveMeta` scaffold).
  *
  * Fallback discipline mirrors the item form EXACTLY: a null/undefined/malformed definition,
  * or one with no header fields, drives an explicit empty-state — NEVER a drill-pipe

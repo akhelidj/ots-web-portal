@@ -30,8 +30,21 @@ export type ValidationOutcome =
   | { ok: true }
   | { ok: false; check: string; reason: string };
 
-/** Portal-renderable field types (must match the form's input branches). */
-const RENDERABLE_TYPES = new Set(['text', 'number', 'boolean', 'select', 'date']);
+/**
+ * Portal-renderable field types (must match the form's input branches).
+ * `object-list` (Phase D step 2) is the generic array type: a repeated
+ * `{ name, number? }` group the header/serial forms render with a structured
+ * array editor and the export transforms consume as an array. Any template's
+ * array field uses it — there is no field-name special-casing.
+ */
+const RENDERABLE_TYPES = new Set([
+  'text',
+  'number',
+  'boolean',
+  'select',
+  'date',
+  'object-list',
+]);
 
 /**
  * A minimal, fully-populated snapshot for the dry-run. Values are irrelevant (the
@@ -109,7 +122,7 @@ export function validateDefinition(
       return {
         ok: false,
         check: 'types-renderable',
-        reason: `Field "${f.key}" has unsupported type "${f.type}". Allowed: text, number, boolean, select, date.`,
+        reason: `Field "${f.key}" has unsupported type "${f.type}". Allowed: text, number, boolean, select, date, object-list.`,
       };
     }
     // 3 — required is a boolean.

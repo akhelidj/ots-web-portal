@@ -1,4 +1,13 @@
-export type FieldInputType = 'text' | 'number' | 'boolean' | 'select' | 'date';
+export type FieldInputType =
+  | 'text'
+  | 'number'
+  | 'boolean'
+  | 'select'
+  | 'date'
+  // Phase D step 2 — generic array type: a repeated `{ name, number? }` group
+  // rendered with a structured array editor and consumed by the export transforms
+  // as an array. Any array field uses it (no field-name special-casing).
+  | 'object-list';
 
 export interface FieldSchema {
   key: string; // e.g. "box.minTongSpace" or "final.disposition"

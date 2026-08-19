@@ -127,6 +127,15 @@ export interface SnapshotTransitionLog {
  */
 export interface Snapshot {
   header: {
+    /**
+     * Phase D step 2 — generic header index. Header-scope field values now live in a
+     * definition-keyed `headerData` map assembled into the header (see
+     * `assembleSnapshotHeader`), so the header carries arbitrary field keys a
+     * non-drill-pipe template may declare (e.g. `certNumber`). The export engine
+     * reads them generically via `walkPath(snapshot.header, entry.field)`. The named
+     * columns below remain as the back-compat overlay base (deleted in step 3).
+     */
+    [key: string]: unknown;
     id: string;
     poNumber: string;
     reportNumber: string | null;

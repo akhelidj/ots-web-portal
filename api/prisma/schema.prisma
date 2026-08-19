@@ -136,6 +136,12 @@ model InspectionReport {
   standardUsed          String?
   equipmentUsed         Json?
   inspectionMethod      Json?
+  // Phase D step 2 — generic, definition-keyed header store. Header-scope field
+  // values (fieldKey -> value) written by the generic header edit form, replacing
+  // the per-named-column path. `snapshot.header` overlays this on top of the legacy
+  // named columns (the back-compat bridge); the named columns above are retired in
+  // Phase D step 3 once existing rows are backfilled into headerData.
+  headerData            Json?
   grade                 String?
   range                 String?
   weight                String?

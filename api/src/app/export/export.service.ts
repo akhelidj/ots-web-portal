@@ -19,6 +19,7 @@ import {
   SerialDisposition,
 } from '@prisma/client';
 import { InspectionData, Snapshot } from '../common/inspection-data.types';
+import { assembleSnapshotHeader } from '../common/snapshot-header';
 
 @Injectable()
 export class ExportService {
@@ -106,29 +107,11 @@ export class ExportService {
         throw new NotFoundException('Inspection report not found');
       }
       snapshot = {
-        header: {
-          id: liveReport.id,
-          poNumber: liveReport.poNumber,
-          reportNumber: liveReport.reportNumber,
-          status: liveReport.status,
-          customerId: liveReport.customerId,
-          createdAt: liveReport.createdAt,
-          updatedAt: liveReport.updatedAt,
-          grade: liveReport.grade,
-          range: liveReport.range,
-          weight: liveReport.weight,
-          nomWT: liveReport.nomWT,
-          nomOD: liveReport.nomOD,
-          nomID: liveReport.nomID,
-          connection: liveReport.connection,
-          inspectionAddress: liveReport.inspectionAddress,
-          standardUsed: liveReport.standardUsed,
-          inspectorComment: liveReport.inspectorComment,
-          equipmentUsed:
-            liveReport.equipmentUsed as Snapshot['header']['equipmentUsed'],
-          inspectionMethod:
-            liveReport.inspectionMethod as Snapshot['header']['inspectionMethod'],
-        },
+        // Phase D step 2 — header assembled generically (definition-keyed
+        // `headerData` overlaid on the legacy named-column bridge) via the SAME
+        // shared assembler the revision snapshot uses, so the rev-0 live rebuild
+        // and the persisted snapshot stay identical. See assembleSnapshotHeader.
+        header: assembleSnapshotHeader(liveReport),
         template: {
           key: liveReport.templateKey,
           version: liveReport.templateVersion,

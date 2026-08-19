@@ -43,8 +43,8 @@
     { "key": "nomID", "label": "Nominal ID", "type": "text", "required": false, "scope": "header" },
     { "key": "connection", "label": "Connection", "type": "text", "required": false, "scope": "header" },
     { "key": "inspectorComment", "label": "Inspector Comment", "type": "text", "required": false, "scope": "header" },
-    { "key": "equipmentUsed", "label": "Equipment Used", "type": "text", "required": false, "scope": "header" },
-    { "key": "inspectionMethod", "label": "Inspection Method", "type": "text", "required": false, "scope": "header" },
+    { "key": "equipmentUsed", "label": "Equipment Used", "type": "object-list", "required": false, "scope": "header" },
+    { "key": "inspectionMethod", "label": "Inspection Method", "type": "object-list", "required": false, "scope": "header" },
 
     { "key": "box.minTongSpace", "label": "Min Tong Space", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },
     { "key": "box.minOD", "label": "Min OD", "type": "text", "required": true, "scope": "item", "region": "serials", "section": "box" },

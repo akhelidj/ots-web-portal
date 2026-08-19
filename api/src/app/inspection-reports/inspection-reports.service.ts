@@ -354,6 +354,24 @@ export class InspectionReportsService {
         updateData.connection = data.connection;
       if (data.poNumber !== undefined) updateData.poNumber = data.poNumber;
 
+      // Phase D step 2 — generic, definition-keyed header store. The header edit
+      // form sends a single `headerData` map (fieldKey -> value) instead of the
+      // named columns above; MERGE it onto the existing map so partial writes
+      // (e.g. the standalone global-comment editor) don't clobber other fields.
+      // `snapshot.header` overlays this map on top of the legacy columns, so a
+      // written key wins on export. Named columns stay writable this step (step 3
+      // removes them) for any caller still sending them.
+      if (data.headerData !== undefined && data.headerData !== null) {
+        const existingHeader =
+          existing.headerData && typeof existing.headerData === 'object'
+            ? (existing.headerData as Record<string, unknown>)
+            : {};
+        updateData.headerData = {
+          ...existingHeader,
+          ...(data.headerData as Record<string, unknown>),
+        } as Prisma.InputJsonValue;
+      }
+
       if (data.status !== undefined) {
         updateData.status = data.status;
       }

@@ -467,8 +467,8 @@
                     <div
                       class="p-4 bg-gray-50 border border-gray-200 rounded-xl min-h-[80px] text-sm text-gray-700 whitespace-pre-wrap"
                     >
-                      @if (reportData.inspectorComment) {
-                        {{ reportData.inspectorComment }}
+                      @if (reportHeaderView()['inspectorComment']) {
+                        {{ reportHeaderView()['inspectorComment'] }}
                       } @else {
                         <span class="text-gray-400 italic"
                           >No comments provided for this inspection.</span
@@ -666,250 +666,28 @@
         <div class="animate-in fade-in duration-300">
           <div class="page-section p-6 border-neutral-200">
             @if (isEditingMeta) {
-              <div class="space-y-8">
+              <div class="space-y-6">
                 <div
                   class="flex items-center justify-between border-b border-neutral-100 pb-3"
                 >
                   <h3 class="text-lg font-bold text-neutral-900">
                     Edit Inspection Details
                   </h3>
-                  <div class="flex gap-2">
-                    <button
-                      (click)="isEditingMeta = false"
-                      class="btn btn-secondary btn-sm"
-                    >
-                      Cancel
-                    </button>
-                    <button (click)="saveMeta()" class="btn btn-primary btn-sm">
-                      Save Changes
-                    </button>
-                  </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div class="space-y-6">
-                    <h4
-                      class="text-xs font-bold text-gray-400 uppercase tracking-widest"
-                    >
-                      Pipe Specifications
-                    </h4>
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <label for="grade-input" class="detail-label"
-                          >Grade</label
-                        ><input
-                          id="grade-input"
-                          type="text"
-                          [(ngModel)]="formGrade"
-                          class="field-control"
-                        />
-                      </div>
-                      <div>
-                        <label for="range-input" class="detail-label"
-                          >Range</label
-                        ><input
-                          id="range-input"
-                          type="text"
-                          [(ngModel)]="formRange"
-                          class="field-control"
-                        />
-                      </div>
-                      <div>
-                        <label for="weight-input" class="detail-label"
-                          >Weight</label
-                        ><input
-                          id="weight-input"
-                          type="text"
-                          [(ngModel)]="formWeight"
-                          class="field-control"
-                        />
-                      </div>
-                      <div>
-                        <label for="nom-wt-input" class="detail-label"
-                          >Nom. W.T</label
-                        ><input
-                          id="nom-wt-input"
-                          type="text"
-                          [(ngModel)]="formNomWT"
-                          class="field-control"
-                        />
-                      </div>
-                      <div>
-                        <label for="nom-od-input" class="detail-label"
-                          >Nom OD</label
-                        ><input
-                          id="nom-od-input"
-                          type="text"
-                          [(ngModel)]="formNomOD"
-                          class="field-control"
-                        />
-                      </div>
-                      <div>
-                        <label for="nom-id-input" class="detail-label"
-                          >Nom ID</label
-                        ><input
-                          id="nom-id-input"
-                          type="text"
-                          [(ngModel)]="formNomID"
-                          class="field-control"
-                        />
-                      </div>
-                      <div class="col-span-2">
-                        <label for="connection-input" class="detail-label"
-                          >Connection</label
-                        ><input
-                          id="connection-input"
-                          type="text"
-                          [(ngModel)]="formConnection"
-                          class="field-control"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="space-y-6">
-                    <h4
-                      class="text-xs font-bold text-gray-400 uppercase tracking-widest"
-                    >
-                      Job Information
-                    </h4>
-                    <div class="space-y-4">
-                      <div>
-                        <label for="address-input" class="detail-label"
-                          >Inspection Address</label
-                        ><input
-                          id="address-input"
-                          type="text"
-                          [(ngModel)]="formInspectionAddress"
-                          class="field-control"
-                        />
-                      </div>
-                      <div>
-                        <label for="standard-input" class="detail-label"
-                          >Standard Used</label
-                        ><input
-                          id="standard-input"
-                          type="text"
-                          [(ngModel)]="formStandardUsed"
-                          class="field-control"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-gray-100"
-                >
-                  <div class="space-y-4">
-                    <div class="flex justify-between items-center">
-                      <h4
-                        class="text-xs font-bold text-gray-400 uppercase tracking-widest"
-                      >
-                        Methods
-                      </h4>
-                      <button
-                        (click)="addMethodFormRow()"
-                        class="text-xs text-primary font-bold hover:underline"
-                      >
-                        + Add Method
-                      </button>
-                    </div>
-                    <div class="space-y-2">
-                      @for (
-                        m of formInspectionMethod;
-                        track $index;
-                        let i = $index
-                      ) {
-                        <div class="flex gap-2">
-                          <select
-                            [(ngModel)]="m.name"
-                            (change)="onMethodSelectChange(i)"
-                            class="field-control text-sm"
-                          >
-                            <option value="" disabled>Select...</option>
-                            @for (opt of METHOD_OPTIONS; track opt) {
-                              <option [value]="opt">{{ opt }}</option>
-                            }
-                          </select>
-                          @if (m.isOther) {
-                            <input
-                              type="text"
-                              [(ngModel)]="m.name"
-                              class="field-control text-sm"
-                            />
-                          }
-                          <button
-                            (click)="removeMethodFormRow(i)"
-                            class="text-error p-2 hover:bg-error/10 rounded-lg"
-                          >
-                            <svg
-                              class="w-4 h-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                          </button>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                  <div class="space-y-4">
-                    <div class="flex justify-between items-center">
-                      <h4
-                        class="text-xs font-bold text-gray-400 uppercase tracking-widest"
-                      >
-                        Equipment
-                      </h4>
-                      <button
-                        (click)="addEquipmentFormRow()"
-                        class="text-xs text-primary font-bold hover:underline"
-                      >
-                        + Add Equipment
-                      </button>
-                    </div>
-                    <div class="space-y-2">
-                      @for (
-                        eq of formEquipmentUsed;
-                        track $index;
-                        let i = $index
-                      ) {
-                        <div class="flex gap-2">
-                          <select
-                            [(ngModel)]="eq.name"
-                            (change)="onEquipmentSelectChange(i)"
-                            class="field-control text-sm"
-                          >
-                            <option value="" disabled>Select...</option>
-                            @for (opt of EQUIPMENT_OPTIONS; track opt) {
-                              <option [value]="opt">{{ opt }}</option>
-                            }
-                          </select>
-                          <input
-                            type="text"
-                            [(ngModel)]="eq.number"
-                            placeholder="S/N"
-                            class="field-control text-sm w-24"
-                          />
-                          <button
-                            (click)="removeEquipmentFormRow(i)"
-                            class="text-error p-2 hover:bg-error/10 rounded-lg"
-                          >
-                            <svg
-                              class="w-4 h-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                          </button>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                </div>
+                <!-- Generic, definition-driven header edit. Fields AND their editors
+                     come from the definition's header scope, dispatched by field TYPE
+                     (scalars + the generic object-list array editor) — no hardcoded
+                     drill-pipe markup, no named `form*` fields. Save emits ONE
+                     definition-keyed header map, persisted to the report's generic
+                     `headerData` store (never per-named-column). Null/empty
+                     definition → the inert empty-state, never a drill-pipe fallback. -->
+                <app-inspection-report-header-edit
+                  [definition]="reportDefinition"
+                  [data]="$any(reportHeaderView())"
+                  (save)="onSaveHeader($event)"
+                  (cancelEdit)="isEditingMeta = false"
+                />
               </div>
             } @else {
               <div class="space-y-8">
@@ -942,13 +720,11 @@
                   }
                 </div>
 
-                <!-- Header-scope fields, rendered generically from the template
-                     definition (no longer hardcoded to drill pipe). The hardcoded
-                     `saveMeta` edit form above stays until the write path moves (next
-                     step); this read-only view is now definition-driven. -->
+                <!-- Read-only header-scope view, rendered generically from the
+                     template definition. -->
                 <app-inspection-report-header-fields
                   [definition]="reportDefinition"
-                  [data]="$any(reportData)"
+                  [data]="$any(reportHeaderView())"
                 />
               </div>
             }

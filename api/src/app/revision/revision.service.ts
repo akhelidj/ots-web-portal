@@ -5,9 +5,8 @@ import {
   InspectionData,
   Snapshot,
   ChildSnapshot,
-  SnapshotEquipment,
-  SnapshotInspectionMethod,
 } from '../common/inspection-data.types';
+import { assembleSnapshotHeader } from '../common/snapshot-header';
 
 @Injectable()
 export class RevisionService {
@@ -81,31 +80,11 @@ export class RevisionService {
     // Explicitly selecting fields to ensure deterministic shape.
     // Excluding raw file bytes, large helper columns, etc.
     const snapshotData = {
-      header: {
-        id: report.id,
-        poNumber: report.poNumber,
-        reportNumber: report.reportNumber,
-        status: report.status,
-        customerId: report.customerId,
-        createdAt: report.createdAt,
-        updatedAt: report.updatedAt,
-        // Pipe Specifications
-        grade: report.grade,
-        range: report.range,
-        weight: report.weight,
-        nomWT: report.nomWT,
-        nomOD: report.nomOD,
-        nomID: report.nomID,
-        connection: report.connection,
-        // Job Info
-        inspectionAddress: report.inspectionAddress,
-        standardUsed: report.standardUsed,
-        inspectorComment: report.inspectorComment,
-        equipmentUsed: report.equipmentUsed as SnapshotEquipment[] | null,
-        inspectionMethod: report.inspectionMethod as
-          | SnapshotInspectionMethod[]
-          | null,
-      },
+      // Phase D step 2 — header assembled generically (definition-keyed `headerData`
+      // overlaid on the legacy named-column bridge) via the shared assembler, so
+      // this and the export-time live rebuild can never drift. See
+      // assembleSnapshotHeader.
+      header: assembleSnapshotHeader(report),
       template: {
         key: report.templateKey,
         version: report.templateVersion,

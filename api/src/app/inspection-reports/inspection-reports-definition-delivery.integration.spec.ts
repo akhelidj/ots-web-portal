@@ -76,4 +76,32 @@ describe('getReports embeds template definitionJson [integration]', () => {
       (reports[0] as { definitionJson: unknown }).definitionJson,
     ).toEqual(definition);
   });
+
+  // Phase D step 2 — the generic header store must survive the list-endpoint
+  // projection, or a full re-pull → IndexedDB hydrate would drop the header overlay
+  // (the portal pull stores each returned report verbatim). getReports uses an
+  // unrestricted findMany (no `select`) + `{ ...r, definitionJson }`, so the whole
+  // row — headerData included — is carried. This pins that read-path completion.
+  it('carries the generic headerData map through the list projection', async () => {
+    const tenant = await seedTenant(prisma);
+    await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT');
+    const report = await seedInspectionReport(prisma, tenant.id);
+
+    const headerData = {
+      grade: 'S-135',
+      certNumber: 'CERT-7788', // a NON-column field — only reachable via headerData
+      equipmentUsed: [{ name: 'UT Gauge', number: 'UT-9' }],
+    };
+    await prisma.inspectionReport.update({
+      where: { id: report.id },
+      data: { headerData },
+    });
+
+    const reports = await service.getReports(admin(tenant.id));
+
+    expect(reports).toHaveLength(1);
+    expect((reports[0] as { headerData: unknown }).headerData).toEqual(
+      headerData,
+    );
+  });
 });

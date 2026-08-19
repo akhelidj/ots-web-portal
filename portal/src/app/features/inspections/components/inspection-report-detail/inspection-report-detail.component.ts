@@ -65,6 +65,7 @@ import { SerialInspectionReactiveFormComponent } from '@portal/features/inspecti
 import { TemplateFormDefinition } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { InspectionReportHeaderComponent } from './sections/inspection-report-header/inspection-report-header.component';
 import { InspectionReportHeaderFieldsComponent } from './sections/inspection-report-header-fields/inspection-report-header-fields.component';
+import { InspectionReportHeaderEditComponent } from './sections/inspection-report-header-fields/inspection-report-header-edit.component';
 import { InspectionReportBannersComponent } from './sections/inspection-report-banners/inspection-report-banners.component';
 import { InspectionReportTransitionActionComponent } from './sections/inspection-report-transition-bar/inspection-report-transition-bar.component';
 import { InspectionReportKpiOverviewComponent } from './sections/inspection-report-kpi-overview/inspection-report-kpi-overview.component';
@@ -92,6 +93,7 @@ import { InspectionReportSerialsTableComponent } from './sections/inspection-rep
     InspectionReportTransitionHistoryComponent,
     InspectionReportSerialsTableComponent,
     InspectionReportHeaderFieldsComponent,
+    InspectionReportHeaderEditComponent,
   ],
   templateUrl: './inspection-report-detail.component.html',
 })
@@ -132,6 +134,28 @@ export class InspectionReportDetailComponent
   public get reportDefinition(): TemplateFormDefinition | null {
     return (this.report()?.definitionJson ?? null) as TemplateFormDefinition | null;
   }
+
+  /**
+   * The effective header view — the report row with its generic `headerData`
+   * overlaid on the legacy named columns (headerData wins), mirroring the
+   * export-time snapshot overlay (`assembleSnapshotHeader`). Both the read-only and
+   * edit header components read header-scope VALUES by field key from this, so a
+   * generic edit shows through immediately after refresh. Phase D step 2.
+   *
+   * A `computed` (not a getter) so the reference is STABLE across change-detection
+   * cycles and only changes when `report()` does. The edit component rebuilds its
+   * reactive form whenever its `[data]` input reference changes; a fresh object per
+   * CD would wipe in-progress keystrokes, so a stable ref is load-bearing.
+   */
+  public reportHeaderView = computed<Record<string, unknown>>(() => {
+    const r = this.report();
+    if (!r) return {};
+    const generic =
+      r.headerData && typeof r.headerData === 'object'
+        ? (r.headerData as Record<string, unknown>)
+        : {};
+    return { ...(r as unknown as Record<string, unknown>), ...generic };
+  });
   public serials = signal<LocalSerialNumber[]>([]);
   public transitionLogs = signal<LocalTransitionLog[]>([]);
   public enrichedTransitionLogs = signal<
@@ -252,26 +276,11 @@ export class InspectionReportDetailComponent
     );
   });
 
-  // Meta Fields
-  public formInspectorComment = '';
+  // The standalone global-comment editor's model. The rest of the header-scope
+  // `form*` scaffold (grade/nomWT/equipment/…) was retired in Phase D step 2 —
+  // header editing is now the generic definition-driven `header-edit` component
+  // writing a single `headerData` map (see `onSaveHeader`).
   public formGlobalComment = '';
-  public formInspectionAddress = '';
-  public formStandardUsed = '';
-  public formEquipmentUsed: Array<{
-    name: string;
-    number: string;
-    isOther: boolean;
-  }> = [];
-  public formInspectionMethod: Array<{ name: string; isOther: boolean }> = [];
-
-  // Pipe Details
-  public formGrade = '';
-  public formRange = '';
-  public formWeight = '';
-  public formNomWT = '';
-  public formNomOD = '';
-  public formNomID = '';
-  public formConnection = '';
 
   public isEditingMeta = false;
   public isWorkflowModalOpen = false;
@@ -380,25 +389,9 @@ export class InspectionReportDetailComponent
     }, 0);
   }
 
-  // Dropdown Options
-  public readonly METHOD_OPTIONS = [
-    'Wet',
-    'Dry',
-    'EAI',
-    'UT-EAI',
-    'VTI',
-    'TGI',
-    'Other',
-  ];
-  public readonly EQUIPMENT_OPTIONS = [
-    'UV Light',
-    'AC Yoke',
-    'DC Coil',
-    'EMI Unit',
-    'UT-EA',
-    'WT',
-    'Other',
-  ];
+  // The hardcoded drill-pipe METHOD_OPTIONS / EQUIPMENT_OPTIONS dropdown lists were
+  // retired in Phase D step 2 with the `saveMeta` scaffold — the generic header
+  // edit uses free-text `{ name, number }` rows (no per-template option lists).
 
   public uiState: InspectionReportUiState | null = null;
   public userRole = computed(
@@ -853,48 +846,21 @@ export class InspectionReportDetailComponent
       this.kpiHold = hold;
       this.kpiPassRate = total > 0 ? Math.round((pass / total) * 100) : 0;
 
-      if (!this.isEditingMeta) {
-        this.formInspectorComment = r.inspectorComment || '';
-        this.formInspectionAddress = r.inspectionAddress || '';
-        this.formStandardUsed = r.standardUsed || '';
-
-        const eqList: Array<{ name?: string; number?: string }> = Array.isArray(
-          r.equipmentUsed,
-        )
-          ? (r.equipmentUsed as Array<{ name?: string; number?: string }>)
-          : [];
-        this.formEquipmentUsed = eqList.map((e) => ({
-          name: e.name || '',
-          number: e.number || '',
-          isOther: !this.EQUIPMENT_OPTIONS.includes(e.name || ''),
-        }));
-
-        const methodList: Array<{ name?: string }> = Array.isArray(
-          r.inspectionMethod,
-        )
-          ? (r.inspectionMethod as Array<{ name?: string }>)
-          : typeof r.inspectionMethod === 'string'
-            ? [{ name: r.inspectionMethod }]
-            : [];
-        this.formInspectionMethod = methodList.map((m) => {
-          const mName = typeof m === 'string' ? m : m.name || '';
-          return {
-            name: mName,
-            isOther: mName !== '' && !this.METHOD_OPTIONS.includes(mName),
-          };
-        });
-
-        this.formGrade = r.grade || '';
-        this.formRange = r.range || '';
-        this.formWeight = r.weight || '';
-        this.formNomWT = r.nomWT || '';
-        this.formNomOD = r.nomOD || '';
-        this.formNomID = r.nomID || '';
-        this.formConnection = r.connection || '';
-      }
-
+      // Header-scope fields are no longer hydrated into a `form*` scaffold — the
+      // generic header-edit component seeds itself from `[data]` (the overlaid
+      // header view). Only the standalone global-comment editor keeps a model here,
+      // read from the EFFECTIVE value (generic headerData overlaid on the legacy
+      // column) so a Specs edit of the comment shows through.
       if (!this.isEditingGlobalComment) {
-        this.formGlobalComment = r.inspectorComment || '';
+        const generic =
+          r.headerData && typeof r.headerData === 'object'
+            ? (r.headerData as Record<string, unknown>)
+            : {};
+        const effectiveComment =
+          typeof generic['inspectorComment'] === 'string'
+            ? (generic['inspectorComment'] as string)
+            : r.inspectorComment || '';
+        this.formGlobalComment = effectiveComment;
       }
     } else {
       this.validationResult = null;
@@ -1102,93 +1068,65 @@ export class InspectionReportDetailComponent
     }
   }
 
-  public addEquipmentFormRow(): void {
-    this.formEquipmentUsed.push({ name: '', number: '', isOther: false });
-  }
-
-  public removeEquipmentFormRow(index: number): void {
-    this.formEquipmentUsed.splice(index, 1);
-  }
-
-  public onEquipmentSelectChange(index: number): void {
-    const row = this.formEquipmentUsed[index];
-    if (!row) return;
-    if (row.name === 'Other') {
-      row.isOther = true;
-      row.name = ''; // Clear for user to type
-    } else {
-      row.isOther = false;
-    }
-  }
-
-  public addMethodFormRow(): void {
-    this.formInspectionMethod.push({ name: '', isOther: false });
-  }
-
-  public removeMethodFormRow(index: number): void {
-    this.formInspectionMethod.splice(index, 1);
-  }
-
-  public onMethodSelectChange(index: number): void {
-    const row = this.formInspectionMethod[index];
-    if (!row) return;
-    if (row.name === 'Other') {
-      row.isOther = true;
-      row.name = ''; // Clear for user to type
-    } else {
-      row.isOther = false;
-    }
-  }
-
-  public async saveMeta(): Promise<void> {
+  /**
+   * Persist a generic header edit. The header-edit component emits ONE
+   * definition-keyed map (fieldKey -> value); it is written to the report's
+   * generic `headerData` store via the existing report-update path (same offline
+   * outbox), never per-named-column. On export the engine reads header fields off
+   * this map (overlaid on the legacy columns). The map is the FULL header slice, so
+   * the offline cache's shallow `{ ...rep, ...updates }` correctly replaces it.
+   */
+  public async onSaveHeader(
+    headerData: Record<string, unknown>,
+  ): Promise<void> {
     this.formError = '';
     try {
-      // Filter out empty equipment rows before saving
-      const cleanEquipment = this.formEquipmentUsed
-        .filter((e) => e.name.trim() !== '' || e.number.trim() !== '')
-        .map((e) => ({ name: e.name, number: e.number }));
-
-      const cleanMethod = this.formInspectionMethod
-        .filter((m) => m.name.trim() !== '')
-        .map((m) => ({ name: m.name }));
-
-      await this.irService.saveReportUpdates(this.reportId, {
-        inspectorComment: this.formInspectorComment,
-        inspectionAddress: this.formInspectionAddress,
-        standardUsed: this.formStandardUsed,
-        equipmentUsed: cleanEquipment.length > 0 ? cleanEquipment : null,
-        inspectionMethod: cleanMethod.length > 0 ? cleanMethod : null,
-        grade: this.formGrade,
-        range: this.formRange,
-        weight: this.formWeight,
-        nomWT: this.formNomWT,
-        nomOD: this.formNomOD,
-        nomID: this.formNomID,
-        connection: this.formConnection,
-      });
+      await this.irService.saveReportUpdates(this.reportId, { headerData });
       this.isEditingMeta = false;
-      this.refreshData();
+      await this.refreshData();
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to save details.';
     }
   }
 
+  /** The effective inspector comment — generic headerData overlaid on the column. */
+  private effectiveInspectorComment(): string {
+    const r = this.report();
+    const generic =
+      r?.headerData && typeof r.headerData === 'object'
+        ? (r.headerData as Record<string, unknown>)
+        : {};
+    return typeof generic['inspectorComment'] === 'string'
+      ? (generic['inspectorComment'] as string)
+      : r?.inspectorComment || '';
+  }
+
   public startEditingGlobalComment(): void {
-    this.formGlobalComment = this.report()?.inspectorComment || '';
+    this.formGlobalComment = this.effectiveInspectorComment();
     this.isEditingGlobalComment = true;
   }
 
   public cancelEditingGlobalComment(): void {
-    this.formGlobalComment = this.report()?.inspectorComment || '';
+    this.formGlobalComment = this.effectiveInspectorComment();
     this.isEditingGlobalComment = false;
   }
 
   public async saveGlobalComment(): Promise<void> {
     this.formError = '';
     try {
-      await this.irService.saveReportUpdates(this.reportId, {
+      // Write through the generic header store too (merged full map), so the
+      // comment lands on the SAME axis the Specs edit uses — no column-vs-headerData
+      // masking. Named columns are retired in step 3.
+      const r = this.report();
+      const merged: Record<string, unknown> = {
+        ...(r?.headerData && typeof r.headerData === 'object'
+          ? (r.headerData as Record<string, unknown>)
+          : {}),
         inspectorComment: this.formGlobalComment,
+      };
+      await this.irService.saveReportUpdates(this.reportId, {
+        headerData: merged,
       });
       this.isEditingGlobalComment = false;
       await this.refreshData();

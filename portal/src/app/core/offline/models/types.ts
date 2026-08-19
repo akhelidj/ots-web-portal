@@ -19,6 +19,11 @@ export interface LocalInspectionReport {
   // the definition-driven inspection form; absent/null → legacy hardcoded schema.
   definitionJson?: unknown | null;
   version: number;
+  // Phase D step 2 — generic, definition-keyed header store (fieldKey -> value).
+  // The generic header edit writes header-scope values here (one map) instead of
+  // the named columns below; the effective header view overlays it on the columns.
+  // The named columns are retired in step 3.
+  headerData?: Record<string, unknown> | null;
   inspectorComment?: string | null;
   inspectionAddress?: string | null;
   standardUsed?: string | null;

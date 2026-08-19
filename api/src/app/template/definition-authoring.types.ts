@@ -14,8 +14,19 @@
  *     equivalence boundary vs. the hand-authored drill-pipe definition.
  */
 
-/** Portal-renderable field types. `date` is now allowed (form renders it). No `list`. */
-export type OpsFieldType = 'text' | 'number' | 'boolean' | 'select' | 'date';
+/**
+ * Portal-renderable field types. `date` renders as a date input; `object-list`
+ * (Phase D step 2) is the generic array type — a repeated `{ name, number? }`
+ * group rendered with a structured array editor and consumed by the export
+ * transforms as an array. Any array field uses it (no field-name special-casing).
+ */
+export type OpsFieldType =
+  | 'text'
+  | 'number'
+  | 'boolean'
+  | 'select'
+  | 'date'
+  | 'object-list';
 
 /** One ops-described field, keyed to a workbook token. */
 export interface OpsTokenField {
