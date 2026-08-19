@@ -20,6 +20,8 @@ import {
   TemplateFormDefinition,
   definitionToFormSchema,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
+import { toObjectListRow } from '@portal/features/templates/schemas/object-list-field';
+import { DefinitionFieldInputComponent } from '@portal/features/inspections/components/definition-field-input/definition-field-input.component';
 
 /**
  * An inert schema for a report whose template has NO usable definition. It carries
@@ -36,7 +38,7 @@ const EMPTY_SCHEMA: FormSchema = {
 @Component({
   selector: 'app-serial-inspection-reactive-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, DefinitionFieldInputComponent],
   templateUrl: './serial-inspection-reactive-form.component.html',
 })
 export class SerialInspectionReactiveFormComponent
@@ -106,16 +108,27 @@ export class SerialInspectionReactiveFormComponent
     // Build form properly mapping fields
     for (const section of this.schema.sections) {
       for (const field of section.fields) {
-        const validators = [];
-        if (field.required) {
-          validators.push(Validators.required);
-        }
-
         const internalKey = this.toInternalKey(field.key);
-        group[internalKey] = [
-          this.getNestedValue(this.initialData, field.key) ?? '',
-          validators,
-        ];
+        if (field.inputType === 'object-list') {
+          // Generic array field (via the shared primitive) — a FormArray of
+          // `{ name, number }` groups. No item-scope field is object-list today, so
+          // this is dormant capability; it exists so the shared primitive renders an
+          // array item field in a future flat template exactly as it does in the header.
+          const raw = this.getNestedValue(this.initialData, field.key);
+          const rows = Array.isArray(raw) ? raw : [];
+          group[internalKey] = this.fb.array(
+            rows.map((row) => this.fb.group(toObjectListRow(row))),
+          );
+        } else {
+          const validators = [];
+          if (field.required) {
+            validators.push(Validators.required);
+          }
+          group[internalKey] = [
+            this.getNestedValue(this.initialData, field.key) ?? '',
+            validators,
+          ];
+        }
       }
     }
 
@@ -130,6 +143,9 @@ export class SerialInspectionReactiveFormComponent
     const patchValues: Record<string, unknown> = {};
     for (const section of this.schema.sections) {
       for (const field of section.fields) {
+        // Object-list fields are FormArrays; a scalar patch would not fit them. No
+        // item-scope object-list field exists today, so skip rather than mis-patch.
+        if (field.inputType === 'object-list') continue;
         patchValues[this.toInternalKey(field.key)] =
           this.getNestedValue(this.initialData, field.key) ?? '';
       }

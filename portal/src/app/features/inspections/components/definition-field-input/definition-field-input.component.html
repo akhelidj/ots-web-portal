@@ -1,0 +1,130 @@
+@if (field.inputType === 'object-list') {
+  <!-- Generic array editor — ANY object-list field, dispatched by TYPE not name. The
+       label captions a GROUP (many controls), so it is a <span>, not a <label for> —
+       the one legitimate exception to the label/for rule. -->
+  <span class="field-label-compact block">{{ field.label }}</span>
+  <div class="space-y-2">
+    @for (row of rows.controls; track $index; let i = $index) {
+      <div class="flex gap-2" [formGroup]="asGroup(row)">
+        <input
+          type="text"
+          formControlName="name"
+          placeholder="Name"
+          class="field-control text-sm"
+          [attr.data-testid]="testid(field.key + '-name-' + i)"
+        />
+        <input
+          type="text"
+          formControlName="number"
+          placeholder="Number / S/N"
+          class="field-control text-sm w-32"
+          [attr.data-testid]="testid(field.key + '-number-' + i)"
+        />
+        <button
+          type="button"
+          (click)="removeRow(i)"
+          class="text-error p-2 hover:bg-error/10 rounded-lg"
+          aria-label="Remove row"
+        >
+          ✕
+        </button>
+      </div>
+    }
+    <button
+      type="button"
+      (click)="addRow()"
+      class="text-xs text-primary font-bold hover:underline"
+      [attr.data-testid]="testid(field.key + '-add')"
+    >
+      + Add
+    </button>
+  </div>
+} @else {
+  <label [for]="inputId" class="field-label-compact">
+    {{ field.label }}
+    @if (field.required) {
+      <span class="text-error">*</span>
+    }
+  </label>
+
+  @switch (field.inputType) {
+    @case ('boolean') {
+      <!-- Reconciled boolean control: tri-state Yes/No/blank select (one control
+           everywhere), so an unanswered boolean stays distinct from an explicit No. -->
+      <select
+        [id]="inputId"
+        [formControl]="scalarControl"
+        class="field-control disabled:bg-neutral-100 disabled:text-neutral-500"
+        [ngClass]="{
+          'border-error focus:border-error focus:ring-error':
+            scalarControl.invalid && scalarControl.touched,
+        }"
+        [attr.data-testid]="testid('input-' + field.key)"
+      >
+        <option [ngValue]="''">Select...</option>
+        <option [ngValue]="true">Yes</option>
+        <option [ngValue]="false">No</option>
+      </select>
+    }
+    @case ('select') {
+      <select
+        [id]="inputId"
+        [formControl]="scalarControl"
+        class="field-control disabled:bg-neutral-100 disabled:text-neutral-500"
+        [ngClass]="{
+          'border-error focus:border-error focus:ring-error':
+            scalarControl.invalid && scalarControl.touched,
+        }"
+        [attr.data-testid]="testid('input-' + field.key)"
+      >
+        <option [value]="''">Select...</option>
+        @for (opt of options; track opt) {
+          <option [value]="opt">{{ opt }}</option>
+        }
+      </select>
+    }
+    @case ('date') {
+      <input
+        type="date"
+        [id]="inputId"
+        [formControl]="scalarControl"
+        class="field-control disabled:bg-neutral-100 disabled:text-neutral-500"
+        [ngClass]="{
+          'border-error focus:border-error focus:ring-error':
+            scalarControl.invalid && scalarControl.touched,
+        }"
+        [attr.data-testid]="testid('input-' + field.key)"
+      />
+    }
+    @case ('number') {
+      <input
+        type="number"
+        [id]="inputId"
+        [formControl]="scalarControl"
+        class="field-control disabled:bg-neutral-100 disabled:text-neutral-500"
+        [ngClass]="{
+          'border-error focus:border-error focus:ring-error':
+            scalarControl.invalid && scalarControl.touched,
+        }"
+        [attr.data-testid]="testid('input-' + field.key)"
+      />
+    }
+    @default {
+      <input
+        type="text"
+        [id]="inputId"
+        [formControl]="scalarControl"
+        class="field-control disabled:bg-neutral-100 disabled:text-neutral-500"
+        [ngClass]="{
+          'border-error focus:border-error focus:ring-error':
+            scalarControl.invalid && scalarControl.touched,
+        }"
+        [attr.data-testid]="testid('input-' + field.key)"
+      />
+    }
+  }
+
+  @if (scalarControl.invalid && scalarControl.touched) {
+    <p class="field-error font-medium">This field is required.</p>
+  }
+}

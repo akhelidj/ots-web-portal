@@ -684,7 +684,7 @@
                      definition → the inert empty-state, never a drill-pipe fallback. -->
                 <app-inspection-report-header-edit
                   [definition]="reportDefinition"
-                  [data]="$any(reportHeaderView())"
+                  [data]="reportHeaderView()"
                   (save)="onSaveHeader($event)"
                   (cancelEdit)="isEditingMeta = false"
                 />
@@ -724,7 +724,7 @@
                      template definition. -->
                 <app-inspection-report-header-fields
                   [definition]="reportDefinition"
-                  [data]="$any(reportHeaderView())"
+                  [data]="reportHeaderView()"
                 />
               </div>
             }

@@ -27,85 +27,13 @@
         <div class="space-y-4">
           @for (field of section.fields; track field.key) {
             <div>
-              <label
-                [for]="getInternalKey(field.key)"
-                class="field-label-compact"
-              >
-                {{ field.label }}
-                @if (field.required) {
-                  <span class="text-error">*</span>
-                }
-              </label>
-
-              @if (field.inputType === 'text' || field.inputType === 'number') {
-                <input
-                  [type]="field.inputType"
-                  [id]="getInternalKey(field.key)"
-                  [formControlName]="getInternalKey(field.key)"
-                  class="field-control disabled:bg-neutral-100 disabled:text-neutral-500"
-                  [ngClass]="{
-                    'border-error focus:border-error focus:ring-error':
-                      formGroup.get(getInternalKey(field.key))?.invalid &&
-                      formGroup.get(getInternalKey(field.key))?.touched,
-                  }"
-                />
-              }
-
-              @if (field.inputType === 'boolean') {
-                <select
-                  [id]="getInternalKey(field.key)"
-                  [formControlName]="getInternalKey(field.key)"
-                  class="field-control disabled:bg-neutral-100 disabled:text-neutral-500"
-                  [ngClass]="{
-                    'border-error focus:border-error focus:ring-error':
-                      formGroup.get(getInternalKey(field.key))?.invalid &&
-                      formGroup.get(getInternalKey(field.key))?.touched,
-                  }"
-                >
-                  <option [ngValue]="''">Select...</option>
-                  <option [ngValue]="true">Yes</option>
-                  <option [ngValue]="false">No</option>
-                </select>
-              }
-
-              @if (field.inputType === 'select') {
-                <select
-                  [id]="getInternalKey(field.key)"
-                  [formControlName]="getInternalKey(field.key)"
-                  class="field-control disabled:bg-neutral-100 disabled:text-neutral-500"
-                  [ngClass]="{
-                    'border-error focus:border-error focus:ring-error':
-                      formGroup.get(getInternalKey(field.key))?.invalid &&
-                      formGroup.get(getInternalKey(field.key))?.touched,
-                  }"
-                >
-                  <option [value]="''">Select...</option>
-                  @for (opt of getFieldOptions(field); track opt) {
-                    <option [value]="opt">{{ opt }}</option>
-                  }
-                </select>
-              }
-
-              @if (field.inputType === 'date') {
-                <input
-                  type="date"
-                  [id]="getInternalKey(field.key)"
-                  [formControlName]="getInternalKey(field.key)"
-                  class="field-control disabled:bg-neutral-100 disabled:text-neutral-500"
-                  [ngClass]="{
-                    'border-error focus:border-error focus:ring-error':
-                      formGroup.get(getInternalKey(field.key))?.invalid &&
-                      formGroup.get(getInternalKey(field.key))?.touched,
-                  }"
-                />
-              }
-
-              @if (
-                formGroup.get(getInternalKey(field.key))?.invalid &&
-                formGroup.get(getInternalKey(field.key))?.touched
-              ) {
-                <p class="field-error font-medium">This field is required.</p>
-              }
+              <!-- The ONE shared field renderer: dispatches by type (scalars + the
+                   generic object-list array editor), no field-name awareness. -->
+              <app-definition-field-input
+                [field]="field"
+                [control]="formGroup.get(getInternalKey(field.key))!"
+                [options]="getFieldOptions(field)"
+              />
             </div>
           }
         </div>

@@ -53,39 +53,59 @@ export interface TemplateFormDefinition {
   fields: DefinitionField[];
 }
 
+/** Which scope's fields the adapter emits. Absent → the default item/flat behavior. */
+export interface DefinitionToFormSchemaOptions {
+  /**
+   * `'header'` → emit the HEADER-scope slice (the Specs tab). Absent/`'item'` → the
+   * original item/flat behavior (the serial-drawer form), byte-identical to before.
+   */
+  scope?: 'item' | 'header';
+}
+
 /**
- * Adapt a template definition into the FormSchema the reactive form already
- * consumes. Proven to reproduce DRILL_PIPE_V1_SCHEMA exactly for drill pipe
- * (definition-to-form-schema.spec.ts), so the component's downstream form-build
- * code is reused verbatim behind the fallback switch.
+ * Adapt a template definition into the FormSchema the reactive form already consumes.
+ * ONE adapter, scope-parameterized — the header slice folded in so item, flat, and
+ * header modes share the identical grouping/label/option machinery (they differed only
+ * in field selection and whether section-less leftovers are kept).
  *
- * MODE SWITCH (explicit discriminator — `regions.length`, never emptiness inference):
- *   - REGION template (`regions.length === 1`, e.g. drill pipe): only item-scope
- *     fields become form fields (header fields live elsewhere — report metadata).
- *     UNCHANGED from the original behavior; the drill-pipe golden pins it.
- *   - FLAT template (`regions.length === 0`): there is no "elsewhere" — the whole
- *     definition IS one record's form, so EVERY field (header + item scope) renders.
- *     A flat template that filtered to item-scope would drop its header fields and
- *     render a blank form; the explicit flat branch is what prevents that.
- *   - Absent/oldshape `regions` → treated as a region template (conservative default;
- *     never flips a legacy definition into the flat, render-everything path).
+ * Proven to reproduce DRILL_PIPE_V1_SCHEMA exactly for drill pipe
+ * (definition-to-form-schema.spec.ts) and the flat golden (flat-form-schema.spec.ts) on
+ * the default (no-options) call, so every existing single-arg caller is unchanged.
  *
- * In both modes: fields group by `section` (sections ordered by the definition's
- * `sections`); within a section fields keep definition array order; type → inputType,
- * required → required, options carried only when present. For flat templates, any
- * field whose `section` is not among the declared `sections` (e.g. a section-less
- * header field) is emitted in a trailing group so no flat field is silently dropped.
+ * FIELD SELECTION:
+ *   - HEADER mode (`scope: 'header'`): the header-scope fields — the Specs tab.
+ *   - FLAT template (`regions.length === 0`, explicit discriminator, never emptiness
+ *     inference): the whole definition IS one record's form, so EVERY field renders.
+ *   - REGION template (default, e.g. drill pipe): item-scope fields only (header fields
+ *     live elsewhere — report metadata). The drill-pipe golden pins this.
+ *   - Absent/oldshape `regions` → region template (conservative default; never flips a
+ *     legacy definition into the flat, render-everything path).
+ *
+ * In all modes: fields group by `section` (ordered by the definition's `sections`);
+ * within a section fields keep definition array order; type → inputType, required →
+ * required, options carried only when present.
+ *
+ * LEFTOVER (section-less / undeclared) groups are appended — after the declared ones, in
+ * first-seen order — only where they must NOT be dropped: HEADER mode (header fields are
+ * section-less) and FLAT mode (a section-less field in a flat template). The region
+ * default drops them, staying byte-identical to the drill-pipe golden (whose item fields
+ * are all sectioned).
  */
 export function definitionToFormSchema(
   definition: TemplateFormDefinition,
+  options: DefinitionToFormSchemaOptions = {},
 ): FormSchema {
+  const headerMode = options.scope === 'header';
   const isFlat =
-    Array.isArray(definition.regions) && definition.regions.length === 0;
+    !headerMode &&
+    Array.isArray(definition.regions) &&
+    definition.regions.length === 0;
 
-  // Region: item-scope only (today's behavior). Flat: all fields ARE the form.
-  const formFields = isFlat
-    ? definition.fields
-    : definition.fields.filter((f) => f.scope === 'item');
+  const formFields = headerMode
+    ? definition.fields.filter((f) => f.scope === 'header')
+    : isFlat
+      ? definition.fields
+      : definition.fields.filter((f) => f.scope === 'item');
 
   const bySection = new Map<string, FieldSchema[]>();
   for (const f of formFields) {
@@ -109,77 +129,11 @@ export function definitionToFormSchema(
     (definition.sections ?? []).map((s) => [s.key, s.title]),
   );
 
-  // Declared sections that actually have fields — the ONLY groups a region template
-  // ever emits (drill-pipe item fields are all sectioned), so the region path is
-  // byte-identical to before. For a flat template, append any leftover groups
-  // (fields whose section wasn't declared, e.g. section-less header fields) after the
-  // declared ones, in first-seen order — so header fields still render.
   const declaredKeys = orderedSectionKeys.filter((key) => bySection.has(key));
-  const leftoverKeys = isFlat
+  const appendLeftovers = headerMode || isFlat;
+  const leftoverKeys = appendLeftovers
     ? [...bySection.keys()].filter((key) => !orderedSectionKeys.includes(key))
     : [];
-
-  const sections: SectionSchema[] = [...declaredKeys, ...leftoverKeys].map(
-    (key) => ({
-      key,
-      title: titleByKey.get(key) ?? key,
-      fields: bySection.get(key) ?? [],
-    }),
-  );
-
-  return {
-    templateKey: definition.templateKey,
-    templateVersion: definition.templateVersion,
-    sections,
-  };
-}
-
-/**
- * Adapt the HEADER-scope slice of a definition into a FormSchema — the report-level
- * fields the Specs tab renders (grade, range, connection, …), the counterpart to the
- * item-scope form `definitionToFormSchema` builds for the serial drawer.
- *
- * Unlike the region branch of `definitionToFormSchema` (which keeps ONLY declared,
- * populated sections and so silently drops section-less fields), this ALWAYS appends the
- * leftover groups — drill-pipe header fields are section-less, so dropping them would
- * render a blank Specs tab. Declared sections come first (definition order); any group
- * whose section key was not declared (e.g. the section-less `''` group) follows, in
- * first-seen order, so no header field is lost.
- *
- * Scope filter is the ONLY difference from the item path; grouping/labels/options are
- * identical, so the two surfaces stay visually consistent.
- */
-export function definitionToHeaderFormSchema(
-  definition: TemplateFormDefinition,
-): FormSchema {
-  const headerFields = definition.fields.filter((f) => f.scope === 'header');
-
-  const bySection = new Map<string, FieldSchema[]>();
-  for (const f of headerFields) {
-    const sectionKey = f.section ?? '';
-    const fields = bySection.get(sectionKey) ?? [];
-    const field: FieldSchema = {
-      key: f.key,
-      label: f.label,
-      inputType: f.type as FieldInputType,
-      required: f.required,
-    };
-    if (f.options) {
-      field.options = f.options;
-    }
-    fields.push(field);
-    bySection.set(sectionKey, fields);
-  }
-
-  const orderedSectionKeys = (definition.sections ?? []).map((s) => s.key);
-  const titleByKey = new Map(
-    (definition.sections ?? []).map((s) => [s.key, s.title]),
-  );
-
-  const declaredKeys = orderedSectionKeys.filter((key) => bySection.has(key));
-  const leftoverKeys = [...bySection.keys()].filter(
-    (key) => !orderedSectionKeys.includes(key),
-  );
 
   const sections: SectionSchema[] = [...declaredKeys, ...leftoverKeys].map(
     (key) => ({

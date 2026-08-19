@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
-  FormArray,
+  AbstractControl,
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
@@ -22,19 +22,21 @@ import {
 } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
   TemplateFormDefinition,
-  definitionToHeaderFormSchema,
+  definitionToFormSchema,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
+import {
+  isObjectListRowEmpty,
+  toObjectListRow,
+} from '@portal/features/templates/schemas/object-list-field';
+import { DefinitionFieldInputComponent } from '@portal/features/inspections/components/definition-field-input/definition-field-input.component';
 
 /**
  * Editable counterpart to `InspectionReportHeaderFieldsComponent` — the generic,
  * definition-driven header edit form (the Specs tab). It renders EVERY header-scope
- * field from the definition, dispatching purely on the declared field TYPE — no
- * field-name awareness, no hardcoded drill-pipe markup:
- *
- *   - scalar types (text/number/select/date/boolean) → a single form control;
- *   - `object-list` (the generic array type) → a structured `{ name, number }`
- *     row editor that ANY array field uses (equipment, methods, or a future
- *     template's array field alike).
+ * field from the definition through the shared `DefinitionFieldInputComponent`
+ * primitive, which dispatches purely on the declared field TYPE — no field-name
+ * awareness, no hardcoded drill-pipe markup (scalars → a single control, `object-list`
+ * → the generic `{ name, number }` array editor that ANY array field uses).
  *
  * On save it emits ONE definition-keyed header map (fieldKey → value); the parent
  * persists it to the report's generic `headerData` store (never per-named-column).
@@ -45,7 +47,7 @@ import {
 @Component({
   selector: 'app-inspection-report-header-edit',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, DefinitionFieldInputComponent],
   templateUrl: './inspection-report-header-edit.component.html',
 })
 export class InspectionReportHeaderEditComponent {
@@ -72,7 +74,7 @@ export class InspectionReportHeaderEditComponent {
     const def = this._definition();
     if (!def) return null;
     try {
-      return definitionToHeaderFormSchema(def);
+      return definitionToFormSchema(def, { scope: 'header' });
     } catch {
       return null;
     }
@@ -110,11 +112,10 @@ export class InspectionReportHeaderEditComponent {
         if (field.inputType === 'object-list') {
           const rows = Array.isArray(raw) ? raw : [];
           group[field.key] = this.fb.array(
-            rows.map((row) => this.newObjectRow(row)),
+            rows.map((row) => this.fb.group(toObjectListRow(row))),
           );
-        } else if (field.inputType === 'boolean') {
-          group[field.key] = this.fb.control(Boolean(raw));
         } else {
+          // Scalars (incl. boolean, now a tri-state select) — seed the raw value or ''.
           const validators = field.required ? [Validators.required] : [];
           group[field.key] = this.fb.control(raw ?? '', validators);
         }
@@ -123,29 +124,9 @@ export class InspectionReportHeaderEditComponent {
     return this.fb.group(group);
   }
 
-  /** One `{ name, number }` row for an object-list field. */
-  private newObjectRow(row?: unknown): FormGroup {
-    const rec = (row && typeof row === 'object' ? row : {}) as Record<
-      string,
-      unknown
-    >;
-    return this.fb.group({
-      name: [rec['name'] ?? ''],
-      number: [rec['number'] ?? ''],
-    });
-  }
-
-  /** The FormArray backing an object-list field (for the template). */
-  public arrayFor(key: string): FormArray {
-    return this.form().get(key) as FormArray;
-  }
-
-  public addObjectRow(key: string): void {
-    this.arrayFor(key).push(this.newObjectRow());
-  }
-
-  public removeObjectRow(key: string, index: number): void {
-    this.arrayFor(key).removeAt(index);
+  /** The control backing a field, handed to the shared input primitive. */
+  public controlFor(key: string): AbstractControl {
+    return this.form().get(key)!;
   }
 
   public getFieldOptions(field: FieldSchema): string[] {
@@ -165,20 +146,10 @@ export class InspectionReportHeaderEditComponent {
       for (const field of section.fields) {
         const value = raw[field.key];
         if (field.inputType === 'object-list') {
-          const rows = (Array.isArray(value) ? value : []) as Record<
-            string,
-            unknown
-          >[];
-          // Drop fully-empty rows; keep the generic `{ name, number }` shape the
-          // export transforms consume. No field-name coupling.
-          out[field.key] = rows
-            .map((r) => ({ name: r['name'] ?? '', number: r['number'] ?? '' }))
-            .filter(
-              (r) =>
-                String(r.name).trim() !== '' || String(r.number).trim() !== '',
-            );
-        } else if (field.inputType === 'boolean') {
-          out[field.key] = Boolean(value);
+          // Normalize to the shared `{ name, number }` row shape and drop empty rows —
+          // the shape the export transforms consume. No field-name coupling.
+          const rows = (Array.isArray(value) ? value : []).map(toObjectListRow);
+          out[field.key] = rows.filter((r) => !isObjectListRowEmpty(r));
         } else {
           out[field.key] = value;
         }

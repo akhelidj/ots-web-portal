@@ -3,14 +3,16 @@ import { CommonModule } from '@angular/common';
 import { FormSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
   TemplateFormDefinition,
-  definitionToHeaderFormSchema,
+  definitionToFormSchema,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
+import { formatObjectListRow } from '@portal/features/templates/schemas/object-list-field';
 
 /**
  * Read-only view of a report's HEADER-scope fields (the Specs tab), rendered generically
  * from the template definition — the counterpart to `SerialInspectionReactiveFormComponent`,
  * which renders the ITEM-scope fields into the serial drawer. Both are driven by the same
- * definition adapter (`definitionToHeaderFormSchema` here, `definitionToFormSchema` there),
+ * definition adapter (`definitionToFormSchema` with `{ scope: 'header' }` here, the
+ * default item scope there),
  * so the Specs tab is no longer hardcoded to drill pipe: any defined template's header
  * fields render here.
  *
@@ -50,7 +52,7 @@ export class InspectionReportHeaderFieldsComponent {
     const def = this._definition();
     if (!def) return null;
     try {
-      return definitionToHeaderFormSchema(def);
+      return definitionToFormSchema(def, { scope: 'header' });
     } catch {
       return null;
     }
@@ -72,15 +74,11 @@ export class InspectionReportHeaderFieldsComponent {
     const raw = (this._data() ?? {})[key];
     if (raw === null || raw === undefined || raw === '') return '—';
     if (Array.isArray(raw)) {
-      const parts = raw.map((item) => {
-        if (item && typeof item === 'object') {
-          const rec = item as Record<string, unknown>;
-          const name = rec['name'] ?? '';
-          const number = rec['number'];
-          return number ? `${String(name)} #${String(number)}` : String(name);
-        }
-        return String(item);
-      });
+      const parts = raw.map((item) =>
+        item && typeof item === 'object'
+          ? formatObjectListRow(item)
+          : String(item),
+      );
       const joined = parts.filter((p) => p.trim() !== '').join(', ');
       return joined === '' ? '—' : joined;
     }

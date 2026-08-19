@@ -32,108 +32,14 @@
                 class="space-y-1"
                 [attr.data-testid]="'header-edit-field-' + field.key"
               >
-                <!-- A styled caption, not a <label>: an object-list field labels a
-                     GROUP (many inputs), so there is no single control to bind a
-                     `for` to. Matches the read-only view's span. -->
-                <span class="detail-label block">{{ field.label }}</span>
-
-                @switch (field.inputType) {
-                  @case ('object-list') {
-                    <!-- Generic array editor — ANY object-list field, dispatched
-                         by type not name. -->
-                    <div
-                      class="space-y-2"
-                      [formArrayName]="field.key"
-                    >
-                      @for (
-                        row of arrayFor(field.key).controls;
-                        track $index;
-                        let i = $index
-                      ) {
-                        <div class="flex gap-2" [formGroupName]="i">
-                          <input
-                            type="text"
-                            formControlName="name"
-                            placeholder="Name"
-                            class="field-control text-sm"
-                            [attr.data-testid]="
-                              'header-edit-' + field.key + '-name-' + i
-                            "
-                          />
-                          <input
-                            type="text"
-                            formControlName="number"
-                            placeholder="Number / S/N"
-                            class="field-control text-sm w-32"
-                            [attr.data-testid]="
-                              'header-edit-' + field.key + '-number-' + i
-                            "
-                          />
-                          <button
-                            type="button"
-                            (click)="removeObjectRow(field.key, i)"
-                            class="text-error p-2 hover:bg-error/10 rounded-lg"
-                            aria-label="Remove row"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      }
-                      <button
-                        type="button"
-                        (click)="addObjectRow(field.key)"
-                        class="text-xs text-primary font-bold hover:underline"
-                        [attr.data-testid]="'header-edit-' + field.key + '-add'"
-                      >
-                        + Add
-                      </button>
-                    </div>
-                  }
-                  @case ('boolean') {
-                    <input
-                      type="checkbox"
-                      [formControlName]="field.key"
-                      class="h-4 w-4"
-                      [attr.data-testid]="'header-edit-input-' + field.key"
-                    />
-                  }
-                  @case ('select') {
-                    <select
-                      [formControlName]="field.key"
-                      class="field-control"
-                      [attr.data-testid]="'header-edit-input-' + field.key"
-                    >
-                      <option value="">Select…</option>
-                      @for (opt of getFieldOptions(field); track opt) {
-                        <option [value]="opt">{{ opt }}</option>
-                      }
-                    </select>
-                  }
-                  @case ('date') {
-                    <input
-                      type="date"
-                      [formControlName]="field.key"
-                      class="field-control"
-                      [attr.data-testid]="'header-edit-input-' + field.key"
-                    />
-                  }
-                  @case ('number') {
-                    <input
-                      type="number"
-                      [formControlName]="field.key"
-                      class="field-control"
-                      [attr.data-testid]="'header-edit-input-' + field.key"
-                    />
-                  }
-                  @default {
-                    <input
-                      type="text"
-                      [formControlName]="field.key"
-                      class="field-control"
-                      [attr.data-testid]="'header-edit-input-' + field.key"
-                    />
-                  }
-                }
+                <!-- The ONE shared field renderer: dispatches by type (scalars + the
+                     generic object-list array editor), no field-name awareness. -->
+                <app-definition-field-input
+                  [field]="field"
+                  [control]="controlFor(field.key)"
+                  [options]="getFieldOptions(field)"
+                  testidPrefix="header-edit"
+                />
               </div>
             }
           </div>
@@ -141,9 +47,7 @@
       }
     </div>
 
-    <div
-      class="flex justify-end gap-2 pt-4 border-t border-gray-100"
-    >
+    <div class="flex justify-end gap-2 pt-4 border-t border-gray-100">
       <button
         type="button"
         (click)="onCancel()"
