@@ -48,7 +48,6 @@ function reportWith(
     templateVersion: 1,
     templateHash: 'h',
     version: 1,
-    grade: 'COLUMN-GRADE',
     ...over,
   } as LocalInspectionReport;
 }

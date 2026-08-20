@@ -19,23 +19,11 @@ export interface LocalInspectionReport {
   // the definition-driven inspection form; absent/null → legacy hardcoded schema.
   definitionJson?: unknown | null;
   version: number;
-  // Phase D step 2 — generic, definition-keyed header store (fieldKey -> value).
-  // The generic header edit writes header-scope values here (one map) instead of
-  // the named columns below; the effective header view overlays it on the columns.
-  // The named columns are retired in step 3.
+  // Phase D step 3 — the generic, definition-keyed header store (fieldKey -> value)
+  // is the sole header-field carrier. The generic header edit writes header-scope
+  // values here as one map; the effective header view reads them directly. The
+  // legacy named columns were retired with their backend columns.
   headerData?: Record<string, unknown> | null;
-  inspectorComment?: string | null;
-  inspectionAddress?: string | null;
-  standardUsed?: string | null;
-  equipmentUsed?: unknown[] | null;
-  inspectionMethod?: unknown[] | null;
-  grade?: string | null;
-  range?: string | null;
-  weight?: string | null;
-  nomWT?: string | null;
-  nomOD?: string | null;
-  nomID?: string | null;
-  connection?: string | null;
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
   updatedAt?: string;
   pendingTransitionToStatus?: ReportStatus | null;

@@ -1,25 +1,24 @@
 /**
- * Phase D step 2 — generic header storage round-trip (engine + assembler, no DB).
+ * Phase D step 3 — generic header storage round-trip + bridge-deletion mutation guard
+ * (engine + assembler, no DB).
  *
- * Proves the header axis is GENERIC end-to-end: a header value written to the
- * report's definition-keyed `headerData` store is assembled into `snapshot.header`
- * by `assembleSnapshotHeader` and read by the export engine's `field` branch, so
- * the typed value lands in the file — WITHOUT any named column for it.
+ * Proves the header axis is GENERIC and that the legacy named-column bridge is GONE: a
+ * header value reaches `snapshot.header` ONLY through the definition-keyed `headerData`
+ * store, and a field absent from `headerData` resolves empty (→ `whenEmpty`) — there is
+ * no per-column fallback any more.
  *
- * The decisive field is `certNumber`: there is NO `certNumber` column on
- * `InspectionReport`, so it can ONLY reach the export through the generic
- * `headerData` overlay. `grade` (which DOES have a legacy column) additionally
- * proves the overlay WINS over the column bridge.
+ * `certNumber` never had a column; `grade` DID (now dropped). Both are treated
+ * identically here: present in `headerData` → they land in the file; absent → `N/A`.
  *
- * RED→GREEN is expressed as two arms of the same export:
- *   - RED  (row has no `headerData`): the generic field is absent (→ `whenEmpty`),
- *     and `grade` shows the legacy column value.
- *   - GREEN (row carries `headerData`): the generic field lands in its cell and
- *     `grade` shows the overlaid value.
+ * RED→GREEN is two arms of the same export:
+ *   - RED  (no `headerData`): BOTH cells are empty (`N/A`). Decisive for the deletion —
+ *     before step 3, `grade` would have shown a column value here.
+ *   - GREEN (`headerData` carries both): both land in their cells.
  *
- * This doubles as the production-write MUTATION GUARD: if `assembleSnapshotHeader`
- * dropped its `...generic` overlay, the GREEN arm would collapse onto the RED arm
- * and both value assertions below would fail.
+ * MUTATION GUARD on the bridge deletion: if `assembleSnapshotHeader` re-introduced any
+ * named-column base, the RED arm's `grade` cell would stop being `N/A` and the second
+ * test (grade omitted from `headerData`) would fail — so a silent column fallback cannot
+ * creep back in unnoticed.
  */
 import * as ExcelJS from 'exceljs';
 import { engineMap, ExportDefinition } from './export-engine';
@@ -28,7 +27,7 @@ import { Snapshot } from '../common/inspection-data.types';
 import { canon, frozenSnapshot } from './flat-proof.testutil';
 import { InspectionReportStatus } from '@prisma/client';
 
-/** A definition whose header binds a NON-column field (`certNumber`) + a column-backed one (`grade`). */
+/** A definition whose header binds two fields, one formerly column-backed (`grade`). */
 const HEADER_DEF: ExportDefinition = {
   transforms: {},
   regions: [],
@@ -41,7 +40,7 @@ const HEADER_DEF: ExportDefinition = {
   },
 };
 
-/** A report row with the legacy `grade` column populated; `headerData` varies per arm. */
+/** A report row carrying ONLY metadata + the generic headerData map (no named columns). */
 function rowWith(headerData: Record<string, unknown> | undefined): HeaderSourceRow {
   return {
     id: 'r1',
@@ -51,18 +50,6 @@ function rowWith(headerData: Record<string, unknown> | undefined): HeaderSourceR
     customerId: 'c1',
     createdAt: undefined as unknown as string,
     updatedAt: undefined as unknown as string,
-    grade: 'COLUMN-GRADE',
-    range: null,
-    weight: null,
-    nomWT: null,
-    nomOD: null,
-    nomID: null,
-    connection: null,
-    inspectionAddress: null,
-    standardUsed: null,
-    inspectorComment: null,
-    equipmentUsed: null,
-    inspectionMethod: null,
     headerData,
   };
 }
@@ -92,34 +79,32 @@ async function exportCells(
   return sheets[0]!.cells;
 }
 
-describe('Phase D step 2 — generic header storage round-trip', () => {
-  it('RED→GREEN: a generic (non-column) header field written to headerData lands in the exported file', async () => {
-    // RED — no generic overlay: certNumber has no column, so its cell is empty
-    // (→ whenEmpty); grade shows the legacy column value.
+describe('Phase D step 3 — generic header storage round-trip (no column bridge)', () => {
+  it('RED→GREEN: header fields reach the file ONLY via headerData; absent → whenEmpty', async () => {
+    // RED — no generic overlay: neither field has a value (grade no longer has a
+    // column to fall back to), so both cells are N/A.
     const red = await exportCells(undefined);
     expect(red['B2']).toBe('N/A');
-    expect(red['C3']).toBe('COLUMN-GRADE');
+    expect(red['C3']).toBe('N/A'); // decisive: NO column fallback for grade
 
-    // GREEN — the generic map carries both: certNumber (no column) now lands in the
-    // file, and grade is OVERLAID over its column. Both assertions are load-bearing —
-    // dropping the assembler's `...generic` overlay collapses GREEN back onto RED.
+    // GREEN — the generic map carries both: they land in their cells.
     const green = await exportCells({
       certNumber: 'CERT-7788',
-      grade: 'OVERLAID-GRADE',
+      grade: 'HEADERDATA-GRADE',
     });
-    expect(green['B2']).toBe('CERT-7788'); // generic, column-less field exported
-    expect(green['C3']).toBe('OVERLAID-GRADE'); // overlay wins over the column bridge
+    expect(green['B2']).toBe('CERT-7788');
+    expect(green['C3']).toBe('HEADERDATA-GRADE');
 
-    // And the two arms genuinely differ (non-vacuity of RED→GREEN).
+    // The two arms genuinely differ (non-vacuity of RED→GREEN).
     expect(green['B2']).not.toBe(red['B2']);
     expect(green['C3']).not.toBe(red['C3']);
   });
 
-  it('legacy column bridge still feeds the header when headerData omits a key', async () => {
-    // headerData present but WITHOUT grade → grade falls back to the column bridge,
-    // while certNumber (generic) resolves. Proves the overlay is a merge, not a replace.
+  it('MUTATION GUARD: a field omitted from headerData resolves empty, never a column', async () => {
+    // headerData present but WITHOUT grade → grade resolves to whenEmpty. Before the
+    // step-3 deletion this cell showed the legacy column value; now nothing falls back.
     const cells = await exportCells({ certNumber: 'CERT-1' });
     expect(cells['B2']).toBe('CERT-1');
-    expect(cells['C3']).toBe('COLUMN-GRADE');
+    expect(cells['C3']).toBe('N/A');
   });
 });

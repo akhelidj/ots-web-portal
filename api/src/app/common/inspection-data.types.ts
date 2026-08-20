@@ -128,12 +128,13 @@ export interface SnapshotTransitionLog {
 export interface Snapshot {
   header: {
     /**
-     * Phase D step 2 — generic header index. Header-scope field values now live in a
+     * Phase D step 3 — the header is GENERIC. Header-scope field values live in a
      * definition-keyed `headerData` map assembled into the header (see
-     * `assembleSnapshotHeader`), so the header carries arbitrary field keys a
-     * non-drill-pipe template may declare (e.g. `certNumber`). The export engine
-     * reads them generically via `walkPath(snapshot.header, entry.field)`. The named
-     * columns below remain as the back-compat overlay base (deleted in step 3).
+     * `assembleSnapshotHeader`), so the header carries whatever field keys a template
+     * declares — drill-pipe's `grade`/`connection`/`equipmentUsed`/… or a
+     * non-drill-pipe `certNumber` alike — all read generically via
+     * `walkPath(snapshot.header, entry.field)`. The legacy per-named-column fields were
+     * removed with their columns; only metadata is fixed, everything else is the index.
      */
     [key: string]: unknown;
     id: string;
@@ -143,20 +144,6 @@ export interface Snapshot {
     customerId: string | null;
     createdAt: Date | string;
     updatedAt: Date | string;
-    // Pipe specifications
-    grade: string | null;
-    range: string | null;
-    weight: string | null;
-    nomWT: string | null;
-    nomOD: string | null;
-    nomID: string | null;
-    connection: string | null;
-    // Job info
-    inspectionAddress: string | null;
-    standardUsed: string | null;
-    inspectorComment: string | null;
-    equipmentUsed: SnapshotEquipment[] | null;
-    inspectionMethod: SnapshotInspectionMethod[] | null;
     // Injected at read time by export.service (not persisted in snapshotJson)
     inspectedByName?: string;
     approvedByName?: string;

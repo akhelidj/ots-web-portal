@@ -328,39 +328,13 @@ export class InspectionReportsService {
         version: existing.version + 1,
       };
 
-      if (data.inspectorComment !== undefined)
-        updateData.inspectorComment = data.inspectorComment;
-      if (data.inspectionAddress !== undefined)
-        updateData.inspectionAddress = data.inspectionAddress;
-      if (data.standardUsed !== undefined)
-        updateData.standardUsed = data.standardUsed;
-      if (data.equipmentUsed !== undefined) {
-        updateData.equipmentUsed =
-          data.equipmentUsed === null ? Prisma.DbNull : data.equipmentUsed;
-      }
-      if (data.inspectionMethod !== undefined) {
-        updateData.inspectionMethod =
-          data.inspectionMethod === null
-            ? Prisma.DbNull
-            : data.inspectionMethod;
-      }
-      if (data.grade !== undefined) updateData.grade = data.grade;
-      if (data.range !== undefined) updateData.range = data.range;
-      if (data.weight !== undefined) updateData.weight = data.weight;
-      if (data.nomWT !== undefined) updateData.nomWT = data.nomWT;
-      if (data.nomOD !== undefined) updateData.nomOD = data.nomOD;
-      if (data.nomID !== undefined) updateData.nomID = data.nomID;
-      if (data.connection !== undefined)
-        updateData.connection = data.connection;
       if (data.poNumber !== undefined) updateData.poNumber = data.poNumber;
 
-      // Phase D step 2 — generic, definition-keyed header store. The header edit
-      // form sends a single `headerData` map (fieldKey -> value) instead of the
-      // named columns above; MERGE it onto the existing map so partial writes
-      // (e.g. the standalone global-comment editor) don't clobber other fields.
-      // `snapshot.header` overlays this map on top of the legacy columns, so a
-      // written key wins on export. Named columns stay writable this step (step 3
-      // removes them) for any caller still sending them.
+      // Phase D step 3 — the generic, definition-keyed header store is the ONLY
+      // header-write path (the named columns and their per-column mapping were
+      // retired). The header edit form sends a single `headerData` map
+      // (fieldKey -> value); MERGE it onto the existing map so partial writes (e.g.
+      // the standalone global-comment editor) don't clobber other fields.
       if (data.headerData !== undefined && data.headerData !== null) {
         const existingHeader =
           existing.headerData && typeof existing.headerData === 'object'

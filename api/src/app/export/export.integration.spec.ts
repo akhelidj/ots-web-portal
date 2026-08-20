@@ -118,9 +118,16 @@ describe('Deterministic xlsx export (foundation baseline) [integration]', () => 
     // Pin reportNumber (create path timestamps it) + distinctive header values, all
     // BEFORE approval so the first-approval snapshot captures them. Does not touch
     // `version`, so the transition chain below still starts from version 1.
+    //
+    // Phase D step 3 — the header fields are seeded into the generic `headerData`
+    // store (not the retired named columns); `reportNumber` stays a real metadata
+    // column. This is a DATA-SOURCE move only: the assertions below read the same
+    // HEADER_SEED values, which now reach the export via headerData → snapshot.header
+    // (walkPath) instead of the deleted column bridge — structurally identical output.
+    const { reportNumber, ...headerFields } = HEADER_SEED;
     const report = await prisma.inspectionReport.update({
       where: { id: created.id },
-      data: HEADER_SEED,
+      data: { reportNumber, headerData: headerFields },
     });
     return { tenant, customer, report };
   }

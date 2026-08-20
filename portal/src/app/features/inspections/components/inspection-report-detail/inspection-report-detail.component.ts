@@ -847,20 +847,19 @@ export class InspectionReportDetailComponent
       this.kpiPassRate = total > 0 ? Math.round((pass / total) * 100) : 0;
 
       // Header-scope fields are no longer hydrated into a `form*` scaffold — the
-      // generic header-edit component seeds itself from `[data]` (the overlaid
-      // header view). Only the standalone global-comment editor keeps a model here,
-      // read from the EFFECTIVE value (generic headerData overlaid on the legacy
-      // column) so a Specs edit of the comment shows through.
+      // generic header-edit component seeds itself from `[data]` (the header view).
+      // Only the standalone global-comment editor keeps a model here, read from the
+      // generic `headerData` store (the sole header source after step 3) so a Specs
+      // edit of the comment shows through.
       if (!this.isEditingGlobalComment) {
         const generic =
           r.headerData && typeof r.headerData === 'object'
             ? (r.headerData as Record<string, unknown>)
             : {};
-        const effectiveComment =
+        this.formGlobalComment =
           typeof generic['inspectorComment'] === 'string'
             ? (generic['inspectorComment'] as string)
-            : r.inspectorComment || '';
-        this.formGlobalComment = effectiveComment;
+            : '';
       }
     } else {
       this.validationResult = null;
@@ -1090,7 +1089,7 @@ export class InspectionReportDetailComponent
     }
   }
 
-  /** The effective inspector comment — generic headerData overlaid on the column. */
+  /** The effective inspector comment, read from the generic headerData store. */
   private effectiveInspectorComment(): string {
     const r = this.report();
     const generic =
@@ -1099,7 +1098,7 @@ export class InspectionReportDetailComponent
         : {};
     return typeof generic['inspectorComment'] === 'string'
       ? (generic['inspectorComment'] as string)
-      : r?.inspectorComment || '';
+      : '';
   }
 
   public startEditingGlobalComment(): void {
