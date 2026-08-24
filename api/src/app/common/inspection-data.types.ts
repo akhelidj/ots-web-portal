@@ -90,22 +90,6 @@ export interface InspectionData {
   disposition?: string;
 }
 
-/**
- * Header equipment entry. `equipmentUsed` is a distinct `Json?` column on
- * `InspectionReport` (not part of `inspectionData`) but surfaces inside the
- * snapshot header; the mapping reads `e.name` and `e.number`.
- */
-export interface SnapshotEquipment {
-  name?: string;
-  number?: string | number;
-}
-
-/**
- * Header inspection-method entry. The mapping reads `m.name || m`, so an entry
- * is either an object with a `name` or a bare string.
- */
-export type SnapshotInspectionMethod = { name?: string } | string;
-
 /** Transition-log row embedded verbatim in the parent snapshot. */
 export interface SnapshotTransitionLog {
   id?: string;
