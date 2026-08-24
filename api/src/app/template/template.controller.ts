@@ -81,7 +81,9 @@ export class TemplateController {
 
   // Writes definitionJson from an ops-authored description IF it passes the
   // write-time validation gate (seven checks incl. an engine dry-run). Rejects the
-  // whole definition atomically otherwise. Never touches fileBlob/hash/version.
+  // whole definition atomically otherwise. Never touches fileBlob/hash/version. In the
+  // same transaction, captures the PRIOR definition as an immutable revision (durable
+  // edit history — an overwrite can no longer destroy the previous state).
   @Put(':id/definition')
   async defineTemplate(
     @Req() req: AuthenticatedRequest,
@@ -89,7 +91,47 @@ export class TemplateController {
     @Body() dto: DefineTemplateDto,
   ) {
     const tenantId = req.user.tenantId;
-    return this.templateDefinitionService.defineTemplate(tenantId, id, dto);
+    const userId = req.user.userId;
+    return this.templateDefinitionService.defineTemplate(
+      tenantId,
+      id,
+      dto,
+      userId,
+    );
+  }
+
+  // Durable definition-edit history (metadata only — revisionNumber, tokensChanged,
+  // who/when/why; never the full blob). Admin-only (class guards).
+  @Get(':id/definition/revisions')
+  async listDefinitionRevisions(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    const tenantId = req.user.tenantId;
+    return this.templateDefinitionService.listDefinitionRevisions(tenantId, id);
+  }
+
+  // Re-apply a prior revision's definition as a new define write — re-validated through
+  // the SAME gate, and itself snapshotting the current-before-restore, so restore is just
+  // another edit and is fully reversible.
+  @Post(':id/definition/revisions/:revisionNumber/restore')
+  async restoreDefinitionRevision(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Param('revisionNumber') revisionNumber: string,
+  ) {
+    const tenantId = req.user.tenantId;
+    const userId = req.user.userId;
+    const parsed = Number(revisionNumber);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new BadRequestException('revisionNumber must be a positive integer');
+    }
+    return this.templateDefinitionService.restoreDefinitionRevision(
+      tenantId,
+      id,
+      parsed,
+      userId,
+    );
   }
 
   @Patch(':id/deprecate')

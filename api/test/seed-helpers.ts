@@ -40,6 +40,7 @@ export async function resetInspectionDomain(prisma: PrismaService) {
   await prisma.inspectionReportTransitionLog.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.inspectionReport.deleteMany();
+  await prisma.templateDefinitionRevision.deleteMany();
   await prisma.template.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.tenant.deleteMany();

@@ -90,7 +90,7 @@ const DRY_RUN_SERIAL = {
 };
 
 /** Collect every token literal the candidate references (export entries + markers). */
-function referencedTokens(def: CandidateDefinition): string[] {
+export function referencedTokens(def: CandidateDefinition): string[] {
   const tokens: string[] = [];
   for (const e of def.export.global) tokens.push(e.token);
   for (const entries of Object.values(def.export.regions)) {

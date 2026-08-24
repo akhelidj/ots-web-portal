@@ -112,8 +112,41 @@ model Template {
   createdAt       DateTime       @default(now())
   createdById     String
 
+  definitionRevisions TemplateDefinitionRevision[]
+
   @@unique([tenantId, templateKey, templateVersion])
   @@index([tenantId, templateKey])
+}
+
+// Phase D — durable history for definitionJson edits. Every `PUT
+// /templates/:id/definition` write (define or restore) appends a row capturing the
+// PRIOR definition (the state being replaced) inside the same transaction as the
+// overwrite, so an edit can never silently destroy the previous definition (the clobber
+// gap). `Template.definitionJson` stays the authoritative CURRENT — nothing on the read
+// path reads this table; it is write-and-restore only. Mirrors InspectionReportRevision
+// (revisionNumber + immutable JSON blob + revisedBy/reason + @@unique[parent, number]).
+//
+// The very first define (prior definitionJson is NULL) records NO revision — there is no
+// prior state to lose — so `definitionJson` here is always a real, non-null prior.
+model TemplateDefinitionRevision {
+  id             String   @id @default(uuid())
+  templateId     String
+  revisionNumber Int
+  // The PRIOR definition this revision preserves (the one the edit replaced).
+  definitionJson Json
+  // Stable signature (sha256) of this prior definition's referenced-token set, and
+  // whether the edit that replaced it CHANGED that token set (structural) vs left it
+  // intact (cosmetic — label/type/scope tweak). Metadata only; never a gate.
+  tokenSetHash   String
+  tokensChanged  Boolean
+  revisedById    String
+  revisedAt      DateTime @default(now())
+  revisionReason String?
+  tenantId       String
+  template       Template @relation(fields: [templateId], references: [id])
+
+  @@unique([templateId, revisionNumber])
+  @@index([tenantId, templateId])
 }
 
 model InspectionReport {

@@ -137,7 +137,12 @@ describe('Template definition write path [integration]', () => {
     it('happy path: writes a definitionJson that round-trips the real engine readers', async () => {
       expect(await readDefinition()).toBeNull();
 
-      const result = await service.defineTemplate(tenantId, templateId, baseDto());
+      const result = await service.defineTemplate(
+        tenantId,
+        templateId,
+        baseDto(),
+        'seed-user',
+      );
       expect(result.definitionJson).not.toBeNull();
 
       const written = await readDefinition();
@@ -164,7 +169,7 @@ describe('Template definition write path [integration]', () => {
     // Each rejection: refuse the write AND leave definitionJson unchanged (still null).
     const expectRejectedAndUnchanged = async (dto: DefineTemplateDto) => {
       await expect(
-        service.defineTemplate(tenantId, templateId, dto),
+        service.defineTemplate(tenantId, templateId, dto, 'seed-user'),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(await readDefinition()).toBeNull();
     };
@@ -208,7 +213,7 @@ describe('Template definition write path [integration]', () => {
     it('forbids writing another tenant’s template — nothing written', async () => {
       const other = await seedTenant(prisma, 'other tenant');
       await expect(
-        service.defineTemplate(other.id, templateId, baseDto()),
+        service.defineTemplate(other.id, templateId, baseDto(), 'seed-user'),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(await readDefinition()).toBeNull();
     });
