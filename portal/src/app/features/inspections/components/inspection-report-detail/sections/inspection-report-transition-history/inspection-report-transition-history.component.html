@@ -42,7 +42,7 @@
                 [ngClass]="{
                   'bg-success shadow-[0_0_6px_rgba(34,197,94,0.3)]':
                     log.toStatus === 'APPROVED' || log.toStatus === 'CLOSED',
-                  'bg-primary shadow-[0_0_6px_rgba(var(--primary-rgb),0.3)]':
+                  'bg-primary shadow-[0_0_6px_rgb(var(--primary-rgb)/0.3)]':
                     log.toStatus === 'IN_INSPECTION' ||
                     log.toStatus === 'PENDING_APPROVAL',
                   'bg-warning shadow-[0_0_6px_rgba(234,179,8,0.3)]':

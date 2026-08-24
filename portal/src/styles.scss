@@ -1,8 +1,75 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Semantic design-token layer (CSS custom properties).
+ * Source of truth for brand color/type/spacing. Tailwind's theme.extend
+ * points its `primary`/`accent`/etc. classes at these vars, so the existing
+ * bg-primary/text-accent usages flow from here automatically.
+ * NOTE: component-level default-palette usage (gray/neutral/blue/…) is NOT
+ * yet migrated — that happens per-screen in a later pass.
+ */
+:root {
+  /* Color — 17-slot semantic set. RGB channel triples where a var feeds rgb()/rgba(). */
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8; /* darker blue — hover/active slot for primary */
+  --on-primary: #ffffff;
+  --secondary: #0b1a2a; /* the former primary navy, demoted */
+  --on-secondary: #ffffff;
+  --accent: #ff9800;
+  --on-accent: #1e293b;
+  --accent-hover: #f57c00;
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
+  --muted: #e9eff8;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+  --destructive: #dc2626;
+  --on-destructive: #ffffff;
+  --ring: #2563eb;
+
+  /* RGB channel triples — feed Tailwind's rgb(var(--*) / <alpha-value>) colors
+     (so bg-primary/10 etc. keep working) and the existing rgba(var(--*)) glow shadows. */
+  --primary-rgb: 37 99 235;
+  --color-primary: 37 99 235;
+  --accent-rgb: 255 152 0;
+
+  /* Spacing — 4pt scale. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius / shadow / focus. */
+  --radius: 8px;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.06);
+  --focus-ring: 0 0 0 3px rgb(37 99 235 / 0.45);
+
+  /* Type. */
+  --font-sans: 'Plus Jakarta Sans', 'IBM Plex Sans', sans-serif;
+}
+
+/* Reduced-motion: neutralize all animation/transition app-wide. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 @layer base {
   html,

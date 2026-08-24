@@ -10,13 +10,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // primary & accent flow from the :root CSS-var token layer (src/styles.scss).
+        // Channel form `rgb(var(--*) / <alpha-value>)` keeps opacity modifiers
+        // (bg-primary/10, ring-primary/25, …) working under Tailwind v3.
         primary: {
-          DEFAULT: '#0B1A2A',
-          light: '#1e334a',
+          DEFAULT: 'rgb(var(--primary-rgb) / <alpha-value>)',
+          light: 'var(--primary-hover)', // darker-blue hover/active slot
         },
         accent: {
-          DEFAULT: '#FF9800',
-          hover: '#F57C00',
+          DEFAULT: 'rgb(var(--accent-rgb) / <alpha-value>)',
+          hover: 'var(--accent-hover)',
         },
         success: {
           DEFAULT: '#4CAF50',
