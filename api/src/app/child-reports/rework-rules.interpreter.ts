@@ -18,8 +18,16 @@
  * FIXED SEMANTICS OWNED BY THE ACTION NAME (ADR-0010, sub-decision 1): the reconciliation
  * mechanics (draft-delete vs non-draft-empty, blank-create vs preserve-existing, version-bump
  * timing) are intrinsic to `upsertChildReport` and reproduced from the method verbatim; the
- * definition declares only what varies (the `when` predicate, `childType`, `membership`,
- * `reportNumberSuffix`, `forbidChildDisposition`).
+ * definition declares only what varies and this parser CONSUMES: the `when` predicate,
+ * `childType`, `membership`, `reportNumberSuffix`.
+ *
+ * RESERVED / UNCONSUMED: `then.forbidChildDisposition` (present in the hand-authored
+ * drill-pipe definition) is NOT read here — `parseUpsertRule` ignores it. The child-side
+ * REWORK-rejection it gestures at is enforced STRUCTURALLY and unconditionally in
+ * child-reports.service.ts (updateChildReportSerialNumber), independent of any rule. It is
+ * parked as a reserved authoring token for a future slice that wires the child guard to the
+ * definition; until then it is deliberately NOT offered to authors (the ops describe flow
+ * emits only the consumed fields), so no author can write a knob that does nothing.
  *
  * FAIL LOUD (ADR-0010, sub-decision 2): unknown `action`, unknown `op`, malformed/absent
  * `when.field` or `when.value`, unknown `childType`, unknown `membership`, or an otherwise
@@ -152,7 +160,7 @@ function parseUpsertRule(raw: unknown): ParsedUpsertRule {
  * there is none. Throws on 2+ (design open question 1). Every rule is validated, so an
  * unknown-action rule fails loud even if another valid rule is present.
  */
-function selectUpsertRule(rules: unknown): ParsedUpsertRule | null {
+export function selectUpsertRule(rules: unknown): ParsedUpsertRule | null {
   if (!Array.isArray(rules)) {
     throw new BadRequestException(
       'rework rules: definition.rules must be an array',

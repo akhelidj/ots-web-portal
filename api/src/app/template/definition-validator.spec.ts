@@ -195,3 +195,121 @@ describe('validateDefinition — write-time gate [unit]', () => {
     });
   });
 });
+
+/**
+ * Slice A — the rework trigger is ops-authorable, and check 8 (rework-rules) is the
+ * write-time gate that keeps a malformed rule off a live report. Generic over templates:
+ * the trigger field is an ordinary described item field, never a named special-case.
+ */
+describe('validateDefinition — rework rule (slice A) [unit]', () => {
+  /** validDto + an authored rework rule keyed on the ordinary `emi` item field. */
+  function reworkDto(): DefineTemplateDto {
+    return {
+      ...validDto(),
+      reworkRule: {
+        field: 'emi',
+        equals: 'REWORK',
+        childType: 'REWORK',
+        reportNumberSuffix: '_rw',
+      },
+    };
+  }
+
+  describe('write-through — the builder emits exactly the interpreter shape', () => {
+    it('no reworkRule → rules: [] (unchanged historical behaviour)', () => {
+      expect(buildDefinition(META, validDto()).rules).toEqual([]);
+    });
+
+    it('authored rule → one rule in the exact parseUpsertRule shape (no unread fields)', () => {
+      const rules = buildDefinition(META, reworkDto()).rules;
+      expect(rules).toEqual([
+        {
+          when: { field: 'emi', op: 'eq', value: 'REWORK' },
+          then: {
+            action: 'upsertChildReport',
+            childType: 'REWORK',
+            membership: 'allItemsMatching',
+            reportNumberSuffix: '_rw',
+          },
+        },
+      ]);
+      // The interpreter-ignored knobs are NEVER emitted (no authored-but-unread trap).
+      const then = (rules[0] as { then: Record<string, unknown> }).then;
+      expect('forbidChildDisposition' in then).toBe(false);
+      expect('id' in (rules[0] as object)).toBe(false);
+      expect('scope' in (rules[0] as object)).toBe(false);
+    });
+
+    it('omitted suffix → the suffix key is absent (interpreter defaults it to "")', () => {
+      const dto = reworkDto();
+      delete dto.reworkRule!.reportNumberSuffix;
+      const then = (buildDefinition(META, dto).rules[0] as { then: object }).then;
+      expect('reportNumberSuffix' in then).toBe(false);
+    });
+  });
+
+  describe('the gate accepts a valid rule and rejects a malformed one at WRITE time', () => {
+    it('accepts a well-formed authored rule', () => {
+      expect(validateDefinition(buildDefinition(META, reworkDto()), TOKENS)).toEqual({
+        ok: true,
+      });
+    });
+
+    it('rejects an empty trigger field (author enabled but picked nothing)', () => {
+      const dto = reworkDto();
+      dto.reworkRule!.field = '';
+      expect(validateDefinition(buildDefinition(META, dto), TOKENS)).toMatchObject({
+        ok: false,
+        check: 'rework-rules',
+      });
+    });
+
+    it('rejects an unknown childType', () => {
+      const dto = reworkDto();
+      dto.reworkRule!.childType = 'NOT_A_TYPE';
+      expect(validateDefinition(buildDefinition(META, dto), TOKENS)).toMatchObject({
+        ok: false,
+        check: 'rework-rules',
+      });
+    });
+
+    it('rejects 2+ rules (multi-rule unsupported by the interpreter)', () => {
+      const c = clone(buildDefinition(META, reworkDto()));
+      c.rules.push(c.rules[0]);
+      expect(validateDefinition(c, TOKENS)).toMatchObject({
+        ok: false,
+        check: 'rework-rules',
+      });
+    });
+
+    it('rejects an unknown action', () => {
+      const c = clone(buildDefinition(META, reworkDto()));
+      (c.rules[0] as { then: { action: string } }).then.action = 'deleteEverything';
+      expect(validateDefinition(c, TOKENS)).toMatchObject({
+        ok: false,
+        check: 'rework-rules',
+      });
+    });
+  });
+
+  describe('mutation guard — check 8 is the SOLE gate catching a bad rule', () => {
+    it('a malformed rule clears checks 1–7 and is caught ONLY by rework-rules', () => {
+      // An unknown childType is invisible to every export/gate reader (checks 1–7 pass on
+      // an otherwise-valid candidate); dropping the rules to [] would make the SAME
+      // candidate pass. So the rejection can only come from check 8 — proving the
+      // interpreter dry-run is load-bearing, not decorative.
+      const c = clone(buildDefinition(META, reworkDto()));
+      (c.rules[0] as { then: { childType: string } }).then.childType = 'NOT_A_TYPE';
+
+      expect(validateDefinition(c, TOKENS)).toMatchObject({
+        ok: false,
+        check: 'rework-rules',
+      });
+
+      // Same candidate, rule content removed → accepted. Isolates the rule as the cause.
+      const cleared = clone(c);
+      cleared.rules = [];
+      expect(validateDefinition(cleared, TOKENS)).toEqual({ ok: true });
+    });
+  });
+});

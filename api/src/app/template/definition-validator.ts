@@ -7,6 +7,7 @@ import {
   ExportDefinition,
 } from '../export/export-engine';
 import { engineGate, GateDefinition } from '../workflow/approval-gate';
+import { selectUpsertRule } from '../child-reports/rework-rules.interpreter';
 import { Snapshot } from '../common/inspection-data.types';
 import { InspectionReportStatus } from '@prisma/client';
 import { CandidateDefinition } from './definition-authoring.types';
@@ -190,6 +191,23 @@ export function validateDefinition(
       ok: false,
       check: 'engine-dry-run',
       reason: `The engine rejected the definition: ${(err as Error).message}`,
+    };
+  }
+
+  // 8 — rework-rules dry-run: feed the candidate's rules through the REAL interpreter
+  // selector (`selectUpsertRule`) — the very same pure parse the live
+  // ChildReportsService.syncReworkChildReport runs. Any malformed rule (unknown op or
+  // action, absent/empty when.field, missing when.value, unknown childType/membership, or
+  // 2+ upsert rules) throws and refuses the whole candidate at WRITE time, so a broken
+  // rework rule can never reach a live report and fail at rework-sync runtime. The
+  // interpreter is the oracle: this check cannot drift from what the live path accepts.
+  try {
+    selectUpsertRule(candidate.rules);
+  } catch (err) {
+    return {
+      ok: false,
+      check: 'rework-rules',
+      reason: `The rework rule is invalid: ${(err as Error).message}`,
     };
   }
 

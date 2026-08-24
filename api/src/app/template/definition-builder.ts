@@ -22,11 +22,12 @@ import {
  * EQUIVALENCE BOUNDARY vs. the hand-authored drill-pipe definition — the ops flow
  * covers: field descriptions (label/type/required/scope/section/options), the
  * header→global / item→region token bindings, the single region + its serial
- * marker, an optional disposition source, and computed token bindings (5-key set).
- * It does NOT author: value transforms (drill-pipe's boolFlag/boolCheckbox/range/
- * list joins), rework `rules`, or multi-path coalesce/compose export entries. A
- * definition it produces is engine-VALID; it reproduces drill-pipe only on the
- * transform-free, single-path fields.
+ * marker, an optional disposition source, computed token bindings (5-key set), and
+ * (slice A) an optional single `reworkRule` — the one `upsertChildReport` trigger shape
+ * the interpreter consumes. It does NOT author: value transforms (drill-pipe's
+ * boolFlag/boolCheckbox/range/list joins), extra rework operators/multi-rule, or
+ * multi-path coalesce/compose export entries. A definition it produces is engine-VALID;
+ * it reproduces drill-pipe only on the transform-free, single-path fields.
  */
 export function buildDefinition(
   meta: { templateKey: string; templateVersion: number },
@@ -133,6 +134,34 @@ export function buildDefinition(
       }
     : {};
 
+  // Rework trigger (slice A) — emit a rule ONLY when the author supplied one, in the
+  // EXACT shape ReworkRulesInterpreter.parseUpsertRule reads. The fixed tokens (op: 'eq',
+  // action: 'upsertChildReport', membership: 'allItemsMatching') are filled here because
+  // the interpreter supports exactly one value of each; the interpreter-IGNORED fields
+  // (id/scope/forbidChildDisposition) are deliberately NOT emitted. Absent → `rules: []`
+  // (unchanged). Structural/semantic validity — non-empty field, known childType, etc. —
+  // is the write-time gate's job (the interpreter dry-run in the validator), so this stays
+  // total: it passes the authored values straight through without inspecting them.
+  const rules: unknown[] = dto.reworkRule
+    ? [
+        {
+          when: {
+            field: dto.reworkRule.field,
+            op: 'eq',
+            value: dto.reworkRule.equals,
+          },
+          then: {
+            action: 'upsertChildReport',
+            childType: dto.reworkRule.childType,
+            membership: 'allItemsMatching',
+            ...(dto.reworkRule.reportNumberSuffix
+              ? { reportNumberSuffix: dto.reworkRule.reportNumberSuffix }
+              : {}),
+          },
+        },
+      ]
+    : [];
+
   return {
     formatVersion: 1,
     templateKey: meta.templateKey,
@@ -154,6 +183,6 @@ export function buildDefinition(
       global: globalExport,
       regions: exportRegions,
     },
-    rules: [],
+    rules,
   };
 }

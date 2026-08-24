@@ -41,6 +41,23 @@ export interface OpsTokenField {
   options?: string[];
 }
 
+/** The child report types a rework rule may upsert. Mirrors the API's ChildReportType. */
+export type ChildReportTypeChoice = 'REWORK' | 'SCRAP' | 'HOLD';
+
+/** The ops-authorable slice of an `upsertChildReport` rule (slice A) — only the shape the
+ *  server's ReworkRulesInterpreter consumes. Mirrors the API's OpsReworkRule. `op`/`action`/
+ *  `membership` are fixed server-side and NOT authored here. */
+export interface OpsReworkRule {
+  /** The field key (token-derived) whose per-serial value triggers the rule. */
+  field: string;
+  /** The value that field must strictly equal for a serial to match. */
+  equals: string;
+  /** The child report type to upsert. */
+  childType: ChildReportTypeChoice;
+  /** Optional suffix appended to the parent reportNumber for the child. */
+  reportNumberSuffix?: string;
+}
+
 /** The request body for `PUT /templates/:id/definition`. Mirrors the API's
  *  DefineTemplateDto — the front/back HTTP contract, duplicated by design. The UI does
  *  NOT author `computed`/`disposition`/transforms; the server gate is the sole authority
@@ -55,6 +72,9 @@ export interface DefineTemplateDto {
     marker: string;
   };
   fields: OpsTokenField[];
+  /** Optional single rework trigger (slice A). Omitted → no rule. Mirrors the API's
+   *  optional `reworkRule`. */
+  reworkRule?: OpsReworkRule;
 }
 
 @Injectable({

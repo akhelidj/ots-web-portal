@@ -229,6 +229,95 @@
       </table>
     </div>
 
+    <!-- Rework trigger rule (slice A) — optional, OFF by default -->
+    <div class="page-section p-5 sm:p-6 space-y-4">
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          [(ngModel)]="reworkEnabled"
+          data-testid="rework-enabled"
+          class="h-4 w-4"
+        />
+        <span class="text-sm font-semibold text-gray-700"
+          >Add a rework trigger rule?</span
+        >
+      </label>
+      <p class="text-sm text-neutral-500">
+        When a serial's chosen field equals a value, a child report is created for
+        every matching serial. Off = no rule.
+      </p>
+
+      @if (reworkEnabled) {
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label
+              for="rework-field"
+              class="block text-sm font-semibold text-gray-700 mb-1"
+              >Trigger Field <span class="text-error">*</span></label
+            >
+            <select
+              id="rework-field"
+              [(ngModel)]="reworkField"
+              class="field-control"
+              data-testid="rework-field"
+            >
+              <option [value]="''">Select the trigger field…</option>
+              @for (opt of triggerFieldOptions(); track opt.key) {
+                <option [value]="opt.key">{{ opt.label }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label
+              for="rework-equals"
+              class="block text-sm font-semibold text-gray-700 mb-1"
+              >Equals Value <span class="text-error">*</span></label
+            >
+            <input
+              id="rework-equals"
+              type="text"
+              [(ngModel)]="reworkEquals"
+              class="field-control"
+              placeholder="e.g. REWORK"
+              data-testid="rework-equals"
+            />
+          </div>
+          <div>
+            <label
+              for="rework-child-type"
+              class="block text-sm font-semibold text-gray-700 mb-1"
+              >Child Report Type <span class="text-error">*</span></label
+            >
+            <select
+              id="rework-child-type"
+              [(ngModel)]="reworkChildType"
+              class="field-control"
+              data-testid="rework-child-type"
+            >
+              @for (t of childReportTypes; track t) {
+                <option [value]="t">{{ t }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label
+              for="rework-suffix"
+              class="block text-sm font-semibold text-gray-700 mb-1"
+              >Report Number Suffix</label
+            >
+            <input
+              id="rework-suffix"
+              type="text"
+              [(ngModel)]="reworkSuffix"
+              class="field-control"
+              placeholder="optional, e.g. _rework"
+              data-testid="rework-suffix"
+            />
+          </div>
+        </div>
+      }
+    </div>
+
     @if (submitError()) {
       <div
         data-testid="submit-error"

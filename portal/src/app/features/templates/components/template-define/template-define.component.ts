@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   AdminTemplatesService,
+  ChildReportTypeChoice,
   DefineTemplateDto,
   ExtractedToken,
   OpsFieldType,
@@ -34,6 +35,18 @@ const FIELD_TYPES: OpsFieldType[] = [
   'date',
 ];
 
+/** The child report types a rework rule may upsert (mirrors the API's ChildReportType). */
+const CHILD_REPORT_TYPES: ChildReportTypeChoice[] = ['REWORK', 'SCRAP', 'HOLD'];
+
+/** One trigger-field choice for the rework rule: the derived key the interpreter matches
+ *  on, shown by the author's label. */
+export interface TriggerFieldOption {
+  /** The value emitted as `reworkRule.field` — the token-derived key (single segment). */
+  key: string;
+  /** What the author sees (their label, falling back to the token). */
+  label: string;
+}
+
 /** One row of the describe table — the editable per-token state. */
 export interface DescribeRow {
   token: string;
@@ -61,6 +74,7 @@ export class TemplateDefineComponent implements OnInit {
   private router = inject(Router);
 
   public readonly fieldTypes = FIELD_TYPES;
+  public readonly childReportTypes = CHILD_REPORT_TYPES;
 
   public templateId = '';
 
@@ -86,6 +100,19 @@ export class TemplateDefineComponent implements OnInit {
   public regionLabel = '';
   /** The token literal chosen as the repeating serial marker (region.marker). */
   public markerToken = '';
+
+  // Rework trigger (slice A) — OFF by default (no rule). All plain [(ngModel)] fields:
+  // they change via DOM events, which already notify the zoneless scheduler. When OFF the
+  // DTO omits `reworkRule` entirely; when ON the current values are shipped verbatim and
+  // the SERVER gate is the sole authority on validity (an incomplete rule surfaces the
+  // gate's rejection, exactly like every other check). The author picks only the shape the
+  // interpreter consumes — trigger field, equality value, child type, optional suffix.
+  public reworkEnabled = false;
+  /** The derived key (reworkRule.field) of the field whose value triggers the rule. */
+  public reworkField = '';
+  public reworkEquals = '';
+  public reworkChildType: ChildReportTypeChoice = 'REWORK';
+  public reworkSuffix = '';
 
   // UI state (signals — set after async work, read by the template).
   public readonly isLoading = signal(true);
@@ -156,6 +183,31 @@ export class TemplateDefineComponent implements OnInit {
     return this.rows().filter((r) => r.include && !this.isMarker(r));
   }
 
+  /** Token → data key: strip the `{{ }}`, matching the server builder's `strip`. This is
+   *  the single-segment key the described field is stored under in a serial's
+   *  inspectionData — exactly what the interpreter resolves `when.field` against. */
+  private stripToken(token: string): string {
+    return token.replace(/^\{\{\s*/, '').replace(/\s*\}\}$/, '');
+  }
+
+  /**
+   * The fields eligible as a rework trigger — those whose value lives on a SERIAL's
+   * inspectionData (what the interpreter matches on). In region mode that is the item-scope
+   * described fields; in flat mode the single record IS the serial, so every described
+   * field qualifies. Presented by label, valued by the derived key. Template-agnostic — no
+   * field name is special-cased.
+   */
+  public triggerFieldOptions(): TriggerFieldOption[] {
+    const described = this.describedRows();
+    const eligible = this.hasRepeatingRows
+      ? described.filter((r) => r.scope === 'item')
+      : described;
+    return eligible.map((r) => ({
+      key: this.stripToken(r.token),
+      label: r.label.trim() || r.token,
+    }));
+  }
+
   /**
    * The client-checkable minimum for a Save — the SAME light niceties `submit()` enforces,
    * used to disable the button so an author never spends a click learning the form is
@@ -201,6 +253,20 @@ export class TemplateDefineComponent implements OnInit {
     const dto: DefineTemplateDto = { fields };
     if (this.displayName.trim()) {
       dto.displayName = this.displayName.trim();
+    }
+    // Rework rule: emitted ONLY when the author turned it on. OFF → omit entirely (never a
+    // fabricated rule). When ON the current values ship verbatim, including an incomplete
+    // one — the server gate is the sole authority and rejects a malformed rule (e.g. an
+    // unpicked trigger field) with its `rework-rules` check, surfaced inline like any other.
+    if (this.reworkEnabled) {
+      dto.reworkRule = {
+        field: this.reworkField,
+        equals: this.reworkEquals.trim(),
+        childType: this.reworkChildType,
+      };
+      if (this.reworkSuffix.trim()) {
+        dto.reworkRule.reportNumberSuffix = this.reworkSuffix.trim();
+      }
     }
     // FLAT (toggle off): omit `region` entirely → the server builds `regions: []` and
     // every field resolves as record data. REGION (toggle on): today's region+marker.

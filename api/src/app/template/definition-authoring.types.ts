@@ -8,10 +8,12 @@
  *   - Scalars + date only: no list types (rejected by validation, not representable
  *     here).
  *   - Exactly ONE repeating region (the engine reads only `regions[0]`).
- *   - No transforms and no rework `rules` are authored by ops in this step — the
- *     builder emits `transforms: {}` and `rules: []`. Booleans/dates export as raw
- *     values, not drill-pipe's `"X"`/`"1"` formatting. See the builder for the exact
- *     equivalence boundary vs. the hand-authored drill-pipe definition.
+ *   - No transforms authored by ops — the builder emits `transforms: {}`.
+ *     Booleans/dates export as raw values, not drill-pipe's `"X"`/`"1"` formatting.
+ *   - Rework: a single OPTIONAL `reworkRule` (slice A) — the one trigger shape the
+ *     interpreter consumes. Absent → the builder emits `rules: []` (unchanged); present
+ *     → one `upsertChildReport` rule. See the builder for the exact equivalence
+ *     boundary vs. the hand-authored drill-pipe definition.
  */
 
 /**
@@ -75,6 +77,35 @@ export interface DefineTemplateDto {
   };
   fields: OpsTokenField[];
   computed?: OpsComputedToken[];
+  /**
+   * Optional REWORK-style trigger rule (slice A). Authors ONLY the shape the
+   * `ReworkRulesInterpreter` actually consumes: a single `when.field eq value`
+   * predicate that upserts a child report over the matching serials. Absent → no
+   * rule (the builder emits `rules: []`, the historical behaviour).
+   *
+   * `op` (`eq`), `action` (`upsertChildReport`) and `membership` (`allItemsMatching`)
+   * each have exactly ONE interpreter-supported value, so they are NOT authored here —
+   * the builder fills them. Fields the interpreter IGNORES (`id`, `scope`,
+   * `then.forbidChildDisposition`) are deliberately not offered: exposing an
+   * unread knob is the authored-but-unconsumed trap slice A avoids.
+   */
+  reworkRule?: OpsReworkRule;
+}
+
+/** The ops-authorable slice of an `upsertChildReport` rule (the supported shape only). */
+export interface OpsReworkRule {
+  /**
+   * The field key (token-derived, e.g. `"emiResult"`) whose per-serial value triggers
+   * the rule. Resolved against each serial's `inspectionData` by the interpreter; for a
+   * describe-authored template this is the single-segment stripped-token key.
+   */
+  field: string;
+  /** The value that field must strictly equal for a serial to match (`when.value`). */
+  equals: string;
+  /** The child report type to upsert — a `ChildReportType` (REWORK | SCRAP | HOLD). */
+  childType: string;
+  /** Optional suffix appended to the parent reportNumber when the child is created. */
+  reportNumberSuffix?: string;
 }
 
 /** One resolved export entry (engine shape). */
