@@ -116,11 +116,8 @@ export class InspectionReportDetailComponent
   private injector = inject(Injector);
   public prefs = inject(UserPreferencesService);
 
-  @ViewChild('summaryTab') summaryTab?: ElementRef;
-  @ViewChild('serialsTab') serialsTab?: ElementRef;
-  @ViewChild('approvalsTab') approvalsTab?: ElementRef;
-  @ViewChild('specsTab') specsTab?: ElementRef;
-  @ViewChild('historyTab') historyTab?: ElementRef;
+  // Focusable validation error-summary target (moved focus after a failed transition).
+  @ViewChild('validationSummary') validationSummaryRef?: ElementRef<HTMLElement>;
 
   public reportId = '';
   public report = signal<LocalInspectionReport | null>(null);
@@ -176,7 +173,6 @@ export class InspectionReportDetailComponent
   public formError = '';
   public editingSnId: string | null = null;
   public editingSnValue = '';
-  public isValidationModalOpen = false;
   public activeHistorySn = signal<LocalSerialNumber | null>(null);
   public isPublishingReport = signal(false);
   public isGeneratingChildReport = signal(false);
@@ -185,7 +181,7 @@ export class InspectionReportDetailComponent
   public selectedInBatch = signal<Set<string>>(new Set());
   public isSubmittingBatch = false;
 
-  public activeActionBatchId: string | null = null;
+  public activeActionBatchId = signal<string | null>(null);
   public returnNotes = '';
   public isActioningBatch = false;
 
@@ -201,7 +197,6 @@ export class InspectionReportDetailComponent
   public activeTab = signal<
     'summary' | 'serials' | 'approvals' | 'specs' | 'history'
   >('summary');
-  public activeTabPos = signal({ left: 0, width: 0 });
   public isMobileTabletViewport = signal(window.innerWidth < 1024);
   public headerPastThreshold = signal(false);
   public headerCondenseProgress = signal(0);
@@ -213,25 +208,6 @@ export class InspectionReportDetailComponent
   private shellScrollEl: HTMLElement | null = null;
   private readonly onShellScrollBound = () => this.onShellScroll();
 
-  public showOnboardingModal = computed(() => {
-    if (this.prefs.preferences().hasSeenOnboardingModal) {
-      return false;
-    }
-
-    const report = this.report();
-    if (!report) {
-      return false;
-    }
-
-    if (
-      report.status === REPORT_STATUSES.APPROVED ||
-      report.status === REPORT_STATUSES.CLOSED
-    ) {
-      return false;
-    }
-
-    return true;
-  });
   public isCompactMode = computed(() => this.prefs.preferences().compactMode);
   public hasSubmittedBatches = computed(() => {
     return this.approvalBatches().length > 0;
@@ -254,9 +230,20 @@ export class InspectionReportDetailComponent
     ),
   );
 
-  public closeOnboardingModal(): void {
-    this.prefs.setHasSeenOnboardingModal(true);
-  }
+  // Static tab attention badges (no animation). Same conditions the old pulse used,
+  // minus any persisted per-tab dismissal (localStorage pulse prefs are no longer read).
+  public serialsUninspectedCount = computed(
+    () =>
+      this.serials().filter(
+        (sn) => sn.approvalStatus === SERIAL_STATUSES.NOT_INSPECTED,
+      ).length,
+  );
+  public pendingApprovalCount = computed(
+    () =>
+      this.approvalBatches().filter(
+        (batch) => batch.batch.status === BATCH_STATUSES.SUBMITTED,
+      ).length,
+  );
 
   // Search Filter Signals
   public snSearchQuery = signal('');
@@ -282,19 +269,11 @@ export class InspectionReportDetailComponent
   // writing a single `headerData` map (see `onSaveHeader`).
   public formGlobalComment = '';
 
-  public isEditingMeta = false;
-  public isWorkflowModalOpen = false;
-  public isEditingGlobalComment = false;
-
-  constructor() {
-    toObservable(this.activeTab, { injector: this.injector }).subscribe(() => {
-      this.updateTabMarker();
-    });
-  }
+  public isEditingMeta = signal<boolean>(false);
+  public isEditingGlobalComment = signal<boolean>(false);
 
   ngAfterViewInit(): void {
     this.setupShellScrollTracking();
-    this.updateTabMarker();
   }
 
   ngOnDestroy(): void {
@@ -360,33 +339,6 @@ export class InspectionReportDetailComponent
       this.shellScrollEl.offsetWidth - this.shellScrollEl.clientWidth,
     );
     this.shellScrollbarWidth.set(scrollbarWidth);
-  }
-
-  private updateTabMarker() {
-    // We need a small delay for the DOM to be ready if we just switched on screen
-    setTimeout(() => {
-      let activeEl: ElementRef | undefined;
-      const tab = this.activeTab();
-
-      if (tab === 'summary') activeEl = this.summaryTab;
-      else if (tab === 'serials') activeEl = this.serialsTab;
-      else if (tab === 'approvals') activeEl = this.approvalsTab;
-      else if (tab === 'specs') activeEl = this.specsTab;
-      else if (tab === 'history') activeEl = this.historyTab;
-
-      if (activeEl?.nativeElement) {
-        const rect = activeEl.nativeElement.getBoundingClientRect();
-        // The marker is inside the <nav> which is relative
-        const navEl = activeEl.nativeElement.closest('nav');
-        if (navEl) {
-          const navRect = navEl.getBoundingClientRect();
-          this.activeTabPos.set({
-            left: rect.left - navRect.left,
-            width: rect.width,
-          });
-        }
-      }
-    }, 0);
   }
 
   // The hardcoded drill-pipe METHOD_OPTIONS / EQUIPMENT_OPTIONS dropdown lists were
@@ -456,12 +408,12 @@ export class InspectionReportDetailComponent
   public customerAddress = 'N/A';
 
   // Modal State
-  public activeModalStatus:
-    | (typeof SERIAL_DISPOSITIONS)[keyof typeof SERIAL_DISPOSITIONS]
-    | null = null;
+  public activeModalStatus = signal<
+    (typeof SERIAL_DISPOSITIONS)[keyof typeof SERIAL_DISPOSITIONS] | null
+  >(null);
   public modalEquipmentList: LocalSerialNumber[] = [];
 
-  public inspectingSn: LocalSerialNumber | null = null;
+  public inspectingSn = signal<LocalSerialNumber | null>(null);
   public inspectionFormData: Record<string, unknown> = {};
 
   public isExporting = false;
@@ -851,7 +803,7 @@ export class InspectionReportDetailComponent
       // Only the standalone global-comment editor keeps a model here, read from the
       // generic `headerData` store (the sole header source after step 3) so a Specs
       // edit of the comment shows through.
-      if (!this.isEditingGlobalComment) {
+      if (!this.isEditingGlobalComment()) {
         const generic =
           r.headerData && typeof r.headerData === 'object'
             ? (r.headerData as Record<string, unknown>)
@@ -874,7 +826,6 @@ export class InspectionReportDetailComponent
       this.reworkSerials = [];
     }
 
-    this.updateTabMarker();
     setTimeout(() => this.setupShellScrollTracking(), 0);
   }
 
@@ -938,7 +889,15 @@ export class InspectionReportDetailComponent
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to transition report.';
+      // Skill: Focusable Error Summary — move focus to the validation summary so
+      // keyboard/screen-reader users land on why the transition was rejected.
+      this.focusValidationSummary();
     }
+  }
+
+  /** Move focus to the role="alert" validation summary if it is currently rendered. */
+  private focusValidationSummary(): void {
+    setTimeout(() => this.validationSummaryRef?.nativeElement?.focus(), 0);
   }
 
   public onEditSn(sn: LocalSerialNumber): void {
@@ -995,7 +954,7 @@ export class InspectionReportDetailComponent
   }
 
   public openInspectionForm(sn: LocalSerialNumber): void {
-    this.inspectingSn = sn;
+    this.inspectingSn.set(sn);
     this.inspectionFormData = sn.inspectionJson
       ? JSON.parse(JSON.stringify(sn.inspectionJson))
       : {};
@@ -1005,14 +964,14 @@ export class InspectionReportDetailComponent
   }
 
   public closeInspectionForm(): void {
-    this.inspectingSn = null;
+    this.inspectingSn.set(null);
     this.inspectionFormData = {};
     this.isTransitionExpanded = true; // Auto-expand when done
   }
 
   public goToNextSn(): void {
     const snList = this.serials();
-    const currentSn = this.inspectingSn;
+    const currentSn = this.inspectingSn();
     if (!currentSn || snList.length === 0) return;
     const index = snList.findIndex((s) => s.id === currentSn.id);
     if (index >= 0 && index < snList.length - 1) {
@@ -1023,7 +982,7 @@ export class InspectionReportDetailComponent
 
   public goToPrevSn(): void {
     const snList = this.serials();
-    const currentSn = this.inspectingSn;
+    const currentSn = this.inspectingSn();
     if (!currentSn || snList.length === 0) return;
     const index = snList.findIndex((s) => s.id === currentSn.id);
     if (index > 0) {
@@ -1034,7 +993,7 @@ export class InspectionReportDetailComponent
 
   public get hasNextSn(): boolean {
     const snList = this.serials();
-    const currentSn = this.inspectingSn;
+    const currentSn = this.inspectingSn();
     if (!currentSn) return false;
     const index = snList.findIndex((s) => s.id === currentSn.id);
     return index >= 0 && index < snList.length - 1;
@@ -1042,7 +1001,7 @@ export class InspectionReportDetailComponent
 
   public get hasPrevSn(): boolean {
     const snList = this.serials();
-    const currentSn = this.inspectingSn;
+    const currentSn = this.inspectingSn();
     if (!currentSn) return false;
     const index = snList.findIndex((s) => s.id === currentSn.id);
     return index > 0;
@@ -1051,11 +1010,12 @@ export class InspectionReportDetailComponent
   public async saveInspectionForm(
     inspectionData: Record<string, unknown>,
   ): Promise<void> {
-    if (!this.inspectingSn) return;
+    const currentSn = this.inspectingSn();
+    if (!currentSn) return;
 
     try {
       await this.irService.saveSerialNumberInspection(
-        this.inspectingSn.id,
+        currentSn.id,
         inspectionData as Record<string, unknown>,
       );
 
@@ -1081,7 +1041,7 @@ export class InspectionReportDetailComponent
     this.formError = '';
     try {
       await this.irService.saveReportUpdates(this.reportId, { headerData });
-      this.isEditingMeta = false;
+      this.isEditingMeta.set(false);
       await this.refreshData();
     } catch (error) {
       const e = error as Error;
@@ -1103,12 +1063,12 @@ export class InspectionReportDetailComponent
 
   public startEditingGlobalComment(): void {
     this.formGlobalComment = this.effectiveInspectorComment();
-    this.isEditingGlobalComment = true;
+    this.isEditingGlobalComment.set(true);
   }
 
   public cancelEditingGlobalComment(): void {
     this.formGlobalComment = this.effectiveInspectorComment();
-    this.isEditingGlobalComment = false;
+    this.isEditingGlobalComment.set(false);
   }
 
   public async saveGlobalComment(): Promise<void> {
@@ -1127,7 +1087,7 @@ export class InspectionReportDetailComponent
       await this.irService.saveReportUpdates(this.reportId, {
         headerData: merged,
       });
-      this.isEditingGlobalComment = false;
+      this.isEditingGlobalComment.set(false);
       await this.refreshData();
     } catch (error) {
       const e = error as Error;
@@ -1229,14 +1189,14 @@ export class InspectionReportDetailComponent
   public openKpiModal(
     status: (typeof SERIAL_DISPOSITIONS)[keyof typeof SERIAL_DISPOSITIONS],
   ): void {
-    this.activeModalStatus = status;
+    this.activeModalStatus.set(status);
     this.modalEquipmentList = this.serials().filter(
       (sn) => this.getDisposition(sn) === status,
     );
   }
 
   public closeKpiModal(): void {
-    this.activeModalStatus = null;
+    this.activeModalStatus.set(null);
     this.modalEquipmentList = [];
   }
 
@@ -1297,14 +1257,14 @@ export class InspectionReportDetailComponent
   }
 
   public openReturnBatchModal(batchId: string): void {
-    this.activeActionBatchId = batchId;
+    this.activeActionBatchId.set(batchId);
     // We NO LONGER reset selection here so pre-selected items carry over
     this.returnNotes = '';
     this.batchError = '';
   }
 
   public closeReturnBatchModal(): void {
-    this.activeActionBatchId = null;
+    this.activeActionBatchId.set(null);
     this.returnNotes = '';
     this.batchError = '';
   }
@@ -1347,12 +1307,13 @@ export class InspectionReportDetailComponent
   }
 
   public async returnBatch(): Promise<void> {
-    if (!this.activeActionBatchId) return;
+    const activeBatchId = this.activeActionBatchId();
+    if (!activeBatchId) return;
     const selected = Array.from(this.selectedInBatch());
 
     // Safety check: ensure selection belongs to this batch
     const batch = this.approvalBatches().find(
-      (b) => b.batch.id === this.activeActionBatchId,
+      (b) => b.batch.id === activeBatchId,
     );
     const batchSnIds = batch?.serials.map((s) => s.id) || [];
     const filteredSelection = selected.filter((id) => batchSnIds.includes(id));
@@ -1362,11 +1323,7 @@ export class InspectionReportDetailComponent
     this.isActioningBatch = true;
     this.batchError = '';
     try {
-      await this.irService.returnBatch(
-        this.activeActionBatchId,
-        this.returnNotes,
-        ids,
-      );
+      await this.irService.returnBatch(activeBatchId, this.returnNotes, ids);
       this.selectedInBatch.set(new Set());
       this.closeReturnBatchModal();
       await this.refreshData();
@@ -1418,22 +1375,21 @@ export class InspectionReportDetailComponent
   public onTabClick(
     tab: 'summary' | 'serials' | 'approvals' | 'specs' | 'history',
   ) {
-    if (this.shouldPulseTab(tab)) {
-      this.prefs.addDisabledPulsingTab(tab);
-    }
     this.activeTab.set(tab);
   }
 
-  public acknowledgeOnboarding() {
-    this.prefs.setHasSeenOnboardingModal(true);
+  /** Enter metadata-edit mode and jump to the Specs tab (from the Summary card). */
+  public editMetadataFromSummary(): void {
+    this.isEditingMeta.set(true);
+    this.onTabClick('specs');
   }
 
-  public shouldPulseTab(tab: string): boolean {
-    const disabledTabs = this.prefs.preferences().disabledPulsingTabs || [];
-    if (disabledTabs.includes(tab)) {
-      return false;
-    }
-
+  /**
+   * Whether a tab should surface a static attention badge. Same role/status/data
+   * conditions the old pulse used, minus the persisted per-tab dismissal — the
+   * localStorage pulse preferences are intentionally no longer read.
+   */
+  public tabNeedsAttention(tab: string): boolean {
     const report = this.report();
     if (!report || this.isCustomer()) {
       return false;
@@ -1492,11 +1448,11 @@ export class InspectionReportDetailComponent
   }
 
   public tabTooltip(tab: 'serials' | 'approvals'): string {
-    if (tab === 'approvals' && this.shouldPulseTab('approvals')) {
+    if (tab === 'approvals' && this.tabNeedsAttention('approvals')) {
       return 'Pending approvals require review';
     }
 
-    if (tab === 'serials' && this.shouldPulseTab('serials')) {
+    if (tab === 'serials' && this.tabNeedsAttention('serials')) {
       return 'Inspect pipes and set dispositions';
     }
 

@@ -87,6 +87,12 @@
     overflow-x: hidden;
   }
 
+  /* Keep keyboard-focused controls clear of the sticky report header / action bar
+     when they are scrolled into view (skill: Focus Not Obscured, WCAG 2.2 AA). */
+  #main-content {
+    scroll-padding-top: 6rem;
+  }
+
   body {
     @apply font-sans antialiased text-neutral-800 bg-stone-100;
   }

@@ -35,11 +35,8 @@
           uiState?.actions?.['ADMIN_EXPORT']?.disabledReason ||
           ''
         "
-        [hasWorkflowActions]="
-          !isCustomer() && (allowedTransitions.length > 0 || canPublishReport())
-        "
+        [hasWorkflowActions]="false"
         (export)="exportReport()"
-        (openWorkflow)="isWorkflowModalOpen = true"
       />
     </div>
 
@@ -48,257 +45,279 @@
       <app-inspection-report-banners [banners]="uiState?.banners || []" />
     }
 
-    <!-- TAB NAVIGATION -->
-    <div
-      class="z-30 fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] pb-safe"
-    >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav
-          class="relative flex justify-between sm:justify-center sm:gap-14"
-          aria-label="Tabs"
-        >
-          <!-- Active Indicator (All sizes) -->
-          <div
-            class="absolute bottom-0 h-0.5 bg-primary transition-all duration-300 ease-out z-10"
-            [style.left.px]="activeTabPos().left"
-            [style.width.px]="activeTabPos().width"
-          ></div>
-
-          <button
-            #summaryTab
-            (click)="onTabClick('summary')"
-            [class]="
-              activeTab() === 'summary'
-                ? 'text-primary'
-                : 'text-gray-500 hover:text-gray-700'
-            "
-            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
-          >
-            <div
-              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
-              [ngClass]="{ 'bg-primary/10': activeTab() === 'summary' }"
-            >
-              <svg
-                class="w-5 h-5 sm:w-4 sm:h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                ></path>
-              </svg>
-            </div>
-            <div class="flex items-center gap-2">
-              <span
-                class="sm:block"
-                [class.font-bold]="activeTab() === 'summary'"
-                >Summary</span
-              >
-              @if (shouldPulseTab('summary')) {
-                <span class="relative flex h-2.5 w-2.5">
-                  <span
-                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"
-                  ></span>
-                  <span
-                    class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"
-                  ></span>
-                </span>
-              }
-            </div>
-          </button>
-
-          <button
-            #serialsTab
-            (click)="onTabClick('serials')"
-            [title]="tabTooltip('serials')"
-            [class]="
-              activeTab() === 'serials'
-                ? 'text-primary'
-                : 'text-gray-500 hover:text-gray-700'
-            "
-            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
-          >
-            <div
-              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
-              [ngClass]="{ 'bg-primary/10': activeTab() === 'serials' }"
-            >
-              <svg
-                class="w-5 h-5 sm:w-4 sm:h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                ></path>
-              </svg>
-            </div>
-            <div class="flex items-center gap-2">
-              <span
-                class="sm:block"
-                [class.font-bold]="activeTab() === 'serials'"
-                >Pipes</span
-              >
-              @if (shouldPulseTab('serials')) {
-                <span class="relative flex h-2.5 w-2.5">
-                  <span
-                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"
-                  ></span>
-                  <span
-                    class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"
-                  ></span>
-                </span>
-              }
-            </div>
-          </button>
-
-          @if (canAccessBatchApprovals()) {
-            <button
-              #approvalsTab
-              (click)="hasSubmittedBatches() ? onTabClick('approvals') : null"
-              [disabled]="!hasSubmittedBatches()"
-              [title]="
-                hasSubmittedBatches()
-                  ? tabTooltip('approvals')
-                  : 'No approval batches submitted yet'
-              "
-              [class]="
-                activeTab() === 'approvals'
-                  ? 'text-primary'
-                  : hasSubmittedBatches()
-                    ? 'text-gray-500 hover:text-gray-700'
-                    : 'text-gray-300 cursor-not-allowed'
-              "
-              class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
-            >
-              <div
-                class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
-                [ngClass]="{ 'bg-primary/10': activeTab() === 'approvals' }"
-              >
-                <svg
-                  class="w-5 h-5 sm:w-5 sm:h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  ></path>
-                </svg>
-              </div>
-              <div class="flex items-center gap-2">
-                <span
-                  class="sm:block"
-                  [class.font-bold]="activeTab() === 'approvals'"
-                  >Approvals</span
-                >
-                @if (shouldPulseTab('approvals')) {
-                  <span class="relative flex h-2.5 w-2.5">
-                    <span
-                      class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"
-                    ></span>
-                    <span
-                      class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"
-                    ></span>
-                  </span>
-                }
-              </div>
-            </button>
-          }
-
-          <button
-            #specsTab
-            (click)="onTabClick('specs')"
-            [class]="
-              activeTab() === 'specs'
-                ? 'text-primary'
-                : 'text-gray-500 hover:text-gray-700'
-            "
-            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
-          >
-            <div
-              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
-              [ngClass]="{ 'bg-primary/10': activeTab() === 'specs' }"
-            >
-              <svg
-                class="w-5 h-5 sm:w-4 sm:h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                ></path>
-              </svg>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="sm:block" [class.font-bold]="activeTab() === 'specs'"
-                >Specs</span
-              >
-              @if (shouldPulseTab('specs')) {
-                <span class="relative flex h-2.5 w-2.5">
-                  <span
-                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"
-                  ></span>
-                  <span
-                    class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"
-                  ></span>
-                </span>
-              }
-            </div>
-          </button>
-
-          <button
-            #historyTab
-            (click)="onTabClick('history')"
-            [class]="
-              activeTab() === 'history'
-                ? 'text-primary'
-                : 'text-gray-500 hover:text-gray-700'
-            "
-            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group"
-          >
-            <div
-              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
-              [ngClass]="{ 'bg-primary/10': activeTab() === 'history' }"
-            >
-              <svg
-                class="w-5 h-5 sm:w-4 sm:h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-              </svg>
-            </div>
-            <span class="sm:block" [class.font-bold]="activeTab() === 'history'"
-              >Activity</span
-            >
-          </button>
-        </nav>
+    <!-- WORKFLOW ACTION (inline, sticky near the header) -->
+    @if (
+      !isCustomer() &&
+      (allowedTransitions.length > 0 ||
+        canPublishReport() ||
+        reportData.pendingTransitionToStatus)
+    ) {
+      <div
+        class="sticky top-0 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-stone-100/95 backdrop-blur border-b border-gray-200"
+      >
+        <app-inspection-report-transition-actions
+          [report]="reportData"
+          [expanded]="true"
+          [isFixed]="false"
+          [allowedTransitions]="allowedTransitions"
+          [selectedTransition]="selectedTransition"
+          [formReason]="formReason"
+          [formError]="formError"
+          [validationResult]="validationResult"
+          [isOnline]="isOnline"
+          [canPublish]="canPublishReport()"
+          [isPublishing]="isPublishingReport()"
+          (selectTransition)="openReasonSelect($event)"
+          (formReasonChange)="formReason = $event"
+          (confirmTransition)="onTransition()"
+          (cancelTransition)="selectedTransition = null; formReason = ''"
+        />
       </div>
+    }
+
+    <!-- VALIDATION ERROR SUMMARY (focusable; skill: Focusable Error Summary) -->
+    @if (!isCustomer() && validationResult && !validationResult.isReady) {
+      <div
+        #validationSummary
+        role="alert"
+        tabindex="-1"
+        aria-labelledby="validation-summary-title"
+        class="page-section p-5 border-l-4 border-error bg-error-light/20 focus:outline-none focus:ring-2 focus:ring-error/40"
+      >
+        <h2
+          id="validation-summary-title"
+          class="text-sm font-bold text-error-dark flex items-center gap-2"
+        >
+          <svg
+            class="h-5 w-5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            ></path>
+          </svg>
+          Review required — {{ validationResult.issues.length }} condition(s) need
+          attention
+        </h2>
+        <ul class="mt-3 space-y-2">
+          @for (issue of validationResult.issues; track issue.message) {
+            <li class="flex items-start gap-2 text-sm text-gray-700">
+              <span
+                class="w-1.5 h-1.5 rounded-full bg-error mt-2 shrink-0"
+              ></span>
+              <span>{{ issue.message }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+    @if (!isCustomer() && validationResult && validationResult.isReady) {
+      <div
+        class="page-section p-4 border-l-4 border-success bg-success-light/20 text-sm font-semibold text-success-dark flex items-center gap-2"
+      >
+        <svg
+          class="h-5 w-5 shrink-0"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M5 13l4 4L19 7"
+          ></path>
+        </svg>
+        Validation passed — ready for the next workflow step.
+      </div>
+    }
+
+    <!-- TAB NAVIGATION (top, underlined) -->
+    <div class="border-b border-gray-200">
+      <nav
+        class="flex gap-1 sm:gap-2 overflow-x-auto custom-scrollbar"
+        aria-label="Tabs"
+      >
+        <button
+          (click)="onTabClick('summary')"
+          [class]="
+            activeTab() === 'summary'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          "
+          class="whitespace-nowrap flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 -mb-px font-medium text-sm transition-colors"
+        >
+          <svg
+            class="w-4 h-4 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            ></path>
+          </svg>
+          <span>Summary</span>
+          @if (tabNeedsAttention('summary')) {
+            <span
+              class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
+              aria-hidden="true"
+            ></span>
+          }
+        </button>
+
+        <button
+          (click)="onTabClick('serials')"
+          [title]="tabTooltip('serials')"
+          [class]="
+            activeTab() === 'serials'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          "
+          class="whitespace-nowrap flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 -mb-px font-medium text-sm transition-colors"
+        >
+          <svg
+            class="w-4 h-4 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 10h16M4 14h16M4 18h16"
+            ></path>
+          </svg>
+          <span>Pipes</span>
+          @if (serialsUninspectedCount() > 0) {
+            <span
+              class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold leading-none"
+              [attr.aria-label]="
+                serialsUninspectedCount() + ' pipes need inspection'
+              "
+              >{{ serialsUninspectedCount() }}</span
+            >
+          } @else if (tabNeedsAttention('serials')) {
+            <span
+              class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
+              aria-hidden="true"
+            ></span>
+          }
+        </button>
+
+        @if (canAccessBatchApprovals()) {
+          <button
+            (click)="hasSubmittedBatches() ? onTabClick('approvals') : null"
+            [disabled]="!hasSubmittedBatches()"
+            [title]="
+              hasSubmittedBatches()
+                ? tabTooltip('approvals')
+                : 'No approval batches submitted yet'
+            "
+            [class]="
+              activeTab() === 'approvals'
+                ? 'border-primary text-primary'
+                : hasSubmittedBatches()
+                  ? 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-300 cursor-not-allowed'
+            "
+            class="whitespace-nowrap flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 -mb-px font-medium text-sm transition-colors"
+          >
+            <svg
+              class="w-4 h-4 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <span>Approvals</span>
+            @if (pendingApprovalCount() > 0) {
+              <span
+                class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold leading-none"
+                [attr.aria-label]="
+                  pendingApprovalCount() + ' batches pending approval'
+                "
+                >{{ pendingApprovalCount() }}</span
+              >
+            }
+          </button>
+        }
+
+        <button
+          (click)="onTabClick('specs')"
+          [class]="
+            activeTab() === 'specs'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          "
+          class="whitespace-nowrap flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 -mb-px font-medium text-sm transition-colors"
+        >
+          <svg
+            class="w-4 h-4 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            ></path>
+          </svg>
+          <span>Specs</span>
+          @if (tabNeedsAttention('specs')) {
+            <span
+              class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
+              aria-hidden="true"
+            ></span>
+          }
+        </button>
+
+        <button
+          (click)="onTabClick('history')"
+          [class]="
+            activeTab() === 'history'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          "
+          class="whitespace-nowrap flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 -mb-px font-medium text-sm transition-colors"
+        >
+          <svg
+            class="w-4 h-4 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
+          </svg>
+          <span>Activity</span>
+        </button>
+      </nav>
     </div>
 
     <!-- TAB CONTENT AREA -->
-    <div class="flex-grow pt-8">
+    <div class="flex-grow pt-2">
       <!-- SUMMARY TAB -->
       @if (activeTab() === 'summary') {
         <div
@@ -315,15 +334,9 @@
             />
           }
 
-          <div
-            class="grid grid-cols-1 gap-6"
-            [ngClass]="!isCustomer() ? 'lg:grid-cols-3' : ''"
-          >
-            <!-- Left Column: Summary & KPIs -->
-            <div
-              class="space-y-6"
-              [ngClass]="!isCustomer() ? 'lg:col-span-2' : ''"
-            >
+          <div class="grid grid-cols-1 gap-6">
+            <!-- Summary & KPIs -->
+            <div class="space-y-6">
               <!-- Executive Summary Card -->
               <div class="page-section p-6 border-neutral-200">
                 <div
@@ -358,7 +371,7 @@
                       uiState?.actions?.['IR_EDIT_META']?.visible
                     ) {
                       <button
-                        (click)="isEditingMeta = true; onTabClick('specs')"
+                        (click)="editMetadataFromSummary()"
                         class="btn btn-secondary btn-sm gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
                       >
                         <svg
@@ -426,7 +439,7 @@
                       Overall Inspector Comments
                     </h3>
                     @if (isInspectorCapable() && !isSupervisor()) {
-                      @if (!isEditingGlobalComment) {
+                      @if (!isEditingGlobalComment()) {
                         <button
                           type="button"
                           (click)="startEditingGlobalComment()"
@@ -438,7 +451,7 @@
                     }
                   </div>
 
-                  @if (isEditingGlobalComment) {
+                  @if (isEditingGlobalComment()) {
                     <div class="space-y-3">
                       <textarea
                         [(ngModel)]="formGlobalComment"
@@ -480,95 +493,6 @@
               </div>
             </div>
 
-            <!-- Right Column: Workflow & Validation -->
-            @if (!isCustomer()) {
-              <div class="space-y-6">
-                <!-- Validation Status Card -->
-                @if (validationResult && !isCustomer()) {
-                  <div class="page-section p-5 border-neutral-200 shadow-sm">
-                    <h3
-                      class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4"
-                    >
-                      Workflow Validation
-                    </h3>
-
-                    @if (validationResult.isReady) {
-                      <div
-                        class="flex items-center gap-3 p-4 bg-success-light/20 border border-success/20 rounded-xl"
-                      >
-                        <div class="p-2 bg-success rounded-lg text-white">
-                          <svg
-                            class="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M5 13l4 4L19 7"
-                            ></path>
-                          </svg>
-                        </div>
-                        <div>
-                          <span
-                            class="block text-sm font-bold text-success-dark"
-                            >Validation Passed</span
-                          >
-                          <span class="block text-xs text-success-dark/70"
-                            >Ready for next workflow step</span
-                          >
-                        </div>
-                      </div>
-                    } @else {
-                      <div
-                        class="flex flex-col gap-3 p-4 bg-error-light/20 border border-error/20 rounded-xl"
-                      >
-                        <div class="flex items-center gap-3">
-                          <div class="p-2 bg-error rounded-lg text-white">
-                            <svg
-                              class="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                              ></path>
-                            </svg>
-                          </div>
-                          <div>
-                            <span
-                              class="block text-sm font-bold text-error-dark"
-                              >Review Required</span
-                            >
-                            <span class="block text-xs text-error-dark/70"
-                              >{{ validationResult.issues.length }} conditions
-                              need attention</span
-                            >
-                          </div>
-                        </div>
-                        <button
-                          (click)="isValidationModalOpen = true"
-                          class="text-xs font-bold text-error hover:underline text-left ml-11"
-                        >
-                          View Details →
-                        </button>
-                      </div>
-                    }
-
-                    <!-- Footer spacer for sticky navigation -->
-                    <div
-                      class="h-24 px-4 overflow-hidden pointer-events-none"
-                    ></div>
-                  </div>
-                }
-              </div>
-            }
           </div>
 
           @if (!isCustomer()) {
@@ -662,10 +586,10 @@
       }
 
       <!-- SPECS TAB -->
-      @if (activeTab() === 'specs' || isEditingMeta) {
+      @if (activeTab() === 'specs' || isEditingMeta()) {
         <div class="animate-in fade-in duration-300">
           <div class="page-section p-6 border-neutral-200">
-            @if (isEditingMeta) {
+            @if (isEditingMeta()) {
               <div class="space-y-6">
                 <div
                   class="flex items-center justify-between border-b border-neutral-100 pb-3"
@@ -686,7 +610,7 @@
                   [definition]="reportDefinition"
                   [data]="reportHeaderView()"
                   (save)="onSaveHeader($event)"
-                  (cancelEdit)="isEditingMeta = false"
+                  (cancelEdit)="isEditingMeta.set(false)"
                 />
               </div>
             } @else {
@@ -702,7 +626,7 @@
                     uiState?.actions?.['IR_EDIT_META']?.visible
                   ) {
                     <button
-                      (click)="isEditingMeta = true"
+                      (click)="isEditingMeta.set(true)"
                       class="btn btn-secondary btn-sm gap-2"
                     >
                       <svg
@@ -744,7 +668,7 @@
     <!-- GLOBAL MODALS -->
 
     <!-- SN Inspection Side Drawer (Sheet) -->
-    @if (inspectingSn) {
+    @if (inspectingSn(); as inspectingSnVal) {
       <div
         class="fixed inset-0 !h-[100dvh] w-screen z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
         (click)="closeInspectionForm()"
@@ -786,7 +710,7 @@
                   Inspect Serial
                 </h2>
                 <p class="font-mono text-sm text-primary font-bold">
-                  {{ inspectingSn.value }}
+                  {{ inspectingSnVal.value }}
                 </p>
               </div>
               <div class="flex gap-1 ml-4 border-l border-gray-200 pl-4">
@@ -863,8 +787,8 @@
               [isReadOnly]="
                 (uiState?.fieldModes?.['inspectionData'] !== 'editable' &&
                   uiState?.fieldModes?.['disposition'] !== 'editable') ||
-                inspectingSn.approvalStatus === 'SUBMITTED_FOR_APPROVAL' ||
-                inspectingSn.approvalStatus === 'APPROVED'
+                inspectingSnVal.approvalStatus === 'SUBMITTED_FOR_APPROVAL' ||
+                inspectingSnVal.approvalStatus === 'APPROVED'
               "
               (saveData)="saveInspectionForm($event)"
               (formCancel)="closeInspectionForm()"
@@ -875,7 +799,7 @@
     }
 
     <!-- KPI Equipment Modal -->
-    @if (activeModalStatus) {
+    @if (activeModalStatus(); as activeModalStatusVal) {
       <div
         class="fixed inset-0 !h-[100dvh] w-screen z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300"
       >
@@ -890,7 +814,7 @@
               <span
                 class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20"
               >
-                {{ activeModalStatus }}
+                {{ activeModalStatusVal }}
               </span>
             </h3>
             <button
@@ -938,79 +862,8 @@
       </div>
     }
 
-    <!-- Validation Details Modal -->
-    @if (isValidationModalOpen && validationResult) {
-      <div
-        class="fixed inset-0 !h-[100dvh] w-screen z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
-      >
-        <div
-          class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in slide-in-from-bottom-4"
-        >
-          <div
-            class="p-6 border-b border-error/10 bg-error-light/10 flex justify-between items-center"
-          >
-            <h3
-              class="text-lg font-bold text-error-dark flex items-center gap-3"
-            >
-              <svg
-                class="w-6 h-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                ></path>
-              </svg>
-              Prerequisites for Approval
-            </h3>
-            <button
-              (click)="isValidationModalOpen = false"
-              class="p-2 hover:bg-error/10 rounded-full text-error-dark"
-            >
-              <svg
-                class="w-6 h-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-8 overflow-y-auto flex-grow bg-white">
-            <div class="space-y-4">
-              @for (issue of validationResult.issues; track issue.message) {
-                <div
-                  class="flex items-start gap-4 p-4 bg-gray-50 border border-gray-100 rounded-xl"
-                >
-                  <div
-                    class="w-2 h-2 rounded-full bg-error mt-2 shrink-0"
-                  ></div>
-                  <p class="text-sm font-medium text-gray-700 leading-relaxed">
-                    {{ issue.message }}
-                  </p>
-                </div>
-              }
-            </div>
-          </div>
-          <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-end">
-            <button
-              (click)="isValidationModalOpen = false"
-              class="btn btn-secondary"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    }
-
     <!-- Return Batch Modal -->
-    @if (activeActionBatchId && !batchError) {
+    @if (activeActionBatchId() && !batchError) {
       <div
         class="fixed inset-0 !h-[100dvh] w-screen z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
       >
@@ -1188,134 +1041,5 @@
       </div>
     }
 
-    <!-- Workflow Actions Modal -->
-    @if (isWorkflowModalOpen) {
-      <div
-        class="fixed inset-0 !h-[100dvh] w-screen z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in"
-        (click)="isWorkflowModalOpen = false"
-        (keydown.escape)="isWorkflowModalOpen = false"
-        tabindex="0"
-        role="button"
-        aria-label="Close Workflow Modal"
-      >
-        <div
-          class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300 cursor-default"
-          (click)="$event.stopPropagation()"
-          (keydown)="$event.stopPropagation()"
-          tabindex="-1"
-          role="region"
-          aria-label="Workflow Actions Dialog"
-        >
-          <div
-            class="px-6 py-4 bg-white border-b border-neutral-100 flex justify-between items-center shrink-0 shadow-sm z-10"
-          >
-            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-3">
-              <span class="p-2 bg-accent/10 rounded-lg">
-                <svg
-                  class="h-6 w-6 text-accent"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                  ></path>
-                </svg>
-              </span>
-              Workflow Actions
-            </h2>
-            <button
-              (click)="isWorkflowModalOpen = false"
-              class="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-400 hover:text-neutral-900"
-            >
-              <svg
-                class="w-6 h-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            </button>
-          </div>
-
-          <div class="flex-grow overflow-y-auto p-2 sm:p-4 custom-scrollbar">
-            <app-inspection-report-transition-actions
-              [report]="reportData"
-              [expanded]="true"
-              [isFixed]="false"
-              [allowedTransitions]="allowedTransitions"
-              [selectedTransition]="selectedTransition"
-              [formReason]="formReason"
-              [formError]="formError"
-              [validationResult]="validationResult"
-              [isOnline]="isOnline"
-              [showExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.visible"
-              [canExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.enabled"
-              [exportDisabledReason]="
-                uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || ''
-              "
-              [isExporting]="isExporting"
-              [canPublish]="canPublishReport()"
-              [isPublishing]="isPublishingReport()"
-              (expandedChange)="isTransitionExpanded = $event"
-              (export)="exportReport()"
-              (publish)="onPublishReport(); isWorkflowModalOpen = false"
-              (showValidationDetails)="isValidationModalOpen = true"
-              (selectTransition)="openReasonSelect($event)"
-              (formReasonChange)="formReason = $event"
-              (confirmTransition)="onTransition(); isWorkflowModalOpen = false"
-              (cancelTransition)="selectedTransition = null; formReason = ''"
-            />
-          </div>
-        </div>
-      </div>
-    }
-
-    <!-- Onboarding Modal -->
-    @if (showOnboardingModal()) {
-      <div
-        class="fixed inset-0 !h-[100dvh] w-screen z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
-      >
-        <div
-          class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col items-center text-center animate-in zoom-in-95 duration-300"
-        >
-          <div
-            class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4"
-          >
-            <span class="relative flex h-6 w-6">
-              <span
-                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"
-              ></span>
-              <span
-                class="relative inline-flex rounded-full h-6 w-6 bg-accent"
-              ></span>
-            </span>
-          </div>
-          <h2 class="text-xl font-bold text-gray-900 mb-2">
-            Follow the Pulse!
-          </h2>
-          <p class="text-gray-600 mb-6 leading-relaxed">
-            Welcome to the inspection report! Keep an eye out for the pulsing
-            orange dots. They will guide you to tabs that require your
-            attention.
-          </p>
-          <button
-            (click)="acknowledgeOnboarding()"
-            class="btn btn-primary w-full py-3 text-sm font-bold shadow-md"
-          >
-            Got it, let's go!
-          </button>
-        </div>
-      </div>
-    }
   </div>
 }
