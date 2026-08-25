@@ -62,7 +62,11 @@ import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.rep
 import { ApprovalBatchLocalRepo } from '@portal/core/offline/repos/approval-batch-local.repo';
 import { BatchSerialNumberLocalRepo } from '@portal/core/offline/repos/batch-serial-number-local.repo';
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
-import { TemplateFormDefinition } from '@portal/features/templates/schemas/definition-to-form-schema';
+import {
+  TemplateFormDefinition,
+  definitionToFormSchema,
+} from '@portal/features/templates/schemas/definition-to-form-schema';
+import { SectionSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import { InspectionReportHeaderComponent } from './sections/inspection-report-header/inspection-report-header.component';
 import { InspectionReportHeaderFieldsComponent } from './sections/inspection-report-header-fields/inspection-report-header-fields.component';
 import { InspectionReportHeaderEditComponent } from './sections/inspection-report-header-fields/inspection-report-header-edit.component';
@@ -131,6 +135,24 @@ export class InspectionReportDetailComponent
   public get reportDefinition(): TemplateFormDefinition | null {
     return (this.report()?.definitionJson ?? null) as TemplateFormDefinition | null;
   }
+
+  /**
+   * The report's item-scope form sections, built from the template definition by the
+   * SAME adapter the serial drawer form consumes (`definitionToFormSchema`, default
+   * item scope). Drives the serials matrix's group bands, column headers, and cells —
+   * so the table and the drawer form agree by construction, for ANY template. A
+   * `computed` so the reference is stable across change-detection and only rebuilds
+   * when `report()` changes. No/malformed definition → `[]` (identity columns only).
+   */
+  public itemFormSections = computed<SectionSchema[]>(() => {
+    const def = this.reportDefinition;
+    if (!def) return [];
+    try {
+      return definitionToFormSchema(def).sections;
+    } catch {
+      return [];
+    }
+  });
 
   /**
    * The effective header view — the report row with its generic `headerData`

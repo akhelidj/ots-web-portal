@@ -523,6 +523,7 @@
           <div class="flex flex-col xl:flex-row gap-6 items-start w-full">
             <app-inspection-report-serials-table
               [serials]="filteredSerials()"
+              [sections]="itemFormSections()"
               [childReports]="childReports()"
               [userRole]="userRole()"
               [searchQuery]="snSearchQuery()"
