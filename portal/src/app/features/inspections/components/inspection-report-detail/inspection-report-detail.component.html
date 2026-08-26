@@ -705,7 +705,7 @@
         aria-label="Close inspection form"
       >
         <div
-          class="bg-white w-full max-w-2xl !h-[100dvh] flex flex-col shadow-2xl border-l border-gray-200 animate-in slide-in-from-right duration-500 overflow-hidden"
+          class="bg-card w-full max-w-2xl !h-[100dvh] flex flex-col shadow-2xl border-l border-border animate-in slide-in-from-right duration-500 overflow-hidden"
           (click)="$event.stopPropagation()"
           (keydown)="$event.stopPropagation()"
           tabindex="-1"
@@ -714,7 +714,7 @@
         >
           <!-- Drawer Header -->
           <div
-            class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center shrink-0"
+            class="px-6 py-4 bg-muted border-b border-border flex justify-between items-center shrink-0"
           >
             <div class="flex items-center gap-4">
               <div class="p-2 bg-primary/10 rounded-xl">
@@ -733,18 +733,18 @@
                 </svg>
               </div>
               <div>
-                <h2 class="text-lg font-bold text-gray-900 leading-tight">
+                <h2 class="text-lg font-bold text-foreground leading-tight">
                   Inspect Serial
                 </h2>
                 <p class="font-mono text-sm text-primary font-bold">
                   {{ inspectingSnVal.value }}
                 </p>
               </div>
-              <div class="flex gap-1 ml-4 border-l border-gray-200 pl-4">
+              <div class="flex gap-1 ml-4 border-l border-border pl-4">
                 <button
                   (click)="goToPrevSn()"
                   [disabled]="!hasPrevSn"
-                  class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors"
+                  class="p-1.5 text-muted-foreground hover:bg-muted rounded-lg disabled:opacity-20 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
                   title="Previous SN"
                 >
                   <svg
@@ -764,7 +764,7 @@
                 <button
                   (click)="goToNextSn()"
                   [disabled]="!hasNextSn"
-                  class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors"
+                  class="p-1.5 text-muted-foreground hover:bg-muted rounded-lg disabled:opacity-20 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
                   title="Next SN"
                 >
                   <svg
@@ -785,7 +785,7 @@
             </div>
             <button
               (click)="closeInspectionForm()"
-              class="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-900"
+              class="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
             >
               <svg
                 class="w-6 h-6"
@@ -805,12 +805,14 @@
 
           <!-- Drawer Body -->
           <div
-            class="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar bg-white"
+            class="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar bg-background"
           >
             <app-serial-inspection-reactive-form
               [initialData]="inspectionFormData"
               [schemaKey]="reportData.templateKey"
               [definition]="reportDefinition"
+              [isSaving]="isSavingInspection()"
+              [saveError]="inspectionSaveError()"
               [isReadOnly]="
                 (uiState?.fieldModes?.['inspectionData'] !== 'editable' &&
                   uiState?.fieldModes?.['disposition'] !== 'editable') ||

@@ -440,6 +440,10 @@ export class InspectionReportDetailComponent
 
   public inspectingSn = signal<LocalSerialNumber | null>(null);
   public inspectionFormData: Record<string, unknown> = {};
+  /** Save-in-flight for the SN drawer → drives the Save button's busy state. */
+  public isSavingInspection = signal(false);
+  /** Save error surfaced INSIDE the drawer (not the hidden workflow panel). */
+  public inspectionSaveError = signal('');
 
   public isExporting = false;
   public isCustomer = computed(
@@ -980,6 +984,7 @@ export class InspectionReportDetailComponent
 
   public openInspectionForm(sn: LocalSerialNumber): void {
     this.inspectingSn.set(sn);
+    this.inspectionSaveError.set('');
     this.inspectionFormData = sn.inspectionJson
       ? JSON.parse(JSON.stringify(sn.inspectionJson))
       : {};
@@ -991,6 +996,7 @@ export class InspectionReportDetailComponent
   public closeInspectionForm(): void {
     this.inspectingSn.set(null);
     this.inspectionFormData = {};
+    this.inspectionSaveError.set('');
     this.isTransitionExpanded = true; // Auto-expand when done
   }
 
@@ -1038,6 +1044,8 @@ export class InspectionReportDetailComponent
     const currentSn = this.inspectingSn();
     if (!currentSn) return;
 
+    this.inspectionSaveError.set('');
+    this.isSavingInspection.set(true);
     try {
       await this.irService.saveSerialNumberInspection(
         currentSn.id,
@@ -1048,7 +1056,11 @@ export class InspectionReportDetailComponent
       this.closeInspectionForm();
     } catch (error) {
       const e = error as Error;
-      this.formError = e.message || 'Failed to save inspection data.';
+      // Surface inside the drawer where the user is looking (the shared `formError`
+      // renders only on the workflow-actions panel, hidden behind the drawer).
+      this.inspectionSaveError.set(e.message || 'Failed to save inspection data.');
+    } finally {
+      this.isSavingInspection.set(false);
     }
   }
 

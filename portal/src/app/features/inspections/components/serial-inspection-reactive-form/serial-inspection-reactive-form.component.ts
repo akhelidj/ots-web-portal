@@ -51,6 +51,10 @@ export class SerialInspectionReactiveFormComponent
   // Phase B3: the report's template definition (from report.definitionJson).
   // Present → build the form from it; null/undefined → legacy hardcoded schema.
   @Input() definition: TemplateFormDefinition | null = null;
+  /** Host-driven save-in-flight flag → Save button shows a disabled busy state. */
+  @Input() isSaving = false;
+  /** Host-driven save error → rendered in-drawer, next to the Save button. */
+  @Input() saveError = '';
 
   @Output() saveData = new EventEmitter<Record<string, unknown>>();
   @Output() formCancel = new EventEmitter<void>();
