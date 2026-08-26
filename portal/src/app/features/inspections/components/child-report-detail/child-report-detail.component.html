@@ -6,7 +6,7 @@
       [style.--shell-scrollbar-width.px]="shellScrollbarWidth()"
       [ngClass]="
         isHeaderCondensed()
-          ? 'sticky top-0 z-30 report-header-condensed-shell bg-stone-100/95 backdrop-blur'
+          ? 'sticky top-0 z-30 report-header-condensed-shell bg-card backdrop-blur'
           : ''
       "
     >
@@ -25,7 +25,7 @@
         <div class="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
           <button
             (click)="goBack()"
-            class="text-neutral-500 hover:text-primary transition-all duration-300 flex items-center justify-center rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 shrink-0"
+            class="text-muted-foreground hover:text-primary transition-all duration-300 flex items-center justify-center rounded-xl border border-border bg-card hover:bg-muted shrink-0 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
             [style.width.px]="40 - 4 * headerCondenseProgress()"
             [style.height.px]="40 - 4 * headerCondenseProgress()"
             title="Back to parent"
@@ -48,7 +48,7 @@
           </button>
           <div class="min-w-0">
             <h1
-              class="font-semibold tracking-tight text-neutral-900 transition-all duration-300 truncate"
+              class="font-semibold tracking-tight text-foreground transition-all duration-300 truncate"
               [style.font-size.rem]="1.5 - 0.375 * headerCondenseProgress()"
               [style.line-height]="1.2"
               [title]="cr.reportNumber || cr.id"
@@ -65,7 +65,7 @@
               @if (parentReport(); as parent) {
                 <a
                   [routerLink]="getParentReportLink(parent.id)"
-                  class="inline-flex items-center rounded-md border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] font-medium text-primary hover:text-primary-light hover:underline transition-colors"
+                  class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-primary hover:text-primary-light hover:underline transition-colors"
                   title="Parent Report PO"
                 >
                   PO: {{ parent.poNumber }}
@@ -73,7 +73,7 @@
               }
 
               <span
-                class="inline-flex items-center rounded-md border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] text-neutral-500"
+                class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
               >
                 Updated {{ cr.updatedAt | date: 'MMM d, y' }}
               </span>
@@ -83,16 +83,16 @@
         <div
           class="flex items-center gap-2 flex-wrap justify-start sm:justify-end w-full sm:w-auto"
         >
-          @if (userRole !== 'CUSTOMER') {
+          @if (userRole() !== 'CUSTOMER') {
             <span
-              class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-[0.08em] bg-neutral-100 text-neutral-700 border border-neutral-200"
+              class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-[0.08em] bg-muted text-muted-foreground border border-border"
             >
               {{ cr.type }}
             </span>
 
-            @if (allowedTransitions.length > 0) {
+            @if (allowedTransitions().length > 0) {
               <button
-                (click)="isWorkflowModalOpen = true"
+                (click)="isWorkflowModalOpen.set(true)"
                 class="inline-flex justify-center items-center gap-1.5 bg-accent hover:bg-accent/90 text-white px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
                 title="Open Workflow Actions"
               >
@@ -130,9 +130,9 @@
     </div>
 
     <!-- Banners -->
-    @if (uiState?.banners?.length) {
+    @if (uiState()?.banners?.length) {
       <div class="space-y-3">
-        @for (banner of uiState!.banners; track banner.message) {
+        @for (banner of uiState()!.banners; track banner.message) {
           <div
             class="p-4 rounded-lg flex items-start shadow-sm border"
             [ngClass]="{
@@ -155,9 +155,9 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="page-section p-6 flex flex-col h-full">
         <div
-          class="border-b border-neutral-200 pb-3 mb-5 flex justify-between items-center"
+          class="border-b border-border pb-3 mb-5 flex justify-between items-center"
         >
-          <h2 class="text-lg font-semibold text-neutral-900">
+          <h2 class="text-lg font-semibold text-foreground">
             Details & Disposition
           </h2>
           <span
@@ -169,14 +169,14 @@
           <div class="mb-6">
             <div class="flex justify-between items-center mb-3">
               <h3
-                class="text-xs font-bold text-gray-500 uppercase tracking-widest"
+                class="text-xs font-bold text-muted-foreground uppercase tracking-widest"
               >
                 Target Equipment ({{ serials.length }})
               </h3>
               @if (
-                userRole === 'INSPECTOR' ||
-                userRole === 'ADMIN' ||
-                userRole === 'SUPERVISOR'
+                userRole() === 'INSPECTOR' ||
+                userRole() === 'ADMIN' ||
+                userRole() === 'SUPERVISOR'
               ) {
                 <div class="flex items-center gap-2">
                   <input
@@ -184,9 +184,9 @@
                     [checked]="isAllSelectableSelected()"
                     [disabled]="selectableSerialCount() === 0"
                     (change)="selectAll()"
-                    class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                    class="rounded border-border text-primary focus:ring-primary h-4 w-4"
                   />
-                  <span class="text-xs text-gray-500 font-medium"
+                  <span class="text-xs text-muted-foreground font-medium"
                     >Select All</span
                   >
                 </div>
@@ -197,25 +197,25 @@
             >
               @for (sn of serials; track sn.id) {
                 <div
-                  class="p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between hover:border-gray-300 transition-colors group"
+                  class="p-3 bg-background rounded-lg border border-border flex items-center justify-between hover:border-primary/30 transition-colors group"
                 >
                   <div class="flex items-center gap-3">
                     @if (
-                      userRole === 'INSPECTOR' ||
-                      userRole === 'ADMIN' ||
-                      userRole === 'SUPERVISOR'
+                      userRole() === 'INSPECTOR' ||
+                      userRole() === 'ADMIN' ||
+                      userRole() === 'SUPERVISOR'
                     ) {
                       @if (canSelectSerial(sn)) {
                         <input
                           type="checkbox"
                           [checked]="selectedSnIds().has(sn.id)"
                           (change)="toggleSelection(sn.id)"
-                          class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                          class="rounded border-border text-primary focus:ring-primary h-4 w-4"
                         />
                       }
                     }
                     <div class="flex flex-col gap-1">
-                      <span class="code-text font-bold text-gray-900 text-sm">{{
+                      <span class="code-text font-bold text-foreground text-sm">{{
                         sn.serial
                       }}</span>
                       <div class="flex items-center gap-2">
@@ -240,11 +240,11 @@
                     </div>
                   </div>
                   @if (
-                    (uiState?.fieldModes?.['inspectionData'] === 'editable' ||
-                      uiState?.fieldModes?.['disposition'] === 'editable' ||
-                      userRole === 'INSPECTOR' ||
-                      userRole === 'ADMIN' ||
-                      userRole === 'SUPERVISOR') &&
+                    (uiState()?.fieldModes?.['inspectionData'] === 'editable' ||
+                      uiState()?.fieldModes?.['disposition'] === 'editable' ||
+                      userRole() === 'INSPECTOR' ||
+                      userRole() === 'ADMIN' ||
+                      userRole() === 'SUPERVISOR') &&
                     sn.approvalStatus !== 'SUBMITTED_FOR_APPROVAL' &&
                     sn.approvalStatus !== 'APPROVED'
                   ) {
@@ -325,31 +325,32 @@
 
         <div class="flex-grow flex flex-col">
           <div class="flex justify-between items-center mb-2">
-            <label for="operatorNotes" class="form-label text-gray-900 mb-0"
+            <label for="operatorNotes" class="form-label text-foreground mb-0"
               >Operator Notes / Findings</label
             >
             @if (
-              !isEditingNotes &&
-              uiState?.fieldModes?.['inspectionData'] === 'editable'
+              !isEditingNotes() &&
+              uiState()?.fieldModes?.['inspectionData'] === 'editable'
             ) {
               <button
-                (click)="isEditingNotes = true"
+                (click)="isEditingNotes.set(true)"
                 class="text-xs text-primary hover:underline font-medium"
               >
                 Edit Notes
               </button>
             }
           </div>
-          @if (isEditingNotes) {
+          @if (isEditingNotes()) {
             <textarea
               id="operatorNotes"
-              [(ngModel)]="notes"
+              [ngModel]="notes()"
+              (ngModelChange)="notes.set($event)"
               rows="4"
               class="field-control mb-3"
             ></textarea>
             <div class="flex gap-2 justify-end">
               <button
-                (click)="isEditingNotes = false; notes = cr.notes || ''"
+                (click)="isEditingNotes.set(false); notes.set(cr.notes || '')"
                 class="btn btn-secondary btn-sm"
               >
                 Cancel
@@ -360,12 +361,12 @@
             </div>
           } @else {
             <div
-              class="p-4 border border-gray-200 bg-white rounded-lg min-h-[100px] text-sm text-gray-700 whitespace-pre-wrap flex-grow shadow-inner"
+              class="p-4 border border-border bg-card rounded-lg min-h-[100px] text-sm text-foreground whitespace-pre-wrap flex-grow shadow-inner"
             >
               @if (cr.notes) {
                 {{ cr.notes }}
               } @else {
-                <span class="text-gray-400 italic">No notes provided.</span>
+                <span class="text-muted-foreground italic">No notes provided.</span>
               }
             </div>
           }
@@ -374,18 +375,16 @@
 
       <!-- Column 2: Workflow & Attachments -->
       <div class="flex flex-col gap-6 h-full">
-        @if (userRole !== 'CUSTOMER') {}
-
         <!-- Attachments Section (Visible to Everyone) -->
         <div class="page-section p-6 flex flex-col flex-grow shadow-sm">
           <div
-            class="border-b border-neutral-200 pb-3 mb-5 flex justify-between items-center"
+            class="border-b border-border pb-3 mb-5 flex justify-between items-center"
           >
             <h2
-              class="text-lg font-semibold text-neutral-900 flex items-center gap-2"
+              class="text-lg font-semibold text-foreground flex items-center gap-2"
             >
               <svg
-                class="w-5 h-5 text-gray-500"
+                class="w-5 h-5 text-muted-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -401,7 +400,7 @@
             </h2>
             <div class="flex items-center gap-3">
               <span
-                class="bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full text-xs font-semibold border border-gray-200"
+                class="bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full text-xs font-semibold border border-border"
               >
                 {{ cr.attachments?.length || cr.attachmentCount || 0 }}
               </span>
@@ -410,7 +409,7 @@
                   type="button"
                   class="btn btn-primary btn-sm flex items-center gap-1.5"
                   (click)="fileInput.click()"
-                  [disabled]="isUploadingAttachment"
+                  [disabled]="isUploadingAttachment()"
                 >
                   <svg
                     class="w-4 h-4"
@@ -418,7 +417,7 @@
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
-                    @if (isUploadingAttachment) {
+                    @if (isUploadingAttachment()) {
                       <path
                         class="opacity-75"
                         fill="currentColor"
@@ -433,7 +432,7 @@
                       ></path>
                     }
                   </svg>
-                  {{ isUploadingAttachment ? 'Uploading...' : 'Upload File' }}
+                  {{ isUploadingAttachment() ? 'Uploading...' : 'Upload File' }}
                 </button>
                 <input
                   type="file"
@@ -451,7 +450,7 @@
             >
               @for (attachment of cr.attachments; track attachment.id) {
                 <div
-                  class="flex items-center p-3.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-primary/40 hover:shadow-md transition-all group"
+                  class="flex items-center p-3.5 bg-card border border-border rounded-xl shadow-sm hover:border-primary/40 hover:shadow-md transition-all group"
                 >
                   <div
                     class="p-2.5 bg-primary/5 rounded-lg mr-4 border border-primary/10 transition-colors group-hover:bg-primary/10"
@@ -472,18 +471,18 @@
                   </div>
                   <div class="min-w-0 flex-grow">
                     <p
-                      class="text-sm font-semibold text-gray-900 truncate"
+                      class="text-sm font-semibold text-foreground truncate"
                       [title]="attachment.filename"
                     >
                       {{ attachment.filename }}
                     </p>
-                    <p class="text-xs text-gray-500 mt-0.5 tracking-wide">
+                    <p class="text-xs text-muted-foreground mt-0.5 tracking-wide">
                       Attached Document
                     </p>
                   </div>
-                  <div class="ml-4 pl-4 border-l border-gray-100">
+                  <div class="ml-4 pl-4 border-l border-border">
                     <span
-                      class="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-600"
+                      class="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground"
                       title="Download coming soon"
                     >
                       Coming Soon
@@ -494,13 +493,13 @@
             </div>
           } @else {
             <div
-              class="flex flex-col items-center justify-center p-8 bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-xl flex-grow mb-5"
+              class="flex flex-col items-center justify-center p-8 bg-background border-2 border-dashed border-border rounded-xl flex-grow mb-5"
             >
               <div
-                class="p-4 bg-white rounded-full shadow-sm mb-4 border border-gray-100 group-hover:scale-105 transition-transform"
+                class="p-4 bg-card rounded-full shadow-sm mb-4 border border-border group-hover:scale-105 transition-transform"
               >
                 <svg
-                  class="w-8 h-8 text-gray-300"
+                  class="w-8 h-8 text-muted-foreground"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -513,11 +512,11 @@
                   ></path>
                 </svg>
               </div>
-              <p class="text-base text-gray-700 font-semibold mb-1">
+              <p class="text-base text-foreground font-semibold mb-1">
                 No attachments found
               </p>
               <p
-                class="text-sm text-gray-500 max-w-[240px] text-center leading-relaxed"
+                class="text-sm text-muted-foreground max-w-[240px] text-center leading-relaxed"
               >
                 Files and documents related to this report will appear here when
                 uploaded.
@@ -525,8 +524,8 @@
             </div>
           }
 
-          <div class="mt-auto border-t border-gray-100 pt-4">
-            <p class="text-xs text-neutral-500">
+          <div class="mt-auto border-t border-border pt-4">
+            <p class="text-xs text-muted-foreground">
               Attachment download is coming soon.
             </p>
           </div>
@@ -537,19 +536,19 @@
     <div class="h-24 px-4 overflow-hidden pointer-events-none"></div>
   </div>
 
-  @if (userRole !== 'CUSTOMER') {
+  @if (userRole() !== 'CUSTOMER') {
     <!-- Workflow Actions Modal -->
-    @if (isWorkflowModalOpen) {
+    @if (isWorkflowModalOpen()) {
       <div
         class="fixed inset-0 !h-[100dvh] w-screen z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in"
-        (click)="isWorkflowModalOpen = false"
-        (keydown.escape)="isWorkflowModalOpen = false"
+        (click)="isWorkflowModalOpen.set(false)"
+        (keydown.escape)="isWorkflowModalOpen.set(false)"
         tabindex="0"
         role="button"
         aria-label="Close Workflow Modal"
       >
         <div
-          class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300 cursor-default"
+          class="bg-muted rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300 cursor-default"
           (click)="$event.stopPropagation()"
           (keydown)="$event.stopPropagation()"
           tabindex="-1"
@@ -557,9 +556,9 @@
           aria-label="Workflow Actions Dialog"
         >
           <div
-            class="px-6 py-4 bg-white border-b border-neutral-100 flex justify-between items-center shrink-0 shadow-sm z-10"
+            class="px-6 py-4 bg-card border-b border-border flex justify-between items-center shrink-0 shadow-sm z-10"
           >
-            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-3">
+            <h2 class="text-xl font-bold text-foreground flex items-center gap-3">
               <span class="p-2 bg-accent/10 rounded-lg">
                 <svg
                   class="h-6 w-6 text-accent"
@@ -578,8 +577,8 @@
               Workflow Actions
             </h2>
             <button
-              (click)="isWorkflowModalOpen = false"
-              class="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-400 hover:text-neutral-900"
+              (click)="isWorkflowModalOpen.set(false)"
+              class="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
             >
               <svg
                 class="w-6 h-6"
@@ -598,58 +597,58 @@
           </div>
 
           <div
-            class="flex-grow overflow-y-auto p-4 sm:p-6 custom-scrollbar bg-white"
+            class="flex-grow overflow-y-auto p-4 sm:p-6 custom-scrollbar bg-card"
           >
             <div class="flex flex-col">
-              @if (formError && !formError.includes('[object Object]')) {
+              @if (formError() && !formError().includes('[object Object]')) {
                 <div
                   class="mb-5 p-4 bg-error-light text-error-dark border-l-4 border-error rounded-r-md text-sm font-medium whitespace-pre-line shadow-sm"
                 >
-                  {{ formError }}
+                  {{ formError() }}
                 </div>
               }
 
               <!-- Transitions Selection Grid -->
               <div class="mb-6">
                 <span
-                  class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 block"
+                  class="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 block"
                   >Available Actions</span
                 >
                 <div class="flex flex-wrap gap-3">
                   @for (
-                    transition of allowedTransitions;
+                    transition of allowedTransitions();
                     track transition.toStatus
                   ) {
                     <button
                       (click)="openReasonSelect(transition)"
                       class="btn transition-all duration-200 transform active:scale-95 px-6 py-3 font-semibold shadow-sm border border-transparent flex items-center gap-2"
                       [class.bg-primary]="
-                        selectedTransition?.toStatus === transition.toStatus
+                        selectedTransition()?.toStatus === transition.toStatus
                       "
                       [class.text-white]="
-                        selectedTransition?.toStatus === transition.toStatus
+                        selectedTransition()?.toStatus === transition.toStatus
                       "
                       [class.hover:bg-primary]="
-                        selectedTransition?.toStatus !== transition.toStatus
+                        selectedTransition()?.toStatus !== transition.toStatus
                       "
                       [class.hover:text-white]="
-                        selectedTransition?.toStatus !== transition.toStatus
+                        selectedTransition()?.toStatus !== transition.toStatus
                       "
-                      [class.bg-neutral-100]="
-                        selectedTransition?.toStatus !== transition.toStatus
+                      [class.bg-muted]="
+                        selectedTransition()?.toStatus !== transition.toStatus
                       "
-                      [class.text-neutral-700]="
-                        selectedTransition?.toStatus !== transition.toStatus
+                      [class.text-muted-foreground]="
+                        selectedTransition()?.toStatus !== transition.toStatus
                       "
-                      [class.border-neutral-200]="
-                        selectedTransition?.toStatus !== transition.toStatus
+                      [class.border-border]="
+                        selectedTransition()?.toStatus !== transition.toStatus
                       "
                       [disabled]="!transition.enabled"
                       [title]="transition.disabledReason || ''"
                     >
                       <span>{{ transition.label || transition.toStatus }}</span>
                       @if (
-                        selectedTransition?.toStatus === transition.toStatus
+                        selectedTransition()?.toStatus === transition.toStatus
                       ) {
                         <svg
                           class="h-4 w-4"
@@ -667,8 +666,8 @@
                       }
                     </button>
                   }
-                  @if (allowedTransitions.length === 0) {
-                    <p class="text-sm text-gray-400 italic py-2">
+                  @if (allowedTransitions().length === 0) {
+                    <p class="text-sm text-muted-foreground italic py-2">
                       No transitions available based on current status and role.
                     </p>
                   }
@@ -676,22 +675,19 @@
               </div>
 
               <!-- Reason / Notes Area -->
-              @if (selectedTransition) {
+              @if (selectedTransition(); as st) {
                 <div
                   class="p-6 border border-primary/20 rounded-xl bg-primary/5 space-y-5 animate-in slide-in-from-top-4 duration-300"
                 >
                   <div class="flex items-center justify-between">
                     <p
-                      class="text-sm font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2"
+                      class="text-sm font-bold text-foreground uppercase tracking-widest flex items-center gap-2"
                     >
                       Confirm Action:
                       <span
-                        class="text-primary bg-white px-3 py-1 rounded-full shadow-sm border border-primary/10"
+                        class="text-primary bg-card px-3 py-1 rounded-full shadow-sm border border-primary/10"
                       >
-                        {{
-                          selectedTransition.label ||
-                            selectedTransition.toStatus
-                        }}
+                        {{ st.label || st.toStatus }}
                       </span>
                     </p>
                   </div>
@@ -699,20 +695,21 @@
                   <div class="space-y-2">
                     <label
                       for="child-transition-reason"
-                      class="text-xs font-bold text-gray-500 uppercase tracking-widest"
+                      class="text-xs font-bold text-muted-foreground uppercase tracking-widest"
                     >
                       Notes / Reason
-                      {{ selectedTransition.requiresReason ? '*' : '' }}
+                      {{ st.requiresReason ? '*' : '' }}
                     </label>
                     <textarea
                       id="child-transition-reason"
-                      [(ngModel)]="formReason"
+                      [ngModel]="formReason()"
+                      (ngModelChange)="formReason.set($event)"
                       [placeholder]="
-                        selectedTransition.requiresReason
+                        st.requiresReason
                           ? 'A reason or comment is required for this transition...'
                           : 'Add any optional notes or remarks here...'
                       "
-                      class="field-control w-full p-4 text-sm min-h-[120px] bg-white border-2 border-primary/20 focus:border-primary shadow-inner rounded-xl"
+                      class="field-control w-full p-4 text-sm min-h-[120px] bg-card border-2 border-primary/20 focus:border-primary shadow-inner rounded-xl"
                     ></textarea>
                   </div>
 
@@ -720,17 +717,15 @@
                     class="flex justify-end gap-3 pt-4 border-t border-primary/10"
                   >
                     <button
-                      (click)="selectedTransition = null; formReason = ''"
-                      class="btn btn-secondary border-transparent hover:bg-neutral-200"
+                      (click)="selectedTransition.set(null); formReason.set('')"
+                      class="btn btn-secondary border-transparent hover:bg-muted"
                     >
                       Cancel
                     </button>
                     <button
-                      (click)="onTransition(); isWorkflowModalOpen = false"
+                      (click)="onTransition(); isWorkflowModalOpen.set(false)"
                       class="btn btn-primary px-8 shadow-md"
-                      [disabled]="
-                        selectedTransition.requiresReason && !formReason.trim()
-                      "
+                      [disabled]="st.requiresReason && !formReason().trim()"
                     >
                       Confirm Action
                     </button>
@@ -750,22 +745,22 @@
       class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-[slideUp_0.3s_ease-out]"
     >
       <div
-        class="bg-gray-900 text-white px-6 py-4 rounded-2xl shadow-2xl border border-gray-700 flex items-center gap-6 backdrop-blur-md bg-opacity-90"
+        class="bg-foreground text-white px-6 py-4 rounded-2xl shadow-2xl border border-white/15 flex items-center gap-6 backdrop-blur-md"
       >
-        <div class="flex items-center gap-3 pr-6 border-r border-gray-700">
+        <div class="flex items-center gap-3 pr-6 border-r border-white/15">
           <span
-            class="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-sm font-bold shadow-lg shadow-primary/20"
+            class="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-sm font-bold shadow-lg shadow-accent/20"
           >
             {{ selectedSnIds().size }}
           </span>
-          <span class="font-medium text-sm text-gray-300">items selected</span>
+          <span class="font-medium text-sm text-white/60">items selected</span>
         </div>
 
         <div class="flex items-center gap-3">
-          @if (userRole === 'INSPECTOR' || userRole === 'ADMIN') {
+          @if (userRole() === 'INSPECTOR' || userRole() === 'ADMIN') {
             <button
               (click)="submitSelectedForApproval()"
-              class="bg-white text-gray-900 hover:bg-gray-100 px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2"
+              class="bg-card text-foreground hover:bg-muted px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2"
             >
               <svg
                 class="w-4 h-4"
@@ -786,7 +781,7 @@
 
           <button
             (click)="clearSelection()"
-            class="text-gray-400 hover:text-white px-3 py-2 text-sm font-medium transition-colors"
+            class="text-white/60 hover:text-white px-3 py-2 text-sm font-medium transition-colors"
           >
             Dismiss
           </button>
@@ -795,7 +790,7 @@
     </div>
   }
 
-  @if (inspectingSnId && parentReport(); as parentData) {
+  @if (inspectingSnId() && parentReport(); as parentData) {
     <div
       class="fixed inset-0 !h-[100dvh] w-screen z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
       (click)="closeInspectionForm()"
@@ -805,7 +800,7 @@
       aria-label="Close inspection form"
     >
       <div
-        class="bg-white w-full max-w-2xl !h-[100dvh] flex flex-col shadow-2xl border-l border-gray-200 animate-in slide-in-from-right duration-500 overflow-hidden"
+        class="bg-card w-full max-w-2xl !h-[100dvh] flex flex-col shadow-2xl border-l border-border animate-in slide-in-from-right duration-500 overflow-hidden"
         (click)="$event.stopPropagation()"
         (keydown)="$event.stopPropagation()"
         tabindex="-1"
@@ -814,7 +809,7 @@
       >
         <!-- Drawer Header -->
         <div
-          class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center shrink-0"
+          class="px-6 py-4 bg-muted border-b border-border flex justify-between items-center shrink-0"
         >
           <div class="flex gap-4 items-center">
             <div class="p-2 bg-primary/10 rounded-xl">
@@ -833,18 +828,18 @@
               </svg>
             </div>
             <div>
-              <h2 class="text-lg font-bold text-gray-900 leading-tight">
+              <h2 class="text-lg font-bold text-foreground leading-tight">
                 Inspect Serial
               </h2>
               <p class="font-mono text-sm text-primary font-bold">
-                {{ inspectingSnValue }}
+                {{ inspectingSnValue() }}
               </p>
             </div>
-            <div class="flex gap-1 ml-4 border-l border-gray-200 pl-4">
+            <div class="flex gap-1 ml-4 border-l border-border pl-4">
               <button
                 (click)="goToPrevSn()"
                 [disabled]="!hasPrevSn"
-                class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors"
+                class="p-1.5 hover:bg-muted rounded-lg disabled:opacity-20 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
                 title="Previous SN"
               >
                 <svg
@@ -864,7 +859,7 @@
               <button
                 (click)="goToNextSn()"
                 [disabled]="!hasNextSn"
-                class="p-1.5 hover:bg-gray-200 rounded-lg disabled:opacity-20 transition-colors"
+                class="p-1.5 hover:bg-muted rounded-lg disabled:opacity-20 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
                 title="Next SN"
               >
                 <svg
@@ -885,7 +880,7 @@
           </div>
           <button
             (click)="closeInspectionForm()"
-            class="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-900"
+            class="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
           >
             <svg
               class="w-6 h-6"
@@ -905,20 +900,22 @@
 
         <!-- Drawer Body -->
         <div
-          class="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar bg-white"
+          class="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar bg-card"
         >
           @if (parentData) {
             <app-serial-inspection-reactive-form
-              [initialData]="inspectionFormData"
+              [initialData]="inspectionFormData()"
               [schemaKey]="parentData.templateKey"
               [definition]="parentDefinition"
               [isReadOnly]="
-                inspectingSnApprovalStatus === 'SUBMITTED_FOR_APPROVAL' ||
-                inspectingSnApprovalStatus === 'APPROVED' ||
-                (uiState?.fieldModes?.['inspectionData'] !== 'editable' &&
-                  uiState?.fieldModes?.['disposition'] !== 'editable')
+                inspectingSnApprovalStatus() === 'SUBMITTED_FOR_APPROVAL' ||
+                inspectingSnApprovalStatus() === 'APPROVED' ||
+                (uiState()?.fieldModes?.['inspectionData'] !== 'editable' &&
+                  uiState()?.fieldModes?.['disposition'] !== 'editable')
               "
               [excludedDispositions]="['REWORK']"
+              [isSaving]="isSavingInspection()"
+              [saveError]="inspectionSaveError()"
               (saveData)="saveInspectionForm($event)"
               (formCancel)="closeInspectionForm()"
             >
@@ -936,23 +933,23 @@
     class="fixed inset-0 !h-[100dvh] w-screen z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in"
   >
     <div
-      class="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4"
+      class="bg-card rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4"
     >
       <div
-        class="p-6 bg-gray-50 border-b border-gray-100 flex justify-between items-center"
+        class="p-6 bg-muted border-b border-border flex justify-between items-center"
       >
         <div>
-          <h3 class="text-lg font-bold text-gray-900">Return History</h3>
+          <h3 class="text-lg font-bold text-foreground">Return History</h3>
           <p class="text-xs font-mono text-primary font-bold mt-1">
             SN: {{ activeHistorySn()?.serial }}
           </p>
         </div>
         <button
           (click)="closeHistory()"
-          class="p-2 hover:bg-gray-200 rounded-full"
+          class="p-2 hover:bg-muted rounded-full focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
         >
           <svg
-            class="w-6 h-6 text-gray-400"
+            class="w-6 h-6 text-muted-foreground"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -961,12 +958,12 @@
           </svg>
         </button>
       </div>
-      <div class="p-8 overflow-y-auto flex-grow bg-white custom-scrollbar">
+      <div class="p-8 overflow-y-auto flex-grow bg-card custom-scrollbar">
         @if (historyNotes().length === 0) {
           <div class="text-center py-12 flex flex-col items-center gap-4">
-            <div class="p-4 bg-gray-50 rounded-full">
+            <div class="p-4 bg-muted rounded-full">
               <svg
-                class="w-8 h-8 text-gray-300"
+                class="w-8 h-8 text-muted-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -979,30 +976,30 @@
                 ></path>
               </svg>
             </div>
-            <p class="text-sm font-medium text-gray-500">
+            <p class="text-sm font-medium text-muted-foreground">
               No return notes found for this serial number.
             </p>
           </div>
         } @else {
           <div
-            class="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100"
+            class="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-border"
           >
             @for (entry of historyNotes(); track $index) {
               <div class="relative pl-8">
                 <div
-                  class="absolute left-0 top-1.5 w-6 h-6 rounded-full border-4 border-white bg-primary shadow-sm z-10"
+                  class="absolute left-0 top-1.5 w-6 h-6 rounded-full border-4 border-card bg-primary shadow-sm z-10"
                 ></div>
                 <div class="flex flex-col gap-2">
                   <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-gray-900">{{
+                    <span class="text-xs font-bold text-foreground">{{
                       entry.user || 'System'
                     }}</span>
-                    <span class="text-[10px] font-bold text-gray-400">{{
+                    <span class="text-[10px] font-bold text-muted-foreground">{{
                       entry.date | date: 'MMM d, h:mm a'
                     }}</span>
                   </div>
-                  <div class="p-4 bg-gray-50 border border-gray-100 rounded-xl">
-                    <p class="text-sm text-gray-600 leading-relaxed italic">
+                  <div class="p-4 bg-muted border border-border rounded-xl">
+                    <p class="text-sm text-muted-foreground leading-relaxed italic">
                       "{{ entry.notes }}"
                     </p>
                   </div>
@@ -1012,7 +1009,7 @@
           </div>
         }
       </div>
-      <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+      <div class="p-6 bg-muted border-t border-border flex justify-end">
         <button (click)="closeHistory()" class="btn btn-secondary">
           Close
         </button>

@@ -139,37 +139,50 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     })[]
   >([]);
 
-  public inspectingSnId: string | null = null;
-  public inspectingSnValue = '';
-  public inspectingSnApprovalStatus = '';
-  public inspectionFormData: Record<string, unknown> = {};
+  // Drawer state is signal-backed so a serial swap (Prev/Next) drives change
+  // detection in this zoneless app and never mutates `inspectionFormData` in place
+  // while the drawer's form is mounted (a fresh reference re-runs the form's
+  // ngOnChanges → repatch). Mirrors the parent detail's signal discipline.
+  public inspectingSnId = signal<string | null>(null);
+  public inspectingSnValue = signal('');
+  public inspectingSnApprovalStatus = signal('');
+  public inspectionFormData = signal<Record<string, unknown>>({});
+  /**
+   * Drawer save feedback, surfaced INSIDE the drawer (mirrors the parent). Before
+   * this, a failed serial save wrote only `formError`, which renders on the hidden
+   * workflow modal — so the failure was silent to a user looking at the drawer.
+   */
+  public isSavingInspection = signal(false);
+  public inspectionSaveError = signal('');
 
-  public uiState: ChildReportUiState | null = null;
-  public userRole = '';
-  public allowedTransitions: {
+  public uiState = signal<ChildReportUiState | null>(null);
+  public userRole = signal('');
+  public allowedTransitions = signal<
+    {
+      toStatus: string;
+      requiresReason: boolean;
+      enabled: boolean;
+      label?: string;
+      disabledReason?: string;
+    }[]
+  >([]);
+  public selectedTransition = signal<{
     toStatus: string;
     requiresReason: boolean;
-    enabled: boolean;
     label?: string;
-    disabledReason?: string;
-  }[] = [];
-  public selectedTransition: {
-    toStatus: string;
-    requiresReason: boolean;
-    label?: string;
-  } | null = null;
-  public formReason = '';
-  public formError = '';
+  } | null>(null);
+  public formReason = signal('');
+  public formError = signal('');
 
-  public notes = '';
-  public isEditingNotes = false;
+  public notes = signal('');
+  public isEditingNotes = signal(false);
   private isRefreshing = false;
   private refreshQueued = false;
   private isDestroyed = false;
 
-  public isUploadingAttachment = false;
+  public isUploadingAttachment = signal(false);
 
-  public isWorkflowModalOpen = false;
+  public isWorkflowModalOpen = signal(false);
 
   public get isOnline(): boolean {
     return this.connectivity.isOnline();
@@ -178,7 +191,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   ngOnInit() {
     const p = this.session.profile();
     if (p) {
-      this.userRole = p.role || '';
+      this.userRole.set(p.role || '');
     }
 
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
@@ -271,8 +284,8 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       this.cr.set(cr);
 
       if (cr) {
-        if (!this.isEditingNotes) {
-          this.notes = cr.notes || '';
+        if (!this.isEditingNotes()) {
+          this.notes.set(cr.notes || '');
         }
 
         // Fetch parent report — pull from server if not found locally (private window case)
@@ -316,9 +329,9 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
 
         // Pull batches for this child report (linked via reportId)
         const canAccessBatches =
-          this.userRole === APP_ROLES.INSPECTOR ||
-          this.userRole === APP_ROLES.SUPERVISOR ||
-          this.userRole === APP_ROLES.ADMIN;
+          this.userRole() === APP_ROLES.INSPECTOR ||
+          this.userRole() === APP_ROLES.SUPERVISOR ||
+          this.userRole() === APP_ROLES.ADMIN;
 
         if (this.isOnline && canAccessBatches) {
           await this.irService.pullBatchesForReport(cr.inspectionReportId);
@@ -350,20 +363,23 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
         );
         this.batches.set(enrichedBatches);
 
-        this.uiState = getChildReportUiState({
-          role: this.userRole as AppRole,
+        const uiState = getChildReportUiState({
+          role: this.userRole() as AppRole,
           reportStatus: cr.status as ChildReportStatus,
           parentReportStatus: parent?.status || 'UNKNOWN',
           isOffline: !this.isOnline,
           syncState: cr.syncState as 'SYNCED' | 'PENDING' | 'CONFLICT',
         });
+        this.uiState.set(uiState);
 
-        this.allowedTransitions = this.uiState.transitionChoices.filter(
-          (t) => t.toStatus !== 'SUBMITTED_FOR_APPROVAL',
+        this.allowedTransitions.set(
+          uiState.transitionChoices.filter(
+            (t) => t.toStatus !== 'SUBMITTED_FOR_APPROVAL',
+          ),
         );
       } else {
-        this.uiState = null;
-        this.allowedTransitions = [];
+        this.uiState.set(null);
+        this.allowedTransitions.set([]);
       }
     } finally {
       this.isRefreshing = false;
@@ -378,15 +394,15 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    if (this.userRole === APP_ROLES.INSPECTOR) {
+    if (this.userRole() === APP_ROLES.INSPECTOR) {
       return sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT;
     }
 
-    if (this.userRole === APP_ROLES.SUPERVISOR) {
+    if (this.userRole() === APP_ROLES.SUPERVISOR) {
       return sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL;
     }
 
-    if (this.userRole === APP_ROLES.ADMIN) {
+    if (this.userRole() === APP_ROLES.ADMIN) {
       return sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT;
     }
 
@@ -465,8 +481,9 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     const attachmentCount =
       this.cr()?.attachmentCount ?? this.cr()?.attachments?.length ?? 0;
     if (attachmentCount < 1) {
-      this.formError =
-        'At least one attachment is required before submitting child report serials for approval.';
+      this.formError.set(
+        'At least one attachment is required before submitting child report serials for approval.',
+      );
       return;
     }
 
@@ -479,7 +496,9 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       this.clearSelection();
       await this.refreshData();
     } catch (e) {
-      this.formError = (e as Error).message || 'Failed to submit for approval';
+      this.formError.set(
+        (e as Error).message || 'Failed to submit for approval',
+      );
     }
   }
 
@@ -487,52 +506,55 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     toStatus: string;
     requiresReason: boolean;
   }): void {
-    this.selectedTransition = transition;
-    this.formReason = '';
-    this.formError = '';
+    this.selectedTransition.set(transition);
+    this.formReason.set('');
+    this.formError.set('');
   }
 
   public async onTransition() {
-    this.formError = '';
-    if (!this.selectedTransition) return;
+    this.formError.set('');
+    const transition = this.selectedTransition();
+    if (!transition) return;
 
     try {
-      if (this.notes !== this.cr()?.notes) {
-        await this.crService.updateNotes(this.reportId, this.notes);
+      if (this.notes() !== this.cr()?.notes) {
+        await this.crService.updateNotes(this.reportId, this.notes());
       }
       await this.crService.transition(
         this.reportId,
-        this.selectedTransition.toStatus as LocalChildReport['status'],
-        this.formReason,
+        transition.toStatus as LocalChildReport['status'],
+        this.formReason(),
       );
-      this.selectedTransition = null;
-      this.formReason = '';
-      this.isEditingNotes = false;
+      this.selectedTransition.set(null);
+      this.formReason.set('');
+      this.isEditingNotes.set(false);
       await this.refreshData();
     } catch (error) {
       const e = error as { error?: { message?: string }; message?: string };
-      this.formError =
+      this.formError.set(
         e?.error?.message ||
-        (e as Error)?.message ||
-        'Failed to transition report.';
+          (e as Error)?.message ||
+          'Failed to transition report.',
+      );
     }
   }
 
   public async saveNotes() {
-    this.formError = '';
+    this.formError.set('');
     try {
-      await this.crService.updateNotes(this.reportId, this.notes);
-      this.isEditingNotes = false;
+      await this.crService.updateNotes(this.reportId, this.notes());
+      this.isEditingNotes.set(false);
       await this.refreshData();
     } catch (error) {
       const e = error as { error?: { message?: string }; message?: string };
-      this.formError =
-        e?.error?.message || (e as Error)?.message || 'Failed to save notes.';
+      this.formError.set(
+        e?.error?.message || (e as Error)?.message || 'Failed to save notes.',
+      );
     }
   }
 
   public getParentReportLink(parentId: string): string[] {
-    const role = this.userRole.toLowerCase();
+    const role = this.userRole().toLowerCase();
     return ['/', role, 'reports', parentId];
   }
 
@@ -541,7 +563,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     if (parentId) {
       this.router.navigate(this.getParentReportLink(parentId));
     } else {
-      const role = this.userRole.toLowerCase();
+      const role = this.userRole().toLowerCase();
       if (role === 'admin' || role === 'inspector') {
         this.router.navigate(['/', role, 'reports']);
       } else {
@@ -553,67 +575,72 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   public openInspectionForm(id: string) {
     const target = this.serials().find((s) => s.id === id);
     if (!target) return;
-    this.inspectingSnId = id;
-    this.inspectingSnValue = target.serial;
-    this.inspectingSnApprovalStatus = target.approvalStatus || '';
-    this.inspectionFormData = target.inspectionData || {};
+    this.inspectionSaveError.set('');
+    this.inspectingSnId.set(id);
+    this.inspectingSnValue.set(target.serial);
+    this.inspectingSnApprovalStatus.set(target.approvalStatus || '');
+    // Fresh object reference (never a mutation) so the mounted form's ngOnChanges
+    // repatches when swapping serials via Prev/Next.
+    this.inspectionFormData.set({ ...(target.inspectionData || {}) });
   }
 
   public closeInspectionForm() {
-    this.inspectingSnId = null;
-    this.inspectingSnValue = '';
-    this.inspectingSnApprovalStatus = '';
-    this.inspectionFormData = {};
+    this.inspectingSnId.set(null);
+    this.inspectingSnValue.set('');
+    this.inspectingSnApprovalStatus.set('');
+    this.inspectionFormData.set({});
+    this.inspectionSaveError.set('');
   }
 
   public async saveInspectionForm(data: Record<string, unknown>) {
-    if (!this.inspectingSnId) return;
+    const snId = this.inspectingSnId();
+    if (!snId) return;
     const cr = this.cr();
     if (!cr) return;
 
-    const target = this.serials().find((s) => s.id === this.inspectingSnId);
-
-    // Extract the new disposition from the emitted form data
-    const bodyData = data['body'] as Record<string, unknown> | undefined;
-    const newDisposition = (bodyData?.['emiResult'] ||
-      target?.disposition) as string;
-
+    // Align with the parent: send only inspectionData and let the server derive the
+    // disposition (it reads inspectionData.body.emiResult itself in
+    // ChildReportsService.updateChildReportSerialNumber and re-applies the REWORK
+    // guard there). No client-side body.emiResult coupling.
+    this.inspectionSaveError.set('');
+    this.isSavingInspection.set(true);
     try {
-      await this.crService.updateSerialNumberInspection(
-        this.reportId,
-        this.inspectingSnId,
-        data,
-        newDisposition,
-      );
+      await this.crService.updateSerialNumberInspection(this.reportId, snId, data);
       this.closeInspectionForm();
       await this.refreshData();
     } catch (e) {
       const err = e as { error?: { message?: string }; message?: string };
-      this.formError =
+      this.inspectionSaveError.set(
         err?.error?.message ||
-        (err as Error)?.message ||
-        'Failed to save inspection data.';
+          (err as Error)?.message ||
+          'Failed to save inspection data.',
+      );
+    } finally {
+      this.isSavingInspection.set(false);
     }
   }
 
   public get hasPrevSn(): boolean {
-    if (!this.inspectingSnId) return false;
+    const id = this.inspectingSnId();
+    if (!id) return false;
     const all = this.serials();
-    const idx = all.findIndex((s) => s.id === this.inspectingSnId);
+    const idx = all.findIndex((s) => s.id === id);
     return idx > 0;
   }
 
   public get hasNextSn(): boolean {
-    if (!this.inspectingSnId) return false;
+    const id = this.inspectingSnId();
+    if (!id) return false;
     const all = this.serials();
-    const idx = all.findIndex((s) => s.id === this.inspectingSnId);
+    const idx = all.findIndex((s) => s.id === id);
     return idx >= 0 && idx < all.length - 1;
   }
 
   public goToPrevSn() {
-    if (!this.inspectingSnId) return;
+    const id = this.inspectingSnId();
+    if (!id) return;
     const all = this.serials();
-    const idx = all.findIndex((s) => s.id === this.inspectingSnId);
+    const idx = all.findIndex((s) => s.id === id);
     if (idx > 0) {
       const prev = all[idx - 1];
       if (prev) this.openInspectionForm(prev.id);
@@ -621,9 +648,10 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   }
 
   public goToNextSn() {
-    if (!this.inspectingSnId) return;
+    const id = this.inspectingSnId();
+    if (!id) return;
     const all = this.serials();
-    const idx = all.findIndex((s) => s.id === this.inspectingSnId);
+    const idx = all.findIndex((s) => s.id === id);
     if (idx >= 0 && idx < all.length - 1) {
       const next = all[idx + 1];
       if (next) this.openInspectionForm(next.id);
@@ -636,20 +664,21 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
 
     const file = input.files[0];
     if (!file) return;
-    this.isUploadingAttachment = true;
-    this.formError = '';
+    this.isUploadingAttachment.set(true);
+    this.formError.set('');
 
     try {
       await this.crService.uploadAttachment(this.reportId, file);
       await this.refreshData();
     } catch (e) {
       const err = e as { error?: { message?: string }; message?: string };
-      this.formError =
+      this.formError.set(
         err?.error?.message ||
-        (err as Error)?.message ||
-        'Failed to upload attachment.';
+          (err as Error)?.message ||
+          'Failed to upload attachment.',
+      );
     } finally {
-      this.isUploadingAttachment = false;
+      this.isUploadingAttachment.set(false);
       // Reset input value so the same file could be selected again if it failed
       input.value = '';
     }
