@@ -293,6 +293,9 @@ export class InspectionReportDetailComponent
 
   public isEditingMeta = signal<boolean>(false);
   public isEditingGlobalComment = signal<boolean>(false);
+  // Restored workflow modal — a signal (not the old plain field) so a reopen after an
+  // await re-renders under zoneless change detection.
+  public isWorkflowModalOpen = signal<boolean>(false);
 
   ngAfterViewInit(): void {
     this.setupShellScrollTracking();

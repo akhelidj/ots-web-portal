@@ -35,44 +35,17 @@
           uiState?.actions?.['ADMIN_EXPORT']?.disabledReason ||
           ''
         "
-        [hasWorkflowActions]="false"
+        [hasWorkflowActions]="
+          !isCustomer() && (allowedTransitions.length > 0 || canPublishReport())
+        "
         (export)="exportReport()"
+        (openWorkflow)="isWorkflowModalOpen.set(true)"
       />
     </div>
 
     <!-- BANNERS -->
     @if (!isCustomer()) {
       <app-inspection-report-banners [banners]="uiState?.banners || []" />
-    }
-
-    <!-- WORKFLOW ACTION (inline, sticky near the header) -->
-    @if (
-      !isCustomer() &&
-      (allowedTransitions.length > 0 ||
-        canPublishReport() ||
-        reportData.pendingTransitionToStatus)
-    ) {
-      <div
-        class="sticky top-0 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-stone-100/95 backdrop-blur border-b border-gray-200"
-      >
-        <app-inspection-report-transition-actions
-          [report]="reportData"
-          [expanded]="true"
-          [isFixed]="false"
-          [allowedTransitions]="allowedTransitions"
-          [selectedTransition]="selectedTransition"
-          [formReason]="formReason"
-          [formError]="formError"
-          [validationResult]="validationResult"
-          [isOnline]="isOnline"
-          [canPublish]="canPublishReport()"
-          [isPublishing]="isPublishingReport()"
-          (selectTransition)="openReasonSelect($event)"
-          (formReasonChange)="formReason = $event"
-          (confirmTransition)="onTransition()"
-          (cancelTransition)="selectedTransition = null; formReason = ''"
-        />
-      </div>
     }
 
     <!-- VALIDATION ERROR SUMMARY (focusable; skill: Focusable Error Summary) -->
@@ -137,187 +110,240 @@
       </div>
     }
 
-    <!-- TAB NAVIGATION (top, underlined) -->
-    <div class="border-b border-gray-200">
-      <nav
-        class="flex gap-1 sm:gap-2 overflow-x-auto custom-scrollbar"
-        aria-label="Tabs"
-      >
-        <button
-          (click)="onTabClick('summary')"
-          [class]="
-            activeTab() === 'summary'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          "
-          class="whitespace-nowrap flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 -mb-px font-medium text-sm transition-colors"
+    <!-- TAB NAVIGATION (fixed bottom bar; static active indicator, no sliding underline) -->
+    <div
+      class="z-30 fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] pb-safe"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav
+          class="flex justify-between sm:justify-center sm:gap-14"
+          aria-label="Tabs"
         >
-          <svg
-            class="w-4 h-4 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-            ></path>
-          </svg>
-          <span>Summary</span>
-          @if (tabNeedsAttention('summary')) {
-            <span
-              class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
-              aria-hidden="true"
-            ></span>
-          }
-        </button>
-
-        <button
-          (click)="onTabClick('serials')"
-          [title]="tabTooltip('serials')"
-          [class]="
-            activeTab() === 'serials'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          "
-          class="whitespace-nowrap flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 -mb-px font-medium text-sm transition-colors"
-        >
-          <svg
-            class="w-4 h-4 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 6h16M4 10h16M4 14h16M4 18h16"
-            ></path>
-          </svg>
-          <span>Pipes</span>
-          @if (serialsUninspectedCount() > 0) {
-            <span
-              class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold leading-none"
-              [attr.aria-label]="
-                serialsUninspectedCount() + ' pipes need inspection'
-              "
-              >{{ serialsUninspectedCount() }}</span
-            >
-          } @else if (tabNeedsAttention('serials')) {
-            <span
-              class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
-              aria-hidden="true"
-            ></span>
-          }
-        </button>
-
-        @if (canAccessBatchApprovals()) {
           <button
-            (click)="hasSubmittedBatches() ? onTabClick('approvals') : null"
-            [disabled]="!hasSubmittedBatches()"
-            [title]="
-              hasSubmittedBatches()
-                ? tabTooltip('approvals')
-                : 'No approval batches submitted yet'
-            "
+            (click)="onTabClick('summary')"
             [class]="
-              activeTab() === 'approvals'
-                ? 'border-primary text-primary'
-                : hasSubmittedBatches()
-                  ? 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  : 'border-transparent text-gray-300 cursor-not-allowed'
+              activeTab() === 'summary'
+                ? 'text-primary border-accent'
+                : 'text-gray-500 hover:text-gray-700 border-transparent'
             "
-            class="whitespace-nowrap flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 -mb-px font-medium text-sm transition-colors"
+            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group border-t-2"
           >
-            <svg
-              class="w-4 h-4 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <div
+              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
+              [ngClass]="{ 'bg-primary/10': activeTab() === 'summary' }"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
-            </svg>
-            <span>Approvals</span>
-            @if (pendingApprovalCount() > 0) {
-              <span
-                class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold leading-none"
-                [attr.aria-label]="
-                  pendingApprovalCount() + ' batches pending approval'
-                "
-                >{{ pendingApprovalCount() }}</span
+              <svg
+                class="w-5 h-5 sm:w-4 sm:h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-            }
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                ></path>
+              </svg>
+            </div>
+            <div class="flex items-center gap-2">
+              <span
+                class="sm:block"
+                [class.font-bold]="activeTab() === 'summary'"
+                >Summary</span
+              >
+              @if (tabNeedsAttention('summary')) {
+                <span
+                  class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
+                  aria-hidden="true"
+                ></span>
+              }
+            </div>
           </button>
-        }
 
-        <button
-          (click)="onTabClick('specs')"
-          [class]="
-            activeTab() === 'specs'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          "
-          class="whitespace-nowrap flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 -mb-px font-medium text-sm transition-colors"
-        >
-          <svg
-            class="w-4 h-4 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          <button
+            (click)="onTabClick('serials')"
+            [title]="tabTooltip('serials')"
+            [class]="
+              activeTab() === 'serials'
+                ? 'text-primary border-accent'
+                : 'text-gray-500 hover:text-gray-700 border-transparent'
+            "
+            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group border-t-2"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-            ></path>
-          </svg>
-          <span>Specs</span>
-          @if (tabNeedsAttention('specs')) {
-            <span
-              class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
-              aria-hidden="true"
-            ></span>
+            <div
+              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
+              [ngClass]="{ 'bg-primary/10': activeTab() === 'serials' }"
+            >
+              <svg
+                class="w-5 h-5 sm:w-4 sm:h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                ></path>
+              </svg>
+            </div>
+            <div class="flex items-center gap-2">
+              <span
+                class="sm:block"
+                [class.font-bold]="activeTab() === 'serials'"
+                >Pipes</span
+              >
+              @if (serialsUninspectedCount() > 0) {
+                <span
+                  class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold leading-none"
+                  [attr.aria-label]="
+                    serialsUninspectedCount() + ' pipes need inspection'
+                  "
+                  >{{ serialsUninspectedCount() }}</span
+                >
+              } @else if (tabNeedsAttention('serials')) {
+                <span
+                  class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
+                  aria-hidden="true"
+                ></span>
+              }
+            </div>
+          </button>
+
+          @if (canAccessBatchApprovals()) {
+            <button
+              (click)="hasSubmittedBatches() ? onTabClick('approvals') : null"
+              [disabled]="!hasSubmittedBatches()"
+              [title]="
+                hasSubmittedBatches()
+                  ? tabTooltip('approvals')
+                  : 'No approval batches submitted yet'
+              "
+              [class]="
+                activeTab() === 'approvals'
+                  ? 'text-primary border-accent'
+                  : hasSubmittedBatches()
+                    ? 'text-gray-500 hover:text-gray-700 border-transparent'
+                    : 'text-gray-300 cursor-not-allowed border-transparent'
+              "
+              class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group border-t-2"
+            >
+              <div
+                class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
+                [ngClass]="{ 'bg-primary/10': activeTab() === 'approvals' }"
+              >
+                <svg
+                  class="w-5 h-5 sm:w-5 sm:h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+              </div>
+              <div class="flex items-center gap-2">
+                <span
+                  class="sm:block"
+                  [class.font-bold]="activeTab() === 'approvals'"
+                  >Approvals</span
+                >
+                @if (pendingApprovalCount() > 0) {
+                  <span
+                    class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold leading-none"
+                    [attr.aria-label]="
+                      pendingApprovalCount() + ' batches pending approval'
+                    "
+                    >{{ pendingApprovalCount() }}</span
+                  >
+                }
+              </div>
+            </button>
           }
-        </button>
 
-        <button
-          (click)="onTabClick('history')"
-          [class]="
-            activeTab() === 'history'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          "
-          class="whitespace-nowrap flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 -mb-px font-medium text-sm transition-colors"
-        >
-          <svg
-            class="w-4 h-4 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          <button
+            (click)="onTabClick('specs')"
+            [class]="
+              activeTab() === 'specs'
+                ? 'text-primary border-accent'
+                : 'text-gray-500 hover:text-gray-700 border-transparent'
+            "
+            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group border-t-2"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            ></path>
-          </svg>
-          <span>Activity</span>
-        </button>
-      </nav>
+            <div
+              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
+              [ngClass]="{ 'bg-primary/10': activeTab() === 'specs' }"
+            >
+              <svg
+                class="w-5 h-5 sm:w-4 sm:h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                ></path>
+              </svg>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="sm:block" [class.font-bold]="activeTab() === 'specs'"
+                >Specs</span
+              >
+              @if (tabNeedsAttention('specs')) {
+                <span
+                  class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
+                  aria-hidden="true"
+                ></span>
+              }
+            </div>
+          </button>
+
+          <button
+            (click)="onTabClick('history')"
+            [class]="
+              activeTab() === 'history'
+                ? 'text-primary border-accent'
+                : 'text-gray-500 hover:text-gray-700 border-transparent'
+            "
+            class="whitespace-nowrap py-4 px-1 sm:py-6 sm:px-4 font-medium text-xs sm:text-base flex flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-all relative group border-t-2"
+          >
+            <div
+              class="p-1.5 sm:p-0 rounded-lg transition-colors group-hover:bg-primary/5 sm:group-hover:bg-transparent"
+              [ngClass]="{ 'bg-primary/10': activeTab() === 'history' }"
+            >
+              <svg
+                class="w-5 h-5 sm:w-4 sm:h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+            </div>
+            <span class="sm:block" [class.font-bold]="activeTab() === 'history'"
+              >Activity</span
+            >
+          </button>
+        </nav>
+      </div>
     </div>
 
-    <!-- TAB CONTENT AREA -->
-    <div class="flex-grow pt-2">
+    <!-- TAB CONTENT AREA (pb clearance so the fixed bottom tab bar never overlaps content) -->
+    <div class="flex-grow pt-8 pb-28">
       <!-- SUMMARY TAB -->
       @if (activeTab() === 'summary') {
         <div
@@ -1042,5 +1068,95 @@
       </div>
     }
 
+    <!-- Workflow Actions Modal -->
+    @if (isWorkflowModalOpen()) {
+      <div
+        class="fixed inset-0 !h-[100dvh] w-screen z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in"
+        (click)="isWorkflowModalOpen.set(false)"
+        (keydown.escape)="isWorkflowModalOpen.set(false)"
+        tabindex="0"
+        role="button"
+        aria-label="Close Workflow Modal"
+      >
+        <div
+          class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300 cursor-default"
+          (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()"
+          tabindex="-1"
+          role="region"
+          aria-label="Workflow Actions Dialog"
+        >
+          <div
+            class="px-6 py-4 bg-white border-b border-neutral-100 flex justify-between items-center shrink-0 shadow-sm z-10"
+          >
+            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-3">
+              <span class="p-2 bg-accent/10 rounded-lg">
+                <svg
+                  class="h-6 w-6 text-accent"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  ></path>
+                </svg>
+              </span>
+              Workflow Actions
+            </h2>
+            <button
+              (click)="isWorkflowModalOpen.set(false)"
+              class="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-400 hover:text-neutral-900"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="flex-grow overflow-y-auto p-2 sm:p-4 custom-scrollbar">
+            <app-inspection-report-transition-actions
+              [report]="reportData"
+              [expanded]="true"
+              [isFixed]="false"
+              [allowedTransitions]="allowedTransitions"
+              [selectedTransition]="selectedTransition"
+              [formReason]="formReason"
+              [formError]="formError"
+              [validationResult]="validationResult"
+              [isOnline]="isOnline"
+              [showExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.visible"
+              [canExport]="!!uiState?.actions?.['ADMIN_EXPORT']?.enabled"
+              [exportDisabledReason]="
+                uiState?.actions?.['ADMIN_EXPORT']?.disabledReason || ''
+              "
+              [isExporting]="isExporting"
+              [canPublish]="canPublishReport()"
+              [isPublishing]="isPublishingReport()"
+              (expandedChange)="isTransitionExpanded = $event"
+              (export)="exportReport()"
+              (publish)="onPublishReport(); isWorkflowModalOpen.set(false)"
+              (selectTransition)="openReasonSelect($event)"
+              (formReasonChange)="formReason = $event"
+              (confirmTransition)="onTransition(); isWorkflowModalOpen.set(false)"
+              (cancelTransition)="selectedTransition = null; formReason = ''"
+            />
+          </div>
+        </div>
+      </div>
+    }
   </div>
 }
