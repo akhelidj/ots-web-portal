@@ -14,8 +14,8 @@
  */
 :root {
   /* Color — 17-slot semantic set. RGB channel triples where a var feeds rgb()/rgba(). */
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8; /* darker blue — hover/active slot for primary */
+  --primary: #0b1a2a;
+  --primary-hover: #1e334a; /* darker navy — hover/active slot for primary */
   --on-primary: #ffffff;
   --secondary: #0b1a2a; /* the former primary navy, demoted */
   --on-secondary: #ffffff;
@@ -35,8 +35,8 @@
 
   /* RGB channel triples — feed Tailwind's rgb(var(--*) / <alpha-value>) colors
      (so bg-primary/10 etc. keep working) and the existing rgba(var(--*)) glow shadows. */
-  --primary-rgb: 37 99 235;
-  --color-primary: 37 99 235;
+  --primary-rgb: 11 26 42;
+  --color-primary: 11 26 42;
   --accent-rgb: 255 152 0;
 
   /* Spacing — 4pt scale. */
