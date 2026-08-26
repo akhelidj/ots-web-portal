@@ -75,7 +75,7 @@ describe('TemplateDefineComponent — describe screen', () => {
   async function describeValid(c: TemplateDefineComponent): Promise<void> {
     c.templateId = 't1';
     await c.load();
-    c.hasRepeatingRows = true; // region mode (default is now flat)
+    c.hasRepeatingRows.set(true); // region mode (default is now flat) — a signal now
     c.displayName = 'Casing Report';
     c.regionId = 'serials';
     c.regionLabel = 'Inspected Serials';

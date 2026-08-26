@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -12,7 +12,7 @@ import {
 } from '@portal/features/templates/services/admin-templates.service';
 
 /**
- * Phase D step 2b — the describe screen.
+ * Phase D step 2b — the describe screen, presented as a STEPPED WIZARD.
  *
  * After a template is uploaded, an admin opens "Define" for it here: the screen fetches
  * the workbook's extracted tokens (`GET /templates/:id/tokens`), lets the admin describe
@@ -20,11 +20,21 @@ import {
  * one token as the repeating serial marker, then submits the assembled description via
  * `PUT /templates/:id/definition`.
  *
+ * WIZARD: the same phases are now walked one step at a time — Layout → (Region & Marker,
+ * only for repeating-row templates) → Describe Fields → Review & Save. The visible step
+ * sequence is a `computed()` off `hasRepeatingRows` so a flat template shows the TRUE count
+ * (3 steps, Region omitted entirely — never a dead/greyed step) and a region one shows 4.
+ * Back/Next only navigate; all entered state lives on the component (signals + ngModel
+ * fields), so nothing resets on navigation. A single terminal `submit()` — one `PUT`, no
+ * incremental save.
+ *
  * SUBMIT-AND-SURFACE: there is NO client reimplementation of the server's seven checks.
  * The gate is the sole authority. The only client-side niceties are: pick a marker, name
- * the region, and don't submit an empty label. Everything else — select-without-options,
- * unknown tokens, unrenderable types — is left to the server, whose per-check reason is
- * rendered inline. Works for an ARBITRARY token set, not a drill-pipe-shaped one.
+ * the region, and don't submit an empty label — now expressed as per-step validity
+ * predicates (ONE source of truth) that gate "Next" and that `submit()` reuses. Everything
+ * else — select-without-options, unknown tokens, unrenderable types, malformed rework rule
+ * — is left to the server, whose per-check reason is rendered inline on the Review step.
+ * Works for an ARBITRARY token set, not a drill-pipe-shaped one.
  */
 
 const FIELD_TYPES: OpsFieldType[] = [
@@ -62,6 +72,14 @@ export interface DescribeRow {
   optionsText: string;
 }
 
+/** The wizard steps. `region` is present ONLY for repeating-row templates. */
+export type WizardStepKey = 'layout' | 'region' | 'describe' | 'review';
+
+export interface WizardStep {
+  key: WizardStepKey;
+  label: string;
+}
+
 @Component({
   selector: 'app-template-define',
   standalone: true,
@@ -89,10 +107,11 @@ export class TemplateDefineComponent implements OnInit {
   // The explicit flat-vs-region discriminator. Ops DECLARES the layout — the app does
   // NOT infer it from tokens. OFF (default) = flat (a single record, no repeating rows →
   // the DTO omits `region`, which the server builds as `regions: []`); ON = region (the
-  // report has repeating serial rows). A plain [(ngModel)] field, not a signal: it is
-  // mutated by a DOM checkbox event, which already notifies the zoneless scheduler, so CD
-  // re-runs and the @if branches re-evaluate (same rationale as the other ngModel fields).
-  public hasRepeatingRows = false;
+  // report has repeating serial rows). A SIGNAL (not a plain field) because the wizard's
+  // `visibleSteps` computed derives off it — flipping it must recompute the step sequence.
+  // A signal can't be the target of `[(ngModel)]`, so the checkbox two-way-binds via
+  // `[ngModel]` + `(ngModelChange)="onRepeatingRowsChange($event)"`.
+  public readonly hasRepeatingRows = signal(false);
 
   // Region / marker declaration ([(ngModel)] two-way — plain, event-driven).
   public displayName = '';
@@ -122,6 +141,43 @@ export class TemplateDefineComponent implements OnInit {
   public readonly submitError = signal('');
   public readonly failedCheck = signal('');
   public readonly success = signal(false);
+
+  // ---------------------------------------------------------------------------
+  // Wizard navigation
+  // ---------------------------------------------------------------------------
+
+  /** Index into `visibleSteps()`. A signal so the zoneless view re-renders on Back/Next. */
+  public readonly currentStep = signal(0);
+
+  /**
+   * The visible step sequence — DYNAMIC: the `region` step exists only for repeating-row
+   * templates. A `computed()` off the `hasRepeatingRows` signal so a flat template renders
+   * the true 3-step count (Region omitted, not greyed) and a region one renders 4.
+   */
+  public readonly visibleSteps = computed<WizardStep[]>(() => {
+    const steps: WizardStep[] = [{ key: 'layout', label: 'Layout' }];
+    if (this.hasRepeatingRows()) {
+      steps.push({ key: 'region', label: 'Region & Marker' });
+    }
+    steps.push({ key: 'describe', label: 'Describe Fields' });
+    steps.push({ key: 'review', label: 'Review & Save' });
+    return steps;
+  });
+
+  /** The current step descriptor. Clamped defensively; navigation keeps the index in range
+   *  (the layout toggle — the only thing that resizes the sequence — lives on step 0). */
+  public readonly activeStep = computed<WizardStep>(() => {
+    const steps = this.visibleSteps();
+    const i = Math.min(Math.max(this.currentStep(), 0), steps.length - 1);
+    // `steps` always starts with `layout`, so the fallback is only for the type checker
+    // (noUncheckedIndexedAccess) — the clamped index is always in range at runtime.
+    return steps[i] ?? { key: 'layout', label: 'Layout' };
+  });
+
+  public readonly isFirstStep = computed(() => this.currentStep() === 0);
+  public readonly isLastStep = computed(
+    () => this.currentStep() >= this.visibleSteps().length - 1,
+  );
 
   async ngOnInit(): Promise<void> {
     this.templateId = this.route.snapshot.paramMap.get('id') ?? '';
@@ -165,6 +221,14 @@ export class TemplateDefineComponent implements OnInit {
     return rows;
   }
 
+  /** Flat/region toggle handler — writes the signal (so `visibleSteps` recomputes) and
+   *  clears any stale submit error. Only reachable on step 0, so `currentStep` stays valid. */
+  public onRepeatingRowsChange(value: boolean): void {
+    this.hasRepeatingRows.set(value);
+    this.submitError.set('');
+    this.failedCheck.set('');
+  }
+
   /** Choosing a marker excludes that token from the described fields. */
   public onMarkerChange(): void {
     this.submitError.set('');
@@ -175,7 +239,7 @@ export class TemplateDefineComponent implements OnInit {
     // Only a REGION template has a marker. In flat mode there is no repeating row, so no
     // token is the marker — every included row is a described field (even if a stale
     // markerToken lingered from a region-mode toggle).
-    return this.hasRepeatingRows && row.token === this.markerToken;
+    return this.hasRepeatingRows() && row.token === this.markerToken;
   }
 
   /** The rows that will be sent as described fields (included, not the marker). */
@@ -196,10 +260,17 @@ export class TemplateDefineComponent implements OnInit {
    * described fields; in flat mode the single record IS the serial, so every described
    * field qualifies. Presented by label, valued by the derived key. Template-agnostic — no
    * field name is special-cased.
+   *
+   * A METHOD, not a computed: it must reflect in-place edits to a row's label/scope made on
+   * the Describe step (the described rows are mutated through ngModel, which does NOT
+   * reassign the `rows` signal, so a `computed(() => …rows()…)` would miss them). Called
+   * from the Review-step template, it re-evaluates on every change-detection pass — and the
+   * zoneless scheduler runs one on the Back→edit and on the Next click — so the dropdown is
+   * always rebuilt from the current row values when the author reaches Review.
    */
   public triggerFieldOptions(): TriggerFieldOption[] {
     const described = this.describedRows();
-    const eligible = this.hasRepeatingRows
+    const eligible = this.hasRepeatingRows()
       ? described.filter((r) => r.scope === 'item')
       : described;
     return eligible.map((r) => ({
@@ -208,23 +279,66 @@ export class TemplateDefineComponent implements OnInit {
     }));
   }
 
-  /**
-   * The client-checkable minimum for a Save — the SAME light niceties `submit()` enforces,
-   * used to disable the button so an author never spends a click learning the form is
-   * already invalid (mirrors the inspection form's `[disabled]="formGroup.invalid"`). The
-   * SERVER gate stays the sole authority on the seven semantic checks; this only guards
-   * what the client can already see is wrong. Mode-aware: region mode additionally needs a
-   * marker and a region id; flat mode does not (marker is irrelevant when there are no
-   * repeating rows).
-   */
-  public canSave(): boolean {
+  // ---------------------------------------------------------------------------
+  // Per-step validity — ONE source of truth (gates "Next"; `submit()` reuses these)
+  // ---------------------------------------------------------------------------
+
+  /** Region step: a marker token and a region id are the only client-checkable minimums
+   *  (Display Name and Region Label are optional). */
+  public regionStepValid(): boolean {
+    return !!this.markerToken && !!this.regionId.trim();
+  }
+
+  /** Describe step: at least one described field, and every included field has a label. */
+  public describeStepValid(): boolean {
     const described = this.describedRows();
     if (described.length === 0) return false;
-    if (described.some((r) => !r.label.trim())) return false;
-    if (this.hasRepeatingRows) {
-      if (!this.markerToken) return false;
-      if (!this.regionId.trim()) return false;
+    return described.every((r) => !!r.label.trim());
+  }
+
+  /** Whether a step is complete enough to advance from / save on. Layout is always valid
+   *  (just a toggle); Review's gate is the full `canSave()` composition. */
+  public stepValid(key: WizardStepKey): boolean {
+    switch (key) {
+      case 'layout':
+        return true;
+      case 'region':
+        return this.regionStepValid();
+      case 'describe':
+        return this.describeStepValid();
+      case 'review':
+        return this.canSave();
     }
+  }
+
+  /** "Next" gate for the active step. */
+  public canGoNext(): boolean {
+    return this.stepValid(this.activeStep().key);
+  }
+
+  public next(): void {
+    if (!this.canGoNext()) return;
+    const last = this.visibleSteps().length - 1;
+    if (this.currentStep() < last) {
+      this.currentStep.update((s) => s + 1);
+    }
+  }
+
+  public prev(): void {
+    if (this.currentStep() > 0) {
+      this.currentStep.update((s) => s - 1);
+    }
+  }
+
+  /**
+   * The client-checkable minimum for a Save — COMPOSED from the same per-step predicates
+   * the wizard gates on (no third copy). The SERVER gate stays the sole authority on the
+   * seven semantic checks; this only guards what the client can already see is wrong.
+   * Mode-aware: region mode additionally needs a marker + region id.
+   */
+  public canSave(): boolean {
+    if (!this.describeStepValid()) return false;
+    if (this.hasRepeatingRows() && !this.regionStepValid()) return false;
     return true;
   }
 
@@ -270,7 +384,7 @@ export class TemplateDefineComponent implements OnInit {
     }
     // FLAT (toggle off): omit `region` entirely → the server builds `regions: []` and
     // every field resolves as record data. REGION (toggle on): today's region+marker.
-    if (this.hasRepeatingRows) {
+    if (this.hasRepeatingRows()) {
       dto.region = {
         id: this.regionId.trim(),
         marker: this.markerToken,
@@ -287,27 +401,23 @@ export class TemplateDefineComponent implements OnInit {
     this.failedCheck.set('');
     this.success.set(false);
 
-    // Light client-side niceties only — NOT a reimplementation of the server gate. The
-    // marker/region checks apply ONLY in region mode; in flat mode there is no marker.
-    if (this.hasRepeatingRows) {
-      if (!this.markerToken) {
-        this.submitError.set(
-          'Choose which token marks a repeating serial row (the region marker).',
-        );
-        return;
-      }
-      if (!this.regionId.trim()) {
-        this.submitError.set('Give the repeating region an id.');
-        return;
-      }
-    }
-    const described = this.describedRows();
-    if (described.length === 0) {
-      this.submitError.set('Describe at least one field before saving.');
+    // Final client-side guard — REUSES the same per-step predicates the wizard gates on,
+    // with granular messages. NOT a reimplementation of the server gate. The marker/region
+    // checks apply ONLY in region mode; in flat mode there is no marker.
+    if (this.hasRepeatingRows() && !this.regionStepValid()) {
+      this.submitError.set(
+        !this.markerToken
+          ? 'Choose which token marks a repeating serial row (the region marker).'
+          : 'Give the repeating region an id.',
+      );
       return;
     }
-    if (described.some((r) => !r.label.trim())) {
-      this.submitError.set('Every included field needs a label.');
+    if (!this.describeStepValid()) {
+      this.submitError.set(
+        this.describedRows().length === 0
+          ? 'Describe at least one field before saving.'
+          : 'Every included field needs a label.',
+      );
       return;
     }
 

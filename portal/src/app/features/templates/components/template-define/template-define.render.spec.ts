@@ -66,9 +66,26 @@ describe('TemplateDefineComponent — zoneless DOM rendering (stuck-loading regr
     await fixture.componentInstance.load();
     await fixture.whenStable();
 
-    // The loading branch is gone and the per-token describe rows are in the DOM. Neither
-    // is true unless a change-detection pass ran automatically after the load settled.
+    // The loading branch is gone: the wizard now shows its FIRST step (Layout). The screen
+    // is stuck-loading no more — and this is the exact regression under test: nothing was
+    // stuck on "Loading tokens…" with the data already in hand. Neither the disappearance
+    // of the loading branch nor the wizard chrome is true unless a change-detection pass
+    // ran automatically after the load settled.
     expect(html().textContent).not.toContain('Loading tokens');
+    expect(html().textContent).toContain('Step 1 of 3'); // flat default → 3 steps
+    expect(
+      html().querySelector('[data-testid="has-repeating-rows"]'),
+    ).not.toBeNull();
+
+    // The per-token describe grid lives on the DESCRIBE step. Walk there the way a user
+    // does — a real click on "Next" — which fires the zoneless scheduler again (still NO
+    // manual detectChanges). The rows appear only if that scheduler-driven CD ran.
+    (
+      html().querySelector('[data-testid="wizard-next"]') as HTMLButtonElement
+    ).click();
+    await fixture.whenStable();
+
+    expect(html().textContent).toContain('Step 2 of 3');
     expect(
       html().querySelector('[data-testid="label-{{poNumber}}"]'),
     ).not.toBeNull();

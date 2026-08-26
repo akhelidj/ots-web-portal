@@ -27,335 +27,548 @@
       <p class="text-sm font-medium">{{ loadError() }}</p>
     </div>
   } @else {
-    <!-- Layout: does this template have repeating rows? (flat vs region discriminator) -->
+    <!-- PROGRESS INDICATOR — "Step N of M" + a labelled step rail (real, dynamic count) -->
     <div class="page-section p-5 sm:p-6">
-      <label class="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          [(ngModel)]="hasRepeatingRows"
-          data-testid="has-repeating-rows"
-          class="h-4 w-4"
-        />
-        <span class="text-sm font-semibold text-gray-700"
-          >Does this template have repeating rows?</span
-        >
-      </label>
-      <p class="mt-2 text-sm text-neutral-500">
-        @if (hasRepeatingRows) {
-          On — the report has a repeating serial row. Mark the row token below.
-        } @else {
-          Off — a single record (flat). Just describe the fields; there is no
-          serial marker or per-row scope.
-        }
+      <p class="text-sm font-semibold text-neutral-700">
+        Step {{ currentStep() + 1 }} of {{ visibleSteps().length }} —
+        {{ activeStep().label }}
       </p>
-    </div>
-
-    @if (hasRepeatingRows) {
-    <!-- Region + marker declaration -->
-    <div class="page-section p-5 sm:p-6 space-y-4">
-      <h2 class="font-semibold text-lg text-neutral-900">Repeating Region</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label
-            for="define-display-name"
-            class="block text-sm font-semibold text-gray-700 mb-1"
-            >Display Name</label
-          >
-          <input
-            id="define-display-name"
-            type="text"
-            [(ngModel)]="displayName"
-            class="field-control"
-            placeholder="e.g. Casing Inspection Report"
-          />
-        </div>
-        <div>
-          <label
-            for="define-marker"
-            class="block text-sm font-semibold text-gray-700 mb-1"
-            >Serial Marker Token <span class="text-error">*</span></label
-          >
-          <select
-            id="define-marker"
-            [(ngModel)]="markerToken"
-            (ngModelChange)="onMarkerChange()"
-            class="field-control"
-          >
-            <option [value]="''">Select the repeating-row token…</option>
-            @for (row of rows(); track row.token) {
-              <option [value]="row.token">{{ row.token }}</option>
-            }
-          </select>
-        </div>
-        <div>
-          <label
-            for="define-region-id"
-            class="block text-sm font-semibold text-gray-700 mb-1"
-            >Region Id <span class="text-error">*</span></label
-          >
-          <input
-            id="define-region-id"
-            type="text"
-            [(ngModel)]="regionId"
-            class="field-control"
-          />
-        </div>
-        <div>
-          <label
-            for="define-region-label"
-            class="block text-sm font-semibold text-gray-700 mb-1"
-            >Region Label</label
-          >
-          <input
-            id="define-region-label"
-            type="text"
-            [(ngModel)]="regionLabel"
-            class="field-control"
-            placeholder="e.g. Inspected Serials"
-          />
-        </div>
-      </div>
-    </div>
-    }
-
-    <!-- Per-token describe rows -->
-    <div class="page-section overflow-x-auto">
-      <table class="table-base divide-y divide-gray-200 w-full">
-        <thead class="table-head">
-          <tr>
-            <th scope="col" class="table-th">Include</th>
-            <th scope="col" class="table-th">Token</th>
-            <th scope="col" class="table-th">Label</th>
-            <th scope="col" class="table-th">Type</th>
-            <th scope="col" class="table-th">Required</th>
-            @if (hasRepeatingRows) {
-              <th scope="col" class="table-th">Scope</th>
-            }
-            <th scope="col" class="table-th">Section</th>
-            <th scope="col" class="table-th">Options</th>
-          </tr>
-        </thead>
-        <tbody class="table-body divide-y divide-gray-100">
-          @for (row of rows(); track row.token; let i = $index) {
-            <tr
-              class="align-top"
-              [ngClass]="{ 'opacity-40': isMarker(row) }"
+      <ol class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2" aria-label="Progress">
+        @for (step of visibleSteps(); track step.key; let i = $index) {
+          <li class="flex items-center gap-2">
+            <span
+              class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold"
+              [ngClass]="
+                i === currentStep()
+                  ? 'bg-primary text-white'
+                  : i < currentStep()
+                    ? 'bg-primary/15 text-primary'
+                    : 'bg-gray-100 text-gray-400'
+              "
+              [attr.aria-current]="i === currentStep() ? 'step' : null"
+              >{{ i + 1 }}</span
             >
-              <td class="table-td">
-                <input
-                  type="checkbox"
-                  [(ngModel)]="row.include"
-                  [disabled]="isMarker(row)"
-                  [attr.aria-label]="'Include ' + row.token"
-                  [attr.data-testid]="'include-' + row.token"
-                />
-              </td>
-              <td class="table-td-strong code-text whitespace-nowrap">
-                {{ row.token }}
-                @if (isMarker(row)) {
-                  <span
-                    class="ml-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-primary/10 text-primary"
-                    >marker</span
-                  >
-                }
-              </td>
-              <td class="table-td">
-                <input
-                  type="text"
-                  [(ngModel)]="row.label"
-                  [disabled]="isMarker(row) || !row.include"
-                  class="field-control min-w-[10rem]"
-                  [attr.data-testid]="'label-' + row.token"
-                />
-              </td>
-              <td class="table-td">
-                <select
-                  [(ngModel)]="row.type"
-                  [disabled]="isMarker(row) || !row.include"
-                  class="field-control"
-                  [attr.data-testid]="'type-' + row.token"
-                >
-                  @for (t of fieldTypes; track t) {
-                    <option [value]="t">{{ t }}</option>
-                  }
-                </select>
-              </td>
-              <td class="table-td text-center">
-                <input
-                  type="checkbox"
-                  [(ngModel)]="row.required"
-                  [disabled]="isMarker(row) || !row.include"
-                  [attr.aria-label]="'Required ' + row.token"
-                />
-              </td>
-              @if (hasRepeatingRows) {
-                <td class="table-td">
-                  <select
-                    [(ngModel)]="row.scope"
-                    [disabled]="isMarker(row) || !row.include"
-                    class="field-control"
-                    [attr.data-testid]="'scope-' + row.token"
-                  >
-                    <option value="header">header</option>
-                    <option value="item">item</option>
-                  </select>
-                </td>
-              }
-              <td class="table-td">
-                <input
-                  type="text"
-                  [(ngModel)]="row.section"
-                  [disabled]="isMarker(row) || !row.include"
-                  class="field-control min-w-[8rem]"
-                  placeholder="optional"
-                />
-              </td>
-              <td class="table-td">
-                @if (row.type === 'select' && row.include && !isMarker(row)) {
-                  <input
-                    type="text"
-                    [(ngModel)]="row.optionsText"
-                    class="field-control min-w-[10rem]"
-                    placeholder="PASS, REWORK, SCRAP"
-                    [attr.data-testid]="'options-' + row.token"
-                  />
-                } @else {
-                  <span class="text-xs text-gray-400">—</span>
-                }
-              </td>
-            </tr>
+            <span
+              class="text-xs font-medium"
+              [ngClass]="
+                i === currentStep() ? 'text-neutral-900' : 'text-gray-400'
+              "
+              >{{ step.label }}</span
+            >
+            @if (!$last) {
+              <span class="text-gray-300" aria-hidden="true">→</span>
+            }
+          </li>
+        }
+      </ol>
+    </div>
+
+    <!-- STEP 1: LAYOUT — the flat/region discriminator -->
+    @if (activeStep().key === 'layout') {
+      <div class="page-section p-5 sm:p-6">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            [ngModel]="hasRepeatingRows()"
+            (ngModelChange)="onRepeatingRowsChange($event)"
+            data-testid="has-repeating-rows"
+            class="h-4 w-4"
+          />
+          <span class="text-sm font-semibold text-gray-700"
+            >Does this template have repeating rows?</span
+          >
+        </label>
+        <p class="mt-2 text-sm text-neutral-500">
+          @if (hasRepeatingRows()) {
+            On — the report has a repeating serial row. You'll mark the row token
+            in the next step.
+          } @else {
+            Off — a single record (flat). Just describe the fields; there is no
+            serial marker or per-row scope.
           }
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Rework trigger rule (slice A) — optional, OFF by default -->
-    <div class="page-section p-5 sm:p-6 space-y-4">
-      <label class="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          [(ngModel)]="reworkEnabled"
-          data-testid="rework-enabled"
-          class="h-4 w-4"
-        />
-        <span class="text-sm font-semibold text-gray-700"
-          >Add a rework trigger rule?</span
-        >
-      </label>
-      <p class="text-sm text-neutral-500">
-        When a serial's chosen field equals a value, a child report is created for
-        every matching serial. Off = no rule.
-      </p>
-
-      @if (reworkEnabled) {
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label
-              for="rework-field"
-              class="block text-sm font-semibold text-gray-700 mb-1"
-              >Trigger Field <span class="text-error">*</span></label
-            >
-            <select
-              id="rework-field"
-              [(ngModel)]="reworkField"
-              class="field-control"
-              data-testid="rework-field"
-            >
-              <option [value]="''">Select the trigger field…</option>
-              @for (opt of triggerFieldOptions(); track opt.key) {
-                <option [value]="opt.key">{{ opt.label }}</option>
-              }
-            </select>
-          </div>
-          <div>
-            <label
-              for="rework-equals"
-              class="block text-sm font-semibold text-gray-700 mb-1"
-              >Equals Value <span class="text-error">*</span></label
-            >
-            <input
-              id="rework-equals"
-              type="text"
-              [(ngModel)]="reworkEquals"
-              class="field-control"
-              placeholder="e.g. REWORK"
-              data-testid="rework-equals"
-            />
-          </div>
-          <div>
-            <label
-              for="rework-child-type"
-              class="block text-sm font-semibold text-gray-700 mb-1"
-              >Child Report Type <span class="text-error">*</span></label
-            >
-            <select
-              id="rework-child-type"
-              [(ngModel)]="reworkChildType"
-              class="field-control"
-              data-testid="rework-child-type"
-            >
-              @for (t of childReportTypes; track t) {
-                <option [value]="t">{{ t }}</option>
-              }
-            </select>
-          </div>
-          <div>
-            <label
-              for="rework-suffix"
-              class="block text-sm font-semibold text-gray-700 mb-1"
-              >Report Number Suffix</label
-            >
-            <input
-              id="rework-suffix"
-              type="text"
-              [(ngModel)]="reworkSuffix"
-              class="field-control"
-              placeholder="optional, e.g. _rework"
-              data-testid="rework-suffix"
-            />
-          </div>
-        </div>
-      }
-    </div>
-
-    @if (submitError()) {
-      <div
-        data-testid="submit-error"
-        class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
-      >
-        @if (failedCheck()) {
-          <p class="text-xs font-bold uppercase tracking-wider mb-1">
-            Rejected check: {{ failedCheck() }}
-          </p>
-        }
-        <p class="text-sm font-medium">{{ submitError() }}</p>
-      </div>
-    }
-
-    @if (success()) {
-      <div
-        data-testid="submit-success"
-        class="bg-success-light border-l-4 border-success text-success-dark p-4 rounded-md shadow-sm"
-      >
-        <p class="text-sm font-medium">
-          Definition saved. This template is now defined and can be used for
-          reports.
         </p>
       </div>
     }
 
-    <div class="flex justify-end gap-3">
+    <!-- STEP 2 (region templates only): REGION & MARKER -->
+    @if (activeStep().key === 'region') {
+      <div class="page-section p-5 sm:p-6 space-y-4">
+        <h2 class="font-semibold text-lg text-neutral-900">Repeating Region</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label
+              for="define-display-name"
+              class="block text-sm font-semibold text-gray-700 mb-1"
+              >Display Name</label
+            >
+            <input
+              id="define-display-name"
+              type="text"
+              [(ngModel)]="displayName"
+              class="field-control"
+              placeholder="e.g. Casing Inspection Report"
+            />
+          </div>
+          <div>
+            <label
+              for="define-marker"
+              class="block text-sm font-semibold text-gray-700 mb-1"
+              >Serial Marker Token <span class="text-error">*</span></label
+            >
+            <select
+              id="define-marker"
+              [(ngModel)]="markerToken"
+              (ngModelChange)="onMarkerChange()"
+              #markerCtrl="ngModel"
+              required
+              class="field-control"
+              [attr.aria-describedby]="
+                markerCtrl.invalid && markerCtrl.touched
+                  ? 'define-marker-error'
+                  : null
+              "
+            >
+              <option [value]="''">Select the repeating-row token…</option>
+              @for (row of rows(); track row.token) {
+                <option [value]="row.token">{{ row.token }}</option>
+              }
+            </select>
+            @if (markerCtrl.invalid && markerCtrl.touched) {
+              <p
+                id="define-marker-error"
+                role="alert"
+                class="mt-1 text-xs text-error"
+              >
+                Choose which token marks a repeating serial row.
+              </p>
+            }
+          </div>
+          <div>
+            <label
+              for="define-region-id"
+              class="block text-sm font-semibold text-gray-700 mb-1"
+              >Region Id <span class="text-error">*</span></label
+            >
+            <input
+              id="define-region-id"
+              type="text"
+              [(ngModel)]="regionId"
+              #regionIdCtrl="ngModel"
+              required
+              class="field-control"
+              [attr.aria-describedby]="
+                regionIdCtrl.invalid && regionIdCtrl.touched
+                  ? 'define-region-id-error'
+                  : null
+              "
+            />
+            @if (regionIdCtrl.invalid && regionIdCtrl.touched) {
+              <p
+                id="define-region-id-error"
+                role="alert"
+                class="mt-1 text-xs text-error"
+              >
+                Give the repeating region an id.
+              </p>
+            }
+          </div>
+          <div>
+            <label
+              for="define-region-label"
+              class="block text-sm font-semibold text-gray-700 mb-1"
+              >Region Label</label
+            >
+            <input
+              id="define-region-label"
+              type="text"
+              [(ngModel)]="regionLabel"
+              class="field-control"
+              placeholder="e.g. Inspected Serials"
+            />
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- STEP 3: DESCRIBE FIELDS — per-token grid (unchanged internally) -->
+    @if (activeStep().key === 'describe') {
+      <div class="page-section overflow-x-auto">
+        <table class="table-base divide-y divide-gray-200 w-full">
+          <thead class="table-head">
+            <tr>
+              <th scope="col" class="table-th">Include</th>
+              <th scope="col" class="table-th">Token</th>
+              <th scope="col" class="table-th">Label</th>
+              <th scope="col" class="table-th">Type</th>
+              <th scope="col" class="table-th">Required</th>
+              @if (hasRepeatingRows()) {
+                <th scope="col" class="table-th">Scope</th>
+              }
+              <th scope="col" class="table-th">Section</th>
+              <th scope="col" class="table-th">Options</th>
+            </tr>
+          </thead>
+          <tbody class="table-body divide-y divide-gray-100">
+            @for (row of rows(); track row.token; let i = $index) {
+              <tr
+                class="align-top"
+                [ngClass]="{ 'opacity-40': isMarker(row) }"
+              >
+                <td class="table-td">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="row.include"
+                    [disabled]="isMarker(row)"
+                    [attr.aria-label]="'Include ' + row.token"
+                    [attr.data-testid]="'include-' + row.token"
+                  />
+                </td>
+                <td class="table-td-strong code-text whitespace-nowrap">
+                  {{ row.token }}
+                  @if (isMarker(row)) {
+                    <span
+                      class="ml-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-primary/10 text-primary"
+                      >marker</span
+                    >
+                  }
+                </td>
+                <td class="table-td">
+                  <input
+                    type="text"
+                    [(ngModel)]="row.label"
+                    [disabled]="isMarker(row) || !row.include"
+                    class="field-control min-w-[10rem]"
+                    [attr.data-testid]="'label-' + row.token"
+                  />
+                </td>
+                <td class="table-td">
+                  <select
+                    [(ngModel)]="row.type"
+                    [disabled]="isMarker(row) || !row.include"
+                    class="field-control min-w-[7rem]"
+                    [attr.data-testid]="'type-' + row.token"
+                  >
+                    @for (t of fieldTypes; track t) {
+                      <option [value]="t">{{ t }}</option>
+                    }
+                  </select>
+                </td>
+                <td class="table-td text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="row.required"
+                    [disabled]="isMarker(row) || !row.include"
+                    [attr.aria-label]="'Required ' + row.token"
+                  />
+                </td>
+                @if (hasRepeatingRows()) {
+                  <td class="table-td">
+                    <select
+                      [(ngModel)]="row.scope"
+                      [disabled]="isMarker(row) || !row.include"
+                      class="field-control"
+                      [attr.data-testid]="'scope-' + row.token"
+                    >
+                      <option value="header">header</option>
+                      <option value="item">item</option>
+                    </select>
+                  </td>
+                }
+                <td class="table-td">
+                  <input
+                    type="text"
+                    [(ngModel)]="row.section"
+                    [disabled]="isMarker(row) || !row.include"
+                    class="field-control min-w-[8rem]"
+                    placeholder="optional"
+                  />
+                </td>
+                <td class="table-td">
+                  @if (row.type === 'select' && row.include && !isMarker(row)) {
+                    <input
+                      type="text"
+                      [(ngModel)]="row.optionsText"
+                      class="field-control min-w-[10rem]"
+                      placeholder="PASS, REWORK, SCRAP"
+                      [attr.data-testid]="'options-' + row.token"
+                    />
+                  } @else {
+                    <span class="text-xs text-gray-400">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Step-level summary (skill: focusable error summary complements the gated Next) -->
+      @if (!describeStepValid()) {
+        <div
+          role="alert"
+          class="page-section p-4 border-l-4 border-warning bg-warning-light/20 text-sm text-warning-dark"
+        >
+          @if (describedRows().length === 0) {
+            Describe at least one field (include a token and give it a label) to
+            continue.
+          } @else {
+            Every included field needs a label before you can continue.
+          }
+        </div>
+      }
+    }
+
+    <!-- FINAL STEP: REVIEW & SAVE — optional rework rule, a compact summary, one submit -->
+    @if (activeStep().key === 'review') {
+      <!-- Rework trigger rule (slice A) — optional, OFF by default. After Describe: its
+           trigger-field dropdown derives from the described rows. -->
+      <div class="page-section p-5 sm:p-6 space-y-4">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="reworkEnabled"
+            data-testid="rework-enabled"
+            class="h-4 w-4"
+          />
+          <span class="text-sm font-semibold text-gray-700"
+            >Add a rework trigger rule?</span
+          >
+        </label>
+        <p class="text-sm text-neutral-500">
+          When a serial's chosen field equals a value, a child report is created
+          for every matching serial. Off = no rule.
+        </p>
+
+        @if (reworkEnabled) {
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                for="rework-field"
+                class="block text-sm font-semibold text-gray-700 mb-1"
+                >Trigger Field <span class="text-error">*</span></label
+              >
+              <select
+                id="rework-field"
+                [(ngModel)]="reworkField"
+                #reworkFieldCtrl="ngModel"
+                [required]="reworkEnabled"
+                class="field-control"
+                data-testid="rework-field"
+                [attr.aria-describedby]="
+                  reworkFieldCtrl.invalid && reworkFieldCtrl.touched
+                    ? 'rework-field-error'
+                    : null
+                "
+              >
+                <option [value]="''">Select the trigger field…</option>
+                @for (opt of triggerFieldOptions(); track opt.key) {
+                  <option [value]="opt.key">{{ opt.label }}</option>
+                }
+              </select>
+              @if (reworkFieldCtrl.invalid && reworkFieldCtrl.touched) {
+                <p
+                  id="rework-field-error"
+                  role="alert"
+                  class="mt-1 text-xs text-error"
+                >
+                  Pick the field whose value triggers the rule.
+                </p>
+              }
+            </div>
+            <div>
+              <label
+                for="rework-equals"
+                class="block text-sm font-semibold text-gray-700 mb-1"
+                >Equals Value <span class="text-error">*</span></label
+              >
+              <input
+                id="rework-equals"
+                type="text"
+                [(ngModel)]="reworkEquals"
+                #reworkEqualsCtrl="ngModel"
+                [required]="reworkEnabled"
+                class="field-control"
+                placeholder="e.g. REWORK"
+                data-testid="rework-equals"
+                [attr.aria-describedby]="
+                  reworkEqualsCtrl.invalid && reworkEqualsCtrl.touched
+                    ? 'rework-equals-error'
+                    : null
+                "
+              />
+              @if (reworkEqualsCtrl.invalid && reworkEqualsCtrl.touched) {
+                <p
+                  id="rework-equals-error"
+                  role="alert"
+                  class="mt-1 text-xs text-error"
+                >
+                  Enter the value that triggers the rule.
+                </p>
+              }
+            </div>
+            <div>
+              <label
+                for="rework-child-type"
+                class="block text-sm font-semibold text-gray-700 mb-1"
+                >Child Report Type <span class="text-error">*</span></label
+              >
+              <select
+                id="rework-child-type"
+                [(ngModel)]="reworkChildType"
+                class="field-control"
+                data-testid="rework-child-type"
+              >
+                @for (t of childReportTypes; track t) {
+                  <option [value]="t">{{ t }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label
+                for="rework-suffix"
+                class="block text-sm font-semibold text-gray-700 mb-1"
+                >Report Number Suffix</label
+              >
+              <input
+                id="rework-suffix"
+                type="text"
+                [(ngModel)]="reworkSuffix"
+                class="field-control"
+                placeholder="optional, e.g. _rework"
+                data-testid="rework-suffix"
+              />
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Compact review summary -->
+      <div class="page-section p-5 sm:p-6">
+        <h2 class="font-semibold text-lg text-neutral-900 mb-3">Review</h2>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <div>
+            <dt class="font-semibold text-gray-500">Layout</dt>
+            <dd class="text-neutral-900">
+              @if (hasRepeatingRows()) {
+                Repeating rows (region)
+              } @else {
+                Flat (single record)
+              }
+            </dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-gray-500">Display Name</dt>
+            <dd class="text-neutral-900">{{ displayName.trim() || '—' }}</dd>
+          </div>
+          @if (hasRepeatingRows()) {
+            <div>
+              <dt class="font-semibold text-gray-500">Region Id</dt>
+              <dd class="text-neutral-900 code-text">{{ regionId.trim() || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="font-semibold text-gray-500">Serial Marker</dt>
+              <dd class="text-neutral-900 code-text">{{ markerToken || '—' }}</dd>
+            </div>
+          }
+          <div class="sm:col-span-2">
+            <dt class="font-semibold text-gray-500">
+              Described Fields ({{ describedRows().length }})
+            </dt>
+            <dd class="text-neutral-900">
+              @if (describedRows().length === 0) {
+                <span class="text-gray-400">None yet</span>
+              } @else {
+                <ul class="mt-1 flex flex-wrap gap-1.5">
+                  @for (r of describedRows(); track r.token) {
+                    <li
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-xs"
+                    >
+                      <span class="font-medium">{{ r.label.trim() || r.token }}</span>
+                      <span class="text-gray-400">· {{ r.type }}</span>
+                      @if (hasRepeatingRows()) {
+                        <span class="text-gray-400">· {{ r.scope }}</span>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            </dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="font-semibold text-gray-500">Rework Rule</dt>
+            <dd class="text-neutral-900">
+              @if (reworkEnabled) {
+                {{ reworkField || '(field?)' }} equals
+                “{{ reworkEquals.trim() || '(value?)' }}” →
+                {{ reworkChildType
+                }}{{ reworkSuffix.trim() ? ' (' + reworkSuffix.trim() + ')' : '' }}
+              } @else {
+                <span class="text-gray-400">None</span>
+              }
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      @if (submitError()) {
+        <div
+          data-testid="submit-error"
+          class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
+        >
+          @if (failedCheck()) {
+            <p class="text-xs font-bold uppercase tracking-wider mb-1">
+              Rejected check: {{ failedCheck() }}
+            </p>
+          }
+          <p class="text-sm font-medium">{{ submitError() }}</p>
+        </div>
+      }
+
+      @if (success()) {
+        <div
+          data-testid="submit-success"
+          class="bg-success-light border-l-4 border-success text-success-dark p-4 rounded-md shadow-sm"
+        >
+          <p class="text-sm font-medium">
+            Definition saved. This template is now defined and can be used for
+            reports.
+          </p>
+        </div>
+      }
+    }
+
+    <!-- WIZARD NAV — Back/Next preserve all entered state; Save only on the final step -->
+    <div class="flex justify-between gap-3">
       <button (click)="backToList()" class="btn btn-secondary" type="button">
         Cancel
       </button>
-      <button
-        (click)="submit()"
-        [disabled]="isSubmitting() || !canSave()"
-        class="btn btn-primary"
-        type="button"
-      >
-        {{ isSubmitting() ? 'Saving…' : 'Save Definition' }}
-      </button>
+      <div class="flex gap-3">
+        @if (!isFirstStep()) {
+          <button (click)="prev()" class="btn btn-secondary" type="button">
+            Back
+          </button>
+        }
+        @if (!isLastStep()) {
+          <button
+            (click)="next()"
+            [disabled]="!canGoNext()"
+            data-testid="wizard-next"
+            class="btn btn-primary"
+            type="button"
+          >
+            Next
+          </button>
+        } @else {
+          <button
+            (click)="submit()"
+            [disabled]="isSubmitting() || !canSave()"
+            class="btn btn-primary"
+            type="button"
+          >
+            {{ isSubmitting() ? 'Saving…' : 'Save Definition' }}
+          </button>
+        }
+      </div>
     </div>
   }
 </div>
