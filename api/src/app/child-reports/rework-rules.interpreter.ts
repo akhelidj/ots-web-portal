@@ -236,7 +236,6 @@ export class ReworkRulesInterpreter {
               where: { id: existingChild.id },
               data: { version: { increment: 1 } },
               include: {
-                attachments: true,
                 serialNumbers: { include: { serialNumber: true } },
               },
             }),
@@ -316,7 +315,6 @@ export class ReworkRulesInterpreter {
     const result = await this.prisma.childReport.findUnique({
       where: { id: crId },
       include: {
-        attachments: true,
         serialNumbers: { include: { serialNumber: true } },
       },
     });
@@ -335,7 +333,6 @@ export class ReworkRulesInterpreter {
   private mapChildReportResponse(
     cr: Prisma.ChildReportGetPayload<{
       include: {
-        attachments: true;
         serialNumbers: { include: { serialNumber: true } };
       };
     }> | null,
@@ -343,7 +340,6 @@ export class ReworkRulesInterpreter {
     if (!cr) return cr;
     return {
       ...cr,
-      attachmentCount: cr.attachments.length,
       serialNumbers: cr.serialNumbers
         ? cr.serialNumbers.map((sn) => ({
             id: sn.serialNumberId,

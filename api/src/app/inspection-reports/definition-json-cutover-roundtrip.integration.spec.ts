@@ -34,6 +34,7 @@ import {
   seedActiveTemplate,
   seedInspectionReport,
   resetInspectionDomain,
+  makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 
 const TEMPLATE_KEY = 'DRILL_PIPE_REPORT';
@@ -78,7 +79,7 @@ describe('definitionJson cutover round-trip equivalence [integration]', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
-    service = new InspectionReportsService(prisma);
+    service = new InspectionReportsService(prisma, makeFilesServiceStub());
   });
 
   afterAll(async () => {

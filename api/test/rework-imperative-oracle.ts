@@ -36,7 +36,6 @@ import { InspectionData } from '../src/app/common/inspection-data.types';
 function mapOracleChildReportResponse(
   cr: Prisma.ChildReportGetPayload<{
     include: {
-      attachments: true;
       serialNumbers: { include: { serialNumber: true } };
     };
   }> | null,
@@ -44,7 +43,6 @@ function mapOracleChildReportResponse(
   if (!cr) return cr;
   return {
     ...cr,
-    attachmentCount: cr.attachments.length,
     serialNumbers: cr.serialNumbers
       ? cr.serialNumbers.map((sn) => ({
           id: sn.serialNumberId,
@@ -103,7 +101,6 @@ export async function imperativeReworkOracle(
             where: { id: existingChild.id },
             data: { version: { increment: 1 } },
             include: {
-              attachments: true,
               serialNumbers: {
                 include: { serialNumber: true },
               },
@@ -181,7 +178,6 @@ export async function imperativeReworkOracle(
   const result = await prisma.childReport.findUnique({
     where: { id: crId },
     include: {
-      attachments: true,
       serialNumbers: {
         include: { serialNumber: true },
       },

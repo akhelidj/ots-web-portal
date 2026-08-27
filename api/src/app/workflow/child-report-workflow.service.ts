@@ -66,7 +66,6 @@ export class ChildReportWorkflowService {
         inspectionReport: {
           select: { tenantId: true },
         },
-        attachments: true,
         serialNumbers: {
           include: {
             serialNumber: true,
@@ -101,19 +100,8 @@ export class ChildReportWorkflowService {
     }
 
     // 4. Preconditions
-
-    // 4.1 PENDING_APPROVAL -> APPROVED: Must have attachments
-    // 7) ChildReport Attachment Rule Must Be Scoped Correctly
-    if (
-      currentStatus === ChildReportStatus.PENDING_APPROVAL &&
-      toStatus === ChildReportStatus.APPROVED
-    ) {
-      if (report.attachments.length === 0) {
-        throw new BadRequestException(
-          'Cannot approve Child Report: At least one attachment is required',
-        );
-      }
-    }
+    // (Attachments moved to InspectionReport and are optional — the former
+    // PENDING_APPROVAL -> APPROVED attachment requirement was removed.)
 
     // 5. Governance / Logic
 

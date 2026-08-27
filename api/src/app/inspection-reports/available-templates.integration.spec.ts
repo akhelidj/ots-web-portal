@@ -16,6 +16,7 @@ import {
   seedTenant,
   seedActiveTemplate,
   resetInspectionDomain,
+  makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 
 /** A minimal but valid-enough definition object (the endpoint only checks non-null). */
@@ -33,7 +34,7 @@ describe('GET available-templates (consumption picker source) [integration]', ()
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
-    service = new InspectionReportsService(prisma);
+    service = new InspectionReportsService(prisma, makeFilesServiceStub());
   });
 
   afterAll(async () => {

@@ -8,7 +8,12 @@ import {
   Req,
   UseGuards,
   Query,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import 'multer';
 import { InspectionReportsService } from './inspection-reports.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 import { CreateApprovalBatchDto } from './dto/create-approval-batch.dto';
@@ -18,6 +23,15 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole, InspectionReportStatus } from '@prisma/client';
 import { AuthenticatedRequest } from '../auth/authenticated-request';
+
+export interface UploadedFileDto {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
 
 @UseGuards(RolesGuard)
 @Controller('inspection-reports')
@@ -98,6 +112,25 @@ export class InspectionReportsController {
       data,
       version,
     );
+  }
+
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.RECEIVER,
+    UserRole.INSPECTOR,
+    UserRole.SUPERVISOR,
+  )
+  @Post(':id/attachments')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAttachment(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @UploadedFile() file: UploadedFileDto,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    return this.reportsService.addAttachment(req.user.tenantId, id, file);
   }
 
   @Roles(UserRole.ADMIN, UserRole.INSPECTOR)

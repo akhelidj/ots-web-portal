@@ -37,6 +37,7 @@ import {
   seedTenant,
   seedCustomer,
   seedActiveTemplate,
+  makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 
 const REAL_TEMPLATE_BYTES = readFileSync(
@@ -223,7 +224,7 @@ describe('Template definition write path [integration]', () => {
     let reportsService: InspectionReportsService;
 
     beforeAll(() => {
-      reportsService = new InspectionReportsService(prisma);
+      reportsService = new InspectionReportsService(prisma, makeFilesServiceStub());
     });
 
     beforeEach(async () => {

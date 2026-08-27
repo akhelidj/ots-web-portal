@@ -8,24 +8,11 @@ import {
   Query,
   Request,
   BadRequestException,
-  UseInterceptors,
-  UploadedFile,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import 'multer';
 import { ChildReportsService } from './child-reports.service';
 import { ChildReportStatus, SerialDisposition } from '@prisma/client';
 import { InspectionData } from '../common/inspection-data.types';
 import { AuthenticatedRequest } from '../auth/authenticated-request';
-
-export interface UploadedFileDto {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  size: number;
-  buffer: Buffer;
-}
 
 @Controller()
 export class ChildReportsController {
@@ -103,18 +90,5 @@ export class ChildReportsController {
         disposition: body['disposition'] as SerialDisposition,
       },
     );
-  }
-
-  @Post('child-reports/:id/attachments')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadAttachment(
-    @Request() req: AuthenticatedRequest,
-    @Param('id') id: string,
-    @UploadedFile() file: UploadedFileDto,
-  ) {
-    if (!file) {
-      throw new BadRequestException('File is required');
-    }
-    return this.childReportsService.addAttachment(req.user.tenantId, id, file);
   }
 }

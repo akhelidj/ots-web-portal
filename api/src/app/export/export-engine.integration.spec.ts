@@ -32,6 +32,7 @@ import {
   seedRealDrillPipeTemplate,
   seedApprovableSerial,
   resetInspectionDomain,
+  makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 
 const DEF = JSON.parse(
@@ -64,7 +65,7 @@ describe('Layer B — export engine structural behaviour + mutation guards [inte
     const revisionService = new RevisionService(prisma);
     exportService = new ExportService(prisma, revisionService);
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
-    reports = new InspectionReportsService(prisma);
+    reports = new InspectionReportsService(prisma, makeFilesServiceStub());
   });
 
   afterAll(async () => {

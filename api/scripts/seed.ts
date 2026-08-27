@@ -437,7 +437,7 @@ async function provisionNobleCorporation(
     where: { childReport: { inspectionReportId: report.id } },
   });
   await prisma.attachment.deleteMany({
-    where: { childReport: { inspectionReportId: report.id } },
+    where: { inspectionReportId: report.id },
   });
   await prisma.inspectionApprovalBatchSerialNumber.deleteMany({
     where: { batch: { inspectionReportId: report.id } },

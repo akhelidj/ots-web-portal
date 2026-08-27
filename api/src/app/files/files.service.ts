@@ -55,14 +55,10 @@ export class FilesService implements OnModuleInit {
     const attachment = await this.prisma.attachment.findUnique({
       where: { id: attachmentId },
       include: {
-        childReport: {
-          include: {
-            inspectionReport: {
-              select: {
-                tenantId: true,
-                customerId: true,
-              },
-            },
+        inspectionReport: {
+          select: {
+            tenantId: true,
+            customerId: true,
           },
         },
       },
@@ -72,7 +68,7 @@ export class FilesService implements OnModuleInit {
       throw new NotFoundException('Attachment not found');
     }
 
-    const ownerReport = attachment.childReport?.inspectionReport;
+    const ownerReport = attachment.inspectionReport;
     if (!ownerReport || ownerReport.tenantId !== user.tenantId) {
       throw new ForbiddenException('Attachment access denied');
     }

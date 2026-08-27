@@ -177,10 +177,4 @@ export interface ChildSnapshot {
     serial: string;
     disposition: string | null;
   }[];
-  attachments: {
-    id: string;
-    filename: string;
-    url: string;
-    createdAt: Date | string;
-  }[];
 }

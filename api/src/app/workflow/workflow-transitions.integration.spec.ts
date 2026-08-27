@@ -36,6 +36,7 @@ import {
   seedCustomer,
   seedActiveTemplate,
   resetInspectionDomain,
+  makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 
 describe('InspectionReport workflow state transitions (foundation baseline) [integration]', () => {
@@ -61,7 +62,7 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
     } as unknown as RevisionService;
 
     workflow = new InspectionReportWorkflowService(prisma, revisionStub);
-    reports = new InspectionReportsService(prisma);
+    reports = new InspectionReportsService(prisma, makeFilesServiceStub());
   });
 
   afterAll(async () => {

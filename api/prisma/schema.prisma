@@ -171,6 +171,7 @@ model InspectionReport {
   // inspectorComment/equipmentUsed/inspectionMethod) and its back-compat bridge were
   // retired here (no dev rows carried column values — the backfill was a no-op).
   headerData            Json?
+  attachments           Attachment[]
   auditLogs             AuditLog[]
   childReports          ChildReport[]
   customer              Customer?                       @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -214,7 +215,6 @@ model ChildReport {
   tenantId           String
   type               ChildReportType            @default(REWORK)
   version            Int                        @default(1)
-  attachments        Attachment[]
   inspectionReport   InspectionReport           @relation(fields: [inspectionReportId], references: [id])
   tenant             Tenant                     @relation(fields: [tenantId], references: [id])
   revisions          ChildReportRevision[]
@@ -240,12 +240,12 @@ model ChildReportSerialNumber {
 }
 
 model Attachment {
-  id            String      @id @default(uuid())
-  filename      String
-  url           String
-  childReportId String
-  createdAt     DateTime    @default(now())
-  childReport   ChildReport @relation(fields: [childReportId], references: [id])
+  id                 String           @id @default(uuid())
+  filename           String
+  url                String
+  inspectionReportId String
+  createdAt          DateTime         @default(now())
+  inspectionReport   InspectionReport @relation(fields: [inspectionReportId], references: [id])
 }
 
 model InspectionReportTransitionLog {

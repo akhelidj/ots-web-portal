@@ -17,6 +17,32 @@ import {
   SerialDisposition,
 } from '@prisma/client';
 import { PrismaService } from '../src/app/prisma/prisma.service';
+import type { FilesService } from '../src/app/files/files.service';
+
+/**
+ * A stand-in FilesService for specs that construct a service which now takes
+ * FilesService as a constructor dep but never exercises an attachment path.
+ * Every reachable method throws loudly, so if a future change routes a *tested*
+ * path through file storage it fails with a clear message instead of a silent
+ * `undefined is not a function`. Only the methods the attachment path could reach
+ * are stubbed — keep this in sync with FilesService's public surface.
+ */
+export function makeFilesServiceStub(): FilesService {
+  const notWired =
+    (method: string) =>
+    (): never => {
+      throw new Error(
+        `FilesService.${method} was called by a spec that wired a stub — ` +
+          `this path was not expected to touch attachment storage.`,
+      );
+    };
+  return {
+    saveAttachmentBinary: notWired('saveAttachmentBinary'),
+    removeAttachmentBinary: notWired('removeAttachmentBinary'),
+    buildAttachmentUrl: notWired('buildAttachmentUrl'),
+    resolveAttachmentForDownload: notWired('resolveAttachmentForDownload'),
+  } as unknown as FilesService;
+}
 
 /**
  * Truncate the whole inspection domain in FK-safe (child → parent) order.

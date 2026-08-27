@@ -6,7 +6,6 @@ import {
   PreconditionFailedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { FilesService } from '../files/files.service';
 import { ReworkRulesInterpreter } from './rework-rules.interpreter';
 import {
   ChildReportStatus,
@@ -20,7 +19,6 @@ import { InspectionData } from '../common/inspection-data.types';
 export class ChildReportsService {
   constructor(
     private prisma: PrismaService,
-    private filesService: FilesService,
     private reworkRulesInterpreter: ReworkRulesInterpreter,
   ) {}
 
@@ -80,7 +78,6 @@ export class ChildReportsService {
   private mapChildReportResponse(
     cr: Prisma.ChildReportGetPayload<{
       include: {
-        attachments: true;
         serialNumbers: { include: { serialNumber: true } };
       };
     }> | null,
@@ -88,7 +85,6 @@ export class ChildReportsService {
     if (!cr) return cr;
     return {
       ...cr,
-      attachmentCount: cr.attachments.length,
       serialNumbers: cr.serialNumbers
         ? cr.serialNumbers.map((sn) => ({
             id: sn.serialNumberId,
@@ -105,7 +101,6 @@ export class ChildReportsService {
     const reports = await this.prisma.childReport.findMany({
       where: { tenantId, inspectionReportId },
       include: {
-        attachments: true,
         serialNumbers: {
           include: { serialNumber: true },
         },
@@ -119,7 +114,6 @@ export class ChildReportsService {
     const cr = await this.prisma.childReport.findFirst({
       where: { id, tenantId },
       include: {
-        attachments: true,
         serialNumbers: {
           include: { serialNumber: true },
         },
@@ -157,7 +151,6 @@ export class ChildReportsService {
           version: { increment: 1 },
         },
         include: {
-          attachments: true,
           serialNumbers: {
             include: { serialNumber: true },
           },
@@ -252,59 +245,11 @@ export class ChildReportsService {
     const result = await this.prisma.childReport.findUnique({
       where: { id: childReportId },
       include: {
-        attachments: true,
         serialNumbers: {
           include: { serialNumber: true },
         },
       },
     });
     return this.mapChildReportResponse(result);
-  }
-
-  async addAttachment(
-    tenantId: string,
-    id: string,
-    file: { originalname: string; buffer: Buffer },
-  ) {
-    const childReport = await this.prisma.childReport.findFirst({
-      where: { id, tenantId },
-    });
-
-    if (!childReport) {
-      throw new NotFoundException('Child Report not found');
-    }
-
-    if (
-      childReport.status === ChildReportStatus.APPROVED ||
-      childReport.status === ChildReportStatus.CLOSED
-    ) {
-      throw new BadRequestException(
-        'Cannot add attachment: Child Report is locked.',
-      );
-    }
-
-    const attachment = await this.prisma.attachment.create({
-      data: {
-        filename: file.originalname,
-        url: '',
-        childReportId: id,
-      },
-    });
-
-    try {
-      await this.filesService.saveAttachmentBinary(attachment.id, file.buffer);
-      const updated = await this.prisma.attachment.update({
-        where: { id: attachment.id },
-        data: {
-          url: this.filesService.buildAttachmentUrl(attachment.id),
-        },
-      });
-
-      return updated;
-    } catch (error) {
-      await this.prisma.attachment.delete({ where: { id: attachment.id } });
-      await this.filesService.removeAttachmentBinary(attachment.id);
-      throw error;
-    }
   }
 }

@@ -13,6 +13,7 @@ import {
   InspectionApprovalBatchStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { FilesService } from '../files/files.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 
 /**
@@ -32,7 +33,10 @@ function prettifyTemplateKey(templateKey: string): string {
 
 @Injectable()
 export class InspectionReportsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private filesService: FilesService,
+  ) {}
 
   async getReports(
     user: { tenantId: string; role: UserRole; customerId?: string | null },
@@ -161,11 +165,59 @@ export class InspectionReportsService {
 
     const report = await this.prisma.inspectionReport.findFirst({
       where,
+      include: { attachments: true },
     });
     if (!report) {
       throw new NotFoundException(`InspectionReport ${id} not found`);
     }
     return report;
+  }
+
+  async addAttachment(
+    tenantId: string,
+    id: string,
+    file: { originalname: string; buffer: Buffer },
+  ) {
+    const report = await this.prisma.inspectionReport.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!report) {
+      throw new NotFoundException(`InspectionReport ${id} not found`);
+    }
+
+    if (
+      report.status === InspectionReportStatus.APPROVED ||
+      report.status === InspectionReportStatus.CLOSED
+    ) {
+      throw new BadRequestException(
+        'Cannot add attachment: Inspection Report is locked.',
+      );
+    }
+
+    const attachment = await this.prisma.attachment.create({
+      data: {
+        filename: file.originalname,
+        url: '',
+        inspectionReportId: id,
+      },
+    });
+
+    try {
+      await this.filesService.saveAttachmentBinary(attachment.id, file.buffer);
+      const updated = await this.prisma.attachment.update({
+        where: { id: attachment.id },
+        data: {
+          url: this.filesService.buildAttachmentUrl(attachment.id),
+        },
+      });
+
+      return updated;
+    } catch (error) {
+      await this.prisma.attachment.delete({ where: { id: attachment.id } });
+      await this.filesService.removeAttachmentBinary(attachment.id);
+      throw error;
+    }
   }
 
   async createReport(
@@ -430,22 +482,11 @@ export class InspectionReportsService {
             tenantId,
             inspectionReportId: reportId,
           },
-          include: {
-            attachments: {
-              select: { id: true },
-            },
-          },
         });
 
         if (!childReport) {
           throw new NotFoundException(
             'Child report not found for this inspection report',
-          );
-        }
-
-        if (childReport.attachments.length === 0) {
-          throw new BadRequestException(
-            'At least one attachment is required before submitting a child report batch',
           );
         }
 

@@ -146,15 +146,6 @@ export class RevisionService {
           },
           orderBy: { serialNumber: { serial: 'asc' } }, // Deterministic
         },
-        attachments: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            filename: true,
-            url: true, // Only metadata/reference
-            createdAt: true,
-          },
-        },
         inspectionReport: {
           select: {
             id: true,
@@ -194,7 +185,6 @@ export class RevisionService {
           // currently they just link. Inclusion of serial value is key.
         };
       }),
-      attachments: childReport.attachments,
     } satisfies ChildSnapshot;
 
     await tx.childReportRevision.create({

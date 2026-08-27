@@ -52,6 +52,7 @@ import {
   seedRealDrillPipeTemplate,
   seedApprovableSerial,
   resetInspectionDomain,
+  makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 
 const XLSX_MIME =
@@ -81,7 +82,7 @@ describe('Deterministic xlsx export (foundation baseline) [integration]', () => 
     const revisionService = new RevisionService(prisma);
     exportService = new ExportService(prisma, revisionService);
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
-    reports = new InspectionReportsService(prisma);
+    reports = new InspectionReportsService(prisma, makeFilesServiceStub());
   });
 
   afterAll(async () => {

@@ -52,7 +52,6 @@ import {
   SerialDisposition,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { FilesService } from '../files/files.service';
 import { ChildReportsService } from './child-reports.service';
 import { ReworkRulesInterpreter } from './rework-rules.interpreter';
 import {
@@ -190,14 +189,11 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
-    // FilesService is a constructor dep syncReworkChildReport never touches; construct
-    // it without onModuleInit (which reconciles the attachment storage dir). The
-    // ReworkRulesInterpreter is now a constructor dep too (the wired gate routes to it
+    // The ReworkRulesInterpreter is a constructor dep (the wired gate routes to it
     // when the report's template carries a definitionJson) — supplied here with prisma,
     // its only dep, exactly as the DI module provides it.
     service = new ChildReportsService(
       prisma,
-      new FilesService(prisma),
       new ReworkRulesInterpreter(prisma),
     );
   });

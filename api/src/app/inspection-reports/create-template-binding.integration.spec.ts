@@ -33,6 +33,7 @@ import {
   seedCustomer,
   seedActiveTemplate,
   resetInspectionDomain,
+  makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 
 describe('Create / template-binding path (multi-template seam) [integration]', () => {
@@ -44,7 +45,7 @@ describe('Create / template-binding path (multi-template seam) [integration]', (
     prisma = new PrismaService();
     await prisma.onModuleInit();
 
-    reportsService = new InspectionReportsService(prisma);
+    reportsService = new InspectionReportsService(prisma, makeFilesServiceStub());
     // workflow.create does not use RevisionService, so an inert stub is fine.
     workflowService = new InspectionReportWorkflowService(
       prisma,

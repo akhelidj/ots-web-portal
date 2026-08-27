@@ -31,7 +31,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { SerialApprovalStatus, SerialDisposition } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { FilesService } from '../files/files.service';
 import { ChildReportsService } from './child-reports.service';
 import { ReworkRulesInterpreter } from './rework-rules.interpreter';
 import {
@@ -50,11 +49,8 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
-    // FilesService is a constructor dep but is never touched by this path; construct it
-    // without onModuleInit (which would try to reconcile the attachment storage dir).
     service = new ChildReportsService(
       prisma,
-      new FilesService(prisma),
       new ReworkRulesInterpreter(prisma),
     );
   });

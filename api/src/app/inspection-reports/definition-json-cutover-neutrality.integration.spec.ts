@@ -51,7 +51,6 @@ import { InspectionReportWorkflowService } from '../workflow/inspection-report-w
 import { InspectionReportsService } from './inspection-reports.service';
 import { ChildReportsService } from '../child-reports/child-reports.service';
 import { ReworkRulesInterpreter } from '../child-reports/rework-rules.interpreter';
-import type { FilesService } from '../files/files.service';
 // Portal delivery-side consumer (the engine under test), imported directly — it is pure
 // TS (zero Angular imports), so swc/jest transpiles it like any other .ts file. The
 // hardcoded DRILL_PIPE_V1_SCHEMA is NOT imported across the app boundary; the oracle is a
@@ -64,6 +63,7 @@ import {
   seedApprovableSerial,
   seedInspectionReport,
   resetInspectionDomain,
+  makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 
 const TEMPLATE_KEY = 'DRILL_PIPE_REPORT';
@@ -116,11 +116,12 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
     const revisionService = new RevisionService(prisma);
     exportService = new ExportService(prisma, revisionService);
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
-    reportsService = new InspectionReportsService(prisma);
-    // syncReworkChildReport never touches FilesService — a stub satisfies the ctor.
+    reportsService = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+    );
     childReports = new ChildReportsService(
       prisma,
-      {} as FilesService,
       new ReworkRulesInterpreter(prisma),
     );
   });

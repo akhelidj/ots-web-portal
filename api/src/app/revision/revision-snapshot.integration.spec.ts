@@ -37,6 +37,7 @@ import {
   seedActiveTemplate,
   seedApprovableSerial,
   resetInspectionDomain,
+  makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 import { Snapshot } from '../common/inspection-data.types';
 
@@ -58,7 +59,7 @@ describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
     // REAL RevisionService this time — its output is exactly what we assert.
     const revisionService = new RevisionService(prisma);
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
-    reports = new InspectionReportsService(prisma);
+    reports = new InspectionReportsService(prisma, makeFilesServiceStub());
   });
 
   afterAll(async () => {

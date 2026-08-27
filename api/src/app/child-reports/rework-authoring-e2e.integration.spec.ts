@@ -19,7 +19,6 @@
  */
 import { InspectionReportStatus, ChildReportType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { FilesService } from '../files/files.service';
 import { ChildReportsService } from './child-reports.service';
 import { ReworkRulesInterpreter } from './rework-rules.interpreter';
 import { buildDefinition } from '../template/definition-builder';
@@ -36,7 +35,6 @@ describe('rework authoring — end-to-end, template-agnostic [integration]', () 
     await prisma.onModuleInit();
     service = new ChildReportsService(
       prisma,
-      new FilesService(prisma),
       new ReworkRulesInterpreter(prisma),
     );
   });

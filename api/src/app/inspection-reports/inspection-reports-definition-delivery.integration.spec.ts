@@ -15,6 +15,7 @@ import {
   seedActiveTemplate,
   seedInspectionReport,
   resetInspectionDomain,
+  makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 
 describe('getReports embeds template definitionJson [integration]', () => {
@@ -30,7 +31,7 @@ describe('getReports embeds template definitionJson [integration]', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
-    service = new InspectionReportsService(prisma);
+    service = new InspectionReportsService(prisma, makeFilesServiceStub());
   });
 
   afterAll(async () => {
