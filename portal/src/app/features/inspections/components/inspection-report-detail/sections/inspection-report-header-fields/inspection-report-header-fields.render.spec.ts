@@ -176,6 +176,48 @@ describe('InspectionReportHeaderFieldsComponent — definition-driven header ren
     expect(html().textContent).not.toContain('Grade');
   });
 
+  it('renders a roled header field as a read-only System row (badge + derived value), not a plain value row', async () => {
+    const fixture = setup();
+    const c = fixture.componentInstance;
+    const html = () => fixture.nativeElement as HTMLElement;
+
+    const ROLED_DEFINITION: TemplateFormDefinition = {
+      templateKey: 'DRILL_PIPE_REPORT',
+      templateVersion: 1,
+      sections: [],
+      regions: [{ id: 'r1', marker: '{{sn}}' }],
+      fields: [
+        { key: 'grade', label: 'Grade', type: 'text', required: false, scope: 'header' },
+        { key: 'inspBy', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+      ],
+    };
+
+    c.definition = ROLED_DEFINITION;
+    // A stale/user value in headerData must NOT be shown for a roled field — its value is
+    // derived. displayValue would surface 'STALE'; the System row must show the derived one.
+    c.data = { grade: 'S-135', inspBy: 'STALE' };
+    c.systemValues = {
+      inspector: {
+        value: 'Ivy Inspector',
+        pending: false,
+        pendingLabel: 'Awaiting inspection',
+        source: 'Set at inspection',
+      },
+    };
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+
+    // The roled field renders the System row (not the plain header-value row) with the badge.
+    expect(html().querySelector('[data-testid="system-field-inspBy"]')).not.toBeNull();
+    expect(html().querySelector('[data-testid="header-value-inspBy"]')).toBeNull();
+    expect(html().querySelector('[data-testid="system-badge-inspBy"]')?.textContent).toContain('System');
+    // The DERIVED value shows; the stale headerData value never reaches the DOM.
+    expect(html().querySelector('[data-testid="system-value-inspBy"]')?.textContent).toContain('Ivy Inspector');
+    expect(html().textContent).not.toContain('STALE');
+    // A role-less field still renders as a normal value row.
+    expect(html().querySelector('[data-testid="header-value-grade"]')?.textContent?.trim()).toBe('S-135');
+  });
+
   it('re-renders reactively when the definition input is re-pointed (driven change)', async () => {
     const fixture = setup();
     const c = fixture.componentInstance;

@@ -149,6 +149,74 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
     expect(el().querySelector('[data-testid="header-edit-save"]')).toBeNull();
   });
 
+  it('a roled header field builds NO control — it renders the read-only System row, and Save emits nothing for it', async () => {
+    const ROLED: TemplateFormDefinition = {
+      templateKey: 'ROLED_TEMPLATE',
+      templateVersion: 1,
+      sections: [],
+      regions: [{ id: 'r1', marker: '{{tag}}' }],
+      fields: [
+        { key: 'certNumber', label: 'Cert Number', type: 'text', required: false, scope: 'header' },
+        { key: 'inspBy', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+      ],
+    };
+
+    const fixture = setup();
+    const c = fixture.componentInstance;
+    const el = () => fixture.nativeElement as HTMLElement;
+
+    const emitted: Record<string, unknown>[] = [];
+    c.save.subscribe((v) => emitted.push(v));
+
+    c.definition = ROLED;
+    c.data = {};
+    // Pending: no inspector yet → the neutral pending label, not a blank or error.
+    c.systemValues = {
+      inspector: {
+        value: '',
+        pending: true,
+        pendingLabel: 'Awaiting inspection',
+        source: 'Set at inspection',
+      },
+    };
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+
+    // No input control is built for the roled field; the System row + badge render instead.
+    expect(el().querySelector('[data-testid="header-edit-input-inspBy"]')).toBeNull();
+    expect(el().querySelector('[data-testid="system-field-inspBy"]')).not.toBeNull();
+    expect(el().querySelector('[data-testid="system-badge-inspBy"]')).not.toBeNull();
+    expect(el().querySelector('[data-testid="system-badge-inspBy"]')?.textContent).toContain('System');
+    // Pending message + source note both show.
+    expect(el().querySelector('[data-testid="system-value-inspBy"]')?.textContent).toContain('Awaiting inspection');
+    expect(el().textContent).toContain('Set at inspection');
+
+    // A role-less field still edits normally, and Save emits ONLY it — never the roled key.
+    typeInto(el(), '[data-testid="header-edit-input-certNumber"]', 'CERT-9');
+    el().querySelector<HTMLButtonElement>('[data-testid="header-edit-save"]')!.click();
+    await fixture.whenStable();
+
+    expect(emitted.length).toBe(1);
+    expect(emitted[0]!['certNumber']).toBe('CERT-9');
+    expect('inspBy' in emitted[0]!).toBe(false);
+
+    // Once a value is derived, the same row shows it (no pending). Re-set `data` (a
+    // signal input) to a fresh ref so the zoneless scheduler re-runs CD and re-reads
+    // the (plain-input) systemValues — no manual detectChanges.
+    c.systemValues = {
+      inspector: {
+        value: 'Ivy Inspector',
+        pending: false,
+        pendingLabel: 'Awaiting inspection',
+        source: 'Set at inspection',
+      },
+    };
+    c.data = {};
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    expect(el().querySelector('[data-testid="system-value-inspBy"]')?.textContent).toContain('Ivy Inspector');
+  });
+
   it('drill-pipe object-list fields (equipment/methods) render through the SAME generic array editor', async () => {
     // Retype proof: equipmentUsed is now type `object-list` in the drill-pipe
     // definition, so it renders with the generic array editor — not a text box —

@@ -4,8 +4,10 @@ import { FormSchema } from '@portal/features/templates/schemas/drill-pipe-v1.sch
 import {
   TemplateFormDefinition,
   definitionToFormSchema,
+  SystemRoleValues,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { formatObjectListRow } from '@portal/features/templates/schemas/object-list-field';
+import { SystemFieldRowComponent } from './system-field-row.component';
 
 /**
  * Read-only view of a report's HEADER-scope fields (the Specs tab), rendered generically
@@ -27,7 +29,7 @@ import { formatObjectListRow } from '@portal/features/templates/schemas/object-l
 @Component({
   selector: 'app-inspection-report-header-fields',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SystemFieldRowComponent],
   templateUrl: './inspection-report-header-fields.component.html',
 })
 export class InspectionReportHeaderFieldsComponent {
@@ -39,6 +41,12 @@ export class InspectionReportHeaderFieldsComponent {
   @Input() set data(value: Record<string, unknown> | null) {
     this._data.set(value ?? {});
   }
+  /**
+   * Derived values for roled (system-owned) fields, from the detail component's single
+   * derivation. A roled field renders its value from here — never from `data` (its key is
+   * stripped on save server-side and never user-entered).
+   */
+  @Input() systemValues: SystemRoleValues = {};
 
   private _definition = signal<TemplateFormDefinition | null>(null);
   private _data = signal<Record<string, unknown>>({});

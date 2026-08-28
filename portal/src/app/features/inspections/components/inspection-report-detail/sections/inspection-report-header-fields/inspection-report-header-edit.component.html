@@ -28,19 +28,31 @@
               </h4>
             }
             @for (field of section.fields; track field.key) {
-              <div
-                class="space-y-1"
-                [attr.data-testid]="'header-edit-field-' + field.key"
-              >
-                <!-- The ONE shared field renderer: dispatches by type (scalars + the
-                     generic object-list array editor), no field-name awareness. -->
-                <app-definition-field-input
-                  [field]="field"
-                  [control]="controlFor(field.key)"
-                  [options]="getFieldOptions(field)"
-                  testidPrefix="header-edit"
-                />
-              </div>
+              @if (field.role) {
+                <!-- System-owned field: no control, no validator, nothing saved. The
+                     value is derived and shown read-only with a "System" badge. -->
+                <div [attr.data-testid]="'header-edit-field-' + field.key">
+                  <app-system-field-row
+                    [fieldKey]="field.key"
+                    [label]="field.label"
+                    [value]="systemValues[field.role]"
+                  />
+                </div>
+              } @else {
+                <div
+                  class="space-y-1"
+                  [attr.data-testid]="'header-edit-field-' + field.key"
+                >
+                  <!-- The ONE shared field renderer: dispatches by type (scalars + the
+                       generic object-list array editor), no field-name awareness. -->
+                  <app-definition-field-input
+                    [field]="field"
+                    [control]="controlFor(field.key)"
+                    [options]="getFieldOptions(field)"
+                    testidPrefix="header-edit"
+                  />
+                </div>
+              }
             }
           </div>
         }

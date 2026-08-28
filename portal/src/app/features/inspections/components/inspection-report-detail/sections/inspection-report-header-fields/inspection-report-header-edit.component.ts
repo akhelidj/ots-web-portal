@@ -23,12 +23,14 @@ import {
 import {
   TemplateFormDefinition,
   definitionToFormSchema,
+  SystemRoleValues,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
 import {
   isObjectListRowEmpty,
   toObjectListRow,
 } from '@portal/features/templates/schemas/object-list-field';
 import { DefinitionFieldInputComponent } from '@portal/features/inspections/components/definition-field-input/definition-field-input.component';
+import { SystemFieldRowComponent } from './system-field-row.component';
 
 /**
  * Editable counterpart to `InspectionReportHeaderFieldsComponent` — the generic,
@@ -47,7 +49,12 @@ import { DefinitionFieldInputComponent } from '@portal/features/inspections/comp
 @Component({
   selector: 'app-inspection-report-header-edit',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DefinitionFieldInputComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    DefinitionFieldInputComponent,
+    SystemFieldRowComponent,
+  ],
   templateUrl: './inspection-report-header-edit.component.html',
 })
 export class InspectionReportHeaderEditComponent {
@@ -59,6 +66,11 @@ export class InspectionReportHeaderEditComponent {
   @Input() set data(value: Record<string, unknown> | null) {
     this._data.set(value ?? {});
   }
+  /**
+   * Derived values for roled (system-owned) fields. A roled field builds NO control and
+   * emits nothing on save — it renders the read-only System row from these values instead.
+   */
+  @Input() systemValues: SystemRoleValues = {};
 
   /** Emits the definition-keyed header map (fieldKey → value) on save. */
   @Output() save = new EventEmitter<Record<string, unknown>>();
@@ -108,6 +120,9 @@ export class InspectionReportHeaderEditComponent {
     if (!schema) return this.fb.group(group);
     for (const section of schema.sections) {
       for (const field of section.fields) {
+        // Roled (system-owned) fields are not user-writable: build NO control, add NO
+        // required validator. They render as read-only System rows in the template.
+        if (field.role) continue;
         const raw = data[field.key];
         if (field.inputType === 'object-list') {
           const rows = Array.isArray(raw) ? raw : [];
@@ -144,6 +159,8 @@ export class InspectionReportHeaderEditComponent {
     const out: Record<string, unknown> = {};
     for (const section of schema?.sections ?? []) {
       for (const field of section.fields) {
+        // Roled fields have no control and are never emitted — their value is derived.
+        if (field.role) continue;
         const value = raw[field.key];
         if (field.inputType === 'object-list') {
           // Normalize to the shared `{ name, number }` row shape and drop empty rows —

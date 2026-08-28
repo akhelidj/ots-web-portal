@@ -13,7 +13,7 @@ import {
   HostListener,
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { CommonModule } from '@angular/common';
+import { CommonModule, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 
@@ -65,6 +65,7 @@ import { SerialInspectionReactiveFormComponent } from '@portal/features/inspecti
 import {
   TemplateFormDefinition,
   definitionToFormSchema,
+  SystemRoleValues,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { SectionSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import { InspectionReportHeaderComponent } from './sections/inspection-report-header/inspection-report-header.component';
@@ -434,6 +435,14 @@ export class InspectionReportDetailComponent
   public approvedByName = 'N/A';
   public customerAddress = 'N/A';
 
+  /**
+   * Derived values for system-owned (roled) header fields — assembled from the SAME
+   * inspectedByName/approvedByName/date derivation below (no second derivation) and
+   * passed to the read-only header surfaces so a roled field renders its derived value,
+   * a "System" badge, and a neutral pending state when not yet inspected/approved.
+   */
+  public systemRoleValues: SystemRoleValues = {};
+
   // Modal State
   public activeModalStatus = signal<
     (typeof SERIAL_DISPOSITIONS)[keyof typeof SERIAL_DISPOSITIONS] | null
@@ -760,6 +769,34 @@ export class InspectionReportDetailComponent
       }
     }
 
+    // System-owned (roled) header values — assembled from the SAME derivation just
+    // computed (inspector/approver names) plus the report's updatedAt for the date. No
+    // second derivation: a roled field's row reads straight from this map. 'N/A' (the
+    // no-actor sentinel above) → a neutral pending state naming what it waits on.
+    const dateValue = r?.updatedAt
+      ? formatDate(r.updatedAt, 'mediumDate', 'en-US')
+      : '';
+    const newSystemRoleValues: SystemRoleValues = {
+      inspector: {
+        value: newInspectedByName,
+        pending: newInspectedByName === 'N/A',
+        pendingLabel: 'Awaiting inspection',
+        source: 'Set at inspection',
+      },
+      supervisor: {
+        value: newApprovedByName,
+        pending: newApprovedByName === 'N/A',
+        pendingLabel: 'Awaiting approval',
+        source: 'Set at approval',
+      },
+      inspectionDate: {
+        value: dateValue,
+        pending: !dateValue,
+        pendingLabel: 'Set on first save',
+        source: 'Set automatically',
+      },
+    };
+
     // KPI Calcs
     const total = snList.length;
     let pass = 0;
@@ -802,6 +839,7 @@ export class InspectionReportDetailComponent
       this.customerAddress = newCustomerAddress;
       this.inspectedByName = newInspectedByName;
       this.approvedByName = newApprovedByName;
+      this.systemRoleValues = newSystemRoleValues;
       this.reworkSerials = reworkList;
 
       // Set default tab if not set

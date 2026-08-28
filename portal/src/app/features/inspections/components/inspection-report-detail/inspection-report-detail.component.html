@@ -643,6 +643,7 @@
                 <app-inspection-report-header-edit
                   [definition]="reportDefinition"
                   [data]="reportHeaderView()"
+                  [systemValues]="systemRoleValues"
                   (save)="onSaveHeader($event)"
                   (cancelEdit)="isEditingMeta.set(false)"
                 />
@@ -683,6 +684,7 @@
                 <app-inspection-report-header-fields
                   [definition]="reportDefinition"
                   [data]="reportHeaderView()"
+                  [systemValues]="systemRoleValues"
                 />
               </div>
             }

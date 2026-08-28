@@ -25,17 +25,26 @@
           }
           <div class="space-y-3">
             @for (field of section.fields; track field.key) {
-              <div
-                class="flex justify-between gap-4"
-                [attr.data-testid]="'header-field-' + field.key"
-              >
-                <span class="text-sm text-gray-500">{{ field.label }}</span>
-                <span
-                  class="text-sm font-bold text-neutral-900 text-right"
-                  [attr.data-testid]="'header-value-' + field.key"
-                  >{{ displayValue(field.key) }}</span
+              @if (field.role) {
+                <!-- System-owned field: derived, read-only, badged. Never user-entered. -->
+                <app-system-field-row
+                  [fieldKey]="field.key"
+                  [label]="field.label"
+                  [value]="systemValues[field.role]"
+                />
+              } @else {
+                <div
+                  class="flex justify-between gap-4"
+                  [attr.data-testid]="'header-field-' + field.key"
                 >
-              </div>
+                  <span class="text-sm text-gray-500">{{ field.label }}</span>
+                  <span
+                    class="text-sm font-bold text-neutral-900 text-right"
+                    [attr.data-testid]="'header-value-' + field.key"
+                    >{{ displayValue(field.key) }}</span
+                  >
+                </div>
+              }
             }
           </div>
         </div>

@@ -3,7 +3,24 @@ import {
   FieldSchema,
   SectionSchema,
   FieldInputType,
+  FieldRole,
 } from './drill-pipe-v1.schema';
+
+/**
+ * A resolved value for a system-owned (roled) header field, derived once in the detail
+ * component and passed down to the read-only header surfaces. `value` is display-ready;
+ * when `pending` (not inspected/approved yet) the surfaces show `pendingLabel` instead of
+ * a blank/error, and `source` is the one-line explanation of where the value comes from.
+ */
+export interface SystemRoleValue {
+  value: string;
+  pending: boolean;
+  pendingLabel: string;
+  source: string;
+}
+
+/** Derived values for the roled header fields present in a definition, keyed by role. */
+export type SystemRoleValues = Partial<Record<FieldRole, SystemRoleValue>>;
 
 /**
  * Phase B3 — portal-side view of the (backend-authored) template definition, as
@@ -21,6 +38,12 @@ export interface DefinitionField {
   region?: string;
   options?: string[];
   section?: string;
+  /**
+   * System role (header scope only) — mirrors the API. A roled field is system-owned and
+   * NOT user-writable: the header-edit form builds no control for it, and both header
+   * surfaces render a read-only "System" row showing the derived value.
+   */
+  role?: FieldRole;
 }
 
 export interface DefinitionSection {
@@ -119,6 +142,11 @@ export function definitionToFormSchema(
     };
     if (f.options) {
       field.options = f.options;
+    }
+    // Carried only when present, mirroring `options` — so a role-less definition (every
+    // existing template, incl. drill pipe) produces the byte-identical golden schema.
+    if (f.role) {
+      field.role = f.role;
     }
     fields.push(field);
     bySection.set(sectionKey, fields);

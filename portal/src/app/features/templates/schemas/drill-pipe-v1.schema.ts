@@ -9,12 +9,22 @@ export type FieldInputType =
   // as an array. Any array field uses it (no field-name special-casing).
   | 'object-list';
 
+/**
+ * A header field's SYSTEM role (mirrors the API's FieldRole). A roled field is
+ * system-owned: its value is DERIVED (inspector/supervisor from the transition log,
+ * inspectionDate automatically), never user-entered. The header-edit surface renders no
+ * input for it; both header surfaces show a read-only "System" row instead.
+ */
+export type FieldRole = 'inspector' | 'supervisor' | 'inspectionDate';
+
 export interface FieldSchema {
   key: string; // e.g. "box.minTongSpace" or "final.disposition"
   label: string;
   inputType: FieldInputType;
   required: boolean;
   options?: string[]; // strictly for select
+  /** System role (header only) — present → render read-only, never as an input. */
+  role?: FieldRole;
 }
 
 export interface SectionSchema {
