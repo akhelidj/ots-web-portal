@@ -20,9 +20,10 @@ export class StatusBadgeComponent {
   severity = input<BadgeSeverity>('neutral');
 
   // Token-backed classes (semantic color scale from tailwind.config → :root vars),
-  // never raw palette. `neutral` uses the muted surface token (solid, no alpha);
-  // success/warning/error use their light/dark/DEFAULT token scale; `info` has no
-  // dedicated token, so it maps to the primary (blue) token.
+  // never raw palette. `neutral` uses the muted surface token (solid, no alpha) with
+  // `text-foreground` for the label — muted-foreground on muted is only 4.12:1 (fails AA
+  // for this 10px label); foreground on muted is 12.66:1. success/warning/error use their
+  // light/dark/DEFAULT token scale; `info` has no dedicated token, so it maps to primary.
   classes = computed(() => {
     switch (this.severity()) {
       case 'success':
@@ -35,7 +36,7 @@ export class StatusBadgeComponent {
         return 'bg-primary/10 text-primary border-primary/40';
       case 'neutral':
       default:
-        return 'bg-muted text-muted-foreground border-border';
+        return 'bg-muted text-foreground border-border';
     }
   });
 }
