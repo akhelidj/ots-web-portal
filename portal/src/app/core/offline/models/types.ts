@@ -5,6 +5,13 @@ import {
   ChildReportType,
 } from '@portal/core/constants/app.constants';
 
+export interface Attachment {
+  id: string;
+  filename: string;
+  url: string;
+  createdAt: string;
+}
+
 export interface LocalInspectionReport {
   id: string;
   customerId: string | null;
@@ -24,6 +31,7 @@ export interface LocalInspectionReport {
   // values here as one map; the effective header view reads them directly. The
   // legacy named columns were retired with their backend columns.
   headerData?: Record<string, unknown> | null;
+  attachments?: Attachment[];
   syncState?: 'PENDING' | 'SYNCED' | 'CONFLICT' | 'ERROR';
   updatedAt?: string;
   pendingTransitionToStatus?: ReportStatus | null;
@@ -135,12 +143,7 @@ export interface LocalChildReport {
   id: string;
   tenantId: string;
   inspectionReportId: string;
-  attachments?: Array<{
-    id: string;
-    filename: string;
-    url: string;
-    createdAt: string;
-  }>;
+  attachments?: Attachment[];
   attachmentCount?: number;
   serialNumbers: Array<{
     id: string;

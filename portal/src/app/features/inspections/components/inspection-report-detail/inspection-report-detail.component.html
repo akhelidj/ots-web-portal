@@ -531,6 +531,13 @@
               (dispositionOpen)="openKpiModal($event)"
             />
           }
+
+          @if (reportId) {
+            <app-report-attachments
+              [reportId]="reportId"
+              [disabled]="isLocked() || isCustomer()"
+            />
+          }
         </div>
       }
 

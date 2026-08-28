@@ -6,6 +6,7 @@ import { environment } from '@app-env/environment';
 import { InspectionReportLocalRepo } from '@portal/core/offline/repos/inspection-report-local.repo';
 import { SerialNumberLocalRepo } from '@portal/core/offline/repos/serial-number-local.repo';
 import {
+  Attachment,
   LocalInspectionReport,
   LocalSerialNumber,
   LocalTransitionLog,
@@ -41,6 +42,21 @@ export interface AvailableTemplate {
   templateKey: string;
   templateVersion: number;
   displayName: string;
+}
+
+/**
+ * Thrown by {@link InspectionReportsService.uploadAttachment} when the device is
+ * offline. Attachment upload is online-only. The attachments UI checks
+ * connectivity and disables its controls ahead of time; this typed error is the
+ * fallback if an upload is somehow attempted while offline — a caller can test
+ * `err instanceof AttachmentUploadOfflineError` instead of string-matching.
+ */
+export class AttachmentUploadOfflineError extends Error {
+  readonly offline = true as const;
+  constructor(message = 'Attachment upload is only available while online.') {
+    super(message);
+    this.name = 'AttachmentUploadOfflineError';
+  }
 }
 
 @Injectable({
@@ -1335,5 +1351,58 @@ export class InspectionReportsService implements DataHydrationSource {
 
   private isOfflineError(error: unknown): boolean {
     return error instanceof HttpErrorResponse && error.status === 0;
+  }
+
+  /**
+   * Upload a file as an attachment on the parent inspection report. Online-only:
+   * throws {@link AttachmentUploadOfflineError} when offline (a typed condition
+   * the UI can pre-empt, rather than a raw string surfaced after the click). On
+   * success the new attachment is merged into the locally-cached report so other
+   * views reflect it, and the created attachment is returned.
+   */
+  public async uploadAttachment(
+    reportId: string,
+    file: File,
+  ): Promise<Attachment> {
+    if (!this.canUseNetwork) {
+      throw new AttachmentUploadOfflineError();
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const attachment = await firstValueFrom(
+      this.http.post<Attachment>(
+        `${environment.apiUrl}/inspection-reports/${reportId}/attachments`,
+        formData,
+      ),
+    );
+
+    this.connectivity.markApiReachable();
+
+    const existing = await this.irRepo.getById(reportId);
+    if (existing) {
+      await this.irRepo.upsert({
+        ...existing,
+        attachments: [...(existing.attachments ?? []), attachment],
+      });
+    }
+
+    return attachment;
+  }
+
+  /**
+   * Fetch an attachment's bytes through HttpClient so the JWT interceptor
+   * applies — the `/api/files/attachments/:id` endpoint is auth-guarded, so a
+   * bare `<img src>`/`<a href>` (no Authorization header) would 401. Callers turn
+   * the returned Blob into an object URL for a thumbnail or a download.
+   */
+  public fetchAttachmentBlob(attachmentId: string): Promise<Blob> {
+    return firstValueFrom(
+      this.http.get(
+        `${environment.apiUrl}/api/files/attachments/${attachmentId}`,
+        { responseType: 'blob' },
+      ),
+    );
   }
 }

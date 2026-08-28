@@ -1,0 +1,249 @@
+<section class="page-section p-6">
+  <!-- Quiet header: names the panel and states it is optional. -->
+  <div class="mb-4">
+    <h3 class="text-sm font-semibold text-foreground">
+      Attachments
+      <span class="font-normal text-muted-foreground">(optional)</span>
+    </h3>
+    <p class="mt-1 text-xs text-muted-foreground">
+      Add photos or documents for this report. This is optional — you can submit
+      without any.
+    </p>
+  </div>
+
+  <!-- Controls: three visually-hidden file inputs, each behind a real
+       <label for>/id pair (label-has-associated-control is enforced). -->
+  <div class="flex flex-wrap gap-2">
+    <label
+      [attr.for]="docInputId"
+      class="btn btn-secondary min-h-[44px] cursor-pointer gap-2 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2"
+      [class.opacity-50]="isDisabled()"
+      [class.cursor-not-allowed]="isDisabled()"
+    >
+      <svg
+        class="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+        ></path>
+      </svg>
+      Upload document
+      <input
+        [id]="docInputId"
+        type="file"
+        class="sr-only"
+        [disabled]="isDisabled()"
+        (change)="onFileSelected($event)"
+      />
+    </label>
+
+    <label
+      [attr.for]="photoInputId"
+      class="btn btn-secondary min-h-[44px] cursor-pointer gap-2 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2"
+      [class.opacity-50]="isDisabled()"
+      [class.cursor-not-allowed]="isDisabled()"
+    >
+      <svg
+        class="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+        ></path>
+      </svg>
+      Add photo
+      <input
+        [id]="photoInputId"
+        type="file"
+        accept="image/*"
+        class="sr-only"
+        [disabled]="isDisabled()"
+        (change)="onFileSelected($event)"
+      />
+    </label>
+
+    <label
+      [attr.for]="cameraInputId"
+      class="btn btn-secondary min-h-[44px] cursor-pointer gap-2 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2"
+      [class.opacity-50]="isDisabled()"
+      [class.cursor-not-allowed]="isDisabled()"
+    >
+      <svg
+        class="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+        ></path>
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+        ></path>
+      </svg>
+      Take photo
+      <input
+        [id]="cameraInputId"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        class="sr-only"
+        [disabled]="isDisabled()"
+        (change)="onFileSelected($event)"
+      />
+    </label>
+  </div>
+
+  <!-- Offline reason, stated before the click. -->
+  @if (isOffline()) {
+    <p class="mt-2 text-xs text-muted-foreground">
+      You're offline — attachments can be added once you reconnect.
+    </p>
+  }
+
+  <!-- Failure banner: names what failed and offers retry. -->
+  @if (errorMessage()) {
+    <div
+      role="alert"
+      [id]="errorId"
+      class="mt-4 flex items-start justify-between gap-3 rounded-md border border-error bg-error-light p-3"
+    >
+      <p class="text-sm text-error-dark">{{ errorMessage() }}</p>
+      @if (hasRetry()) {
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm shrink-0"
+          [disabled]="uploading()"
+          (click)="retry()"
+        >
+          Retry
+        </button>
+      }
+    </div>
+  }
+
+  <!-- File list + pending row, or the optional empty state. -->
+  @if (attachments().length || pendingName()) {
+    <ul class="mt-4 flex flex-col gap-2">
+      @for (attachment of attachments(); track attachment.id) {
+        <li>
+          <button
+            type="button"
+            (click)="download(attachment)"
+            class="flex w-full min-h-[44px] items-center gap-3 rounded-md border border-border bg-card p-2 text-left text-card-foreground hover:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            @if (thumbReady(attachment.id)) {
+              <img
+                [src]="thumbUrl()[attachment.id]"
+                [alt]="attachment.filename"
+                (error)="onThumbError(attachment.id)"
+                class="h-11 w-11 shrink-0 rounded object-cover"
+              />
+            } @else if (thumbLoading(attachment)) {
+              <span
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground"
+                aria-hidden="true"
+              >
+                <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  ></path>
+                </svg>
+              </span>
+            } @else {
+              <span
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground"
+                aria-hidden="true"
+              >
+                <svg
+                  class="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  ></path>
+                </svg>
+              </span>
+            }
+            <span class="min-w-0 flex-1 truncate text-sm" [title]="attachment.filename">
+              {{ attachment.filename }}
+            </span>
+          </button>
+        </li>
+      }
+
+      @if (pendingName()) {
+        <li
+          class="flex min-h-[44px] items-center gap-3 rounded-md border border-border bg-card p-2 text-muted-foreground"
+        >
+          <span
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-muted"
+          >
+            <svg
+              class="h-5 w-5 animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              ></path>
+            </svg>
+          </span>
+          <span class="min-w-0 flex-1 truncate text-sm">
+            Uploading {{ pendingName() }}…
+          </span>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="mt-4 text-sm text-muted-foreground">
+      No attachments yet. Photos and documents are optional for this report.
+    </p>
+  }
+</section>

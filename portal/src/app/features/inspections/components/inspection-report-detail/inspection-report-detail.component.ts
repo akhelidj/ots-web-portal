@@ -73,6 +73,7 @@ import { InspectionReportHeaderEditComponent } from './sections/inspection-repor
 import { InspectionReportBannersComponent } from './sections/inspection-report-banners/inspection-report-banners.component';
 import { InspectionReportTransitionActionComponent } from './sections/inspection-report-transition-bar/inspection-report-transition-bar.component';
 import { InspectionReportKpiOverviewComponent } from './sections/inspection-report-kpi-overview/inspection-report-kpi-overview.component';
+import { ReportAttachmentsComponent } from '../report-attachments/report-attachments.component';
 import { InspectionReportReworkStatusComponent } from './sections/inspection-report-rework-status/inspection-report-rework-status.component';
 import { InspectionReportAddSerialPanelComponent } from './sections/inspection-report-add-serial-panel/inspection-report-add-serial-panel.component';
 import { InspectionReportApprovalBatchesComponent } from './sections/inspection-report-approval-batches/inspection-report-approval-batches.component';
@@ -91,6 +92,7 @@ import { InspectionReportSerialsTableComponent } from './sections/inspection-rep
     InspectionReportBannersComponent,
     InspectionReportTransitionActionComponent,
     InspectionReportKpiOverviewComponent,
+    ReportAttachmentsComponent,
     InspectionReportReworkStatusComponent,
     InspectionReportAddSerialPanelComponent,
     InspectionReportApprovalBatchesComponent,
