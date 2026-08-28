@@ -38,6 +38,10 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# Uploaded attachment binaries — local file storage, not source. Regenerated as
+# users upload; must never be tracked.
+/api/uploads/
+
 .nx/cache
 .nx/workspace-data
 
