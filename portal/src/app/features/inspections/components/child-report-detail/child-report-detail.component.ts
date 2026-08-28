@@ -180,8 +180,6 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   private refreshQueued = false;
   private isDestroyed = false;
 
-  public isUploadingAttachment = signal(false);
-
   public isWorkflowModalOpen = signal(false);
 
   public get isOnline(): boolean {
@@ -409,13 +407,6 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  public canUploadAttachments(status: ChildReportStatus): boolean {
-    return (
-      status !== CHILD_REPORT_STATUSES.APPROVED &&
-      status !== CHILD_REPORT_STATUSES.CLOSED
-    );
-  }
-
   private getSelectableSerialIds(): string[] {
     return this.serials()
       .filter((sn) => this.canSelectSerial(sn))
@@ -477,15 +468,6 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       .map((sn) => sn.id);
 
     if (ids.length === 0) return;
-
-    const attachmentCount =
-      this.cr()?.attachmentCount ?? this.cr()?.attachments?.length ?? 0;
-    if (attachmentCount < 1) {
-      this.formError.set(
-        'At least one attachment is required before submitting child report serials for approval.',
-      );
-      return;
-    }
 
     try {
       await this.irService.submitApprovalBatch(
@@ -655,32 +637,6 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     if (idx >= 0 && idx < all.length - 1) {
       const next = all[idx + 1];
       if (next) this.openInspectionForm(next.id);
-    }
-  }
-
-  public async onFileSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) return;
-
-    const file = input.files[0];
-    if (!file) return;
-    this.isUploadingAttachment.set(true);
-    this.formError.set('');
-
-    try {
-      await this.crService.uploadAttachment(this.reportId, file);
-      await this.refreshData();
-    } catch (e) {
-      const err = e as { error?: { message?: string }; message?: string };
-      this.formError.set(
-        err?.error?.message ||
-          (err as Error)?.message ||
-          'Failed to upload attachment.',
-      );
-    } finally {
-      this.isUploadingAttachment.set(false);
-      // Reset input value so the same file could be selected again if it failed
-      input.value = '';
     }
   }
 }

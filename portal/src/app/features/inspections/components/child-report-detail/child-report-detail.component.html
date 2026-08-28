@@ -152,14 +152,13 @@
       </div>
     }
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="page-section p-6 flex flex-col h-full">
-        <div
-          class="border-b border-border pb-3 mb-5 flex justify-between items-center"
-        >
-          <h2 class="text-lg font-semibold text-foreground">
-            Details & Disposition
-          </h2>
+    <div class="page-section p-6 flex flex-col">
+      <div
+        class="border-b border-border pb-3 mb-5 flex justify-between items-center"
+      >
+        <h2 class="text-lg font-semibold text-foreground">
+          Details & Disposition
+        </h2>
           <span
             class="data-chip bg-primary/10 text-primary border-primary/20"
             >{{ cr.status }}</span
@@ -372,166 +371,6 @@
           }
         </div>
       </div>
-
-      <!-- Column 2: Workflow & Attachments -->
-      <div class="flex flex-col gap-6 h-full">
-        <!-- Attachments Section (Visible to Everyone) -->
-        <div class="page-section p-6 flex flex-col flex-grow shadow-sm">
-          <div
-            class="border-b border-border pb-3 mb-5 flex justify-between items-center"
-          >
-            <h2
-              class="text-lg font-semibold text-foreground flex items-center gap-2"
-            >
-              <svg
-                class="w-5 h-5 text-muted-foreground"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                ></path>
-              </svg>
-              Attachments
-            </h2>
-            <div class="flex items-center gap-3">
-              <span
-                class="bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full text-xs font-semibold border border-border"
-              >
-                {{ cr.attachments?.length || cr.attachmentCount || 0 }}
-              </span>
-              @if (cr.status && canUploadAttachments(cr.status)) {
-                <button
-                  type="button"
-                  class="btn btn-primary btn-sm flex items-center gap-1.5"
-                  (click)="fileInput.click()"
-                  [disabled]="isUploadingAttachment()"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    @if (isUploadingAttachment()) {
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    } @else {
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                      ></path>
-                    }
-                  </svg>
-                  {{ isUploadingAttachment() ? 'Uploading...' : 'Upload File' }}
-                </button>
-                <input
-                  type="file"
-                  #fileInput
-                  class="hidden"
-                  (change)="onFileSelected($event)"
-                />
-              }
-            </div>
-          </div>
-
-          @if (cr.attachments?.length) {
-            <div
-              class="grid grid-cols-1 gap-3 mb-5 max-h-[300px] overflow-y-auto px-1 custom-scrollbar"
-            >
-              @for (attachment of cr.attachments; track attachment.id) {
-                <div
-                  class="flex items-center p-3.5 bg-card border border-border rounded-xl shadow-sm hover:border-primary/40 hover:shadow-md transition-all group"
-                >
-                  <div
-                    class="p-2.5 bg-primary/5 rounded-lg mr-4 border border-primary/10 transition-colors group-hover:bg-primary/10"
-                  >
-                    <svg
-                      class="w-5 h-5 text-primary"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      ></path>
-                    </svg>
-                  </div>
-                  <div class="min-w-0 flex-grow">
-                    <p
-                      class="text-sm font-semibold text-foreground truncate"
-                      [title]="attachment.filename"
-                    >
-                      {{ attachment.filename }}
-                    </p>
-                    <p class="text-xs text-muted-foreground mt-0.5 tracking-wide">
-                      Attached Document
-                    </p>
-                  </div>
-                  <div class="ml-4 pl-4 border-l border-border">
-                    <span
-                      class="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground"
-                      title="Download coming soon"
-                    >
-                      Coming Soon
-                    </span>
-                  </div>
-                </div>
-              }
-            </div>
-          } @else {
-            <div
-              class="flex flex-col items-center justify-center p-8 bg-background border-2 border-dashed border-border rounded-xl flex-grow mb-5"
-            >
-              <div
-                class="p-4 bg-card rounded-full shadow-sm mb-4 border border-border group-hover:scale-105 transition-transform"
-              >
-                <svg
-                  class="w-8 h-8 text-muted-foreground"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  ></path>
-                </svg>
-              </div>
-              <p class="text-base text-foreground font-semibold mb-1">
-                No attachments found
-              </p>
-              <p
-                class="text-sm text-muted-foreground max-w-[240px] text-center leading-relaxed"
-              >
-                Files and documents related to this report will appear here when
-                uploaded.
-              </p>
-            </div>
-          }
-
-          <div class="mt-auto border-t border-border pt-4">
-            <p class="text-xs text-muted-foreground">
-              Attachment download is coming soon.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
     <!-- Footer spacer for sticky navigation -->
     <div class="h-24 px-4 overflow-hidden pointer-events-none"></div>
   </div>

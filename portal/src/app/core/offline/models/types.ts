@@ -143,8 +143,6 @@ export interface LocalChildReport {
   id: string;
   tenantId: string;
   inspectionReportId: string;
-  attachments?: Attachment[];
-  attachmentCount?: number;
   serialNumbers: Array<{
     id: string;
     serial: string;
