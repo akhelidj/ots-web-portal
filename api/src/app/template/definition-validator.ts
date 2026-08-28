@@ -10,7 +10,13 @@ import { engineGate, GateDefinition } from '../workflow/approval-gate';
 import { selectUpsertRule } from '../child-reports/rework-rules.interpreter';
 import { Snapshot } from '../common/inspection-data.types';
 import { InspectionReportStatus } from '@prisma/client';
-import { CandidateDefinition } from './definition-authoring.types';
+import {
+  CandidateDefinition,
+  ROLE_TO_COMPUTED,
+} from './definition-authoring.types';
+
+/** The known system roles a header field may carry (see FieldRole / ROLE_TO_COMPUTED). */
+const VALID_ROLES = new Set(Object.keys(ROLE_TO_COMPUTED));
 
 /**
  * Phase D step 2a — write-time validation gate (the untrusted-input boundary).
@@ -148,6 +154,37 @@ export function validateDefinition(
         reason: `Select field "${f.key}" must declare non-empty options.`,
       };
     }
+  }
+
+  // 4b — field roles: header-scope only, a known role, and each role at most once. Roles
+  // are OPTIONAL — a definition with none skips this entirely. A roled field's value is
+  // derived from a computed token (the builder wired it), never user-entered.
+  const seenRoles = new Set<string>();
+  for (const f of candidate.fields) {
+    const role: string | undefined = f.role;
+    if (role === undefined) continue;
+    if (!VALID_ROLES.has(role)) {
+      return {
+        ok: false,
+        check: 'role-known',
+        reason: `Field "${f.key}" has unknown role "${role}". Allowed: ${[...VALID_ROLES].join(', ')}.`,
+      };
+    }
+    if (f.scope !== 'header') {
+      return {
+        ok: false,
+        check: 'role-header-scope',
+        reason: `Field "${f.key}" carries role "${role}" on an item-scope field; roles are header-scope only.`,
+      };
+    }
+    if (seenRoles.has(role)) {
+      return {
+        ok: false,
+        check: 'role-unique',
+        reason: `Role "${role}" is used by more than one field; each role may appear at most once.`,
+      };
+    }
+    seenRoles.add(role);
   }
 
   // 5 — every computed export entry names one of the engine's implemented computed keys.

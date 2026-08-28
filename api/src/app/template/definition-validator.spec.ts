@@ -29,6 +29,7 @@ const TOKENS: ReadonlySet<string> = new Set([
   '{{grade}}',
   '{{emi}}',
   '{{customer}}',
+  '{{inspBy}}',
 ]);
 const META = { templateKey: 'PUMP_REPORT', templateVersion: 1 };
 
@@ -141,7 +142,6 @@ describe('validateDefinition — write-time gate [unit]', () => {
       c.regions.push({
         id: 'second',
         label: 'second',
-        marker: '{{sn}}',
         chunkSize: null,
       });
       expect(validateDefinition(c, TOKENS)).toMatchObject({
@@ -292,7 +292,7 @@ describe('validateDefinition — rework rule (slice A) [unit]', () => {
     });
   });
 
-  describe('mutation guard — check 8 is the SOLE gate catching a bad rule', () => {
+  describe('mutation guard — check 8 is the SOLE gate catching a bad rule (rework)', () => {
     it('a malformed rule clears checks 1–7 and is caught ONLY by rework-rules', () => {
       // An unknown childType is invisible to every export/gate reader (checks 1–7 pass on
       // an otherwise-valid candidate); dropping the rules to [] would make the SAME
@@ -310,6 +310,95 @@ describe('validateDefinition — rework rule (slice A) [unit]', () => {
       const cleared = clone(c);
       cleared.rules = [];
       expect(validateDefinition(cleared, TOKENS)).toEqual({ ok: true });
+    });
+  });
+});
+
+/**
+ * Field ROLES — a header field bound to a system-derived value via the engine's existing
+ * computed tokens. The builder maps the role onto the computed name (no new computed
+ * names); the validator enforces header-scope, a known role, and role uniqueness.
+ */
+describe('validateDefinition — field roles [unit]', () => {
+  /** validDto + one header field carrying the `inspector` role. */
+  function roledDto(): DefineTemplateDto {
+    const dto = validDto();
+    dto.fields.push({
+      token: '{{inspBy}}',
+      label: 'Inspector',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'inspector',
+    });
+    return dto;
+  }
+
+  describe('builder — a roled field binds to the existing computed token', () => {
+    it('emits the roled token as a computed export entry, not a user `field`', () => {
+      const built = buildDefinition(META, roledDto());
+      const entry = built.export.global.find((e) => e.token === '{{inspBy}}');
+      expect(entry).toEqual({ token: '{{inspBy}}', computed: 'inspectedBy' });
+    });
+
+    it('keeps the role on the built field (for read-only rendering)', () => {
+      const built = buildDefinition(META, roledDto());
+      expect(built.fields.find((f) => f.key === 'inspBy')?.role).toBe('inspector');
+    });
+
+    it('supervisor→approvedBy and inspectionDate→reportDate map likewise', () => {
+      const dto = validDto();
+      dto.fields.push(
+        { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
+        { token: '{{when}}', label: 'Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
+      );
+      const g = buildDefinition(META, dto).export.global;
+      expect(g.find((e) => e.token === '{{apprBy}}')).toEqual({ token: '{{apprBy}}', computed: 'approvedBy' });
+      expect(g.find((e) => e.token === '{{when}}')).toEqual({ token: '{{when}}', computed: 'reportDate' });
+    });
+  });
+
+  describe('validator', () => {
+    it('accepts a definition with a valid header role', () => {
+      expect(validateDefinition(buildDefinition(META, roledDto()), TOKENS)).toEqual({ ok: true });
+    });
+
+    it('a template with NO roles is valid (roles are optional)', () => {
+      expect(validateDefinition(buildDefinition(META, validDto()), TOKENS)).toEqual({ ok: true });
+    });
+
+    it('rejects a role on an item-scope field', () => {
+      const c = clone(buildDefinition(META, validDto()));
+      c.fields.find((f) => f.scope === 'item')!.role = 'inspector';
+      expect(validateDefinition(c, TOKENS)).toMatchObject({
+        ok: false,
+        check: 'role-header-scope',
+      });
+    });
+
+    it('rejects the same role used by two fields', () => {
+      const c = clone(buildDefinition(META, roledDto()));
+      c.fields.push({
+        key: 'inspBy2',
+        label: 'Inspector 2',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'inspector',
+      });
+      expect(validateDefinition(c, TOKENS)).toMatchObject({
+        ok: false,
+        check: 'role-unique',
+      });
+    });
+
+    it('rejects an unknown role', () => {
+      const c = clone(buildDefinition(META, roledDto()));
+      (c.fields.find((f) => f.role) as { role: string }).role = 'bogus';
+      expect(validateDefinition(c, TOKENS)).toMatchObject({
+        ok: false,
+        check: 'role-known',
+      });
     });
   });
 });

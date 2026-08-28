@@ -374,6 +374,21 @@ export class InspectionReportsService {
       );
     }
 
+    // A roled header field (inspector/supervisor/inspectionDate) is system-derived and
+    // NOT user-writable. If the client sends a value for one in `headerData`, drop it here
+    // so the stored map can never carry a user-entered value for a derived field — the
+    // exported value always comes from the transition-log-backed computed token, and the
+    // form/specs read the derived value, never this key. Empty for every template with no
+    // roled fields (all existing templates), so their header saves are unchanged.
+    const roledKeys =
+      data.headerData !== undefined && data.headerData !== null
+        ? await this.roledHeaderKeys(
+            tenantId,
+            existing.templateKey,
+            existing.templateVersion,
+          )
+        : new Set<string>();
+
     return await this.prisma.$transaction(async (tx) => {
       const updateData: Prisma.InspectionReportUpdateInput = {
         updatedAt: new Date(),
@@ -388,13 +403,15 @@ export class InspectionReportsService {
       // (fieldKey -> value); MERGE it onto the existing map so partial writes (e.g.
       // the standalone global-comment editor) don't clobber other fields.
       if (data.headerData !== undefined && data.headerData !== null) {
+        const incoming = { ...(data.headerData as Record<string, unknown>) };
+        for (const k of roledKeys) delete incoming[k];
         const existingHeader =
           existing.headerData && typeof existing.headerData === 'object'
             ? (existing.headerData as Record<string, unknown>)
             : {};
         updateData.headerData = {
           ...existingHeader,
-          ...(data.headerData as Record<string, unknown>),
+          ...incoming,
         } as Prisma.InputJsonValue;
       }
 
@@ -450,6 +467,34 @@ export class InspectionReportsService {
       });
       return updated;
     });
+  }
+
+  /**
+   * The header field keys bound to a system ROLE in the report's template definition.
+   * Their values are always derived at export (from the transition-log-backed computed
+   * token), so they are stripped from any incoming `headerData` on save — never stored
+   * from user input. Reads the bound template's `definitionJson`; returns an empty set
+   * when the template has no definition or no roled fields (every existing template), so
+   * their header saves are byte-for-byte unchanged.
+   */
+  private async roledHeaderKeys(
+    tenantId: string,
+    templateKey: string,
+    templateVersion: number,
+  ): Promise<Set<string>> {
+    const template = await this.prisma.template.findFirst({
+      where: { tenantId, templateKey, templateVersion },
+      select: { definitionJson: true },
+    });
+    const def = template?.definitionJson as
+      | { fields?: { key?: string; role?: string }[] }
+      | null
+      | undefined;
+    const keys = new Set<string>();
+    for (const f of def?.fields ?? []) {
+      if (f && typeof f.key === 'string' && f.role) keys.add(f.key);
+    }
+    return keys;
   }
 
   async submitForApproval(

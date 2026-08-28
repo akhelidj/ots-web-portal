@@ -105,4 +105,38 @@ describe('getReports embeds template definitionJson [integration]', () => {
       headerData,
     );
   });
+
+  // A roled header field is system-derived, never user-writable: updateReport must DROP
+  // any value the client sends for it in headerData, while leaving ordinary fields intact.
+  it('strips a roled header field from an incoming headerData save', async () => {
+    const tenant = await seedTenant(prisma);
+    // Template definition with one roled field (`inspBy` → inspector) and one ordinary
+    // header field (`grade`). Only key + role matter to the write-guard.
+    const definition = {
+      formatVersion: 1,
+      templateKey: 'DRILL_PIPE_REPORT',
+      fields: [
+        { key: 'grade', label: 'Grade', type: 'text', required: false, scope: 'header' },
+        { key: 'inspBy', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+      ],
+    };
+    await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT', {
+      definitionJson: definition,
+    });
+    const report = await seedInspectionReport(prisma, tenant.id);
+
+    await service.updateReport(
+      tenant.id,
+      report.id,
+      'user-1',
+      { headerData: { grade: 'S-135', inspBy: 'HACKER' } as never },
+      report.version,
+    );
+
+    const row = await prisma.inspectionReport.findUniqueOrThrow({
+      where: { id: report.id },
+    });
+    // The ordinary field is stored; the roled field is dropped (value stays derived).
+    expect(row.headerData).toEqual({ grade: 'S-135' });
+  });
 });

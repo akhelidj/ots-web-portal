@@ -3,6 +3,7 @@ import {
   DefineTemplateDto,
   CandidateDefinition,
   CandidateExportEntry,
+  ROLE_TO_COMPUTED,
 } from './definition-authoring.types';
 
 /**
@@ -82,6 +83,7 @@ export function buildDefinition(
     type: f.type,
     required: f.required,
     scope: f.scope,
+    ...(f.role ? { role: f.role } : {}),
     ...(f.section ? { section: f.section } : {}),
     ...(f.options ? { options: f.options } : {}),
   }));
@@ -105,13 +107,21 @@ export function buildDefinition(
   // back from there, not from snapshot.header. Item fields likewise go global with
   // `source: 'record'` for flat (for a region template they live in export.regions
   // below, so this whole block stays byte-identical to before for region definitions).
+  // A header field carrying a ROLE binds to the engine's existing computed token
+  // (inspector→inspectedBy, supervisor→approvedBy, inspectionDate→reportDate) instead of
+  // a user `field`, so its exported value is the transition-log derivation — never a
+  // stored/entered value. A role-less header field maps to a plain `field` entry as before.
   const globalExport: CandidateExportEntry[] = [
     ...(dto.computed ?? []).map((c) => ({ token: c.token, computed: c.computed })),
-    ...headerFields.map((f) => ({
-      token: f.token,
-      field: strip(f.token),
-      ...(dto.region ? {} : { source: 'record' }),
-    })),
+    ...headerFields.map((f) =>
+      f.role
+        ? { token: f.token, computed: ROLE_TO_COMPUTED[f.role] }
+        : {
+            token: f.token,
+            field: strip(f.token),
+            ...(dto.region ? {} : { source: 'record' }),
+          },
+    ),
     ...(dto.region
       ? []
       : itemFields.map((f) => ({

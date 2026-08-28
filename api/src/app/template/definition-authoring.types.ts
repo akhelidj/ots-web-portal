@@ -30,6 +30,26 @@ export type OpsFieldType =
   | 'date'
   | 'object-list';
 
+/**
+ * A header field's SYSTEM role. A roled field is not user-writable: its value is always
+ * DERIVED at export from the transition log, via the engine's existing computed tokens.
+ * Header scope only (the validator rejects a role on an item field); each role may appear
+ * at most once per definition. Roles are optional — a template with none is valid.
+ */
+export type FieldRole = 'inspector' | 'supervisor' | 'inspectionDate';
+
+/**
+ * Maps a field role onto the engine's EXISTING computed token name (no new computed
+ * names). The builder emits a roled field's token as `{ computed }` instead of a plain
+ * `{ field }` export entry, so its value comes from the transition-log derivation that
+ * already backs `{{inspectedBy}}` / `{{approvedBy}}` / `{{reportDate}}`.
+ */
+export const ROLE_TO_COMPUTED: Record<FieldRole, string> = {
+  inspector: 'inspectedBy',
+  supervisor: 'approvedBy',
+  inspectionDate: 'reportDate',
+};
+
 /** One ops-described field, keyed to a workbook token. */
 export interface OpsTokenField {
   /** Token literal from the workbook, e.g. `"{{poNumber}}"`. Must exist in the sheet. */
@@ -40,6 +60,11 @@ export interface OpsTokenField {
   required: boolean;
   /** Header-scope (report metadata) vs. item-scope (per-serial, in the region). */
   scope: 'header' | 'item';
+  /**
+   * Optional SYSTEM role (header scope only). A roled field is derived — its value comes
+   * from the transition-log-backed computed token, never from user input. See FieldRole.
+   */
+  role?: FieldRole;
   /** Form section grouping (item fields). */
   section?: string;
   /** Choices — required iff `type === 'select'`. */
@@ -147,6 +172,8 @@ export interface CandidateDefinition {
     type: OpsFieldType;
     required: boolean;
     scope: 'header' | 'item';
+    /** System role (header only) — value derived from a computed token, not user input. */
+    role?: FieldRole;
     section?: string;
     options?: string[];
   }[];
