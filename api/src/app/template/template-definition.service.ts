@@ -229,8 +229,9 @@ export class TemplateDefinitionService {
 
 /**
  * Stable signature of a definition's referenced-token set. Sorts + dedupes the token
- * literals the validator's `referencedTokens` already collects (export entries + region
- * markers) and hashes them, so two definitions with the same tokens in any order share a
+ * literals the validator's `referencedTokens` already collects (export entries, which
+ * include the serial's own token) and hashes them, so two definitions with the same
+ * tokens in any order share a
  * hash. A missing/garbled blob degrades to an empty set rather than throwing — history
  * capture must never block a write.
  */

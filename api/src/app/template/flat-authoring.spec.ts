@@ -165,9 +165,9 @@ describe('Flat authoring — ties into step-1 engine', () => {
 });
 
 describe('Flat authoring — reachability-flip guards intact', () => {
-  it('rejects a region WITHOUT a marker (structural, at build)', () => {
+  it('rejects a region WITHOUT a serial token (structural, at build)', () => {
     const dto = { ...flatDto(), region: { id: 'serials' } } as unknown as DefineTemplateDto;
-    expect(() => buildDefinition(META, dto)).toThrow(/id and a marker/i);
+    expect(() => buildDefinition(META, dto)).toThrow(/serial token/i);
   });
 
   it('rejects 2+ regions (validator check 6)', () => {
@@ -178,7 +178,7 @@ describe('Flat authoring — reachability-flip guards intact', () => {
       fields: [{ token: '{{poNumber}}', label: 'PO', type: 'text', required: false, scope: 'header' }],
     };
     const c = clone(buildDefinition(META, regionDto));
-    c.regions.push({ id: 'second', label: 'second', marker: '{{sn}}', chunkSize: null });
+    c.regions.push({ id: 'second', label: 'second', chunkSize: null });
     expect(validateDefinition(c, new Set(['{{poNumber}}', '{{sn}}']))).toMatchObject({
       ok: false,
       check: 'single-region',

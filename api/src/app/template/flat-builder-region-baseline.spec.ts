@@ -72,7 +72,9 @@ describe('Region builder output — frozen structural baseline', () => {
     if (!existsSync(BASELINE_PATH)) return;
     const frozen = JSON.parse(readFileSync(BASELINE_PATH, 'utf8'));
     const dto = regionDto();
-    dto.region.id = 'different'; // any real change must move the output
+    // The region id is now an internal constant (ignored from the DTO), so mutate a
+    // field that still flows to the output — the serial token — to prove non-vacuity.
+    dto.region.marker = '{{different_sn}}';
     expect(buildDefinition(META, dto)).not.toEqual(frozen);
   });
 });

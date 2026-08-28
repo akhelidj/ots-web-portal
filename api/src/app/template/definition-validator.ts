@@ -89,14 +89,17 @@ const DRY_RUN_SERIAL = {
   updatedAt: new Date(0),
 };
 
-/** Collect every token literal the candidate references (export entries + markers). */
+/**
+ * Collect every token literal the candidate references (export entries). The serial's
+ * own token is among `export.regions` (its `rowSerial` entry), so it is covered here —
+ * there is no separate region "marker" to collect any more.
+ */
 export function referencedTokens(def: CandidateDefinition): string[] {
   const tokens: string[] = [];
   for (const e of def.export.global) tokens.push(e.token);
   for (const entries of Object.values(def.export.regions)) {
     for (const e of entries) tokens.push(e.token);
   }
-  for (const r of def.regions) tokens.push(r.marker);
   return tokens;
 }
 

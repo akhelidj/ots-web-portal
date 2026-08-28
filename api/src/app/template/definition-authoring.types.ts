@@ -63,9 +63,20 @@ export interface DefineTemplateDto {
    * rows. Zero or one region only (never more). See phase-d-flat-templates-design.md.
    */
   region?: {
-    id: string;
+    /**
+     * DEPRECATED / IGNORED. The region id is now an internal constant assigned by the
+     * builder — it is no longer an ops choice. Accepted for back-compat with older
+     * clients but not read.
+     */
+    id?: string;
     label?: string;
-    /** The token whose row repeats per serial, e.g. `"{{sn}}"`. Must exist in the sheet. */
+    /**
+     * The serial's OWN token, e.g. `"{{sn}}"` — the placeholder that resolves to each
+     * serial number in the repeating row. Must exist in the sheet. It is emitted as the
+     * region's `rowSerial` export entry. It is NOT a row locator: the repeating row is
+     * inferred from the region's row tokens (this token among them). Formerly called the
+     * "marker"; the name is kept for the wire contract.
+     */
     marker: string;
     chunkSize?: number | null;
   };
@@ -126,7 +137,9 @@ export interface CandidateDefinition {
   displayName: string;
   sections: { key: string; title: string }[];
   transforms: Record<string, { kind: string; [k: string]: unknown }>;
-  regions: { id: string; label: string; marker: string; chunkSize: number | null }[];
+  // No `marker`: the repeating row is inferred from the region's row tokens at export
+  // time (xlsx-token-engine step 4). `id` is an internal constant keying `export.regions`.
+  regions: { id: string; label: string; chunkSize: number | null }[];
   disposition?: { source: string[]; requiredForApproval: boolean };
   fields: {
     key: string;
@@ -134,7 +147,6 @@ export interface CandidateDefinition {
     type: OpsFieldType;
     required: boolean;
     scope: 'header' | 'item';
-    region?: string;
     section?: string;
     options?: string[];
   }[];

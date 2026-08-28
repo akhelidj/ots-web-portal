@@ -6,13 +6,22 @@ import {
 } from './definition-authoring.types';
 
 /**
+ * The repeating region's internal id. It only keys `export.regions[REGION_ID]` and the
+ * region entry — it is not an ops choice and carries no external meaning, so it is a
+ * constant rather than an authored value (`dto.region.id` is accepted but ignored).
+ * Stored/hand-authored definitions may use a different id (e.g. drill-pipe's `serials`);
+ * the engine keys off whatever `regions[0].id` each definition carries, so both resolve.
+ */
+const REGION_ID = 'serials';
+
+/**
  * Phase D step 2a — ops description → engine-shaped candidate definition.
  *
  * PURE and TOTAL for well-formed input: given a syntactically-valid DTO it always
  * produces a candidate in the exact shape `export-engine.ts` / `approval-gate.ts`
- * read. It throws `BadRequestException` only for structurally-broken input (missing
- * region/marker, non-array fields, duplicate tokens) — the SEMANTIC checks (types,
- * computed allow-list, tokens-in-sheet, engine dry-run) live in the validator.
+ * read. It throws `BadRequestException` only for structurally-broken input (a region
+ * missing its serial token, non-array fields, duplicate tokens) — the SEMANTIC checks
+ * (types, computed allow-list, tokens-in-sheet, engine dry-run) live in the validator.
  *
  * Field KEY derivation: the data key is the token stripped of its braces, e.g.
  * `"{{poNumber}}"` → `"poNumber"`, `"{{b_ts}}"` → `"b_ts"`. This makes the
@@ -22,7 +31,7 @@ import {
  * EQUIVALENCE BOUNDARY vs. the hand-authored drill-pipe definition — the ops flow
  * covers: field descriptions (label/type/required/scope/section/options), the
  * header→global / item→region token bindings, the single region + its serial
- * marker, an optional disposition source, computed token bindings (5-key set), and
+ * token, an optional disposition source, computed token bindings (5-key set), and
  * (slice A) an optional single `reworkRule` — the one `upsertChildReport` trigger shape
  * the interpreter consumes. It does NOT author: value transforms (drill-pipe's
  * boolFlag/boolCheckbox/range/list joins), extra rework operators/multi-rule, or
@@ -36,12 +45,12 @@ export function buildDefinition(
   if (!dto || typeof dto !== 'object') {
     throw new BadRequestException('A definition body is required.');
   }
-  // A region is OPTIONAL (flat templates omit it). But if one IS supplied it must be
-  // well-formed — an id and a marker token — else it is a structural error. A region
-  // without a marker is rejected here, before any semantic check.
-  if (dto.region && (typeof dto.region.marker !== 'string' || !dto.region.id)) {
+  // A region is OPTIONAL (flat templates omit it). But if one IS supplied it must name
+  // the serial's own token (the `rowSerial` placeholder), else it is a structural error.
+  // (The region id is an internal constant now — not required from the author.)
+  if (dto.region && typeof dto.region.marker !== 'string') {
     throw new BadRequestException(
-      'A repeating region needs an id and a marker token.',
+      'A repeating region needs a serial token (`marker`).',
     );
   }
   if (!Array.isArray(dto.fields)) {
@@ -73,7 +82,6 @@ export function buildDefinition(
     type: f.type,
     required: f.required,
     scope: f.scope,
-    ...(f.scope === 'item' && dto.region ? { region: dto.region.id } : {}),
     ...(f.section ? { section: f.section } : {}),
     ...(f.options ? { options: f.options } : {}),
   }));
@@ -113,21 +121,22 @@ export function buildDefinition(
         }))),
   ];
 
-  // Region present → exactly today's single region + its marker/row export.
+  // Region present → a single region (id = internal constant) whose row export leads
+  // with the serial's own token (`rowSerial`) followed by the item fields. No `marker`
+  // on the region: the repeating row is inferred from these row tokens at export time.
   // Region absent (flat) → `regions: []` and no row-token export entries.
   const regions = dto.region
     ? [
         {
-          id: dto.region.id,
-          label: dto.region.label ?? dto.region.id,
-          marker: dto.region.marker,
+          id: REGION_ID,
+          label: dto.region.label ?? REGION_ID,
           chunkSize: dto.region.chunkSize ?? null,
         },
       ]
     : [];
   const exportRegions: Record<string, CandidateExportEntry[]> = dto.region
     ? {
-        [dto.region.id]: [
+        [REGION_ID]: [
           { token: dto.region.marker, source: 'rowSerial' },
           ...itemFields.map((f) => ({ token: f.token, field: strip(f.token) })),
         ],

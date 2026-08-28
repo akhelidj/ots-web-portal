@@ -47,7 +47,10 @@ export interface TransformSpec {
 
 export interface ExportDefinition {
   transforms: Record<string, TransformSpec>;
-  regions: { id: string; marker: string; chunkSize: number | null }[];
+  // `id` keys `export.regions`; `chunkSize` bounds per-page serial count. No `marker`:
+  // the repeating row is inferred from the region's row tokens (see xlsx-token-engine
+  // step 4). Stored definitions may still carry a `marker` — it is simply ignored.
+  regions: { id: string; chunkSize: number | null }[];
   export: {
     global: ExportEntry[];
     regions: Record<string, ExportEntry[]>;
@@ -265,19 +268,18 @@ export async function engineMap(
   const region = optionalRegion(def);
 
   if (!region) {
-    // FLAT (region-less) export. There is no marker row to clone, so resolve only
+    // FLAT (region-less) export. There is no repeating row to clone, so resolve only
     // the global/header token map and drive the SAME shared machinery with an EMPTY
     // chunk. `expandRegionAndSubstitute` already guards its row-cloning behind
     // `templateRowNumber !== -1 && chunk.length > 0` (xlsx-token-engine.ts), so an
     // empty chunk skips the byte-emitting regex row-clone path entirely and only the
-    // global substitution (step 6) runs — no new lines in that fragile code. The
-    // empty chunk (NOT merely an empty marker, which `.includes('')` would match on
-    // every cell) is what makes the skip unconditional. See phase-d-flat-templates
-    // -design.md §0/§1. The single record serial (flat = one serial) is threaded
-    // into engineFlatTokens so `source: 'record'` fields resolve from its
-    // inspectionData (fork #2); header/computed tokens resolve as usual.
+    // global substitution (step 6) runs — no new lines in that fragile code. Passing
+    // an empty `rowTokenKeys` ALSO makes step-4 row inference match nothing, so
+    // `templateRowNumber` stays -1 regardless of the chunk — the skip is unconditional
+    // on both counts. See phase-d-flat-templates-design.md §0/§1. The single record
+    // serial (flat = one serial) is threaded into engineFlatTokens so `source: 'record'`
+    // fields resolve from its inspectionData (fork #2); header/computed tokens as usual.
     await expandRegionAndSubstitute(workbook, [], {
-      marker: '',
       rowTokenKeys: [],
       globalTokens: engineFlatTokens(def, snapshot, chunk[0]),
       rowTokensFor: () => ({}),
@@ -286,7 +288,6 @@ export async function engineMap(
   }
 
   await expandRegionAndSubstitute(workbook, chunk, {
-    marker: region.marker,
     rowTokenKeys: engineRowTokenKeys(def),
     globalTokens: engineGlobalTokens(def, snapshot),
     rowTokensFor: (serial) => engineRowTokens(def, snapshot, serial),

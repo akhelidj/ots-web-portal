@@ -18,7 +18,6 @@
     {
       "id": "serials",
       "label": "Inspected Serials",
-      "marker": "{{sn}}",
       "chunkSize": 10
     }
   ],
@@ -49,7 +48,6 @@
       "type": "text",
       "required": true,
       "scope": "item",
-      "region": "serials",
       "section": "Box"
     },
     {
@@ -58,7 +56,6 @@
       "type": "select",
       "required": true,
       "scope": "item",
-      "region": "serials",
       "section": "Body",
       "options": [
         "PASS",
