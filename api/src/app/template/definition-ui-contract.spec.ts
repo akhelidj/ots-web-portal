@@ -26,14 +26,19 @@ const REAL_TEMPLATE_BYTES = readFileSync(
 
 const META = { templateKey: 'FIXTURE_REPORT', templateVersion: 1 };
 
-/** The exact body the describe screen emits (portal EXPECTED_DTO). */
+/**
+ * The exact body the describe screen emits (portal EXPECTED_DTO). Every template is a
+ * serial region now: `region` is always present, and the serial's own token is designated
+ * by the `serialNumber` ITEM role (its token is echoed as `region.marker`). Field order is
+ * header rows first, then serial rows in row order.
+ */
 function uiDto(): DefineTemplateDto {
   return {
     displayName: 'Casing Report',
-    region: { id: 'serials', marker: '{{sn}}', label: 'Inspected Serials' },
     fields: [
       { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header' },
       { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header' },
+      { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
       { token: '{{b_od}}', label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' },
       {
         token: '{{emi}}',
@@ -45,22 +50,7 @@ function uiDto(): DefineTemplateDto {
         options: ['PASS', 'REWORK', 'SCRAP', 'HOLD'],
       },
     ],
-  };
-}
-
-/**
- * The body the describe screen emits with the "repeating rows?" toggle OFF: a FLAT
- * template. `region` is OMITTED (no marker), and the fields describe the same real tokens
- * as fixed-cell record data. This is exactly what `buildDto()` produces in flat mode.
- */
-function flatUiDto(): DefineTemplateDto {
-  return {
-    displayName: 'Flat Casing Report',
-    fields: [
-      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header' },
-      { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header' },
-      { token: '{{b_od}}', label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' },
-    ],
+    region: { id: 'serials', marker: '{{sn}}' },
   };
 }
 
@@ -88,8 +78,10 @@ describe('describe-screen DTO ⇄ 2a gate contract', () => {
 
   it('REJECTS a select-without-options variant with the gate’s per-check reason', () => {
     const dto = uiDto();
-    // Same edit a mistaken admin would make; the UI leaves this check to the server.
-    delete (dto.fields[3] as { options?: string[] }).options;
+    // Same edit a mistaken admin would make; the UI leaves this check to the server. The
+    // select field ({{emi}}) is the last field.
+    const emi = dto.fields.find((f) => f.token === '{{emi}}')!;
+    delete (emi as { options?: string[] }).options;
 
     const candidate = buildDefinition(META, dto);
     const outcome = validateDefinition(candidate, extractedTokens);
@@ -100,17 +92,20 @@ describe('describe-screen DTO ⇄ 2a gate contract', () => {
     expect(outcome.reason).toContain('must declare non-empty options');
   });
 
-  // Step 4: the FLAT describe-screen body (toggle off → no region) is a body the gate
-  // accepts. This is the server half of the flat authoring flow — the portal spec proves
-  // the UI emits a region-less DTO; this proves the real builder + validator accept it and
-  // build it as `regions: []`.
-  it('ACCEPTS a region-less (flat) body the describe screen emits with the toggle off', () => {
-    const dto = flatUiDto();
-    expect(dto.region).toBeUndefined(); // flat: the UI omitted the region entirely
+  it('wires the serialNumber-roled token as rowSerial and never as a per-serial field', () => {
+    const candidate = buildDefinition(META, uiDto());
 
-    const candidate = buildDefinition(META, dto);
-    expect(candidate.regions).toEqual([]); // built as a flat definition — no repeating row
-    expect(candidate.export.regions).toEqual({}); // no row-token export
-    expect(validateDefinition(candidate, extractedTokens)).toEqual({ ok: true });
+    // The serial's own token is the region's rowSerial (from region.marker)…
+    expect(candidate.export.regions['serials']).toContainEqual({
+      token: '{{sn}}',
+      source: 'rowSerial',
+    });
+    // …and it is NOT also emitted as a plain per-serial field entry (which would shadow it).
+    expect(
+      candidate.export.regions['serials']!.filter((e) => e.token === '{{sn}}'),
+    ).toHaveLength(1);
+    // It is kept in `fields` (with its role) so the validator can enforce item-scope +
+    // uniqueness, but the portal form-schema filters it out of the serial form.
+    expect(candidate.fields.find((f) => f.key === 'sn')?.role).toBe('serialNumber');
   });
 });

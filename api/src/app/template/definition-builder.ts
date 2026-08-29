@@ -3,6 +3,7 @@ import {
   DefineTemplateDto,
   CandidateDefinition,
   CandidateExportEntry,
+  HeaderFieldRole,
   ROLE_TO_COMPUTED,
 } from './definition-authoring.types';
 
@@ -75,7 +76,15 @@ export function buildDefinition(
   }
 
   const headerFields = dto.fields.filter((f) => f.scope === 'header');
-  const itemFields = dto.fields.filter((f) => f.scope === 'item');
+  // Item fields for the FORM/EXPORT — excludes the `serialNumber`-roled field. That field
+  // marks the serial's own token (emitted ONCE as the region's `rowSerial` from
+  // `region.marker`); emitting it again here as a plain per-serial export entry would
+  // shadow `rowSerial` and blank the serial number. It is kept in `fields` below (with its
+  // role) so the validator can enforce item-scope + uniqueness, but never rendered or
+  // exported as a per-serial value.
+  const itemFields = dto.fields.filter(
+    (f) => f.scope === 'item' && f.role !== 'serialNumber',
+  );
 
   const fields = dto.fields.map((f) => ({
     key: strip(f.token),
@@ -113,15 +122,22 @@ export function buildDefinition(
   // stored/entered value. A role-less header field maps to a plain `field` entry as before.
   const globalExport: CandidateExportEntry[] = [
     ...(dto.computed ?? []).map((c) => ({ token: c.token, computed: c.computed })),
-    ...headerFields.map((f) =>
-      f.role
-        ? { token: f.token, computed: ROLE_TO_COMPUTED[f.role] }
+    ...headerFields.map((f) => {
+      // Only the HEADER roles map to a computed token. `ROLE_TO_COMPUTED` is keyed by
+      // HeaderFieldRole, so an item role (serialNumber) mistakenly on a header field
+      // looks up `undefined` and falls through to a plain `field` — the validator then
+      // rejects that misplacement (role-item-scope), so it never actually writes.
+      const computed = f.role
+        ? ROLE_TO_COMPUTED[f.role as HeaderFieldRole]
+        : undefined;
+      return computed
+        ? { token: f.token, computed }
         : {
             token: f.token,
             field: strip(f.token),
             ...(dto.region ? {} : { source: 'record' }),
-          },
-    ),
+          };
+    }),
     ...(dto.region
       ? []
       : itemFields.map((f) => ({

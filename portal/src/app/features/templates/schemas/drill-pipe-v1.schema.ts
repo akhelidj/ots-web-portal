@@ -10,12 +10,18 @@ export type FieldInputType =
   | 'object-list';
 
 /**
- * A header field's SYSTEM role (mirrors the API's FieldRole). A roled field is
- * system-owned: its value is DERIVED (inspector/supervisor from the transition log,
- * inspectionDate automatically), never user-entered. The header-edit surface renders no
- * input for it; both header surfaces show a read-only "System" row instead.
+ * A field's SYSTEM role (mirrors the API's FieldRole). The three HEADER roles are
+ * system-owned: their value is DERIVED (inspector/supervisor from the transition log,
+ * inspectionDate automatically), never user-entered — the header-edit surface renders no
+ * input, and both header surfaces show a read-only "System" row instead. The item role
+ * `serialNumber` marks the serial's own token (the region marker); it is not a form field
+ * and is filtered out of the serial form entirely.
  */
-export type FieldRole = 'inspector' | 'supervisor' | 'inspectionDate';
+export type FieldRole =
+  | 'inspector'
+  | 'supervisor'
+  | 'inspectionDate'
+  | 'serialNumber';
 
 export interface FieldSchema {
   key: string; // e.g. "box.minTongSpace" or "final.disposition"

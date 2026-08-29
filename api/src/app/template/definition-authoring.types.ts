@@ -31,20 +31,33 @@ export type OpsFieldType =
   | 'object-list';
 
 /**
- * A header field's SYSTEM role. A roled field is not user-writable: its value is always
- * DERIVED at export from the transition log, via the engine's existing computed tokens.
- * Header scope only (the validator rejects a role on an item field); each role may appear
- * at most once per definition. Roles are optional — a template with none is valid.
+ * A HEADER field's SYSTEM role. A roled header field is not user-writable: its value is
+ * always DERIVED at export from the transition log, via the engine's existing computed
+ * tokens. Header scope only (the validator rejects one on an item field); each role may
+ * appear at most once per definition. Roles are optional — a template with none is valid.
  */
-export type FieldRole = 'inspector' | 'supervisor' | 'inspectionDate';
+export type HeaderFieldRole = 'inspector' | 'supervisor' | 'inspectionDate';
 
 /**
- * Maps a field role onto the engine's EXISTING computed token name (no new computed
- * names). The builder emits a roled field's token as `{ computed }` instead of a plain
- * `{ field }` export entry, so its value comes from the transition-log derivation that
- * already backs `{{inspectedBy}}` / `{{approvedBy}}` / `{{reportDate}}`.
+ * A field's SYSTEM role. Roles split by scope: the three HEADER roles above bind to a
+ * computed token, and the single ITEM role `serialNumber` marks the serial's own token —
+ * the one emitted as the region's `rowSerial` export entry (the API's `region.marker`).
+ * `serialNumber` is item-scope only (the validator rejects it on a header field) and, like
+ * every role, may appear at most once. Roles are optional.
  */
-export const ROLE_TO_COMPUTED: Record<FieldRole, string> = {
+export type FieldRole = HeaderFieldRole | 'serialNumber';
+
+/** Roles that must sit on an ITEM-scope field. `serialNumber` is the only one today. */
+export const ITEM_ROLES: ReadonlySet<string> = new Set<FieldRole>(['serialNumber']);
+
+/**
+ * Maps a HEADER field role onto the engine's EXISTING computed token name (no new computed
+ * names). The builder emits a roled header field's token as `{ computed }` instead of a
+ * plain `{ field }` export entry, so its value comes from the transition-log derivation
+ * that already backs `{{inspectedBy}}` / `{{approvedBy}}` / `{{reportDate}}`. The item role
+ * `serialNumber` is NOT here — it binds to `rowSerial`, not a computed token.
+ */
+export const ROLE_TO_COMPUTED: Record<HeaderFieldRole, string> = {
   inspector: 'inspectedBy',
   supervisor: 'approvedBy',
   inspectionDate: 'reportDate',
@@ -61,8 +74,11 @@ export interface OpsTokenField {
   /** Header-scope (report metadata) vs. item-scope (per-serial, in the region). */
   scope: 'header' | 'item';
   /**
-   * Optional SYSTEM role (header scope only). A roled field is derived — its value comes
-   * from the transition-log-backed computed token, never from user input. See FieldRole.
+   * Optional SYSTEM role. A HEADER role (inspector/supervisor/inspectionDate) makes the
+   * field derived — its value comes from the transition-log-backed computed token, never
+   * from user input. The ITEM role `serialNumber` marks the serial's own token (the
+   * region's `rowSerial` / `region.marker`); it is excluded from the item form and the
+   * per-serial export entries. See FieldRole.
    */
   role?: FieldRole;
   /** Form section grouping (item fields). */
@@ -172,7 +188,8 @@ export interface CandidateDefinition {
     type: OpsFieldType;
     required: boolean;
     scope: 'header' | 'item';
-    /** System role (header only) — value derived from a computed token, not user input. */
+    /** System role — header roles derive from a computed token; the item role
+     *  `serialNumber` marks the serial's own token (not a rendered field). */
     role?: FieldRole;
     section?: string;
     options?: string[];

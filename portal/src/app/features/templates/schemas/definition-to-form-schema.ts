@@ -124,11 +124,19 @@ export function definitionToFormSchema(
     Array.isArray(definition.regions) &&
     definition.regions.length === 0;
 
-  const formFields = headerMode
-    ? definition.fields.filter((f) => f.scope === 'header')
-    : isFlat
-      ? definition.fields
-      : definition.fields.filter((f) => f.scope === 'item');
+  const formFields = (
+    headerMode
+      ? definition.fields.filter((f) => f.scope === 'header')
+      : isFlat
+        ? definition.fields
+        : definition.fields.filter((f) => f.scope === 'item')
+  )
+    // The `serialNumber`-roled field marks the serial's own token (the region marker), not
+    // a describable value — it is the row's identity, never an input. Filter it out of
+    // every form slice so it can't render as an editable serial field. Header/flat slices
+    // can't reach it (it is item-scope), but the filter keeps the guarantee explicit and
+    // total. Role-less definitions (incl. drill pipe) are unaffected — golden unchanged.
+    .filter((f) => f.role !== 'serialNumber');
 
   const bySection = new Map<string, FieldSchema[]>();
   for (const f of formFields) {

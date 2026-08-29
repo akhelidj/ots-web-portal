@@ -12,11 +12,13 @@ import { Snapshot } from '../common/inspection-data.types';
 import { InspectionReportStatus } from '@prisma/client';
 import {
   CandidateDefinition,
+  ITEM_ROLES,
   ROLE_TO_COMPUTED,
 } from './definition-authoring.types';
 
-/** The known system roles a header field may carry (see FieldRole / ROLE_TO_COMPUTED). */
-const VALID_ROLES = new Set(Object.keys(ROLE_TO_COMPUTED));
+/** The known system roles a field may carry. Header roles bind to a computed token
+ *  (ROLE_TO_COMPUTED); the item role `serialNumber` marks the serial's own token. */
+const VALID_ROLES = new Set([...Object.keys(ROLE_TO_COMPUTED), ...ITEM_ROLES]);
 
 /**
  * Phase D step 2a — write-time validation gate (the untrusted-input boundary).
@@ -156,9 +158,10 @@ export function validateDefinition(
     }
   }
 
-  // 4b — field roles: header-scope only, a known role, and each role at most once. Roles
-  // are OPTIONAL — a definition with none skips this entirely. A roled field's value is
-  // derived from a computed token (the builder wired it), never user-entered.
+  // 4b — field roles: a known role, on the scope that role requires, and each role at most
+  // once. Roles are OPTIONAL — a definition with none skips this entirely. The header roles
+  // derive their value from a computed token; the item role `serialNumber` marks the
+  // serial's own token (the builder wired each), never user-entered.
   const seenRoles = new Set<string>();
   for (const f of candidate.fields) {
     const role: string | undefined = f.role;
@@ -170,11 +173,20 @@ export function validateDefinition(
         reason: `Field "${f.key}" has unknown role "${role}". Allowed: ${[...VALID_ROLES].join(', ')}.`,
       };
     }
-    if (f.scope !== 'header') {
+    // Scope rule splits by role: `serialNumber` is item-scope only; the header roles are
+    // header-scope only.
+    if (ITEM_ROLES.has(role) && f.scope !== 'item') {
+      return {
+        ok: false,
+        check: 'role-item-scope',
+        reason: `Field "${f.key}" carries role "${role}" on a header-scope field; that role is item-scope only.`,
+      };
+    }
+    if (!ITEM_ROLES.has(role) && f.scope !== 'header') {
       return {
         ok: false,
         check: 'role-header-scope',
-        reason: `Field "${f.key}" carries role "${role}" on an item-scope field; roles are header-scope only.`,
+        reason: `Field "${f.key}" carries role "${role}" on an item-scope field; that role is header-scope only.`,
       };
     }
     if (seenRoles.has(role)) {

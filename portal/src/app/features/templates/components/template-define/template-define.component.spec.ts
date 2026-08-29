@@ -1,25 +1,25 @@
 /**
- * Phase D step 2b — the describe screen (deliverable 1).
+ * The Define-Template wizard (Detect → Header → Serial → Review) — assembly + submit.
  *
  * Proves the component, given the REAL fixture's tokens, ASSEMBLES a DefineTemplateDto
- * whose shape the 2a server gate accepts, and SURFACES a server rejection verbatim
- * (rendering the gate's per-check reason — no client reimplementation of the checks).
+ * whose shape the server gate accepts, and SURFACES a server rejection verbatim (rendering
+ * the gate's per-check reason — no client reimplementation of the checks).
  *
  * The valid DTO built here is byte-identical to the one the API-side gate proof
- * (`definition-ui-contract.spec.ts`) runs through the REAL builder + validator against
- * the REAL fixture workbook. The two specs meet at this DefineTemplateDto contract:
- * this side proves the UI emits it; that side proves the gate accepts it.
+ * (`definition-ui-contract.spec.ts`) runs through the REAL builder + validator against the
+ * REAL fixture workbook. The two specs meet at this DefineTemplateDto contract: this side
+ * proves the UI emits it; that side proves the gate accepts it.
  */
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TemplateDefineComponent } from './template-define.component';
+import { TemplateDefineComponent, DescribeRow } from './template-define.component';
 import {
   AdminTemplatesService,
   DefineTemplateDto,
   ExtractedToken,
 } from '@portal/features/templates/services/admin-templates.service';
 
-/** The fixture's tokens (a superset of what we describe — `{{grade}}` is left ignored). */
+/** The fixture's tokens (a superset of what we describe — `{{grade}}` is left out). */
 const FIXTURE_TOKENS: ExtractedToken[] = [
   { token: '{{sn}}', cell: 'A2', row: 2 },
   { token: '{{poNumber}}', cell: 'B1', row: 1 },
@@ -29,13 +29,19 @@ const FIXTURE_TOKENS: ExtractedToken[] = [
   { token: '{{grade}}', cell: 'F1', row: 1 },
 ];
 
-/** The exact body the gate proof asserts is accepted. Keep the two in lockstep. */
+/**
+ * The exact body the gate proof asserts is accepted. Keep the two in lockstep. Every
+ * template is a serial region now: `region` is always present, scope is DERIVED (Header
+ * step → `header`, Serial step → `item`), and the serial's own token carries the
+ * `serialNumber` role and is echoed as `region.marker`. Field order = header rows first,
+ * then serial rows in row order.
+ */
 const EXPECTED_DTO: DefineTemplateDto = {
   displayName: 'Casing Report',
-  region: { id: 'serials', marker: '{{sn}}', label: 'Inspected Serials' },
   fields: [
     { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header' },
     { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header' },
+    { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
     { token: '{{b_od}}', label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' },
     {
       token: '{{emi}}',
@@ -47,9 +53,10 @@ const EXPECTED_DTO: DefineTemplateDto = {
       options: ['PASS', 'REWORK', 'SCRAP', 'HOLD'],
     },
   ],
+  region: { id: 'serials', marker: '{{sn}}' },
 };
 
-describe('TemplateDefineComponent — describe screen', () => {
+describe('TemplateDefineComponent — assembly + submit', () => {
   let getTokens: jest.Mock;
   let defineTemplate: jest.Mock;
 
@@ -71,49 +78,63 @@ describe('TemplateDefineComponent — describe screen', () => {
     return TestBed.createComponent(TemplateDefineComponent).componentInstance;
   }
 
-  /** Drive the describe form to the valid EXPECTED_DTO state. */
+  const set = (
+    c: TemplateDefineComponent,
+    token: string,
+    patch: Partial<DescribeRow>,
+  ) => Object.assign(c.rows().find((r) => r.token === token)!, patch);
+
+  /** Drive the wizard state to the valid EXPECTED_DTO. */
   async function describeValid(c: TemplateDefineComponent): Promise<void> {
     c.templateId = 't1';
     await c.load();
-    c.hasRepeatingRows.set(true); // region mode (default is now flat) — a signal now
     c.displayName = 'Casing Report';
-    c.regionId = 'serials';
-    c.regionLabel = 'Inspected Serials';
-    c.markerToken = '{{sn}}';
 
-    const set = (token: string, patch: Partial<ReturnType<typeof c.rows>[number]>) =>
-      Object.assign(c.rows().find((r) => r.token === token)!, patch);
+    // Header claims two tokens (scope derived from where a token is included).
+    set(c, '{{poNumber}}', { header: true, serial: false, label: 'PO Number', type: 'text' });
+    set(c, '{{reportDate}}', { header: true, serial: false, label: 'Report Date', type: 'date' });
 
-    set('{{poNumber}}', { label: 'PO Number', type: 'text', scope: 'header' });
-    set('{{reportDate}}', { label: 'Report Date', type: 'date', scope: 'header' });
-    set('{{b_od}}', { label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' });
-    set('{{emi}}', {
+    // Serial fields — {{sn}} is the default serialNumber marker (rows[0]); the rest describe.
+    set(c, '{{sn}}', { label: 'Serial Number' });
+    set(c, '{{b_od}}', { label: 'Box Min OD', required: true, section: 'Box' });
+    set(c, '{{emi}}', {
       label: 'EMI Result',
       type: 'select',
       required: true,
-      scope: 'item',
       section: 'Body',
       optionsText: 'PASS, REWORK, SCRAP, HOLD',
     });
-    set('{{grade}}', { include: false }); // ignored → must not appear in the DTO
+    // A stray token, unchecked on the Serial step → excluded from the DTO.
+    set(c, '{{grade}}', { serial: false });
   }
 
   afterEach(() => TestBed.resetTestingModule());
 
-  it('loads the workbook tokens into one describe-row each', async () => {
+  it('loads the workbook tokens into one describe-row each (keeping the detected row)', async () => {
     const c = make();
     c.templateId = 't1';
     await c.load();
     expect(getTokens).toHaveBeenCalledWith('t1');
     expect(c.rows().map((r) => r.token)).toEqual(FIXTURE_TOKENS.map((t) => t.token));
+    // The detected workbook row is KEPT in state (was dropped before), not rendered.
+    expect(c.rows().map((r) => r.row)).toEqual(FIXTURE_TOKENS.map((t) => t.row));
   });
 
-  it('assembles the gate-accepted DTO and submits it on success', async () => {
+  it('pre-checks every token as a serial candidate and defaults the first as serialNumber', async () => {
+    const c = make();
+    c.templateId = 't1';
+    await c.load();
+    // All serial candidates arrive pre-checked (ops unchecks strays).
+    expect(c.serialCandidateRows().every((r) => r.serial)).toBe(true);
+    expect(c.serialCandidateRows()).toHaveLength(FIXTURE_TOKENS.length);
+    // The first token is the default serialNumber marker — visible/changeable, not silent.
+    expect(c.serialMarkerRow()?.token).toBe('{{sn}}');
+  });
+
+  it('assembles the gate-accepted DTO (derived scope, serialNumber → marker) and submits it', async () => {
     const c = make();
     await describeValid(c);
 
-    // The assembled body matches the shape the server gate accepts (excludes the marker
-    // and the ignored token; carries options only on the select).
     expect(c.buildDto()).toEqual(EXPECTED_DTO);
 
     await c.submit();
@@ -125,8 +146,6 @@ describe('TemplateDefineComponent — describe screen', () => {
   it('surfaces the server’s per-check rejection inline; nothing marked written', async () => {
     const c = make();
     await describeValid(c);
-    // Server rejects (e.g. the gate found a select with no options). The UI renders the
-    // server's reason — it does NOT reimplement the check.
     defineTemplate.mockRejectedValueOnce({
       error: {
         code: 'DEFINITION_INVALID',
@@ -144,20 +163,59 @@ describe('TemplateDefineComponent — describe screen', () => {
   it('nicety: refuses to submit an included field with an empty label', async () => {
     const c = make();
     await describeValid(c);
-    c.rows().find((r) => r.token === '{{b_od}}')!.label = '   ';
+    set(c, '{{b_od}}', { label: '   ' });
 
     await c.submit();
     expect(defineTemplate).not.toHaveBeenCalled();
     expect(c.submitError()).toContain('label');
   });
 
-  it('nicety: refuses to submit without a chosen serial marker', async () => {
+  it('nicety: refuses to submit without exactly one serialNumber marker', async () => {
     const c = make();
     await describeValid(c);
-    c.markerToken = '';
+    set(c, '{{sn}}', { role: '' }); // no marker
 
     await c.submit();
     expect(defineTemplate).not.toHaveBeenCalled();
-    expect(c.submitError()).toContain('marker');
+    expect(c.submitError()).toContain('Serial Number');
+  });
+
+  it('role uniqueness: assigning a role a second time clears it from the first row', async () => {
+    const c = make();
+    c.templateId = 't1';
+    await c.load();
+    // Two header fields both aiming for `inspector` — the UI keeps only the latest.
+    set(c, '{{poNumber}}', { header: true, serial: false, role: 'inspector' });
+    c.onRoleChange(c.rows().find((r) => r.token === '{{poNumber}}')!);
+    set(c, '{{reportDate}}', { header: true, serial: false, role: 'inspector' });
+    c.onRoleChange(c.rows().find((r) => r.token === '{{reportDate}}')!);
+
+    const roled = c.rows().filter((r) => r.role === 'inspector');
+    expect(roled).toHaveLength(1);
+    expect(roled[0]!.token).toBe('{{reportDate}}');
+  });
+
+  it('a role forces its type (inspectionDate → date) and clears required', async () => {
+    const c = make();
+    c.templateId = 't1';
+    await c.load();
+    const row = c.rows().find((r) => r.token === '{{poNumber}}')!;
+    Object.assign(row, { header: true, serial: false, required: true, type: 'text', role: 'inspectionDate' });
+    c.onRoleChange(row);
+    expect(row.type).toBe('date');
+    expect(row.required).toBe(false);
+  });
+
+  it('bulk section applies across included serial rows, skipping the roled marker', async () => {
+    const c = make();
+    await describeValid(c);
+    c.bulkSection = 'Body';
+    c.applyBulkSection();
+
+    // Every plain serial field takes the section…
+    expect(c.rows().find((r) => r.token === '{{b_od}}')!.section).toBe('Body');
+    expect(c.rows().find((r) => r.token === '{{emi}}')!.section).toBe('Body');
+    // …but the serialNumber marker is untouched (it has no section).
+    expect(c.rows().find((r) => r.token === '{{sn}}')!.section).toBe('');
   });
 });

@@ -30,6 +30,19 @@ export interface ExtractedToken {
 /** Portal-side mirror of the API's ops field type. `date` is renderable (Phase D 2b). */
 export type OpsFieldType = 'text' | 'number' | 'boolean' | 'select' | 'date';
 
+/**
+ * A field's SYSTEM role (mirrors the API's FieldRole). Roles split by scope: the three
+ * HEADER roles derive their value from a computed token (inspector→inspectedBy,
+ * supervisor→approvedBy, inspectionDate→reportDate); the single ITEM role `serialNumber`
+ * marks the serial's own token — the one sent as `region.marker`. At most one field per
+ * role in a definition.
+ */
+export type FieldRole =
+  | 'inspector'
+  | 'supervisor'
+  | 'inspectionDate'
+  | 'serialNumber';
+
 /** One ops-described field for `PUT /templates/:id/definition`. Mirrors OpsTokenField. */
 export interface OpsTokenField {
   token: string;
@@ -37,6 +50,8 @@ export interface OpsTokenField {
   type: OpsFieldType;
   required: boolean;
   scope: 'header' | 'item';
+  /** Optional system role — a header role (derived value) or the item role `serialNumber`. */
+  role?: FieldRole;
   section?: string;
   options?: string[];
 }

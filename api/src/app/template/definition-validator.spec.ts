@@ -402,3 +402,66 @@ describe('validateDefinition — field roles [unit]', () => {
     });
   });
 });
+
+/**
+ * The ITEM role `serialNumber` — marks the serial's own token (the region marker /
+ * rowSerial). Item-scope only, unique, kept in `fields` for validation but excluded from
+ * the per-serial export entries so it can't shadow rowSerial.
+ */
+describe('validateDefinition — item role (serialNumber) [unit]', () => {
+  /** validDto + the `{{sn}}` token described as an item field carrying `serialNumber`. */
+  function serialRoleDto(): DefineTemplateDto {
+    const dto = validDto();
+    dto.fields.push({
+      token: '{{sn}}',
+      label: 'Serial Number',
+      type: 'text',
+      required: false,
+      scope: 'item',
+      role: 'serialNumber',
+    });
+    return dto;
+  }
+
+  it('accepts serialNumber on an item field', () => {
+    expect(
+      validateDefinition(buildDefinition(META, serialRoleDto()), TOKENS),
+    ).toEqual({ ok: true });
+  });
+
+  it('keeps the serialNumber field in candidate.fields but emits its token only as rowSerial', () => {
+    const built = buildDefinition(META, serialRoleDto());
+    // Kept in fields (with its role) so the validator sees it…
+    expect(built.fields.find((f) => f.key === 'sn')?.role).toBe('serialNumber');
+    // …but the ONLY export entry for its token is the region's rowSerial (no shadowing
+    // plain-field entry that would blank the serial number).
+    expect(
+      built.export.regions['serials']!.filter((e) => e.token === '{{sn}}'),
+    ).toEqual([{ token: '{{sn}}', source: 'rowSerial' }]);
+  });
+
+  it('rejects serialNumber on a header-scope field (item-scope only)', () => {
+    const c = clone(buildDefinition(META, serialRoleDto()));
+    c.fields.find((f) => f.key === 'sn')!.scope = 'header';
+    expect(validateDefinition(c, TOKENS)).toMatchObject({
+      ok: false,
+      check: 'role-item-scope',
+    });
+  });
+
+  it('rejects two fields carrying serialNumber (role-unique)', () => {
+    const c = clone(buildDefinition(META, serialRoleDto()));
+    c.fields.push({
+      key: 'sn2',
+      label: 'Serial 2',
+      type: 'text',
+      required: false,
+      scope: 'item',
+      role: 'serialNumber',
+    });
+    expect(validateDefinition(c, TOKENS)).toMatchObject({
+      ok: false,
+      check: 'role-unique',
+    });
+  });
+});
