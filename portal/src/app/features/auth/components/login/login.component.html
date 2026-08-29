@@ -1,9 +1,9 @@
 <div
-  class="min-h-screen w-screen flex flex-col lg:flex-row overflow-hidden antialiased bg-white"
+  class="min-h-screen w-screen flex flex-col lg:flex-row overflow-hidden antialiased bg-card"
 >
   <!-- Left column: form -->
   <div
-    class="flex-1 flex flex-col justify-between py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 bg-white w-full lg:w-1/2 z-10 relative"
+    class="flex-1 flex flex-col justify-between py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 bg-card w-full lg:w-1/2 z-10 relative"
   >
     <!-- Logo -->
     <div class="flex items-center justify-between">
@@ -18,7 +18,7 @@
           decoding="async"
         />
         <span
-          class="text-slate-900 font-semibold tracking-tight text-lg group-hover:opacity-80 transition-opacity"
+          class="text-foreground font-semibold tracking-tight text-lg group-hover:opacity-80 transition-opacity"
           >Trackline</span
         >
       </a>
@@ -27,10 +27,10 @@
     <!-- Form body -->
     <div class="mx-auto w-full max-w-sm lg:w-96">
       <div>
-        <h2 class="mt-6 text-2xl font-semibold tracking-tight text-slate-900">
+        <h2 class="mt-6 text-2xl font-semibold tracking-tight text-foreground">
           Welcome !
         </h2>
-        <p class="mt-2 text-sm text-slate-500">
+        <p class="mt-2 text-sm text-muted-foreground">
           Please sign in to access your account.
         </p>
       </div>
@@ -38,12 +38,12 @@
       @if (!connectivity.isOnline()) {
         <div
           role="alert"
-          class="mt-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-md"
+          class="mt-6 bg-error-light border-l-4 border-error p-4 rounded-r-md"
         >
           <div class="flex">
             <div class="flex-shrink-0">
               <svg
-                class="h-5 w-5 text-red-400"
+                class="h-5 w-5 text-error"
                 viewBox="0 0 20 20"
                 fill="currentColor"
               >
@@ -55,8 +55,8 @@
               </svg>
             </div>
             <div class="ml-3">
-              <h3 class="text-sm font-medium text-red-800">Offline Mode</h3>
-              <p class="text-sm text-red-700 mt-1">
+              <h3 class="text-sm font-medium text-error-dark">Offline Mode</h3>
+              <p class="text-sm text-error mt-1">
                 A network connection is required to sign in.
               </p>
             </div>
@@ -91,9 +91,9 @@
                   email
                   #emailField="ngModel"
                   autocomplete="email"
-                  class="field-control text-slate-900 placeholder-slate-400"
+                  class="field-control text-foreground placeholder-muted-foreground"
                   [ngClass]="{
-                    'border-red-400 focus:ring-red-400 focus:border-red-400':
+                    'border-error focus:ring-error focus:border-error':
                       emailField.invalid &&
                       (emailField.dirty || emailField.touched),
                   }"
@@ -117,9 +117,9 @@
                   required
                   #passwordField="ngModel"
                   autocomplete="current-password"
-                  class="field-control text-slate-900 pr-10 placeholder-slate-400"
+                  class="field-control text-foreground pr-10 placeholder-muted-foreground"
                   [ngClass]="{
-                    'border-red-400 focus:ring-red-400 focus:border-red-400':
+                    'border-error focus:ring-error focus:border-error':
                       passwordField.invalid &&
                       (passwordField.dirty || passwordField.touched),
                   }"
@@ -128,7 +128,7 @@
                   type="button"
                   (click)="togglePassword()"
                   tabindex="-1"
-                  class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                  class="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
                 >
                   @if (showPassword) {
                     <svg
@@ -193,17 +193,17 @@
     </div>
 
     <!-- Footer -->
-    <div class="flex items-center justify-between text-xs text-slate-400">
+    <div class="flex items-center justify-between text-xs text-muted-foreground">
       <p>© 2025 OTS. All rights reserved.</p>
       <div class="flex gap-4">
-        <a href="#" class="hover:text-slate-600 transition-colors">Privacy</a>
-        <a href="#" class="hover:text-slate-600 transition-colors">Terms</a>
+        <a href="#" class="hover:text-foreground transition-colors">Privacy</a>
+        <a href="#" class="hover:text-foreground transition-colors">Terms</a>
       </div>
     </div>
   </div>
 
   <!-- Right column: dark brand panel -->
-  <div class="hidden lg:block relative w-0 flex-1 bg-[#0B1A2A]">
+  <div class="hidden lg:block relative w-0 flex-1 bg-primary">
     <!-- Background image + overlay -->
     <div class="absolute inset-0 z-0">
       <img
@@ -212,7 +212,7 @@
         class="h-full w-full object-cover opacity-40 mix-blend-overlay"
       />
       <div
-        class="absolute inset-0 bg-gradient-to-t from-[#0B1A2A] via-[#0B1A2A]/60 to-[#0B1A2A]/30"
+        class="absolute inset-0 bg-gradient-to-t from-primary via-primary/60 to-primary/30"
       ></div>
     </div>
 
@@ -233,7 +233,7 @@
             <div class="text-sm font-semibold text-white">
               Our goal is to help you
             </div>
-            <div class="text-xs text-slate-400 font-medium">OTS Team</div>
+            <div class="text-xs text-white/70 font-medium">OTS Team</div>
           </div>
         </div>
       </div>
@@ -253,14 +253,14 @@
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
-              class="text-[#FF9800]"
+              class="text-accent"
             >
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path>
               <path d="m9 12 2 2 4-4"></path>
             </svg>
             Secure Access
           </h3>
-          <p class="text-xs text-slate-400 leading-relaxed">
+          <p class="text-xs text-white/70 leading-relaxed">
             Enterprise-grade encryption for all inspection data.
           </p>
         </div>
@@ -278,14 +278,14 @@
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
-              class="text-[#FF9800]"
+              class="text-accent"
             >
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
             View your data
           </h3>
-          <p class="text-xs text-slate-400 leading-relaxed">
+          <p class="text-xs text-white/70 leading-relaxed">
             Instant availability of bucking graphs.
           </p>
         </div>
