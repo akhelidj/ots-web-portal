@@ -4,7 +4,7 @@
       class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
     >
       <div>
-        <h1 class="text-2xl sm:text-3xl font-semibold text-neutral-900">
+        <h1 class="text-2xl sm:text-3xl font-semibold text-foreground">
           Inspection Reports
         </h1>
         @if (isCustomer) {
@@ -49,13 +49,13 @@
           [ngClass]="
             statusFilter === ''
               ? 'border-primary bg-primary/5'
-              : 'border-neutral-200 bg-white hover:border-neutral-300'
+              : 'border-border bg-card hover:border-muted-foreground'
           "
         >
-          <p class="text-xs uppercase tracking-[0.08em] text-neutral-500">
+          <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
             Total Reports
           </p>
-          <p class="text-2xl font-semibold text-neutral-900 mt-2">
+          <p class="text-2xl font-semibold text-foreground mt-2">
             {{ kpiTotalReports }}
           </p>
         </button>
@@ -66,13 +66,13 @@
           [ngClass]="
             statusFilter === 'OPEN'
               ? 'border-primary bg-primary/5'
-              : 'border-neutral-200 bg-white hover:border-neutral-300'
+              : 'border-border bg-card hover:border-muted-foreground'
           "
         >
-          <p class="text-xs uppercase tracking-[0.08em] text-neutral-500">
+          <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
             Open Reports
           </p>
-          <p class="text-2xl font-semibold text-neutral-900 mt-2">
+          <p class="text-2xl font-semibold text-foreground mt-2">
             {{ kpiOpenReports }}
           </p>
         </button>
@@ -83,13 +83,13 @@
           [ngClass]="
             statusFilter === 'CLOSED'
               ? 'border-primary bg-primary/5'
-              : 'border-neutral-200 bg-white hover:border-neutral-300'
+              : 'border-border bg-card hover:border-muted-foreground'
           "
         >
-          <p class="text-xs uppercase tracking-[0.08em] text-neutral-500">
+          <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
             Closed Reports
           </p>
-          <p class="text-2xl font-semibold text-neutral-900 mt-2">
+          <p class="text-2xl font-semibold text-foreground mt-2">
             {{ kpiClosedReports }}
           </p>
         </button>
@@ -192,7 +192,7 @@
         @if (reports(); as reports) {
           @for (r of getFilteredReports(reports); track r.id) {
             <tr
-              class="hover:bg-neutral-50 transition-colors group cursor-pointer"
+              class="hover:bg-muted transition-colors group cursor-pointer"
               [routerLink]="[r.id]"
             >
               <td class="table-td-strong code-text">
@@ -210,10 +210,7 @@
                 </td>
               }
               <td class="table-td">
-                <span
-                  class="data-chip bg-neutral-100 text-neutral-700 border-neutral-200"
-                  >{{ r.status }}</span
-                >
+                <span class="data-chip-neutral">{{ r.status }}</span>
               </td>
               @if (!isCompactMode()) {
                 <td class="table-td">
@@ -222,7 +219,7 @@
                 <td class="table-td-code">
                   {{ reportStatsCache[r.id]?.serialCount || 0 }}
                 </td>
-                <td class="table-td-code text-neutral-900">
+                <td class="table-td-code text-foreground">
                   {{ getPassRate(r.id) || 0 | percent: '1.0-0' }}
                 </td>
               }
@@ -249,7 +246,7 @@
                 [attr.colspan]="
                   isCompactMode() ? (isCustomer ? 4 : 5) : isCustomer ? 7 : 9
                 "
-                class="p-10 text-center text-neutral-500"
+                class="p-10 text-center text-muted-foreground"
               >
                 No inspection reports found for the selected filters.
               </td>

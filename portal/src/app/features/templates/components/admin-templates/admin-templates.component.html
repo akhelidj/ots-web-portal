@@ -4,11 +4,11 @@
   >
     <div>
       <h1
-        class="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900"
+        class="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground"
       >
         Inspection Templates
       </h1>
-      <p class="mt-2 text-sm text-neutral-500">
+      <p class="mt-2 text-sm text-muted-foreground">
         Manage template versions and change notes without affecting workflow
         rules.
       </p>
@@ -85,14 +85,14 @@
   @if (showUploadForm && isOnline()) {
     <div class="page-section overflow-hidden">
       <div
-        class="px-6 py-4 border-b border-neutral-200 bg-neutral-50 flex justify-between items-center"
+        class="px-6 py-4 border-b border-border bg-muted flex justify-between items-center"
       >
-        <h2 class="font-semibold text-lg text-neutral-900">
+        <h2 class="font-semibold text-lg text-foreground">
           Upload Template Version
         </h2>
         <button
           (click)="showUploadForm = false"
-          class="text-gray-400 hover:text-gray-600 transition-colors"
+          class="text-muted-foreground hover:text-foreground transition-colors"
         >
           <svg
             class="h-5 w-5"
@@ -114,7 +114,7 @@
           <div>
             <label
               for="templateKey"
-              class="block text-sm font-semibold text-gray-700 mb-1"
+              class="block text-sm font-semibold text-foreground mb-1"
               >Template Key (e.g. DRILL_PIPE_REPORT)
               <span class="text-error">*</span></label
             >
@@ -131,7 +131,7 @@
           <div>
             <label
               for="templateFile"
-              class="block text-sm font-semibold text-gray-700 mb-1"
+              class="block text-sm font-semibold text-foreground mb-1"
               >Excel Template (.xlsx) <span class="text-error">*</span></label
             >
             <input
@@ -140,13 +140,13 @@
               accept=".xlsx"
               (change)="onFileSelected($event)"
               required
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all border border-gray-300 rounded-lg shadow-sm cursor-pointer"
+              class="block w-full text-sm text-muted-foreground file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all border border-border rounded-lg shadow-sm cursor-pointer"
             />
           </div>
           <div class="md:col-span-2">
             <label
               for="changeNote"
-              class="block text-sm font-semibold text-gray-700 mb-1"
+              class="block text-sm font-semibold text-foreground mb-1"
               >Change Note / Description
               <span class="text-error">*</span></label
             >
@@ -161,7 +161,7 @@
             ></textarea>
           </div>
         </div>
-        <div class="flex justify-end pt-4 border-t border-gray-100">
+        <div class="flex justify-end pt-4 border-t border-border">
           <button
             type="button"
             (click)="showUploadForm = false"
@@ -210,7 +210,7 @@
   <div class="queue-table-wrap">
     <table
       aria-label="Templates List"
-      class="table-base divide-y divide-gray-200"
+      class="table-base divide-y divide-border"
     >
       <thead class="table-head">
         <tr>
@@ -224,7 +224,7 @@
           <th scope="col" class="table-th-right">Actions</th>
         </tr>
       </thead>
-      <tbody class="table-body divide-y divide-gray-100">
+      <tbody class="table-body divide-y divide-border">
         @for (tmpl of templates(); track tmpl.id) {
           <tr class="hover:bg-primary/5 transition-colors group">
             <td
@@ -281,9 +281,9 @@
                   Deprecate
                 </button>
               } @else if (tmpl.status === 'ACTIVE' && isOnline() === false) {
-                <span class="text-xs text-gray-400 italic">Offline</span>
+                <span class="text-xs text-muted-foreground italic">Offline</span>
               } @else {
-                <span class="text-xs text-gray-400 italic">No Actions</span>
+                <span class="text-xs text-muted-foreground italic">No Actions</span>
               }
             </td>
           </tr>
@@ -291,11 +291,11 @@
           <tr>
             <td
               [colSpan]="isCompactMode() ? 4 : 6"
-              class="px-6 py-10 text-center text-sm text-gray-500"
+              class="px-6 py-10 text-center text-sm text-muted-foreground"
             >
               <div class="flex flex-col items-center justify-center">
                 <svg
-                  class="h-10 w-10 text-gray-300 mb-3"
+                  class="h-10 w-10 text-border mb-3"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"

@@ -6,7 +6,7 @@
     <div class="flex items-center gap-4">
       <a
         routerLink="/"
-        class="text-neutral-500 hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-full hover:bg-neutral-100"
+        class="text-muted-foreground hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-full hover:bg-muted"
         title="Go to Dashboard"
       >
         <svg
@@ -25,11 +25,11 @@
       </a>
       <div>
         <h1
-          class="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900"
+          class="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground"
         >
           Settings
         </h1>
-        <p class="text-sm text-neutral-500 mt-1">
+        <p class="text-sm text-muted-foreground mt-1">
           Manage your account security and application preferences.
         </p>
       </div>
@@ -52,11 +52,11 @@
     <!-- LEFT COLUMN: PREFERENCES -->
     <div class="lg:col-span-1 space-y-6">
       <div
-        class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+        class="page-section overflow-hidden"
       >
-        <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+        <div class="px-6 py-4 bg-muted border-b border-border">
           <h2
-            class="text-sm font-bold text-gray-900 flex items-center gap-2 uppercase tracking-wider"
+            class="text-sm font-bold text-foreground flex items-center gap-2 uppercase tracking-wider"
           >
             <svg
               class="w-4 h-4 text-primary"
@@ -83,10 +83,10 @@
         <div class="p-6 space-y-6">
           <div class="flex items-center justify-between">
             <div class="flex-grow pr-4">
-              <p class="text-sm font-semibold text-gray-900 text-pretty">
+              <p class="text-sm font-semibold text-foreground text-pretty">
                 Compact View
               </p>
-              <p class="text-xs text-gray-500 mt-0.5">
+              <p class="text-xs text-muted-foreground mt-0.5">
                 Reduce table density for mobile devices.
               </p>
             </div>
@@ -95,7 +95,7 @@
               (click)="onToggleCompactMode(!isCompactMode())"
               class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               [class.bg-primary]="isCompactMode()"
-              [class.bg-gray-200]="!isCompactMode()"
+              [class.bg-muted]="!isCompactMode()"
               role="switch"
               [attr.aria-checked]="isCompactMode()"
             >
@@ -115,13 +115,13 @@
     <!-- MAIN COLUMN: SECURITY -->
     <div class="lg:col-span-2 space-y-6">
       <div
-        class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+        class="page-section overflow-hidden"
       >
         <div
-          class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center"
+          class="px-6 py-4 bg-muted border-b border-border flex justify-between items-center"
         >
           <h2
-            class="text-sm font-bold text-gray-900 flex items-center gap-2 uppercase tracking-wider"
+            class="text-sm font-bold text-foreground flex items-center gap-2 uppercase tracking-wider"
           >
             <svg
               class="w-4 h-4 text-primary"
@@ -157,7 +157,7 @@
               <div>
                 <label
                   for="currentPassword"
-                  class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2"
+                  class="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2"
                   >Current Password</label
                 >
                 <div class="relative rounded-lg shadow-sm">
@@ -169,12 +169,12 @@
                     required
                     #currentPasswordField="ngModel"
                     autocomplete="current-password"
-                    class="field-control w-full pr-10 border-gray-200 hover:border-gray-300 transition-colors"
+                    class="field-control w-full pr-10 border-border hover:border-muted-foreground transition-colors"
                   />
                   <button
                     type="button"
                     (click)="toggleCurrentPassword()"
-                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
                   >
                     @if (showCurrentPassword) {
                       <svg
@@ -219,7 +219,7 @@
                 <div>
                   <label
                     for="newPassword"
-                    class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2"
+                    class="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2"
                     >New Password</label
                   >
                   <div class="relative rounded-lg shadow-sm">
@@ -232,12 +232,12 @@
                       minlength="8"
                       #newPasswordField="ngModel"
                       autocomplete="new-password"
-                      class="field-control w-full pr-10 border-gray-200"
+                      class="field-control w-full pr-10 border-border"
                     />
                     <button
                       type="button"
                       (click)="toggleNewPassword()"
-                      class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400"
+                      class="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground"
                     >
                       <svg
                         class="h-4 w-4"
@@ -256,7 +256,7 @@
                 <div>
                   <label
                     for="confirmPassword"
-                    class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2"
+                    class="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2"
                     >Confirm New Password</label
                   >
                   <div class="relative rounded-lg shadow-sm">
@@ -268,12 +268,12 @@
                       required
                       #confirmPasswordField="ngModel"
                       autocomplete="new-password"
-                      class="field-control w-full pr-10 border-gray-200"
+                      class="field-control w-full pr-10 border-border"
                     />
                     <button
                       type="button"
                       (click)="toggleConfirmPassword()"
-                      class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400"
+                      class="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground"
                     >
                       <svg
                         class="h-4 w-4"
