@@ -96,7 +96,7 @@ describe('TemplateDefineComponent — wizard step gating + derived scope', () =>
     // Detect has no editable controls; Next is enabled straight away.
     expect(nextBtn(f)!.disabled).toBe(false);
     await clickNext(f);
-    expect(el(f).textContent).toContain('Step 2 of 4 — Header');
+    expect(el(f).textContent).toContain('Step 2 of 4 — Metadata');
   });
 
   it('derived scope: a token checked on Header leaves the serial set; the rest are pre-checked serials', async () => {
@@ -108,7 +108,7 @@ describe('TemplateDefineComponent — wizard step gating + derived scope', () =>
     );
     expect(f.componentInstance.serialCandidateRows().every((r) => r.serial)).toBe(true);
 
-    // Claim {{poNumber}} on the Header step.
+    // Claim {{poNumber}} on the Metadata step.
     await clickNext(f); // → Header
     await click(f, '[data-testid="header-include-{{poNumber}}"]');
 

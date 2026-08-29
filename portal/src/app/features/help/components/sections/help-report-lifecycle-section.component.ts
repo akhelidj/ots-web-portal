@@ -21,7 +21,7 @@ import { AppRole } from '@portal/core/constants/app.constants';
         @if (role === 'RECEIVER' || role === 'ADMIN') {
           <li>
             <strong>Creation:</strong> Only Receivers and Admins can create new
-            Draft reports and modify header data like PO Numbers.
+            Draft reports and modify report metadata like PO Numbers.
           </li>
           <li>
             <strong>Prep Workflow:</strong> Responsible for transitioning

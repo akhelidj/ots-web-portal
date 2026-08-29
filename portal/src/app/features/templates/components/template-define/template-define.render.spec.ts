@@ -63,7 +63,7 @@ describe('TemplateDefineComponent — zoneless DOM rendering (stuck-loading regr
     expect(html().querySelector('[data-testid="detect-count"]')?.textContent).toContain('2');
     expect(html().querySelector('[data-testid="detect-token-{{poNumber}}"]')).not.toBeNull();
 
-    // Walk to the Header step the way a user does — a real "Next" click fires the zoneless
+    // Walk to the Metadata step the way a user does — a real "Next" click fires the zoneless
     // scheduler again (still NO manual detectChanges). The header grid appears only if that
     // scheduler-driven CD ran.
     (

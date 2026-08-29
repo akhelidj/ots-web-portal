@@ -16,7 +16,7 @@ import {
  * Phase D — the Define-Template wizard, reshaped to a fixed FOUR-step flow that mirrors
  * how a workbook is actually structured:
  *
- *   Detect Tokens → Header → Serial → Review & Save.
+ *   Detect Tokens → Metadata → Serial → Review & Save.
  *
  * Every template now has a repeating serial region (there is no flat authoring here), so
  * the old Layout/Region steps and the `hasRepeatingRows` discriminator are gone. SCOPE is
@@ -92,7 +92,7 @@ export interface WizardStep {
 /** The fixed four-step sequence — no dynamic/optional steps any more. */
 const STEPS: WizardStep[] = [
   { key: 'detect', label: 'Detect Tokens' },
-  { key: 'header', label: 'Header' },
+  { key: 'header', label: 'Metadata' },
   { key: 'serial', label: 'Serial' },
   { key: 'review', label: 'Review & Save' },
 ];
@@ -496,7 +496,7 @@ export class TemplateDefineComponent implements OnInit {
       return;
     }
     if (!this.headerStepValid()) {
-      this.submitError.set('Every included header field needs a label.');
+      this.submitError.set('Every included metadata field needs a label.');
       return;
     }
 

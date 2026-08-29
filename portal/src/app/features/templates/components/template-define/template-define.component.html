@@ -12,7 +12,7 @@
       Define Template Form
     </h1>
     <p class="mt-2 text-sm text-neutral-500">
-      Sort the workbook's tokens into header fields and repeating serial fields,
+      Sort the workbook's tokens into metadata fields and repeating serial fields,
       describe each one, then save. The server validates the whole definition and
       reports any problem below.
     </p>
@@ -75,7 +75,7 @@
         </div>
         <p class="text-sm text-neutral-500">
           These are the placeholders found in the uploaded workbook. Nothing to
-          edit here — the next steps sort them into header and serial fields.
+          edit here — the next steps sort them into metadata and serial fields.
         </p>
         <div class="overflow-x-auto">
           <table class="table-base divide-y divide-gray-200 w-full">
@@ -102,10 +102,10 @@
       </div>
     }
 
-    <!-- STEP 2: HEADER — pick the header fields; describe each inline -->
+    <!-- STEP 2: METADATA — pick the report-level (non-serial) fields; describe each inline -->
     @if (activeStep().key === 'header') {
       <div class="page-section p-5 sm:p-6 pb-0">
-        <h2 class="font-semibold text-lg text-neutral-900">Header Fields</h2>
+        <h2 class="font-semibold text-lg text-neutral-900">Metadata Fields</h2>
         <p class="mt-1 mb-0 text-sm text-neutral-500">
           Check the tokens that are report-level metadata (one value per report).
           A roled field is system-owned — its value is derived, so it needs no
@@ -134,7 +134,7 @@
                     type="checkbox"
                     [ngModel]="row.header"
                     (ngModelChange)="onHeaderToggle(row, $event)"
-                    [attr.aria-label]="'Include ' + row.token + ' as a header field'"
+                    [attr.aria-label]="'Include ' + row.token + ' as a metadata field'"
                     [attr.data-testid]="'header-include-' + row.token"
                   />
                 </td>
@@ -226,7 +226,7 @@
           role="alert"
           class="page-section p-4 border-l-4 border-warning bg-warning-light/20 text-sm text-warning-dark"
         >
-          Every included header field needs a label before you can continue.
+          Every included metadata field needs a label before you can continue.
         </div>
       }
     }
@@ -237,7 +237,7 @@
         <h2 class="font-semibold text-lg text-neutral-900">Serial Fields</h2>
         <p class="mt-1 mb-0 text-sm text-neutral-500">
           These tokens repeat once per inspected serial. Everything not claimed by
-          the Header step is pre-checked — uncheck any strays. Mark exactly one
+          the Metadata step is pre-checked — uncheck any strays. Mark exactly one
           field as the <span class="font-semibold">Serial Number</span> (the
           serial's own token); it identifies the row and is not a form field.
         </p>
@@ -303,7 +303,7 @@
           role="alert"
           class="page-section p-4 border-l-4 border-warning bg-warning-light/20 text-sm text-warning-dark"
         >
-          Every token is claimed by the Header step. Uncheck at least one there —
+          Every token is claimed by the Metadata step. Uncheck at least one there —
           a template needs at least one serial field.
         </div>
       } @else {
@@ -613,7 +613,7 @@
           </div>
           <div>
             <dt class="font-semibold text-gray-500">
-              Header Fields ({{ headerRows().length }})
+              Metadata Fields ({{ headerRows().length }})
             </dt>
             <dd class="text-neutral-900">
               @if (headerRows().length === 0) {
