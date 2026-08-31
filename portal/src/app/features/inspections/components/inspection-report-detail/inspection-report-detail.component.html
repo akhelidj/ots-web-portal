@@ -198,7 +198,10 @@
                 <span
                   class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-none bg-accent text-accent-foreground text-[10px] font-bold leading-none"
                   [attr.aria-label]="
-                    serialsUninspectedCount() + ' pipes need inspection'
+                    serialsUninspectedCount() +
+                    (isCustomer()
+                      ? ' pipes awaiting inspection'
+                      : ' pipes need inspection')
                   "
                   >{{ serialsUninspectedCount() }}</span
                 >
@@ -743,7 +746,11 @@
               </div>
               <div>
                 <h2 class="text-lg text-foreground leading-tight">
-                  Inspect Serial
+                  @if (isCustomer()) {
+                    Inspection Details
+                  } @else {
+                    Inspect Serial
+                  }
                 </h2>
                 <p class="font-mono text-sm text-primary font-bold">
                   {{ inspectingSnVal.value }}

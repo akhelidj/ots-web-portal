@@ -410,6 +410,34 @@ export class InspectionReportsService implements DataHydrationSource {
         } catch (snErr) {
           console.error(`Failed to pull SNs for report ${rep.id}`, snErr);
         }
+
+        // Attachments live only on the per-report detail payload — the list
+        // endpoint omits them — so hydrate them the same way as serials: through
+        // the pull, into the cache, so a read-only consumer (a customer) sees
+        // their documents offline-first. Only SYNCED rows are touched: a PENDING
+        // local edit is never clobbered, and no detail fetch is made for a
+        // not-yet-synced local id (which the server would 404).
+        try {
+          const localRep = await this.irRepo.getById(rep.id);
+          if (localRep && localRep.syncState === 'SYNCED') {
+            const detail = await firstValueFrom(
+              this.http.get<LocalInspectionReport>(
+                `${environment.apiUrl}/inspection-reports/${rep.id}`,
+              ),
+            );
+            if (detail.attachments) {
+              await this.irRepo.upsert({
+                ...localRep,
+                attachments: detail.attachments,
+              });
+            }
+          }
+        } catch (attErr) {
+          console.error(
+            `Failed to pull attachments for report ${rep.id}`,
+            attErr,
+          );
+        }
       }
 
       await this.refreshLocalCache();

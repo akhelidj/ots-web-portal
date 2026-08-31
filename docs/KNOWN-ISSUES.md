@@ -144,6 +144,20 @@ Jest transpiles with swc, so neither fails tests today:
 possibly-`NaN`/`undefined` `revisionNumber`. Genuine `strictNullChecks` cases — read
 the intended runtime contract before "fixing" either.
 
+## Portal UI
+
+### 16. Child-report route renders a blank page when no child exists
+The child-report route — `reports/:id/child` (all roles;
+`app.routes.ts:70, :92, :107, :122, :133`) → `ChildReportDetailComponent` — pulls
+the child via `GET /child-reports/:id` (`child-report-detail.component.ts`). When the
+parent has no generated child report, that request 404s; the component logs "Failed to
+pull child report …" and leaves the main content area empty — no not-found or
+empty-state UI. In practice the route is not linked while a serial's child is
+"Not Generated", so it is reached only by a typed/stale URL.
+**Impact:** cosmetic/edge — a customer (or any role) who lands on the route directly
+sees a blank page rather than an explanatory empty state. Fix: render a not-found /
+"no child report" state on the 404.
+
 ## Definition-driven cutover (`Template.definitionJson`)
 
 ### 15. REWORK rule authored in the definition but not engine-consumed — RESOLVED (a031969)

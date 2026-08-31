@@ -59,9 +59,20 @@ export class ReportAttachmentsComponent implements OnDestroy {
   public readonly cameraInputId = `${this.uid}-camera`;
   public readonly errorId = `${this.uid}-error`;
 
+  /** Reactive view of the cached report's attachments. Derived from the service's
+   *  `reports` signal (refreshed on every local-cache change), so attachments that
+   *  arrive AFTER this panel mounts — e.g. a slow pull hydrating them mid-view —
+   *  render without a remount. A successful upload persists through the same cache,
+   *  so a new document surfaces here via this computed too. */
+  public readonly attachments = computed<Attachment[]>(() => {
+    const id = this.reportId();
+    return (
+      this.reportsService.reports().find((r) => r.id === id)?.attachments ?? []
+    );
+  });
+
   // All post-await state lives in signals — the app is zoneless, so a plain
   // field set in a catch() would not repaint.
-  public readonly attachments = signal<Attachment[]>([]);
   public readonly uploading = signal(false);
   public readonly pendingName = signal<string | null>(null);
   public readonly errorMessage = signal<string | null>(null);
@@ -87,12 +98,6 @@ export class ReportAttachmentsComponent implements OnDestroy {
     /\.(png|jpe?g|gif|webp|avif|bmp|heic|heif|svg)$/i;
 
   constructor() {
-    // Seed the list from the locally-cached report whenever the id resolves.
-    effect(() => {
-      const id = this.reportId();
-      void this.loadExisting(id);
-    });
-
     // Lazily resolve a thumbnail for each image row not yet fetched/failed.
     effect(() => {
       const list = this.attachments();
@@ -159,11 +164,10 @@ export class ReportAttachmentsComponent implements OnDestroy {
     this.uploading.set(true);
     this.pendingName.set(file.name);
     try {
-      const created = await this.reportsService.uploadAttachment(
-        this.reportId(),
-        file,
-      );
-      this.attachments.update((list) => [...list, created]);
+      // uploadAttachment upserts the new attachment into the local cache, which
+      // refreshes the `reports` signal and re-derives `attachments`. No optimistic
+      // local append — that would duplicate the row the cache is about to add.
+      await this.reportsService.uploadAttachment(this.reportId(), file);
     } catch (err: unknown) {
       this.errorMessage.set(this.describeUploadError(err, file.name));
       this.retryAction.set(() => void this.upload(file));
@@ -217,8 +221,4 @@ export class ReportAttachmentsComponent implements OnDestroy {
     this.thumbFailed.update((m) => ({ ...m, [id]: true }));
   }
 
-  private async loadExisting(id: string): Promise<void> {
-    const report = await this.reportsService.irRepo.getById(id);
-    this.attachments.set(report?.attachments ?? []);
-  }
 }

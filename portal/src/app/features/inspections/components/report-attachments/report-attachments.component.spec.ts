@@ -58,7 +58,7 @@ function reportWith(atts: Attachment[]): LocalInspectionReport {
 describe('ReportAttachmentsComponent', () => {
   let uploadAttachment: jest.Mock;
   let fetchAttachmentBlob: jest.Mock;
-  let getById: jest.Mock;
+  let reports: WritableSignal<LocalInspectionReport[]>;
   let online: WritableSignal<boolean>;
 
   beforeEach(() => {
@@ -73,22 +73,34 @@ describe('ReportAttachmentsComponent', () => {
 
   function setup(opts: { online?: boolean; existing?: Attachment[] } = {}) {
     online = signal(opts.online ?? true);
-    uploadAttachment = jest.fn().mockResolvedValue(UPLOADED);
+    // The panel derives its rows from the service's reactive `reports` cache, so
+    // seed it with the report (optionally carrying attachments) the panel views.
+    reports = signal<LocalInspectionReport[]>([
+      reportWith(opts.existing ?? []),
+    ]);
+    // Faithful to the real service: an upload upserts the attachment into the local
+    // cache, which refreshes `reports` — the very signal the panel re-derives from.
+    // So the mock updates the signal rather than resolving in isolation.
+    uploadAttachment = jest.fn().mockImplementation(async () => {
+      reports.update((list) =>
+        list.map((r) =>
+          r.id === 'ir-1'
+            ? { ...r, attachments: [...(r.attachments ?? []), UPLOADED] }
+            : r,
+        ),
+      );
+      return UPLOADED;
+    });
     fetchAttachmentBlob = jest
       .fn()
       .mockResolvedValue(new Blob(['bytes'], { type: 'image/png' }));
-    getById = jest
-      .fn()
-      .mockResolvedValue(
-        opts.existing ? reportWith(opts.existing) : undefined,
-      );
 
     TestBed.configureTestingModule({
       imports: [ReportAttachmentsComponent],
       providers: [
         {
           provide: InspectionReportsService,
-          useValue: { uploadAttachment, fetchAttachmentBlob, irRepo: { getById } },
+          useValue: { uploadAttachment, fetchAttachmentBlob, reports },
         },
         { provide: ConnectivityService, useValue: { isOnline: online } },
       ],
@@ -140,6 +152,24 @@ describe('ReportAttachmentsComponent', () => {
     expect(text.toLowerCase()).toContain('optional');
     expect(el(fixture).querySelector('ul')).toBeNull();
     expect(el(fixture).querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('renders late-arriving attachments without a remount (cache hydrates after mount)', async () => {
+    // Mount while the cached report carries no attachments yet — the empty state.
+    const fixture = await render();
+    expect(el(fixture).textContent ?? '').toContain('No attachments yet');
+    expect(el(fixture).querySelector('ul')).toBeNull();
+
+    // A slow pull hydrates attachments into the cache AFTER mount. Same component
+    // instance — no re-creation — must reflect the new rows reactively.
+    reports.set([
+      reportWith([attachment({ id: 'late-1', filename: 'late-scan.pdf' })]),
+    ]);
+    await flush(fixture);
+
+    expect(el(fixture).querySelectorAll('ul li').length).toBe(1);
+    expect(el(fixture).textContent ?? '').toContain('late-scan.pdf');
+    expect(el(fixture).textContent ?? '').not.toContain('No attachments yet');
   });
 
   it('appends a row on a successful upload, driven by a real file-input change', async () => {
