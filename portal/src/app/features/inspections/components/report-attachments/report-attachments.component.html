@@ -1,18 +1,28 @@
 <section class="page-section p-6">
-  <!-- Quiet header: names the panel and states it is optional. -->
+  <!-- Quiet header: names the panel. For a view-only consumer it reads as a
+       documents list; for an editor it states the panel is optional. -->
   <div class="mb-4">
-    <h3 class="text-sm text-foreground">
-      Attachments
-      <span class="font-normal text-muted-foreground">(optional)</span>
-    </h3>
-    <p class="mt-1 text-xs text-muted-foreground">
-      Add photos or documents for this report. This is optional — you can submit
-      without any.
-    </p>
+    @if (viewerOnly()) {
+      <h3 class="text-sm text-foreground">Attachments</h3>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Documents and photos attached to this report.
+      </p>
+    } @else {
+      <h3 class="text-sm text-foreground">
+        Attachments
+        <span class="font-normal text-muted-foreground">(optional)</span>
+      </h3>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Add photos or documents for this report. This is optional — you can
+        submit without any.
+      </p>
+    }
   </div>
 
   <!-- Controls: three visually-hidden file inputs, each behind a real
-       <label for>/id pair (label-has-associated-control is enforced). -->
+       <label for>/id pair (label-has-associated-control is enforced).
+       Hidden entirely for a view-only consumer. -->
+  @if (!viewerOnly()) {
   <div class="flex flex-wrap gap-2">
     <label
       [attr.for]="docInputId"
@@ -113,9 +123,10 @@
       />
     </label>
   </div>
+  }
 
-  <!-- Offline reason, stated before the click. -->
-  @if (isOffline()) {
+  <!-- Offline reason, stated before the click. Upload-oriented → editors only. -->
+  @if (!viewerOnly() && isOffline()) {
     <p class="mt-2 text-xs text-muted-foreground">
       You're offline — attachments can be added once you reconnect.
     </p>
@@ -242,8 +253,14 @@
       }
     </ul>
   } @else {
-    <p class="mt-4 text-sm text-muted-foreground">
-      No attachments yet. Photos and documents are optional for this report.
-    </p>
+    @if (viewerOnly()) {
+      <p class="mt-4 text-sm text-muted-foreground">
+        No documents attached to this report.
+      </p>
+    } @else {
+      <p class="mt-4 text-sm text-muted-foreground">
+        No attachments yet. Photos and documents are optional for this report.
+      </p>
+    }
   }
 </section>

@@ -254,4 +254,39 @@ export class SerialInspectionReactiveFormComponent
   public getInternalKey(key: string): string {
     return this.toInternalKey(key);
   }
+
+  /**
+   * Read-only display string for a field, formatted by type — the presentation
+   * mirror of the editable control. Empty/absent → '' so the template can render a
+   * neutral placeholder. Never mutates state.
+   */
+  public displayValue(field: {
+    key: string;
+    inputType?: string;
+    options?: string[];
+  }): string {
+    const raw = this.getNestedValue(this.initialData, field.key);
+
+    if (field.inputType === 'object-list') {
+      const rows = Array.isArray(raw) ? raw : [];
+      return rows
+        .map((row) => {
+          const r = (row ?? {}) as Record<string, unknown>;
+          return [r['name'], r['number']]
+            .filter((v) => v !== null && v !== undefined && v !== '')
+            .join(' — ');
+        })
+        .filter((s) => s.length > 0)
+        .join(', ');
+    }
+
+    if (field.inputType === 'boolean') {
+      if (raw === true || raw === 'true') return 'Yes';
+      if (raw === false || raw === 'false') return 'No';
+      return '';
+    }
+
+    if (raw === null || raw === undefined || raw === '') return '';
+    return String(raw);
+  }
 }

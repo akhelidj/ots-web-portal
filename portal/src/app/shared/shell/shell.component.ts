@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import {
@@ -15,6 +15,7 @@ import { NavigationService } from '@portal/core/navigation/services/navigation.s
 import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
 import { environment } from '@app-env/environment';
 import { AuthRequiredComponent } from '@portal/shared/components/auth-required/auth-required.component';
+import { APP_ROLES } from '@portal/core/constants/app.constants';
 
 @Component({
   selector: 'app-shell',
@@ -41,6 +42,13 @@ export class ShellComponent {
   public hasConflict = this.outbox.hasConflict;
   public isAuthenticated = this.session.isAuthenticated;
   public profile = this.session.profile;
+
+  /** Customers are read-only and hold no local writes, so the manual Sync control
+   *  is meaningless for them. The connectivity indicator is kept — it is
+   *  informative (export requires being online). */
+  public isCustomer = computed(
+    () => this.profile()?.role === APP_ROLES.CUSTOMER,
+  );
 
   public syncStatus = this.orchestrator.syncStatus;
   public syncState = this.orchestrator.syncState;

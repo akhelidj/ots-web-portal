@@ -48,6 +48,10 @@ export class ReportAttachmentsComponent implements OnDestroy {
   public readonly reportId = input.required<string>();
   /** Optional: host-supplied read-only flag (e.g. report locked). */
   public readonly disabled = input(false);
+  /** Optional: a view-only consumer (e.g. customer) — the upload controls are
+   *  hidden entirely and the panel reads as a documents list. Downloads and
+   *  thumbnails are unaffected. */
+  public readonly viewerOnly = input(false);
 
   private readonly uid = `report-attachments-${nextReportAttachmentsId++}`;
   public readonly docInputId = `${this.uid}-doc`;

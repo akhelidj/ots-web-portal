@@ -11,6 +11,37 @@
       shown.
     </p>
   </div>
+} @else if (isReadOnly) {
+<!-- Read-only presentation: label + value in the definition-driven field order,
+     never disabled inputs. No footer — the drawer's own close control and Esc
+     dismiss it. Editable path below is untouched. -->
+<div class="flex flex-col gap-5">
+  @for (section of schema.sections; track section.key) {
+    <section
+      class="bg-card border border-border rounded-lg shadow-sm overflow-hidden"
+    >
+      <h3
+        class="text-foreground text-sm px-5 py-3 bg-muted border-b border-border"
+      >
+        {{ section.title }}
+      </h3>
+      <dl class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        @for (field of section.fields; track field.key) {
+          <div class="min-w-0">
+            <dt class="field-label-compact">{{ field.label }}</dt>
+            <dd class="detail-value break-words">
+              @if (displayValue(field); as v) {
+                {{ v }}
+              } @else {
+                <span class="text-muted-foreground">—</span>
+              }
+            </dd>
+          </div>
+        }
+      </dl>
+    </section>
+  }
+</div>
 } @else {
 <form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="space-y-6">
   <!-- One field per row, sections stacked top-to-bottom: a single column reads as a

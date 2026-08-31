@@ -15,7 +15,6 @@ import { LocalInspectionReport } from '@portal/core/offline/models/types';
 })
 export class InspectionReportHeaderComponent {
   @Input({ required: true }) report!: LocalInspectionReport;
-  @Input() isCustomer = false;
   @Input() userRole = '';
   @Input() isExporting = false;
   @Input() isOnline = false;

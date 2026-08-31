@@ -12,7 +12,6 @@
     >
       <app-inspection-report-header
         [report]="reportData"
-        [isCustomer]="isCustomer()"
         [userRole]="userRole()"
         [isExporting]="isExporting"
         [isOnline]="isOnline"
@@ -536,6 +535,7 @@
             <app-report-attachments
               [reportId]="reportId"
               [disabled]="isLocked() || isCustomer()"
+              [viewerOnly]="isCustomer()"
             />
           }
         </div>

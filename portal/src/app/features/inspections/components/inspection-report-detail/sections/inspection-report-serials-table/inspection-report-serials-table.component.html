@@ -326,24 +326,24 @@
                   <div
                     class="flex flex-col gap-1.5 flex-grow min-w-0 justify-center"
                   >
-                    <button
-                      type="button"
-                      (click)="
-                        canInspectInspectionData
-                          ? openInspection.emit(sn)
-                          : null
-                      "
-                      (keydown.enter)="
-                        canInspectInspectionData
-                          ? openInspection.emit(sn)
-                          : null
-                      "
-                      [class.cursor-pointer]="canInspectInspectionData"
-                      [class.hover:text-primary]="canInspectInspectionData"
-                      class="code-text font-bold text-gray-900 text-sm whitespace-nowrap transition-colors text-left bg-transparent border-none p-0"
-                    >
-                      {{ sn.value }}
-                    </button>
+                    <!-- Interactive only when there is an inspect action; otherwise
+                         plain text so no dead control is presented (e.g. customers,
+                         or ops on a locked report). -->
+                    @if (canInspectInspectionData) {
+                      <button
+                        type="button"
+                        (click)="openInspection.emit(sn)"
+                        (keydown.enter)="openInspection.emit(sn)"
+                        class="code-text font-bold text-gray-900 text-sm whitespace-nowrap transition-colors text-left bg-transparent border-none p-0 cursor-pointer hover:text-primary"
+                      >
+                        {{ sn.value }}
+                      </button>
+                    } @else {
+                      <span
+                        class="code-text font-bold text-gray-900 text-sm whitespace-nowrap"
+                        >{{ sn.value }}</span
+                      >
+                    }
                     <div class="space-y-1">
                       @for (cr of childReports; track cr.id) {
                         @for (csn of cr.serialNumbers || []; track csn.id) {
