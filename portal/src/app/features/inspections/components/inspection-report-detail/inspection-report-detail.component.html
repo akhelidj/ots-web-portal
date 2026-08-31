@@ -6,7 +6,7 @@
       [style.--shell-scrollbar-width.px]="shellScrollbarWidth()"
       [ngClass]="
         isHeaderCondensed()
-          ? 'sticky top-0 z-30 report-header-condensed-shell bg-stone-100/95 backdrop-blur'
+          ? 'sticky top-0 z-30 report-header-condensed-shell bg-background/95 backdrop-blur'
           : ''
       "
     >
@@ -197,7 +197,7 @@
               >
               @if (serialsUninspectedCount() > 0) {
                 <span
-                  class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold leading-none"
+                  class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-none bg-accent text-accent-foreground text-[10px] font-bold leading-none"
                   [attr.aria-label]="
                     serialsUninspectedCount() + ' pipes need inspection'
                   "
@@ -256,7 +256,7 @@
                 >
                 @if (pendingApprovalCount() > 0) {
                   <span
-                    class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold leading-none"
+                    class="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-none bg-accent text-accent-foreground text-[10px] font-bold leading-none"
                     [attr.aria-label]="
                       pendingApprovalCount() + ' batches pending approval'
                     "
@@ -794,7 +794,7 @@
             </div>
             <button
               (click)="closeInspectionForm()"
-              class="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+              class="p-2 hover:bg-muted rounded-none transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
             >
               <svg
                 class="w-6 h-6"
@@ -850,14 +850,14 @@
             <h3 class="text-lg font-bold text-gray-900 flex items-center gap-3">
               Equipment List:
               <span
-                class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20"
+                class="px-3 py-1 rounded-none text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20"
               >
                 {{ activeModalStatusVal }}
               </span>
             </h3>
             <button
               (click)="closeKpiModal()"
-              class="p-2 hover:bg-gray-200 rounded-full"
+              class="p-2 hover:bg-gray-200 rounded-none"
             >
               <svg
                 class="w-5 h-5 text-gray-400"
@@ -931,7 +931,7 @@
             </h3>
             <button
               (click)="closeReturnBatchModal()"
-              class="p-2 hover:bg-error/10 rounded-full text-error-dark"
+              class="p-2 hover:bg-error/10 rounded-none text-error-dark"
             >
               <svg
                 class="w-6 h-6"
@@ -1005,7 +1005,7 @@
             </div>
             <button
               (click)="closeHistory()"
-              class="p-2 hover:bg-gray-200 rounded-full"
+              class="p-2 hover:bg-gray-200 rounded-none"
             >
               <svg
                 class="w-6 h-6 text-gray-400"
@@ -1120,7 +1120,7 @@
             </h2>
             <button
               (click)="isWorkflowModalOpen.set(false)"
-              class="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-400 hover:text-neutral-900"
+              class="p-2 hover:bg-neutral-100 rounded-none transition-colors text-neutral-400 hover:text-neutral-900"
             >
               <svg
                 class="w-6 h-6"

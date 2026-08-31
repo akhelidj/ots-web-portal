@@ -6,7 +6,7 @@
     <div class="flex items-center gap-4">
       <a
         routerLink="/"
-        class="text-muted-foreground hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-full hover:bg-muted"
+        class="text-muted-foreground hover:text-primary transition-colors flex items-center justify-center h-10 w-10 rounded-none hover:bg-muted"
         title="Go to Dashboard"
       >
         <svg
@@ -36,7 +36,7 @@
     </div>
     <div class="flex items-center gap-3">
       <span
-        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest transition-colors"
+        class="inline-flex items-center px-3 py-1 rounded-none text-xs font-semibold uppercase tracking-widest transition-colors"
         [ngClass]="
           connectivity.isOnline()
             ? 'bg-success-light text-success-dark border border-success/20'

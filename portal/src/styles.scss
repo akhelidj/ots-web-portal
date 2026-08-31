@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Manrope:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -13,31 +13,55 @@
  * yet migrated — that happens per-screen in a later pass.
  */
 :root {
-  /* Color — 17-slot semantic set. RGB channel triples where a var feeds rgb()/rgba(). */
-  --primary: #0b1a2a;
-  --primary-hover: #1e334a; /* darker navy — hover/active slot for primary */
+  /* Color — semantic slots repointed to the marketing palette (ink / paper / orange).
+     Slot names are unchanged so existing utilities keep resolving; only values moved.
+     RGB channel triples live below where a var feeds rgb()/rgba(). */
+  --primary: #171b1d; /* ink */
+  --primary-hover: #242a2d; /* ink-soft — hover/active slot for primary */
   --on-primary: #ffffff;
-  --secondary: #0b1a2a; /* the former primary navy, demoted */
+  --secondary: #242a2d; /* ink-soft (former demoted navy) */
   --on-secondary: #ffffff;
-  --accent: #ff9800;
-  --on-accent: #1e293b;
-  --accent-hover: #f57c00;
-  --background: #f8fafc;
-  --foreground: #1e293b;
-  --card: #ffffff;
-  --card-foreground: #1e293b;
-  --muted: #e9eff8;
-  --muted-foreground: #64748b;
-  --border: #e2e8f0;
-  --destructive: #dc2626;
+  --accent: #ed812d; /* orange */
+  --on-accent: #171b1d; /* ink text on orange */
+  --accent-hover: #ff9b4c;
+  --background: #f1f0ea; /* paper */
+  --foreground: #171b1d; /* ink */
+  --card: #ffffff; /* white */
+  --card-foreground: #171b1d; /* ink */
+  --muted: #e7e5dd; /* deep-paper */
+  --muted-foreground: #5d6466; /* slate */
+  --border: rgba(23, 27, 29, 0.16); /* ink @ 16% */
+  --destructive: #9b3d2e; /* brick red — aligned with --error */
   --on-destructive: #ffffff;
-  --ring: #2563eb;
+  --ring: #ed812d; /* orange */
+
+  /* Caption / secondary-label text. */
+  --light-slate: #7b8081;
+
+  /* Status — muted per brand brief (forest green / ochre / brick red), not Material
+     brights. Re-pointable here; Tailwind's success/error/warning colors map these so
+     bg-success-light, text-error-dark, border-warning/30, … keep working.
+     Stored as R G B channel triples (hex in comments) because these slots are used
+     with Tailwind alpha modifiers (border-success/30, ring-error/25, bg-warning-light/20,
+     bg-error-light/10, …) — a bare var() cannot take an /alpha, a channel triple can. */
+  --success: 63 107 78; /* #3f6b4e forest */
+  --success-light: 228 236 229; /* #e4ece5 */
+  --success-dark: 46 81 57; /* #2e5139 */
+  --warning: 181 127 42; /* #b57f2a ochre */
+  --warning-light: 241 232 214; /* #f1e8d6 */
+  --warning-dark: 138 94 28; /* #8a5e1c */
+  --error: 155 61 46; /* #9b3d2e brick */
+  --error-light: 241 225 221; /* #f1e1dd */
+  --error-dark: 122 46 34; /* #7a2e22 */
 
   /* RGB channel triples — feed Tailwind's rgb(var(--*) / <alpha-value>) colors
-     (so bg-primary/10 etc. keep working) and the existing rgba(var(--*)) glow shadows. */
-  --primary-rgb: 11 26 42;
-  --color-primary: 11 26 42;
-  --accent-rgb: 255 152 0;
+     (so bg-primary/10, ring-primary/25, bg-accent/… keep working) and rgba() glows.
+     Both accent and primary need channel form now. */
+  --primary-rgb: 23 27 29;
+  --color-primary: 23 27 29;
+  --accent-rgb: 237 129 45;
+  --background-rgb: 241 240 234; /* paper — channel form so bg-background/95 (translucent
+                                    sticky headers) can take an alpha modifier */
 
   /* Spacing — 4pt scale. */
   --space-1: 4px;
@@ -50,13 +74,24 @@
   --space-16: 64px;
 
   /* Radius / shadow / focus. */
-  --radius: 8px;
-  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08),
-    0 1px 2px rgba(15, 23, 42, 0.06);
-  --focus-ring: 0 0 0 3px rgb(37 99 235 / 0.45);
+  --radius: 0;
+  --shadow-card: 0 1px 3px rgba(23, 27, 29, 0.08),
+    0 1px 2px rgba(23, 27, 29, 0.06);
+  --focus-ring: 0 0 0 3px rgb(237 129 45 / 0.55); /* visible orange focus outline */
 
-  /* Type. */
-  --font-sans: 'Plus Jakarta Sans', 'IBM Plex Sans', sans-serif;
+  /* Motion — easing curves + duration tokens at the app scale. Defined only; not
+     yet applied to any transition/animation. */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* general in/out */
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1); /* entrances */
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1); /* exits */
+  --duration-fast: 220ms; /* 180–280ms — hovers, small state flips */
+  --duration-medium: 440ms; /* 350–550ms — panels, disclosures */
+  --duration-slow: 720ms; /* 600–900ms — page/route level */
+
+  /* Type — vars agree with the Tailwind font families wired in tailwind.config.js. */
+  --font-sans: 'IBM Plex Sans', 'Source Sans 3', sans-serif;
+  --font-heading: 'Manrope', 'IBM Plex Sans', sans-serif;
+  --font-condensed: 'Barlow Condensed', 'IBM Plex Sans', sans-serif;
 }
 
 /* Reduced-motion: neutralize all animation/transition app-wide. */
@@ -94,7 +129,7 @@
   }
 
   body {
-    @apply font-sans antialiased text-neutral-800 bg-stone-100;
+    @apply font-sans antialiased text-neutral-800 bg-background;
   }
 
   input,
@@ -298,7 +333,7 @@
   }
 
   .data-chip {
-    @apply inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] border;
+    @apply inline-flex items-center px-2.5 py-1 rounded-none text-[11px] font-semibold uppercase tracking-[0.08em] border;
   }
 
   .data-chip-success {
@@ -322,11 +357,11 @@
   }
 
   .data-chip-success-soft {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success-dark;
+    @apply inline-flex items-center px-2 py-0.5 rounded-none text-xs font-medium bg-success-light text-success-dark;
   }
 
   .data-chip-neutral-soft {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600;
+    @apply inline-flex items-center px-2 py-0.5 rounded-none text-xs font-medium bg-neutral-100 text-neutral-600;
   }
 
   .action-link {
@@ -338,7 +373,9 @@
   }
 
   .action-link-accent {
-    @apply action-link text-accent hover:text-accent-hover;
+    /* Resting label is ink (orange text on paper fails contrast); orange returns on
+       hover as an active-state affordance, which the brief allows. */
+    @apply action-link text-primary hover:text-accent-hover;
   }
 
   .action-link-neutral {
@@ -379,7 +416,8 @@
   }
 
   .btn-accent {
-    @apply bg-accent hover:bg-accent-hover text-white focus:ring-accent border border-transparent;
+    /* Primary action per brief: orange surface, ink label (white on orange fails AA). */
+    @apply bg-accent hover:bg-accent-hover text-accent-foreground focus:ring-accent border border-transparent;
   }
 
   .btn-danger {

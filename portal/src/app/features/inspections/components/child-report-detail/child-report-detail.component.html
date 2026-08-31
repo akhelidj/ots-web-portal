@@ -85,7 +85,7 @@
         >
           @if (userRole() !== 'CUSTOMER') {
             <span
-              class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-[0.08em] bg-muted text-muted-foreground border border-border"
+              class="inline-flex items-center px-3 py-1 rounded-none text-xs font-semibold uppercase tracking-[0.08em] bg-muted text-muted-foreground border border-border"
             >
               {{ cr.type }}
             </span>
@@ -93,7 +93,7 @@
             @if (allowedTransitions().length > 0) {
               <button
                 (click)="isWorkflowModalOpen.set(true)"
-                class="inline-flex justify-center items-center gap-1.5 bg-accent hover:bg-accent/90 text-white px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+                class="inline-flex justify-center items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
                 title="Open Workflow Actions"
               >
                 <svg
@@ -113,7 +113,7 @@
               </button>
             }
             <span
-              class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest"
+              class="inline-flex items-center px-3 py-1 rounded-none text-xs font-semibold uppercase tracking-widest"
               [ngClass]="{
                 'bg-error-light text-error-dark':
                   cr.syncState === 'CONFLICT' || cr.syncState === 'ERROR',
@@ -249,7 +249,7 @@
                   ) {
                     <button
                       (click)="openInspectionForm(sn.id)"
-                      class="btn btn-secondary btn-sm gap-1.5 text-accent hover:text-white hover:bg-accent"
+                      class="btn btn-secondary btn-sm gap-1.5 text-foreground hover:text-accent-foreground hover:bg-accent"
                     >
                       <svg
                         class="w-3.5 h-3.5"
@@ -417,7 +417,7 @@
             </h2>
             <button
               (click)="isWorkflowModalOpen.set(false)"
-              class="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+              class="p-2 hover:bg-muted rounded-none transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
             >
               <svg
                 class="w-6 h-6"
@@ -524,7 +524,7 @@
                     >
                       Confirm Action:
                       <span
-                        class="text-primary bg-card px-3 py-1 rounded-full shadow-sm border border-primary/10"
+                        class="text-primary bg-card px-3 py-1 rounded-none shadow-sm border border-primary/10"
                       >
                         {{ st.label || st.toStatus }}
                       </span>
@@ -588,7 +588,7 @@
       >
         <div class="flex items-center gap-3 pr-6 border-r border-white/15">
           <span
-            class="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-sm font-bold shadow-lg shadow-accent/20"
+            class="h-8 w-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center text-sm font-bold shadow-lg shadow-accent/20"
           >
             {{ selectedSnIds().size }}
           </span>
@@ -719,7 +719,7 @@
           </div>
           <button
             (click)="closeInspectionForm()"
-            class="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+            class="p-2 hover:bg-muted rounded-none transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
           >
             <svg
               class="w-6 h-6"
@@ -785,7 +785,7 @@
         </div>
         <button
           (click)="closeHistory()"
-          class="p-2 hover:bg-muted rounded-full focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+          class="p-2 hover:bg-muted rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
         >
           <svg
             class="w-6 h-6 text-muted-foreground"

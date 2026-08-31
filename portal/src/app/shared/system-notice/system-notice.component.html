@@ -81,7 +81,7 @@
       class="pointer-events-none fixed inset-x-0 top-4 z-[1050] flex justify-center px-4"
     >
       <div
-        class="pointer-events-auto inline-flex items-center gap-3 rounded-full border px-4 py-2.5 shadow-lg backdrop-blur-sm"
+        class="pointer-events-auto inline-flex items-center gap-3 rounded-none border px-4 py-2.5 shadow-lg backdrop-blur-sm"
         [ngClass]="{
           'bg-amber-50/95 border-amber-200 text-amber-900':
             notice.type === 'offline',
@@ -104,7 +104,7 @@
         </div>
         <button
           type="button"
-          class="rounded-full p-1 transition-colors"
+          class="rounded-none p-1 transition-colors"
           [ngClass]="{
             'hover:bg-amber-100': notice.type === 'offline',
             'hover:bg-emerald-100': notice.type === 'online',
