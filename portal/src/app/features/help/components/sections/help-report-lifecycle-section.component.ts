@@ -9,7 +9,7 @@ import { AppRole } from '@portal/core/constants/app.constants';
       class="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 shadow-sm"
     >
       <p class="text-xs uppercase tracking-[0.1em] text-neutral-500">Reports</p>
-      <h2 class="mt-2 text-xl font-semibold tracking-tight text-neutral-900">
+      <h2 class="mt-2 text-xl tracking-tight text-neutral-900">
         Inspection report lifecycle
       </h2>
       <p class="mt-3 text-sm text-neutral-600">

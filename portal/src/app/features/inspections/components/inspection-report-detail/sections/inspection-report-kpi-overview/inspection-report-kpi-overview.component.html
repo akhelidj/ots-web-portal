@@ -3,11 +3,11 @@
     class="page-section p-5 flex flex-col justify-center text-center items-center"
   >
     <span
-      class="text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em] mb-1"
+      class="stat-label"
       >Total Pipes</span
     >
     <span
-      class="text-3xl font-semibold text-neutral-900 flex items-baseline gap-1"
+      class="stat-value text-3xl text-neutral-900 flex items-baseline gap-1"
       >{{ total }}</span
     >
   </div>
@@ -19,10 +19,10 @@
     class="bg-white p-5 rounded-xl shadow-sm border border-success/30 hover:border-success/50 transition-colors cursor-pointer flex flex-col justify-center text-center items-center"
   >
     <span
-      class="text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em] mb-1"
+      class="stat-label"
       >Passed</span
     >
-    <span class="text-3xl font-semibold text-success-dark">{{ passed }}</span>
+    <span class="stat-value text-3xl text-success-dark">{{ passed }}</span>
   </div>
 
   <div
@@ -32,10 +32,10 @@
     class="bg-white p-5 rounded-xl shadow-sm border border-warning/30 hover:border-warning/50 transition-colors cursor-pointer flex flex-col justify-center text-center items-center"
   >
     <span
-      class="text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em] mb-1"
+      class="stat-label"
       >Action Required</span
     >
-    <span class="text-3xl font-semibold text-warning-dark">{{ rework }}</span>
+    <span class="stat-value text-3xl text-warning-dark">{{ rework }}</span>
   </div>
 
   <div
@@ -45,21 +45,21 @@
     class="bg-white p-5 rounded-xl shadow-sm border border-error/30 hover:border-error/50 transition-colors cursor-pointer flex flex-col justify-center text-center items-center"
   >
     <span
-      class="text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em] mb-1"
+      class="stat-label"
       >Rejected</span
     >
-    <span class="text-3xl font-semibold text-error-dark">{{ scrap }}</span>
+    <span class="stat-value text-3xl text-error-dark">{{ scrap }}</span>
   </div>
 
   <div
     class="page-section p-5 flex flex-col justify-center items-center text-center bg-neutral-50"
   >
     <span
-      class="text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em] mb-1"
+      class="stat-label"
       >Pass Rate</span
     >
     <span
-      class="text-3xl font-semibold flex items-baseline gap-0.5"
+      class="stat-value text-3xl flex items-baseline gap-0.5"
       [ngClass]="{
         'text-success-dark': passRate === 100,
         'text-warning-dark': passRate > 0 && passRate < 100,

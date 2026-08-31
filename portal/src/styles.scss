@@ -140,20 +140,23 @@
     @apply font-sans;
   }
 
+  /* Headings = Manrope (font-heading), medium weight, tight tracking + compact
+     leading per the brand brief — deliberately not bold. h4 keeps semibold so small
+     subheads stay legible. h5 is an uppercase metadata eyebrow → Barlow Condensed. */
   h1 {
-    @apply text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900;
+    @apply font-heading text-2xl sm:text-3xl font-medium tracking-tight leading-tight text-neutral-900;
   }
   h2 {
-    @apply text-xl sm:text-2xl font-semibold tracking-tight text-neutral-900;
+    @apply font-heading text-xl sm:text-2xl font-medium tracking-tight leading-tight text-neutral-900;
   }
   h3 {
-    @apply text-lg font-semibold tracking-tight text-neutral-800;
+    @apply font-heading text-lg font-medium tracking-tight leading-tight text-neutral-800;
   }
   h4 {
-    @apply text-base font-semibold text-neutral-800;
+    @apply font-heading text-base font-semibold tracking-tight text-neutral-800;
   }
   h5 {
-    @apply text-sm font-semibold uppercase tracking-[0.08em] text-neutral-500;
+    @apply font-condensed text-sm font-semibold uppercase tracking-[0.08em] text-neutral-500;
   }
 
   a {
@@ -208,31 +211,45 @@
   }
 
   .section-title {
-    @apply text-base sm:text-lg font-semibold text-neutral-900;
+    @apply font-heading text-base sm:text-lg font-medium tracking-tight text-neutral-900;
   }
 
   .section-caption {
     @apply text-sm text-neutral-500;
   }
 
+  /* Large "important values" — KPI numbers, counts, headline figures. Manrope
+     (font-heading) medium, tight tracking, compact leading, tabular figures.
+     Deliberately not bold, per the brand brief. Size/color set by the call site. */
+  .stat-value {
+    @apply font-heading font-medium tracking-tight leading-none tabular-nums;
+  }
+
+  /* The condensed metadata eyebrow that sits above a stat-value (KPI cards, etc.). */
+  .stat-label {
+    @apply block font-condensed text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-1;
+  }
+
   .queue-table-wrap {
     @apply bg-white border border-neutral-200 rounded-xl shadow-sm overflow-x-auto overflow-y-hidden;
   }
 
+  /* Technical metadata labels → Barlow Condensed (font-condensed), uppercase.
+     Weight held at semibold since only 500/600 are loaded. */
   .field-label {
-    @apply block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-1.5;
+    @apply block font-condensed text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-1.5;
   }
 
   .field-label-compact {
-    @apply block text-[11px] font-semibold uppercase tracking-[0.06em] text-neutral-500 mb-1;
+    @apply block font-condensed text-[11px] font-semibold uppercase tracking-[0.06em] text-neutral-500 mb-1;
   }
 
   .detail-label {
-    @apply block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1;
+    @apply block font-condensed text-[10px] font-semibold text-neutral-500 uppercase tracking-widest mb-1;
   }
 
   .detail-value {
-    @apply text-sm font-medium text-neutral-900;
+    @apply text-sm font-medium text-neutral-900 tabular-nums;
   }
 
   .detail-value-code {
@@ -269,7 +286,7 @@
   }
 
   .section-legend {
-    @apply text-lg font-semibold text-neutral-900 border-b border-neutral-200 pb-3 w-full mb-6;
+    @apply font-heading text-lg font-medium tracking-tight text-neutral-900 border-b border-neutral-200 pb-3 w-full mb-6;
   }
 
   .dialog-header {
@@ -288,8 +305,10 @@
     @apply text-sm text-success-dark bg-success-light py-2 px-3 rounded-md border border-success;
   }
 
+  /* Serial numbers, codes and other measured strings — tabular figures so digits
+     align in columns. */
   .code-text {
-    @apply font-sans tracking-[0.06em];
+    @apply font-sans tracking-[0.06em] tabular-nums;
   }
 
   .table-base {
@@ -301,11 +320,11 @@
   }
 
   .table-th {
-    @apply px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em];
+    @apply px-6 py-3 text-left font-condensed text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em];
   }
 
   .table-th-right {
-    @apply px-6 py-3 text-right text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em];
+    @apply px-6 py-3 text-right font-condensed text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em];
   }
 
   .table-body {
@@ -317,15 +336,15 @@
   }
 
   .table-td {
-    @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-700;
+    @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-700 tabular-nums;
   }
 
   .table-td-strong {
-    @apply px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900;
+    @apply px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900 tabular-nums;
   }
 
   .table-td-code {
-    @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-700 font-sans tracking-[0.06em];
+    @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-700 font-sans tracking-[0.06em] tabular-nums;
   }
 
   .table-actions {
@@ -333,7 +352,7 @@
   }
 
   .data-chip {
-    @apply inline-flex items-center px-2.5 py-1 rounded-none text-[11px] font-semibold uppercase tracking-[0.08em] border;
+    @apply inline-flex items-center px-2.5 py-1 rounded-none font-condensed text-[11px] font-semibold uppercase tracking-[0.08em] border;
   }
 
   .data-chip-success {

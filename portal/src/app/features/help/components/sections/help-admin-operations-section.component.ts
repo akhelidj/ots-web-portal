@@ -11,7 +11,7 @@ import { AppRole } from '@portal/core/constants/app.constants';
       <p class="text-xs uppercase tracking-[0.1em] text-neutral-500">
         Administration
       </p>
-      <h2 class="mt-2 text-xl font-semibold tracking-tight text-neutral-900">
+      <h2 class="mt-2 text-xl tracking-tight text-neutral-900">
         Platform operations available to Admin
       </h2>
       <div

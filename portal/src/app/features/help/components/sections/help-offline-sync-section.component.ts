@@ -11,7 +11,7 @@ import { AppRole } from '@portal/core/constants/app.constants';
       <p class="text-xs uppercase tracking-[0.1em] text-neutral-500">
         Offline & Sync
       </p>
-      <h2 class="mt-2 text-xl font-semibold tracking-tight text-neutral-900">
+      <h2 class="mt-2 text-xl tracking-tight text-neutral-900">
         Working safely with unstable network
       </h2>
       <ul class="mt-4 space-y-2 text-sm text-neutral-700">

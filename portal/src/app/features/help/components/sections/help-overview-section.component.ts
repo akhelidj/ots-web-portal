@@ -11,7 +11,7 @@ import { AppRole } from '@portal/core/constants/app.constants';
       <p class="text-xs uppercase tracking-[0.1em] text-neutral-500">
         Getting Started
       </p>
-      <h2 class="mt-2 text-xl font-semibold tracking-tight text-neutral-900">
+      <h2 class="mt-2 text-xl tracking-tight text-neutral-900">
         Daily workflow in Trackline
       </h2>
       <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">

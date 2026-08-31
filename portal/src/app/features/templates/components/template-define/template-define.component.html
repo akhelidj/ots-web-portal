@@ -7,7 +7,7 @@
       ← Back to templates
     </button>
     <h1
-      class="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900"
+      class="text-2xl sm:text-3xl tracking-tight text-neutral-900"
     >
       Define Template Form
     </h1>
@@ -67,7 +67,7 @@
     @if (activeStep().key === 'detect') {
       <div class="page-section p-5 sm:p-6 space-y-4">
         <div class="flex items-baseline justify-between">
-          <h2 class="font-semibold text-lg text-neutral-900">Detected Tokens</h2>
+          <h2 class="text-lg text-neutral-900">Detected Tokens</h2>
           <span data-testid="detect-count" class="text-sm text-neutral-500">
             {{ allRows().length }}
             token{{ allRows().length === 1 ? '' : 's' }}
@@ -105,7 +105,7 @@
     <!-- STEP 2: METADATA — pick the report-level (non-serial) fields; describe each inline -->
     @if (activeStep().key === 'header') {
       <div class="page-section p-5 sm:p-6 pb-0">
-        <h2 class="font-semibold text-lg text-neutral-900">Metadata Fields</h2>
+        <h2 class="text-lg text-neutral-900">Metadata Fields</h2>
         <p class="mt-1 mb-0 text-sm text-neutral-500">
           Check the tokens that are report-level metadata (one value per report).
           A roled field is system-owned — its value is derived, so it needs no
@@ -234,7 +234,7 @@
     <!-- STEP 3: SERIAL — the repeating-row fields; bulk actions + inline describe -->
     @if (activeStep().key === 'serial') {
       <div class="page-section p-5 sm:p-6 pb-0">
-        <h2 class="font-semibold text-lg text-neutral-900">Serial Fields</h2>
+        <h2 class="text-lg text-neutral-900">Serial Fields</h2>
         <p class="mt-1 mb-0 text-sm text-neutral-500">
           These tokens repeat once per inspected serial. Everything not claimed by
           the Metadata step is pre-checked — uncheck any strays. Mark exactly one
@@ -599,7 +599,7 @@
 
       <!-- Compact review summary -->
       <div class="page-section p-5 sm:p-6">
-        <h2 class="font-semibold text-lg text-neutral-900 mb-3">Review</h2>
+        <h2 class="text-lg text-neutral-900 mb-3">Review</h2>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
           <div>
             <dt class="font-semibold text-gray-500">Display Name</dt>

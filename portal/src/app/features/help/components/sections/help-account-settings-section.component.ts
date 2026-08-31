@@ -9,7 +9,7 @@ import { AppRole } from '@portal/core/constants/app.constants';
       class="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 shadow-sm"
     >
       <p class="text-xs uppercase tracking-[0.1em] text-neutral-500">Account</p>
-      <h2 class="mt-2 text-xl font-semibold tracking-tight text-neutral-900">
+      <h2 class="mt-2 text-xl tracking-tight text-neutral-900">
         Settings and access hygiene
       </h2>
       <ul class="mt-4 space-y-2 text-sm text-neutral-700">
