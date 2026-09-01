@@ -175,6 +175,22 @@ customer tables (so a customer sees the same raw keys an admin does). Recorded s
 raw-key header is not later mistaken for a rendering bug. Fix belongs in the template
 definition (author section titles / field labels), not in the table components.
 
+**Cross-template confirmation (customer document view).** Verified the customer
+document surface against a *second* seeded template (`NCO-260901-101413`), whose
+definition is authored independently of the NOBLECORP one. The shared derivation
+renders that template's own group bands ("Box", "Pin") and its own column labels
+("OD", "CONDITION", "TONGUE SPACE", "THREAD TYPE", …) with no code change — the six
+document sections (Identity, Specifications, Findings, Serials, Documents, History) and
+the definition-driven serial columns are generic across templates. Its Specifications
+block additionally renders the authored empty state ("This report's template has no
+usable field definition yet…") when the definition declares no metadata fields — again
+an authoring condition surfaced faithfully, not a rendering fault. Separately, that same
+template's *export* fails at the API with a `400` ("Repeating-row tokens span multiple
+worksheet rows: row 41 … row 45"): its uploaded Excel template blob spreads row-scope
+tokens across rows 41–45 instead of one repeating row (`export.service.ts:430`). That is
+a template-blob authoring fault in the export mapper — a different subsystem from the
+label derivation above, and likewise not a view/rendering fault.
+
 ## Definition-driven cutover (`Template.definitionJson`)
 
 ### 15. REWORK rule authored in the definition but not engine-consumed — RESOLVED (a031969)

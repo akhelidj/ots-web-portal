@@ -7,7 +7,17 @@
   <table
     class="w-full min-w-full border-collapse text-left align-middle tabular-nums"
   >
-    <thead class="sticky top-0 z-10">
+    <!--
+      No vertical sticky on the header: this wrapper owns overflow-x, which
+      forces overflow-y to a used value of `auto`, making it the sticky
+      containing block — so `position: sticky; top: 0` can never pin against the
+      outer document scroller (it just scrolls away with the rows). A bounded
+      inner scroll region would engage it but is the wrong trade on a reading
+      surface (trapped mid-document scroll, worse on touch). The header scrolls
+      away with the document by design; the horizontal freeze on the Serial
+      column below still works, because that axis IS this wrapper's scroller.
+    -->
+    <thead>
       <!-- Group band: one condensed uppercase title spanning each section's columns. -->
       @if (columnGroups.length > 0) {
         <tr class="bg-muted">
