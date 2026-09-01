@@ -158,6 +158,23 @@ empty-state UI. In practice the route is not linked while a serial's child is
 sees a blank page rather than an explanatory empty state. Fix: render a not-found /
 "no child report" state on the 404.
 
+### 17. Serials-table column labels/group titles are only as good as the template definition
+Both serials tables — the ops table and the customer document table — derive their
+column headers and group bands entirely from the template's item-scope form sections
+via the shared `buildSerialColumnGroups` (`sections/serial-matrix.ts`): a group band is
+`section.title` and each column header is `field.label`, verbatim, with no fallback
+prettifier. A well-authored definition (e.g. the seeded NOBLECORP template) renders
+clean group titles ("Box Connection", "Pin Connection") and friendly labels ("Min OD").
+A rough or under-authored definition renders exactly what it declares — raw field keys
+as labels (`od_1`, `thread_type_1`, `summaru_results` [sic]) and an empty group-band
+title when a section has no `title`. Observed on the hand-made drill-pipe test report
+`NCO-260827-235132`.
+**Impact:** none functional — this is authoring/data quality surfaced faithfully, not a
+rendering fault, and because the derivation is shared it looks identical in the ops and
+customer tables (so a customer sees the same raw keys an admin does). Recorded so a
+raw-key header is not later mistaken for a rendering bug. Fix belongs in the template
+definition (author section titles / field labels), not in the table components.
+
 ## Definition-driven cutover (`Template.definitionJson`)
 
 ### 15. REWORK rule authored in the definition but not engine-consumed — RESOLVED (a031969)
