@@ -1,0 +1,124 @@
+<!--
+  Read-only serials matrix, document style. No card chrome: the surface is the
+  band it sits in. Horizontal overflow is owned here so wide matrices scroll
+  inside the table rather than pushing the document body sideways.
+-->
+<div class="w-full overflow-x-auto border-y border-border">
+  <table
+    class="w-full min-w-full border-collapse text-left align-middle tabular-nums"
+  >
+    <thead class="sticky top-0 z-10">
+      <!-- Group band: one condensed uppercase title spanning each section's columns. -->
+      @if (columnGroups.length > 0) {
+        <tr class="bg-muted">
+          <th
+            scope="col"
+            rowspan="2"
+            class="sticky left-0 z-10 bg-muted border-b border-r border-border px-4 py-3 font-condensed uppercase tracking-[0.14em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+          >
+            Serial
+          </th>
+          @for (group of columnGroups; track group.key) {
+            <th
+              scope="colgroup"
+              [attr.colspan]="group.columns.length"
+              class="border-b border-r border-border px-4 py-3 font-condensed uppercase tracking-[0.14em] text-[11px] leading-none text-primary/70 whitespace-nowrap"
+            >
+              {{ group.title }}
+            </th>
+          }
+          <th
+            scope="col"
+            rowspan="2"
+            class="border-b border-l border-border px-4 py-3 text-right font-condensed uppercase tracking-[0.14em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+          >
+            Result
+          </th>
+        </tr>
+      }
+      <!-- Column header row: one condensed label per rendered column. -->
+      <tr class="bg-muted">
+        @if (columnGroups.length === 0) {
+          <th
+            scope="col"
+            class="sticky left-0 z-10 bg-muted border-b border-r border-border px-4 py-3 font-condensed uppercase tracking-[0.14em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+          >
+            Serial
+          </th>
+          <th
+            scope="col"
+            class="border-b border-l border-border px-4 py-3 text-right font-condensed uppercase tracking-[0.14em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+          >
+            Result
+          </th>
+        }
+        @for (group of columnGroups; track group.key) {
+          @for (col of group.columns; track col.id) {
+            <th
+              scope="col"
+              class="border-b border-border px-4 py-2.5 font-condensed uppercase tracking-[0.1em] text-[11px] leading-tight text-primary/55 whitespace-nowrap"
+              [class.border-r]="col.isSectionEnd"
+            >
+              {{ col.label }}
+            </th>
+          }
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @for (sn of serials; track trackBySerial($index, sn)) {
+        <!--
+          Whole row opens the shared read-only serial drawer. It's a genuine
+          control, so it carries button semantics, keyboard activation, and an
+          orange focus ring — orange stays reserved for focus/selection here.
+        -->
+        <tr
+          role="button"
+          tabindex="0"
+          (click)="openInspection.emit(sn)"
+          (keydown.enter)="openInspection.emit(sn)"
+          (keydown.space)="$event.preventDefault(); openInspection.emit(sn)"
+          class="group cursor-pointer border-b border-border/60 transition-colors duration-fast hover:bg-primary/[0.05] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+        >
+          <th
+            scope="row"
+            class="sticky left-0 z-[5] bg-background group-hover:bg-primary/[0.05] border-r border-border/60 px-4 py-3 text-left font-heading font-medium text-primary whitespace-nowrap"
+          >
+            {{ sn.value }}
+          </th>
+          @for (group of columnGroups; track group.key) {
+            @for (col of group.columns; track col.id) {
+              <td
+                class="px-4 py-3 text-primary/80 whitespace-nowrap"
+                [class.border-r]="col.isSectionEnd"
+                [class.border-border]="col.isSectionEnd"
+              >
+                {{ getCellText(sn, col) }}
+              </td>
+            }
+          }
+          <td class="border-l border-border/60 px-4 py-3 text-right">
+            @if (getDisposition(sn)) {
+              <app-status-badge
+                [label]="dispositionLabel(sn)"
+                [severity]="dispositionSeverity(sn)"
+              />
+            } @else {
+              <span class="text-primary/40">—</span>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td
+            [attr.colspan]="totalColumnCount"
+            class="px-4 py-10 text-center font-sans text-sm text-primary/50"
+          >
+            No serials recorded on this report.
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

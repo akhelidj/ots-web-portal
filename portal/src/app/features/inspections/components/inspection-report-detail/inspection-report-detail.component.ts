@@ -80,6 +80,11 @@ import { InspectionReportAddSerialPanelComponent } from './sections/inspection-r
 import { InspectionReportApprovalBatchesComponent } from './sections/inspection-report-approval-batches/inspection-report-approval-batches.component';
 import { InspectionReportTransitionHistoryComponent } from './sections/inspection-report-transition-history/inspection-report-transition-history.component';
 import { InspectionReportSerialsTableComponent } from './sections/inspection-report-serials-table/inspection-report-serials-table.component';
+import { CustomerSerialsTableComponent } from './sections/customer-serials-table/customer-serials-table.component';
+import {
+  BadgeSeverity,
+  StatusBadgeComponent,
+} from '@portal/shared/components/status-badge/status-badge.component';
 
 @Component({
   selector: 'app-inspection-report-detail',
@@ -99,6 +104,8 @@ import { InspectionReportSerialsTableComponent } from './sections/inspection-rep
     InspectionReportApprovalBatchesComponent,
     InspectionReportTransitionHistoryComponent,
     InspectionReportSerialsTableComponent,
+    CustomerSerialsTableComponent,
+    StatusBadgeComponent,
     InspectionReportHeaderFieldsComponent,
     InspectionReportHeaderEditComponent,
   ],
@@ -434,6 +441,7 @@ export class InspectionReportDetailComponent
   public inspectedByName = 'N/A';
   public approvedByName = 'N/A';
   public customerAddress = 'N/A';
+  public customerName = 'N/A';
 
   /**
    * Derived values for system-owned (roled) header fields — assembled from the SAME
@@ -460,6 +468,48 @@ export class InspectionReportDetailComponent
   public isCustomer = computed(
     () => this.userRole().toUpperCase() === APP_ROLES.CUSTOMER,
   );
+  /**
+   * Milestone dates for the customer document identity band, derived from the
+   * transition log (the report entity carries no created/received/approved
+   * timestamps). `received` = first entry into RECEIVED; `completed` = the most
+   * recent entry into APPROVED/CLOSED. Both null until the milestone is reached.
+   */
+  public customerKeyDates = computed<{
+    received: string | null;
+    completed: string | null;
+  }>(() => {
+    const logs = this.enrichedTransitionLogs(); // newest-first
+    const received =
+      [...logs]
+        .reverse()
+        .find((l) => l.toStatus === REPORT_STATUSES.RECEIVED)?.timestamp ??
+      null;
+    const completed =
+      logs.find(
+        (l) =>
+          l.toStatus === REPORT_STATUSES.APPROVED ||
+          l.toStatus === REPORT_STATUSES.CLOSED,
+      )?.timestamp ?? null;
+    return { received, completed };
+  });
+  /**
+   * Badge severity for the report status shown in the customer identity band —
+   * a settled/approved report reads success, a held one warning, one under
+   * review info, everything mid-flight neutral. Presentational only.
+   */
+  public reportStatusSeverity = computed<BadgeSeverity>(() => {
+    switch (this.report()?.status) {
+      case REPORT_STATUSES.APPROVED:
+      case REPORT_STATUSES.CLOSED:
+        return 'success';
+      case REPORT_STATUSES.ON_HOLD:
+        return 'warning';
+      case REPORT_STATUSES.PENDING_APPROVAL:
+        return 'info';
+      default:
+        return 'neutral';
+    }
+  });
   public isReceiver = computed(
     () => this.userRole().toUpperCase() === APP_ROLES.RECEIVER,
   );
@@ -659,6 +709,7 @@ export class InspectionReportDetailComponent
     let onHoldReason: string | null = null;
     let newUiState = null;
     let newCustomerAddress = 'N/A';
+    let newCustomerName = 'N/A';
     let newInspectedByName = 'N/A';
     let newApprovedByName = 'N/A';
 
@@ -714,6 +765,7 @@ export class InspectionReportDetailComponent
       if (r.customerId) {
         const cust = await this.customerRepo.getById(r.customerId);
         if (cust) {
+          newCustomerName = cust.name?.trim() || 'N/A';
           const parts = [
             cust.addressLine1,
             cust.addressLine2,
@@ -837,6 +889,7 @@ export class InspectionReportDetailComponent
       this.uiState = newUiState;
       this.allowedTransitions = newUiState ? newUiState.transitionChoices : [];
       this.customerAddress = newCustomerAddress;
+      this.customerName = newCustomerName;
       this.inspectedByName = newInspectedByName;
       this.approvedByName = newApprovedByName;
       this.systemRoleValues = newSystemRoleValues;
