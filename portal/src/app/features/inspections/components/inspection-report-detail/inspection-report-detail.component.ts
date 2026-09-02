@@ -493,6 +493,18 @@ export class InspectionReportDetailComponent
     return { received, completed };
   });
   /**
+   * The customer's organisation name for the identity band. Reads the session
+   * profile (`customer.name`, falling back to the tenant name) — the SAME source
+   * the report list uses — rather than the ops `customerName` property, which is
+   * resolved from the customers repo cache that never hydrates for a non-admin
+   * (AdminCustomersService.canHydrate is ADMIN-only), so it would read 'N/A' here.
+   * Customer surface only; the ops resolution of `customerName` is left untouched.
+   */
+  public customerDisplayName = computed<string>(() => {
+    const p = this.session.profile();
+    return p?.customer?.name || p?.tenant?.name || 'N/A';
+  });
+  /**
    * Badge severity for the report status shown in the customer identity band —
    * a settled/approved report reads success, a held one warning, one under
    * review info, everything mid-flight neutral. Presentational only.

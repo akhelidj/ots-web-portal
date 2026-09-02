@@ -6,9 +6,12 @@
       top-to-bottom: identity → specifications → findings → serials → documents
       → history. Marketing visual language: full-bleed paper / deep-paper bands
       alternating, 1px seams over the line color, editorial container width,
-      Manrope headings + values, Barlow Condensed labels, IBM Plex body, tabular
+      Manrope headings + values, IBM Plex uppercase labels + body, tabular
       numerals on every measurement. Orange stays reserved for focus, selection,
-      and the single export action.
+      and the single export action. Interaction follows the marketing site at app
+      scale (motion tokens): the export action sweeps its fill in, the back link
+      and its icon nudge, focus settles, and the shared serial drawer opens with
+      a medium-duration slide (customer-only; ops keeps its instant appear).
     -->
     <article class="w-full bg-background text-foreground">
       <!-- ============================ SECTION 1 · IDENTITY ============================ -->
@@ -18,10 +21,10 @@
         >
           <a
             routerLink=".."
-            class="inline-flex items-center gap-2 font-condensed uppercase tracking-[0.16em] text-[12px] text-primary/55 transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+            class="group inline-flex items-center gap-2 font-sans uppercase tracking-[0.12em] text-[12px] text-primary/55 transition-colors duration-fast ease-standard hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
           >
             <svg
-              class="h-3.5 w-3.5"
+              class="h-3.5 w-3.5 cust-nudge group-hover:-translate-x-0.5 group-focus-visible:-translate-x-0.5"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -40,7 +43,7 @@
           >
             <div class="min-w-0">
               <p
-                class="font-condensed uppercase tracking-[0.22em] text-[12px] text-primary/45"
+                class="font-sans uppercase tracking-[0.16em] text-[12px] text-primary/45"
               >
                 Inspection Report
               </p>
@@ -53,6 +56,7 @@
                 <app-status-badge
                   [label]="reportData.status"
                   [severity]="reportStatusSeverity()"
+                  font="sans"
                 />
               </div>
             </div>
@@ -73,10 +77,10 @@
                       uiState?.actions?.['ADMIN_EXPORT']?.enabled
                     )
                   "
-                  class="inline-flex items-center gap-2 bg-accent px-5 py-3 font-condensed uppercase tracking-[0.16em] text-[13px] text-accent-foreground transition-colors hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+                  class="cust-sweep cust-sweep--accent group inline-flex items-center gap-2 bg-accent px-5 py-3 font-sans uppercase tracking-[0.12em] text-[13px] text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 disabled:before:hidden"
                 >
                   <svg
-                    class="h-4 w-4"
+                    class="h-4 w-4 cust-nudge group-hover:translate-y-0.5 group-focus-visible:translate-y-0.5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -106,17 +110,17 @@
           >
             <div class="bg-background px-5 py-4">
               <dt
-                class="font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
                 Customer
               </dt>
               <dd class="mt-1.5 font-heading text-base text-primary break-words">
-                {{ customerName }}
+                {{ customerDisplayName() }}
               </dd>
             </div>
             <div class="bg-background px-5 py-4">
               <dt
-                class="font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
                 PO Number
               </dt>
@@ -128,7 +132,7 @@
             </div>
             <div class="bg-background px-5 py-4">
               <dt
-                class="font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
                 Received
               </dt>
@@ -142,17 +146,21 @@
             </div>
             <div class="bg-background px-5 py-4">
               <dt
-                class="font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
                 Completed
               </dt>
-              <dd class="mt-1.5 font-heading text-base text-primary tabular-nums">
-                {{
-                  customerKeyDates().completed
-                    ? (customerKeyDates().completed | date: 'mediumDate')
-                    : '—'
-                }}
-              </dd>
+              @if (customerKeyDates().completed) {
+                <dd
+                  class="mt-1.5 font-heading text-base text-primary tabular-nums"
+                >
+                  {{ customerKeyDates().completed | date: 'mediumDate' }}
+                </dd>
+              } @else {
+                <dd class="mt-1.5 font-heading text-base text-primary/50">
+                  In progress
+                </dd>
+              }
             </div>
           </dl>
         </div>
@@ -162,26 +170,18 @@
       <section class="animate-in fade-in duration-500 border-t border-border bg-muted">
         <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
           <header class="max-w-2xl">
-            <div class="flex items-baseline gap-3">
-              <span
-                class="font-condensed text-[13px] tracking-[0.2em] text-primary/40 tabular-nums"
-                >01</span
-              >
-              <h2
-                class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-              >
-                Specifications
-              </h2>
-            </div>
-            <p class="mt-2 font-sans text-sm text-primary/60">
-              The declared parameters of what was inspected.
-            </p>
+            <h2
+              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
+            >
+              Specifications
+            </h2>
           </header>
           <div class="mt-8">
             <app-inspection-report-header-fields
               [definition]="reportDefinition"
               [data]="reportHeaderView()"
               [systemValues]="systemRoleValues"
+              [isCustomer]="true"
             />
           </div>
         </div>
@@ -193,20 +193,11 @@
       >
         <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
           <header class="max-w-2xl">
-            <div class="flex items-baseline gap-3">
-              <span
-                class="font-condensed text-[13px] tracking-[0.2em] text-primary/40 tabular-nums"
-                >02</span
-              >
-              <h2
-                class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-              >
-                Findings
-              </h2>
-            </div>
-            <p class="mt-2 font-sans text-sm text-primary/60">
-              A summary of dispositions across every serial on this report.
-            </p>
+            <h2
+              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
+            >
+              Findings
+            </h2>
           </header>
 
           <!-- Read summary, not drill-down. One surface, 1px seams, no click-to-filter. -->
@@ -215,7 +206,7 @@
           >
             <div class="bg-background px-6 py-7">
               <p
-                class="font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
                 Total Inspected
               </p>
@@ -227,7 +218,7 @@
             </div>
             <div class="bg-background px-6 py-7">
               <p
-                class="font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
                 Passed
               </p>
@@ -239,7 +230,7 @@
             </div>
             <div class="bg-background px-6 py-7">
               <p
-                class="font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
                 Rework
               </p>
@@ -251,7 +242,7 @@
             </div>
             <div class="bg-background px-6 py-7">
               <p
-                class="font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
                 Scrap
               </p>
@@ -263,7 +254,7 @@
             </div>
             <div class="bg-background px-6 py-7">
               <p
-                class="font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
                 On Hold
               </p>
@@ -275,7 +266,7 @@
             </div>
             <div class="bg-background px-6 py-7">
               <p
-                class="font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
                 Pass Rate
               </p>
@@ -293,21 +284,11 @@
       <section class="animate-in fade-in duration-500 border-t border-border bg-muted">
         <div class="mx-auto w-full max-w-6xl px-6 sm:px-8 py-12 sm:py-16">
           <header class="max-w-2xl">
-            <div class="flex items-baseline gap-3">
-              <span
-                class="font-condensed text-[13px] tracking-[0.2em] text-primary/40 tabular-nums"
-                >03</span
-              >
-              <h2
-                class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-              >
-                Serials
-              </h2>
-            </div>
-            <p class="mt-2 font-sans text-sm text-primary/60">
-              Every inspected serial and its recorded measurements. Select a row to
-              view its full inspection detail.
-            </p>
+            <h2
+              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
+            >
+              Serials
+            </h2>
           </header>
           <div class="mt-8">
             <app-customer-serials-table
@@ -325,20 +306,11 @@
       >
         <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
           <header class="max-w-2xl">
-            <div class="flex items-baseline gap-3">
-              <span
-                class="font-condensed text-[13px] tracking-[0.2em] text-primary/40 tabular-nums"
-                >04</span
-              >
-              <h2
-                class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-              >
-                Documents
-              </h2>
-            </div>
-            <p class="mt-2 font-sans text-sm text-primary/60">
-              Certificates, photos, and supporting files attached to this report.
-            </p>
+            <h2
+              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
+            >
+              Documents
+            </h2>
           </header>
           <div class="mt-8">
             <app-report-attachments
@@ -354,20 +326,11 @@
       <section class="animate-in fade-in duration-500 border-t border-border bg-muted">
         <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
           <header class="max-w-2xl">
-            <div class="flex items-baseline gap-3">
-              <span
-                class="font-condensed text-[13px] tracking-[0.2em] text-primary/40 tabular-nums"
-                >05</span
-              >
-              <h2
-                class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-              >
-                History
-              </h2>
-            </div>
-            <p class="mt-2 font-sans text-sm text-primary/60">
-              The milestones this report has passed through, most recent first.
-            </p>
+            <h2
+              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
+            >
+              History
+            </h2>
           </header>
 
           @if (enrichedTransitionLogs().length > 0) {
@@ -393,7 +356,7 @@
                     }
                   </p>
                   <p
-                    class="mt-1 font-condensed uppercase tracking-[0.14em] text-[11px] text-primary/50 tabular-nums"
+                    class="mt-1 font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50 tabular-nums"
                   >
                     {{ log.timestamp | date: 'medium' }}
                   </p>
@@ -1122,6 +1085,7 @@
     @if (inspectingSn(); as inspectingSnVal) {
       <div
         class="fixed inset-0 !h-[100dvh] w-screen z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
+        [class.cust-drawer-backdrop]="isCustomer()"
         (click)="closeInspectionForm()"
         (keydown.escape)="closeInspectionForm()"
         tabindex="0"
@@ -1130,6 +1094,7 @@
       >
         <div
           class="bg-card w-full max-w-2xl !h-[100dvh] flex flex-col shadow-2xl border-l border-border animate-in slide-in-from-right duration-500 overflow-hidden"
+          [class.cust-drawer-panel]="isCustomer()"
           (click)="$event.stopPropagation()"
           (keydown)="$event.stopPropagation()"
           tabindex="-1"
