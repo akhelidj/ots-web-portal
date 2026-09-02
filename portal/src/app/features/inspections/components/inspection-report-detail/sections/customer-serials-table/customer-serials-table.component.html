@@ -18,13 +18,13 @@
       column below still works, because that axis IS this wrapper's scroller.
     -->
     <thead>
-      <!-- Group band: one condensed uppercase title spanning each section's columns. -->
+      <!-- Group band: one uppercase IBM Plex title spanning each section's columns. -->
       @if (columnGroups.length > 0) {
         <tr class="bg-muted">
           <th
             scope="col"
             rowspan="2"
-            class="sticky left-0 z-10 bg-muted border-b border-r border-border px-4 py-3 font-condensed uppercase tracking-[0.14em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+            class="sticky left-0 z-10 bg-muted border-b border-r border-border px-4 py-3 font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
           >
             Serial
           </th>
@@ -32,7 +32,7 @@
             <th
               scope="colgroup"
               [attr.colspan]="group.columns.length"
-              class="border-b border-r border-border px-4 py-3 font-condensed uppercase tracking-[0.14em] text-[11px] leading-none text-primary/70 whitespace-nowrap"
+              class="border-b border-r border-border px-4 py-3 font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/70 whitespace-nowrap"
             >
               {{ group.title }}
             </th>
@@ -40,24 +40,24 @@
           <th
             scope="col"
             rowspan="2"
-            class="border-b border-l border-border px-4 py-3 text-right font-condensed uppercase tracking-[0.14em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+            class="border-b border-l border-border px-4 py-3 text-right font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
           >
             Result
           </th>
         </tr>
       }
-      <!-- Column header row: one condensed label per rendered column. -->
+      <!-- Column header row: one uppercase IBM Plex label per rendered column. -->
       <tr class="bg-muted">
         @if (columnGroups.length === 0) {
           <th
             scope="col"
-            class="sticky left-0 z-10 bg-muted border-b border-r border-border px-4 py-3 font-condensed uppercase tracking-[0.14em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+            class="sticky left-0 z-10 bg-muted border-b border-r border-border px-4 py-3 font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
           >
             Serial
           </th>
           <th
             scope="col"
-            class="border-b border-l border-border px-4 py-3 text-right font-condensed uppercase tracking-[0.14em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+            class="border-b border-l border-border px-4 py-3 text-right font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
           >
             Result
           </th>
@@ -66,7 +66,7 @@
           @for (col of group.columns; track col.id) {
             <th
               scope="col"
-              class="border-b border-border px-4 py-2.5 font-condensed uppercase tracking-[0.1em] text-[11px] leading-tight text-primary/55 whitespace-nowrap"
+              class="border-b border-border px-4 py-2.5 font-sans uppercase tracking-[0.08em] text-[11px] leading-tight text-primary/55 whitespace-nowrap"
               [class.border-r]="col.isSectionEnd"
             >
               {{ col.label }}
@@ -89,11 +89,11 @@
           (click)="openInspection.emit(sn)"
           (keydown.enter)="openInspection.emit(sn)"
           (keydown.space)="$event.preventDefault(); openInspection.emit(sn)"
-          class="group cursor-pointer border-b border-border/60 transition-colors duration-fast hover:bg-primary/[0.05] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+          class="cust-interactive group cursor-pointer border-b border-border/60 hover:bg-primary/[0.05] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
         >
           <th
             scope="row"
-            class="sticky left-0 z-[5] bg-background group-hover:bg-primary/[0.05] border-r border-border/60 px-4 py-3 text-left font-heading font-medium text-primary whitespace-nowrap"
+            class="sticky left-0 z-[5] bg-background group-hover:bg-primary/[0.05] transition-colors duration-fast ease-standard border-r border-border/60 px-4 py-3 text-left font-heading font-medium text-primary whitespace-nowrap"
           >
             {{ sn.value }}
           </th>
@@ -113,6 +113,7 @@
               <app-status-badge
                 [label]="dispositionLabel(sn)"
                 [severity]="dispositionSeverity(sn)"
+                font="sans"
               />
             } @else {
               <span class="text-primary/40">—</span>

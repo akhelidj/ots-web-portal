@@ -28,6 +28,7 @@ import { SystemRoleValue } from '@portal/features/templates/schemas/definition-t
           <app-status-badge
             label="System"
             severity="neutral"
+            [font]="isCustomer() ? 'sans' : 'condensed'"
             [attr.data-testid]="'system-badge-' + fieldKey()"
           />
         </span>
@@ -59,4 +60,10 @@ export class SystemFieldRowComponent {
   label = input.required<string>();
   /** The derived value for this role (undefined → treated as pending-less blank). */
   value = input<SystemRoleValue | undefined>(undefined);
+  /**
+   * Customer document surface flag. Default `false` keeps the shared ops
+   * rendering (Barlow Condensed "System" badge) byte-identical; `true` renders
+   * the badge label in IBM Plex to match the customer surface.
+   */
+  isCustomer = input<boolean>(false);
 }

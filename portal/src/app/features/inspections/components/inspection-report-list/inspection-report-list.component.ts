@@ -30,7 +30,14 @@ import { SerialNumberLocalRepo } from '@portal/core/offline/repos/serial-number-
 import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-local.repo';
 import { SessionService } from '@portal/core/auth/services/session.service';
 import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
-import { APP_ROLES } from '@portal/core/constants/app.constants';
+import {
+  APP_ROLES,
+  REPORT_STATUSES,
+} from '@portal/core/constants/app.constants';
+import {
+  BadgeSeverity,
+  StatusBadgeComponent,
+} from '@portal/shared/components/status-badge/status-badge.component';
 import {
   resolveDisposition,
   TemplateFormDefinition,
@@ -39,7 +46,7 @@ import {
 @Component({
   selector: 'app-inspection-report-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, StatusBadgeComponent],
   templateUrl: './inspection-report-list.component.html',
 })
 export class InspectionReportListComponent implements OnInit, OnDestroy {
@@ -66,6 +73,8 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   public isCustomer = false;
   public isReceiver = false;
   public isAdmin = false;
+  /** Customer's organization name, for the quiet document header (customer view only). */
+  public customerOrgName = '';
   private customerScopeId: string | null = null;
 
   public kpiTotalReports = 0;
@@ -79,6 +88,17 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   public validationCache: Record<string, ValidationResult> = {};
   public isCompactMode = computed(() => this.prefs.preferences().compactMode);
   private subs = new Subscription();
+
+  /**
+   * Fade-before-reflow phase for the customer document list. A discrete status
+   * or sort change fades the list body OUT (accelerate), swaps the data while
+   * it's invisible so the height reflow isn't seen, then settles it back IN
+   * (decelerate) — the marketing site's signature rule, at app scale. Idle when
+   * nothing is transitioning. Search-as-you-type is deliberately excluded so
+   * typing feedback stays instant.
+   */
+  public listPhase = signal<'idle' | 'out' | 'in'>('idle');
+  private reflowTimers: ReturnType<typeof setTimeout>[] = [];
 
   @Input() initialStatusFilter?: string;
 
@@ -96,6 +116,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
       this.isAdmin = p.role === APP_ROLES.ADMIN;
       this.customerScopeId =
         p.role === APP_ROLES.CUSTOMER && p.customerId ? p.customerId : null;
+      this.customerOrgName = p.customer?.name || p.tenant?.name || '';
     }
 
     this.subs.add(
@@ -123,6 +144,71 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+    this.clearReflowTimers();
+  }
+
+  /**
+   * Apply a discrete status-filter change through the fade-before-reflow.
+   * Called only from the customer document filter cells; the ops status
+   * <select> keeps its plain [(ngModel)] binding, so ops is unaffected.
+   */
+  applyStatusFilter(value: string) {
+    if (this.statusFilter === value) return;
+    this.runReflow(() => (this.statusFilter = value));
+  }
+
+  /** Apply a discrete sort change through the same choreography. */
+  applySort(value: 'updatedAt' | 'poNumber' | 'status') {
+    if (this.sortBy === value) return;
+    this.runReflow(() => (this.sortBy = value));
+  }
+
+  private clearReflowTimers() {
+    this.reflowTimers.forEach((t) => clearTimeout(t));
+    this.reflowTimers = [];
+  }
+
+  /** Duration token (`--duration-fast`) in ms, so the JS timing tracks the CSS. */
+  private motionFastMs(): number {
+    if (typeof window === 'undefined') return 220;
+    const raw = getComputedStyle(document.documentElement)
+      .getPropertyValue('--duration-fast')
+      .trim();
+    const n = parseFloat(raw);
+    return Number.isFinite(n) && n > 0 ? n : 220;
+  }
+
+  private prefersReducedMotion(): boolean {
+    return (
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+    );
+  }
+
+  private runReflow(apply: () => void) {
+    // Reduced motion (or no window): apply instantly, no choreography.
+    if (this.prefersReducedMotion()) {
+      apply();
+      this.listPhase.set('idle');
+      this.cdr.markForCheck();
+      return;
+    }
+    this.clearReflowTimers();
+    const d = this.motionFastMs();
+    this.listPhase.set('out');
+    this.reflowTimers.push(
+      setTimeout(() => {
+        apply();
+        this.listPhase.set('in');
+        this.cdr.markForCheck();
+        this.reflowTimers.push(
+          setTimeout(() => {
+            this.listPhase.set('idle');
+            this.cdr.markForCheck();
+          }, d),
+        );
+      }, d),
+    );
   }
 
   private async loadCustomers() {
@@ -201,6 +287,36 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
     const stats = this.reportStatsCache[reportId];
     if (!stats || stats.serialCount === 0) return null;
     return stats.passCount / stats.serialCount;
+  }
+
+  /**
+   * Status → badge severity for the customer document list. Mirrors the detail
+   * view's `reportStatusSeverity` so a status reads the same colour on the list
+   * as on the report it opens.
+   */
+  statusSeverity(status: string): BadgeSeverity {
+    switch (status) {
+      case REPORT_STATUSES.APPROVED:
+      case REPORT_STATUSES.CLOSED:
+        return 'success';
+      case REPORT_STATUSES.ON_HOLD:
+        return 'warning';
+      case REPORT_STATUSES.PENDING_APPROVAL:
+        return 'info';
+      default:
+        return 'neutral';
+    }
+  }
+
+  /**
+   * Whether the customer has narrowed the list (status chip, PO search, or S/N
+   * search). Drives the empty state: "nothing matches your filter" vs. the
+   * first-run "no reports yet". Sort is not a narrowing control, so it's excluded.
+   */
+  hasActiveCustomerFilter(): boolean {
+    const q = this.qFilter.trim();
+    const sn = this.snFilter.trim();
+    return !!this.statusFilter || q.length >= 2 || sn.length >= 2;
   }
 
   getFilteredReports(reports: LocalInspectionReport[]) {

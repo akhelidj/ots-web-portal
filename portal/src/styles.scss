@@ -491,6 +491,111 @@
     @apply group-hover:bg-neutral-50/20;
   }
 
+  /* ============================================================
+     Customer document surface — the marketing site's interaction
+     language, at app scale. Every timing/easing comes from the
+     :root motion tokens (--duration-*, --ease-*); no ad-hoc values.
+     The global reduced-motion block above collapses each transition
+     to ~0ms. These hooks are used ONLY on the customer read-only
+     surfaces — ops markup never references them, so ops behaviour and
+     appearance are unchanged.
+     ============================================================ */
+
+  /* Actionable buttons (filter cells, export): a fill sweeps in from
+     the leading edge on hover/focus instead of the background
+     snapping — the marketing `.button::before` scaleX wipe. The base
+     surface stays its resting colour; the sweep panel rides above it
+     (z-index:-1 within the isolated stacking context) and below the
+     label. Focus ring and label colour ease on the same curve. */
+  .cust-sweep {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
+  }
+  .cust-sweep::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--cust-sweep-fill, rgb(var(--primary-rgb) / 0.05));
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+  .cust-sweep:hover::before,
+  .cust-sweep:focus-visible::before {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  /* The single orange action sweeps a brighter orange over its base. */
+  .cust-sweep--accent {
+    --cust-sweep-fill: var(--accent-hover);
+  }
+
+  /* Document rows / quiet controls: the hover fill and the orange
+     focus ring both arrive on the standard curve rather than
+     snapping. Pair with a `hover:bg-*` and focus-ring utility. */
+  .cust-interactive {
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  /* Directional affordance: supplies the eased transform transition
+     for a ~2px nudge; direction is set at the call site with a
+     translate utility on the parent's :hover/:focus-visible. */
+  .cust-nudge {
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+
+  /* Shared SN drawer, customer entrance only. Applied via
+     [class.*]="isCustomer()", so the ops path never carries these
+     classes and keeps its current instant appear. @starting-style
+     gives the pre-insertion state, so the panel slides + the backdrop
+     fades in on open at the medium duration; close stays instant
+     (Angular removes the node). Reduced-motion collapses the settle. */
+  .cust-drawer-panel {
+    transition:
+      transform var(--duration-medium) var(--ease-decelerate),
+      opacity var(--duration-medium) var(--ease-decelerate);
+    @starting-style {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+  .cust-drawer-backdrop {
+    transition: opacity var(--duration-medium) var(--ease-standard);
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  /* Fade-before-reflow — the marketing site's signature rule. When the
+     customer report list changes while its container resizes (a
+     discrete status/sort change), the body fades + lifts OUT on the
+     accelerate curve, the data swaps and the height reflows while it's
+     invisible, then it settles back IN on the decelerate curve. Driven
+     by a phase signal on the component; search-as-you-type is left
+     instant on purpose so typing feedback isn't held back. */
+  .cust-reflow-out {
+    opacity: 0;
+    transform: translateY(6px);
+    transition:
+      opacity var(--duration-fast) var(--ease-accelerate),
+      transform var(--duration-fast) var(--ease-accelerate);
+  }
+  .cust-reflow-in {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity var(--duration-fast) var(--ease-decelerate),
+      transform var(--duration-fast) var(--ease-decelerate);
+  }
+
   .custom-scrollbar {
     &::-webkit-scrollbar {
       width: 6px;

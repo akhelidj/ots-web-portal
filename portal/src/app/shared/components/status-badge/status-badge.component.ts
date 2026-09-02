@@ -18,6 +18,18 @@ export type BadgeSeverity =
 export class StatusBadgeComponent {
   label = input.required<string>();
   severity = input<BadgeSeverity>('neutral');
+  /**
+   * Label typeface. Defaults to `'condensed'` (Barlow Condensed) so every
+   * existing call site — including the ops-shared header-field "System" badge —
+   * renders exactly as before. The customer document surfaces opt into `'sans'`
+   * (IBM Plex) so their status labels match that surface's IBM-Plex label
+   * treatment without changing the badge anywhere else.
+   */
+  font = input<'condensed' | 'sans'>('condensed');
+
+  fontClass = computed(() =>
+    this.font() === 'sans' ? 'font-sans' : 'font-condensed',
+  );
 
   // Token-backed classes (semantic color scale from tailwind.config → :root vars),
   // never raw palette. `neutral` uses the muted surface token (solid, no alpha) with

@@ -80,6 +80,21 @@ module.exports = {
         '2xl': 'var(--radius)',
         '3xl': 'var(--radius)',
       },
+      // Motion — expose the :root duration/easing tokens as real utilities so
+      // markup can write `duration-fast`/`ease-standard` etc. instead of ad-hoc
+      // values. Additive under `extend`: Tailwind's numeric durations (150/300/
+      // 500…) and default easings (in/out/in-out) that the ops surfaces use are
+      // untouched.
+      transitionDuration: {
+        fast: 'var(--duration-fast)', // 220ms — hovers, small state flips
+        medium: 'var(--duration-medium)', // 440ms — panels, disclosures
+        slow: 'var(--duration-slow)', // 720ms — drawer/route level
+      },
+      transitionTimingFunction: {
+        standard: 'var(--ease-standard)', // general in/out
+        decelerate: 'var(--ease-decelerate)', // entrances
+        accelerate: 'var(--ease-accelerate)', // exits
+      },
       // Card elevation and the orange focus ring, driven from the token layer.
       boxShadow: {
         card: 'var(--shadow-card)',

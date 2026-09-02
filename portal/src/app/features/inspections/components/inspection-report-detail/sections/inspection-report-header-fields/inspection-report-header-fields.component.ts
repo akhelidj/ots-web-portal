@@ -1,4 +1,4 @@
-import { Component, Input, computed, signal } from '@angular/core';
+import { Component, Input, computed, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
@@ -47,6 +47,14 @@ export class InspectionReportHeaderFieldsComponent {
    * stripped on save server-side and never user-entered).
    */
   @Input() systemValues: SystemRoleValues = {};
+
+  /**
+   * Customer document surface flag. Default `false` keeps every existing (ops)
+   * call site byte-identical — Barlow Condensed section titles, condensed
+   * "System" badge. When the customer detail passes `true`, the labels drop to
+   * IBM Plex to match that surface's typeface discipline; nothing else changes.
+   */
+  isCustomer = input<boolean>(false);
 
   private _definition = signal<TemplateFormDefinition | null>(null);
   private _data = signal<Record<string, unknown>>({});

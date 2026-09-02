@@ -1,6 +1,6 @@
 <span
-  class="inline-flex items-center px-2.5 py-0.5 rounded-none font-condensed text-[10px] font-semibold uppercase tracking-widest border"
-  [ngClass]="classes()"
+  class="inline-flex items-center px-2.5 py-0.5 rounded-none text-[10px] font-semibold uppercase tracking-widest border"
+  [ngClass]="[fontClass(), classes()]"
 >
   {{ label() }}
 </span>

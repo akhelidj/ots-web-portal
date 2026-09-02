@@ -1,259 +1,583 @@
-<div class="max-w-7xl mx-auto py-4 sm:py-6 space-y-6">
-  <div class="page-section p-5 sm:p-6">
-    <div
-      class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
-    >
-      <div>
-        <h1 class="text-2xl sm:text-3xl text-foreground">
+@if (isCustomer) {
+  <!--
+    CUSTOMER DOCUMENT LIST
+    The entry point rendered in the same document language as the report detail:
+    full-bleed paper / deep-paper bands, 1px seams over the line colour, editorial
+    container width, Manrope values, IBM Plex uppercase labels, IBM Plex body,
+    tabular numerals on every count/date/rate. Orange is reserved for focus and
+    selection only. Interaction follows the marketing site at app scale (motion
+    tokens): filter cells sweep their fill in, rows ease their hover fill, focus
+    settles, and a discrete status/sort change fades the list out before the
+    reflow and back in. No ops table chrome; no forked data — the customer
+    scoping, KPI counts, filtering and sort come from the shared class untouched,
+    only re-presented.
+  -->
+  <article class="w-full bg-background text-foreground">
+    <!-- ===================== SECTION 1 · QUIET HEADER ===================== -->
+    <section class="animate-in fade-in duration-500 bg-background">
+      <div
+        class="mx-auto w-full max-w-5xl px-6 sm:px-8 pt-8 sm:pt-12 pb-10 sm:pb-12"
+      >
+        <p
+          class="font-sans uppercase tracking-[0.16em] text-[12px] text-primary/45"
+        >
           Inspection Reports
+        </p>
+        <h1
+          class="mt-2 font-heading text-3xl sm:text-4xl font-semibold tracking-tight text-primary break-words"
+        >
+          {{ customerOrgName || 'Your organization' }}
         </h1>
-        @if (isCustomer) {
-          <p class="mt-2 section-caption">
-            Review completed and in-progress reports for your organization.
-          </p>
-        } @else if (isReceiver) {
-          <p class="mt-2 section-caption">
-            Prepare intake jobs, confirm metadata, and route work into
-            inspection.
-          </p>
-        } @else if (isAdmin) {
-          <p class="mt-2 section-caption">
-            Oversee queue health, manage report throughput, and monitor sync
-            integrity.
-          </p>
-        } @else {
-          <p class="mt-2 section-caption">
-            Work the inspection queue by priority, status, and readiness.
-          </p>
-        }
+        <p class="mt-3 max-w-2xl font-sans text-sm text-primary/60">
+          Your completed and in-progress inspection reports. Select any report to
+          open its full document.
+        </p>
       </div>
-      <div>
-        @if (isReceiver) {
-          <a routerLink="/receiver/reports/create" class="btn btn-primary"
-            >Create Report</a
-          >
-        } @else if (isAdmin) {
-          <a routerLink="/admin/reports/create" class="btn btn-primary"
-            >Create Report</a
-          >
-        }
-      </div>
-    </div>
+    </section>
 
-    @if (isCustomer) {
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
-        <button
-          type="button"
-          (click)="statusFilter = ''"
-          class="text-left rounded-lg border p-4 transition-colors"
-          [ngClass]="
-            statusFilter === ''
-              ? 'border-primary bg-primary/5'
-              : 'border-border bg-card hover:border-muted-foreground'
-          "
-        >
-          <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-            Total Reports
-          </p>
-          <p class="text-2xl font-semibold text-foreground mt-2">
-            {{ kpiTotalReports }}
-          </p>
-        </button>
-        <button
-          type="button"
-          (click)="statusFilter = 'OPEN'"
-          class="text-left rounded-lg border p-4 transition-colors"
-          [ngClass]="
-            statusFilter === 'OPEN'
-              ? 'border-primary bg-primary/5'
-              : 'border-border bg-card hover:border-muted-foreground'
-          "
-        >
-          <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-            Open Reports
-          </p>
-          <p class="text-2xl font-semibold text-foreground mt-2">
-            {{ kpiOpenReports }}
-          </p>
-        </button>
-        <button
-          type="button"
-          (click)="statusFilter = 'CLOSED'"
-          class="text-left rounded-lg border p-4 transition-colors"
-          [ngClass]="
-            statusFilter === 'CLOSED'
-              ? 'border-primary bg-primary/5'
-              : 'border-border bg-card hover:border-muted-foreground'
-          "
-        >
-          <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-            Closed Reports
-          </p>
-          <p class="text-2xl font-semibold text-foreground mt-2">
-            {{ kpiClosedReports }}
-          </p>
-        </button>
-      </div>
-    }
-  </div>
-
-  <div class="page-section p-4 sm:p-5">
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
-      <div>
-        <label for="qFilter" class="field-label">Search PO</label>
-        <input
-          id="qFilter"
-          type="text"
-          [(ngModel)]="qFilter"
-          placeholder="Min 2 chars..."
-          class="field-control"
-        />
-      </div>
-      <div>
-        <label for="snFilter" class="field-label">Search S/N</label>
-        <input
-          id="snFilter"
-          type="text"
-          [(ngModel)]="snFilter"
-          placeholder="Min 2 chars..."
-          class="field-control"
-        />
-      </div>
-      <div>
-        <label for="statusFilter" class="field-label">Status</label>
-        <select
-          id="statusFilter"
-          [(ngModel)]="statusFilter"
-          class="field-control"
-        >
-          <option value="">All Statuses</option>
-          <option value="OPEN">OPEN (Not Closed)</option>
-          <option value="DRAFT">DRAFT</option>
-          <option value="RECEIVED">RECEIVED</option>
-          <option value="READY_FOR_CLEANING">READY_FOR_CLEANING</option>
-          <option value="READY_FOR_INSPECTION">READY_FOR_INSPECTION</option>
-          <option value="IN_INSPECTION">IN_INSPECTION</option>
-          <option value="PENDING_APPROVAL">PENDING_APPROVAL</option>
-          <option value="APPROVED">APPROVED</option>
-          <option value="ON_HOLD">ON_HOLD</option>
-          <option value="CLOSED">CLOSED</option>
-        </select>
-      </div>
-      @if (!isCustomer) {
-        <div>
-          <label for="customerFilter" class="field-label">Customer</label>
-          <select
-            id="customerFilter"
-            [(ngModel)]="customerFilter"
-            class="field-control"
+    <!-- ================= SECTION 2 · STATUS SUMMARY / FILTER ================= -->
+    <section
+      class="animate-in fade-in duration-500 border-t border-border bg-muted"
+    >
+      <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
+        <header class="max-w-2xl">
+          <h2
+            class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
           >
-            <option value="">All Customers</option>
-            @for (c of customers(); track c.id) {
-              <option [value]="c.id">{{ c.name }}</option>
+            At a glance
+          </h2>
+          <p class="mt-2 font-sans text-sm text-primary/60">
+            Select a status to filter the reports below.
+          </p>
+        </header>
+
+        <!--
+          Read summary AND filter control. Same seamed surface as the detail's
+          Findings — flat paper cells, 1px seams, no raised card chrome — but each
+          cell is a genuine control: a <button> with aria-pressed, a hover fill
+          (not a hover border), and an inset orange bar marking the active
+          selection. That's the distinction from a KPI card: pressable segmented
+          filters over one reading surface, not standalone metric tiles.
+        -->
+        <div
+          role="group"
+          aria-label="Filter reports by status"
+          class="mt-8 grid grid-cols-1 gap-px border border-border bg-border sm:grid-cols-3"
+        >
+          <button
+            type="button"
+            (click)="applyStatusFilter('')"
+            [attr.aria-pressed]="statusFilter === ''"
+            class="cust-sweep group relative bg-background px-6 py-7 text-left focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+          >
+            <p
+              class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+            >
+              Total Reports
+            </p>
+            <p
+              class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
+            >
+              {{ kpiTotalReports }}
+            </p>
+            @if (statusFilter === '') {
+              <span
+                aria-hidden="true"
+                class="absolute inset-x-0 bottom-0 h-0.5 bg-accent"
+              ></span>
             }
-          </select>
+          </button>
+          <button
+            type="button"
+            (click)="applyStatusFilter('OPEN')"
+            [attr.aria-pressed]="statusFilter === 'OPEN'"
+            class="cust-sweep group relative bg-background px-6 py-7 text-left focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+          >
+            <p
+              class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+            >
+              Open Reports
+            </p>
+            <p
+              class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
+            >
+              {{ kpiOpenReports }}
+            </p>
+            @if (statusFilter === 'OPEN') {
+              <span
+                aria-hidden="true"
+                class="absolute inset-x-0 bottom-0 h-0.5 bg-accent"
+              ></span>
+            }
+          </button>
+          <button
+            type="button"
+            (click)="applyStatusFilter('CLOSED')"
+            [attr.aria-pressed]="statusFilter === 'CLOSED'"
+            class="cust-sweep group relative bg-background px-6 py-7 text-left focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+          >
+            <p
+              class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+            >
+              Closed Reports
+            </p>
+            <p
+              class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
+            >
+              {{ kpiClosedReports }}
+            </p>
+            @if (statusFilter === 'CLOSED') {
+              <span
+                aria-hidden="true"
+                class="absolute inset-x-0 bottom-0 h-0.5 bg-accent"
+              ></span>
+            }
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECTION 3 · REPORTS DOCUMENT LIST ==================== -->
+    <section
+      class="animate-in fade-in duration-500 border-t border-border bg-background"
+    >
+      <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
+        <header class="max-w-2xl">
+          <h2
+            class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
+          >
+            Reports
+          </h2>
+          <p class="mt-2 font-sans text-sm text-primary/60">
+            Each entry opens the full inspection report.
+          </p>
+        </header>
+
+        <!-- Search + sort, presented quietly: square fields, no card, accent only on focus. -->
+        <div
+          class="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between"
+        >
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <div>
+              <label
+                for="custPoSearch"
+                class="block font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+                >Search PO</label
+              >
+              <input
+                id="custPoSearch"
+                type="text"
+                [(ngModel)]="qFilter"
+                placeholder="Min 2 characters"
+                class="mt-1.5 w-full border border-border bg-background px-3 py-2 font-sans text-sm text-primary placeholder:text-primary/35 transition-[box-shadow] duration-fast ease-standard focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset sm:w-56"
+              />
+            </div>
+            <div>
+              <label
+                for="custSnSearch"
+                class="block font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+                >Search serial</label
+              >
+              <input
+                id="custSnSearch"
+                type="text"
+                [(ngModel)]="snFilter"
+                placeholder="Min 2 characters"
+                class="mt-1.5 w-full border border-border bg-background px-3 py-2 font-sans text-sm text-primary placeholder:text-primary/35 transition-[box-shadow] duration-fast ease-standard focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset sm:w-56"
+              />
+            </div>
+          </div>
+          <div>
+            <label
+              for="custSort"
+              class="block font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+              >Sort</label
+            >
+            <select
+              id="custSort"
+              [ngModel]="sortBy"
+              (ngModelChange)="applySort($event)"
+              class="mt-1.5 w-full border border-border bg-background px-3 py-2 font-sans text-sm text-primary transition-[box-shadow] duration-fast ease-standard focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset sm:w-52"
+            >
+              <option value="updatedAt">Last updated</option>
+              <option value="poNumber">PO number</option>
+              <option value="status">Status</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- The list: seams between entries, no table chrome. The phase class
+             plays the fade-before-reflow on a discrete status/sort change. -->
+        <div
+          class="mt-6 border-y border-border divide-y divide-border"
+          [class.cust-reflow-out]="listPhase() === 'out'"
+          [class.cust-reflow-in]="listPhase() === 'in'"
+        >
+          @if (reports(); as reps) {
+            @for (r of getFilteredReports(reps); track r.id; let even = $even) {
+              <!-- Zebra banding so adjacent entries read as distinct rows at a
+                   glance, not one continuous sheet: paper on even rows, a faint
+                   ink wash (primary/0.04) on odd. Ink rather than the warm
+                   deep-paper tone reads more clearly on any display and keeps
+                   the neutral badge (bg-muted) from blending into the band. The
+                   1px seams stay; the hover fill (primary/0.05) still eases in
+                   just above whichever band the row sits on. -->
+              <a
+                [routerLink]="[r.id]"
+                class="cust-interactive group block px-5 py-5 hover:bg-primary/[0.05] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset sm:px-6"
+                [ngClass]="even ? 'bg-background' : 'bg-primary/[0.04]'"
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div class="min-w-0">
+                    <p
+                      class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/45"
+                    >
+                      Report
+                    </p>
+                    <p
+                      class="mt-1 font-heading text-lg font-semibold text-primary tabular-nums break-words"
+                    >
+                      {{ r.reportNumber || (r.id.substring(0, 8) | uppercase) }}
+                    </p>
+                  </div>
+                  <app-status-badge
+                    [label]="r.status"
+                    [severity]="statusSeverity(r.status)"
+                    font="sans"
+                  />
+                </div>
+                <dl class="mt-4 flex flex-wrap gap-x-10 gap-y-3">
+                  <div>
+                    <dt
+                      class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/45"
+                    >
+                      PO Number
+                    </dt>
+                    <dd
+                      class="mt-0.5 font-sans text-sm text-primary/85 break-words"
+                    >
+                      {{ r.poNumber || '—' }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt
+                      class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/45"
+                    >
+                      Updated
+                    </dt>
+                    <dd
+                      class="mt-0.5 font-sans text-sm text-primary/85 tabular-nums"
+                    >
+                      {{ r.updatedAt ? (r.updatedAt | date: 'mediumDate') : '—' }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt
+                      class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/45"
+                    >
+                      Pass Rate
+                    </dt>
+                    <dd
+                      class="mt-0.5 font-heading text-sm font-medium text-primary tabular-nums"
+                    >
+                      @if (getPassRate(r.id) !== null) {
+                        {{ getPassRate(r.id) | percent: '1.0-0' }}
+                      } @else {
+                        <span class="text-primary/40">—</span>
+                      }
+                    </dd>
+                  </div>
+                </dl>
+              </a>
+            }
+            @if (getFilteredReports(reps).length === 0) {
+              <div class="bg-background px-6 py-16 text-center">
+                @if (hasActiveCustomerFilter()) {
+                  <p class="font-heading text-lg font-medium text-primary">
+                    No reports match your search.
+                  </p>
+                  <p
+                    class="mx-auto mt-2 max-w-md font-sans text-sm text-primary/55"
+                  >
+                    Try a different status, PO, or serial number — or clear the
+                    filters to see all your reports.
+                  </p>
+                } @else {
+                  <p class="font-heading text-lg font-medium text-primary">
+                    No reports yet.
+                  </p>
+                  <p
+                    class="mx-auto mt-2 max-w-md font-sans text-sm text-primary/55"
+                  >
+                    When inspections are completed for your organization, the
+                    reports will appear here.
+                  </p>
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </section>
+  </article>
+} @else {
+  <div class="max-w-7xl mx-auto py-4 sm:py-6 space-y-6">
+    <div class="page-section p-5 sm:p-6">
+      <div
+        class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
+      >
+        <div>
+          <h1 class="text-2xl sm:text-3xl text-foreground">
+            Inspection Reports
+          </h1>
+          @if (isCustomer) {
+            <p class="mt-2 section-caption">
+              Review completed and in-progress reports for your organization.
+            </p>
+          } @else if (isReceiver) {
+            <p class="mt-2 section-caption">
+              Prepare intake jobs, confirm metadata, and route work into
+              inspection.
+            </p>
+          } @else if (isAdmin) {
+            <p class="mt-2 section-caption">
+              Oversee queue health, manage report throughput, and monitor sync
+              integrity.
+            </p>
+          } @else {
+            <p class="mt-2 section-caption">
+              Work the inspection queue by priority, status, and readiness.
+            </p>
+          }
+        </div>
+        <div>
+          @if (isReceiver) {
+            <a routerLink="/receiver/reports/create" class="btn btn-primary"
+              >Create Report</a
+            >
+          } @else if (isAdmin) {
+            <a routerLink="/admin/reports/create" class="btn btn-primary"
+              >Create Report</a
+            >
+          }
+        </div>
+      </div>
+
+      @if (isCustomer) {
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
+          <button
+            type="button"
+            (click)="statusFilter = ''"
+            class="text-left rounded-lg border p-4 transition-colors"
+            [ngClass]="
+              statusFilter === ''
+                ? 'border-primary bg-primary/5'
+                : 'border-border bg-card hover:border-muted-foreground'
+            "
+          >
+            <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+              Total Reports
+            </p>
+            <p class="text-2xl font-semibold text-foreground mt-2">
+              {{ kpiTotalReports }}
+            </p>
+          </button>
+          <button
+            type="button"
+            (click)="statusFilter = 'OPEN'"
+            class="text-left rounded-lg border p-4 transition-colors"
+            [ngClass]="
+              statusFilter === 'OPEN'
+                ? 'border-primary bg-primary/5'
+                : 'border-border bg-card hover:border-muted-foreground'
+            "
+          >
+            <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+              Open Reports
+            </p>
+            <p class="text-2xl font-semibold text-foreground mt-2">
+              {{ kpiOpenReports }}
+            </p>
+          </button>
+          <button
+            type="button"
+            (click)="statusFilter = 'CLOSED'"
+            class="text-left rounded-lg border p-4 transition-colors"
+            [ngClass]="
+              statusFilter === 'CLOSED'
+                ? 'border-primary bg-primary/5'
+                : 'border-border bg-card hover:border-muted-foreground'
+            "
+          >
+            <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+              Closed Reports
+            </p>
+            <p class="text-2xl font-semibold text-foreground mt-2">
+              {{ kpiClosedReports }}
+            </p>
+          </button>
         </div>
       }
-      <div>
-        <label for="sortBy" class="field-label">Sort By</label>
-        <select id="sortBy" [(ngModel)]="sortBy" class="field-control">
-          <option value="updatedAt">Last Updated</option>
-          <option value="poNumber">PO Number</option>
-          <option value="status">Status</option>
-        </select>
+    </div>
+
+    <div class="page-section p-4 sm:p-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
+        <div>
+          <label for="qFilter" class="field-label">Search PO</label>
+          <input
+            id="qFilter"
+            type="text"
+            [(ngModel)]="qFilter"
+            placeholder="Min 2 chars..."
+            class="field-control"
+          />
+        </div>
+        <div>
+          <label for="snFilter" class="field-label">Search S/N</label>
+          <input
+            id="snFilter"
+            type="text"
+            [(ngModel)]="snFilter"
+            placeholder="Min 2 chars..."
+            class="field-control"
+          />
+        </div>
+        <div>
+          <label for="statusFilter" class="field-label">Status</label>
+          <select
+            id="statusFilter"
+            [(ngModel)]="statusFilter"
+            class="field-control"
+          >
+            <option value="">All Statuses</option>
+            <option value="OPEN">OPEN (Not Closed)</option>
+            <option value="DRAFT">DRAFT</option>
+            <option value="RECEIVED">RECEIVED</option>
+            <option value="READY_FOR_CLEANING">READY_FOR_CLEANING</option>
+            <option value="READY_FOR_INSPECTION">READY_FOR_INSPECTION</option>
+            <option value="IN_INSPECTION">IN_INSPECTION</option>
+            <option value="PENDING_APPROVAL">PENDING_APPROVAL</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="ON_HOLD">ON_HOLD</option>
+            <option value="CLOSED">CLOSED</option>
+          </select>
+        </div>
+        @if (!isCustomer) {
+          <div>
+            <label for="customerFilter" class="field-label">Customer</label>
+            <select
+              id="customerFilter"
+              [(ngModel)]="customerFilter"
+              class="field-control"
+            >
+              <option value="">All Customers</option>
+              @for (c of customers(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          </div>
+        }
+        <div>
+          <label for="sortBy" class="field-label">Sort By</label>
+          <select id="sortBy" [(ngModel)]="sortBy" class="field-control">
+            <option value="updatedAt">Last Updated</option>
+            <option value="poNumber">PO Number</option>
+            <option value="status">Status</option>
+          </select>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="queue-table-wrap">
-    <table class="table-base">
-      <thead class="table-head">
-        <tr>
-          <th class="table-th">Report #</th>
-          <th class="table-th">PO Number</th>
-          @if (!isCustomer) {
-            <th class="table-th">Customer</th>
-          }
-          <th class="table-th">Status</th>
-          @if (!isCompactMode()) {
-            <th class="table-th">Last Updated</th>
-            <th class="table-th">Joints</th>
-            <th class="table-th">Pass Rate</th>
-          }
-          @if (!isCustomer && !isCompactMode()) {
-            <th class="table-th">Sync</th>
-          }
-          <th class="table-th-right">
-            <span class="sr-only">Actions</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody class="table-body">
-        @if (reports(); as reports) {
-          @for (r of getFilteredReports(reports); track r.id) {
-            <tr
-              class="hover:bg-muted transition-colors group cursor-pointer"
-              [routerLink]="[r.id]"
-            >
-              <td class="table-td-strong code-text">
-                {{ r.reportNumber || (r.id.substring(0, 8) | uppercase) }}
-              </td>
-              <td class="table-td-strong">
-                {{ r.poNumber }}
-              </td>
-              @if (!isCustomer) {
-                <td
-                  class="table-td max-w-[220px] truncate"
-                  [title]="getCustomerName(r.customerId)"
-                >
-                  {{ getCustomerName(r.customerId) }}
-                </td>
-              }
-              <td class="table-td">
-                <span class="data-chip-neutral">{{ r.status }}</span>
-              </td>
-              @if (!isCompactMode()) {
-                <td class="table-td">
-                  {{ r.updatedAt ? (r.updatedAt | date: 'medium') : 'N/A' }}
-                </td>
-                <td class="table-td-code">
-                  {{ reportStatsCache[r.id]?.serialCount || 0 }}
-                </td>
-                <td class="table-td-code text-foreground">
-                  {{ getPassRate(r.id) || 0 | percent: '1.0-0' }}
-                </td>
-              }
-              @if (!isCustomer && !isCompactMode()) {
-                <td class="table-td">
-                  <span
-                    class="data-chip"
-                    [ngClass]="{
-                      'data-chip-error':
-                        r.syncState === 'CONFLICT' || r.syncState === 'ERROR',
-                      'data-chip-warning': r.syncState === 'PENDING',
-                      'data-chip-success': r.syncState === 'SYNCED',
-                    }"
-                    >{{ r.syncState }}</span
-                  >
-                </td>
-              }
-              <td class="table-actions text-primary">View</td>
-            </tr>
-          }
-          @if (getFilteredReports(reports).length === 0) {
-            <tr>
-              <td
-                [attr.colspan]="
-                  isCompactMode() ? (isCustomer ? 4 : 5) : isCustomer ? 7 : 9
-                "
-                class="p-10 text-center text-muted-foreground"
+    <div class="queue-table-wrap">
+      <table class="table-base">
+        <thead class="table-head">
+          <tr>
+            <th class="table-th">Report #</th>
+            <th class="table-th">PO Number</th>
+            @if (!isCustomer) {
+              <th class="table-th">Customer</th>
+            }
+            <th class="table-th">Status</th>
+            @if (!isCompactMode()) {
+              <th class="table-th">Last Updated</th>
+              <th class="table-th">Joints</th>
+              <th class="table-th">Pass Rate</th>
+            }
+            @if (!isCustomer && !isCompactMode()) {
+              <th class="table-th">Sync</th>
+            }
+            <th class="table-th-right">
+              <span class="sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="table-body">
+          @if (reports(); as reports) {
+            @for (r of getFilteredReports(reports); track r.id) {
+              <tr
+                class="hover:bg-muted transition-colors group cursor-pointer"
+                [routerLink]="[r.id]"
               >
-                No inspection reports found for the selected filters.
-              </td>
-            </tr>
+                <td class="table-td-strong code-text">
+                  {{ r.reportNumber || (r.id.substring(0, 8) | uppercase) }}
+                </td>
+                <td class="table-td-strong">
+                  {{ r.poNumber }}
+                </td>
+                @if (!isCustomer) {
+                  <td
+                    class="table-td max-w-[220px] truncate"
+                    [title]="getCustomerName(r.customerId)"
+                  >
+                    {{ getCustomerName(r.customerId) }}
+                  </td>
+                }
+                <td class="table-td">
+                  <span class="data-chip-neutral">{{ r.status }}</span>
+                </td>
+                @if (!isCompactMode()) {
+                  <td class="table-td">
+                    {{ r.updatedAt ? (r.updatedAt | date: 'medium') : 'N/A' }}
+                  </td>
+                  <td class="table-td-code">
+                    {{ reportStatsCache[r.id]?.serialCount || 0 }}
+                  </td>
+                  <td class="table-td-code text-foreground">
+                    {{ getPassRate(r.id) || 0 | percent: '1.0-0' }}
+                  </td>
+                }
+                @if (!isCustomer && !isCompactMode()) {
+                  <td class="table-td">
+                    <span
+                      class="data-chip"
+                      [ngClass]="{
+                        'data-chip-error':
+                          r.syncState === 'CONFLICT' || r.syncState === 'ERROR',
+                        'data-chip-warning': r.syncState === 'PENDING',
+                        'data-chip-success': r.syncState === 'SYNCED',
+                      }"
+                      >{{ r.syncState }}</span
+                    >
+                  </td>
+                }
+                <td class="table-actions text-primary">View</td>
+              </tr>
+            }
+            @if (getFilteredReports(reports).length === 0) {
+              <tr>
+                <td
+                  [attr.colspan]="
+                    isCompactMode() ? (isCustomer ? 4 : 5) : isCustomer ? 7 : 9
+                  "
+                  class="p-10 text-center text-muted-foreground"
+                >
+                  No inspection reports found for the selected filters.
+                </td>
+              </tr>
+            }
           }
-        }
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
+}
