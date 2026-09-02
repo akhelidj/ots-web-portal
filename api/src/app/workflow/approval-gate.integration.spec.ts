@@ -116,7 +116,11 @@ describe('approval gate wiring: engine path + retired-null precondition [integra
     });
   }
 
-  /** All required item keys populated + a disposition. */
+  /**
+   * All required item keys populated. Disposition resolves from the declared source
+   * body.emiResult (also a required item field), set to a real enum value; the legacy
+   * final.disposition mirror is not written (single-source — it is inert).
+   */
   function fullData(): Record<string, Record<string, unknown>> {
     const d: Record<string, Record<string, unknown>> = {};
     for (const key of REQUIRED_ITEM_KEYS) {
@@ -124,7 +128,7 @@ describe('approval gate wiring: engine path + retired-null precondition [integra
       d[group] ??= {};
       d[group][field] = 1;
     }
-    d.final.disposition = 'ACCEPT';
+    d.body.emiResult = 'PASS';
     return d;
   }
 
@@ -203,13 +207,15 @@ describe('approval gate wiring: engine path + retired-null precondition [integra
 
     const rDef = await seedInInspection(tenant.id, 2);
     const data = fullData();
-    delete data.final.disposition; // no disposition anywhere
+    // Clear the declared disposition source. On drill-pipe it is ALSO a required item
+    // field, so the failure surfaces on BOTH arrays — the honest single-source outcome.
+    delete data.body.emiResult;
     await seedSerial(rDef, 'SN-1', data);
     const engine = await runOne(rDef);
 
     expect(engine.ok).toBe(false);
     expect(engine.body).toBe(
-      '{"code":"VALIDATION_FAILED","message":"Validation failed for one or more serial numbers.","missingDispositionSerials":["SN-1"],"missingRequiredFields":{}}',
+      '{"code":"VALIDATION_FAILED","message":"Validation failed for one or more serial numbers.","missingDispositionSerials":["SN-1"],"missingRequiredFields":{"SN-1":["body.emiResult"]}}',
     );
   });
 });

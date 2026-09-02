@@ -74,6 +74,56 @@ export interface TemplateFormDefinition {
    */
   regions?: DefinitionRegion[];
   fields: DefinitionField[];
+  /**
+   * Where a serial's disposition lives, mirrored from the backend definition and the
+   * server approval gate. `source` is an ordered first-truthy coalesce of dotted paths
+   * into a serial's inspection data (one path per real template — drill-pipe's is
+   * `body.emiResult`). `requiredForApproval` gates whether an absent disposition blocks
+   * approval. Absent block → the template has no disposition (nothing to read, not
+   * required). Read it through `resolveDisposition` so every client surface — validation,
+   * the detail KPIs/Findings, the list — resolves disposition identically to the gate.
+   */
+  disposition?: {
+    source?: string[];
+    requiredForApproval?: boolean;
+  };
+}
+
+/** Dotted-path walk with the same falsy-node short-circuit as the server gate's `walk`. */
+function walkPath(data: unknown, path: string): unknown {
+  return path
+    .split('.')
+    .reduce<unknown>(
+      (acc, part) => (acc ? (acc as Record<string, unknown>)[part] : acc),
+      data,
+    );
+}
+
+/**
+ * The ONE disposition resolver every portal surface shares — the client mirror of the
+ * server's `resolveDisposition` (approval-gate.ts). Resolves a serial's disposition from
+ * wherever the template definition declares (`disposition.source`, first-truthy coalesce),
+ * never a hardcoded field. Returns `null` when nothing is declared or resolves; callers
+ * decide what that means (a required-but-absent disposition is a blocker only when
+ * `dispositionRequired` is true, matching the gate).
+ */
+export function resolveDisposition(
+  data: unknown,
+  definition: TemplateFormDefinition | null | undefined,
+): string | null {
+  const sources = definition?.disposition?.source ?? [];
+  for (const path of sources) {
+    const value = walkPath(data, path);
+    if (value) return String(value);
+  }
+  return null;
+}
+
+/** Whether the template requires a disposition for approval — mirrors the server gate. */
+export function dispositionRequired(
+  definition: TemplateFormDefinition | null | undefined,
+): boolean {
+  return definition?.disposition?.requiredForApproval === true;
 }
 
 /** Which scope's fields the adapter emits. Absent → the default item/flat behavior. */

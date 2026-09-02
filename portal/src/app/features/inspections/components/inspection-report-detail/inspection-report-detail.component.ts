@@ -65,6 +65,7 @@ import { SerialInspectionReactiveFormComponent } from '@portal/features/inspecti
 import {
   TemplateFormDefinition,
   definitionToFormSchema,
+  resolveDisposition,
   SystemRoleValues,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { SectionSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
@@ -609,10 +610,10 @@ export class InspectionReportDetailComponent
 
   public getDisposition(sn: LocalSerialNumber): string | null {
     if (!sn.inspectionJson) return null;
-    const bodySection = sn.inspectionJson['body'] as
-      | Record<string, unknown>
-      | undefined;
-    return (bodySection?.['emiResult'] as string) || null;
+    // Resolve through the shared definition-driven resolver so the detail KPIs/Findings
+    // read disposition from wherever THIS template declares (disposition.source) —
+    // identical to the server gate and every other client surface. No hardcoded field.
+    return resolveDisposition(sn.inspectionJson, this.reportDefinition);
   }
 
   async ngOnInit() {

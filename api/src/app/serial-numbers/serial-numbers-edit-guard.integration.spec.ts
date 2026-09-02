@@ -35,6 +35,7 @@ import { SerialNumbersService } from './serial-numbers.service';
 import {
   resetInspectionDomain,
   seedTenant,
+  seedActiveTemplate,
   seedInspectionReport,
   seedApprovableSerial,
 } from '../../../test/seed-helpers';
@@ -61,6 +62,11 @@ describe('SerialNumbersService.updateSerialNumber edit-guard [integration]', () 
     approvalStatus: SerialApprovalStatus,
   ) {
     const tenant = await seedTenant(prisma);
+    // Seed the pinned template carrying the committed definition: updateSerialNumber now
+    // resolves disposition through the template's declared `disposition.source`
+    // (body.emiResult) rather than a hardcoded read, so the row must exist as it does in
+    // production (every report pins a real Template@version).
+    await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT');
     const report = await seedInspectionReport(prisma, tenant.id, {
       status: reportStatus,
     });

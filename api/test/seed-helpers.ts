@@ -246,7 +246,7 @@ const DRILL_PIPE_REQUIRED_KEYS = [
 /**
  * Seed one SerialNumber whose inspectionData satisfies the PENDING_APPROVAL gate
  * for a DRILL_PIPE_REPORT: every required key populated with a non-empty value,
- * plus a disposition (the gate reads inspectionData.final.disposition, NOT the
+ * plus a disposition at the declared source inspectionData.body.emiResult (NOT the
  * SerialDisposition column). This is exactly what lets a report cross
  * IN_INSPECTION → PENDING_APPROVAL so the approval snapshot can be exercised.
  */
@@ -256,7 +256,7 @@ export function seedApprovableSerial(
   inspectionReportId: string,
   serial = 'SN-001',
   opts: {
-    // final.disposition — export sorts REWORK serials last (export.service.ts:296).
+    // body.emiResult — the declared disposition source; export sorts REWORK last.
     disposition?: string;
     // Override box.minOD so the export spec can assert a distinctive {{b_od}} value.
     boxMinOD?: unknown;
@@ -275,8 +275,12 @@ export function seedApprovableSerial(
     inspectionData[group] ??= {};
     inspectionData[group][field] = 1; // truthy, non-empty → passes the gate
   }
-  // Gate: disposition = inspectionData.final?.disposition || inspectionData.disposition
-  inspectionData.final.disposition = opts.disposition ?? 'ACCEPT';
+  // Gate: disposition resolves through the template's declared `disposition.source`,
+  // which for DRILL_PIPE_REPORT is `["body.emiResult"]` (the single true location). Write
+  // the disposition there so seeded serials pass the gate and the export REWORK-last sort
+  // sees the value.
+  inspectionData.body ??= {};
+  inspectionData.body.emiResult = opts.disposition ?? 'ACCEPT';
   if (opts.boxMinOD !== undefined) {
     inspectionData.box.minOD = opts.boxMinOD;
   }

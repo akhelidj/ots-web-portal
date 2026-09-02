@@ -35,7 +35,12 @@ const DEFINITION = JSON.parse(
   ),
 ) as GateDefinition;
 
-/** All 32 required keys populated + a (final) disposition — the passing baseline. */
+/**
+ * All 32 required keys populated — the passing baseline. Disposition resolves from the
+ * declared source `body.emiResult` (which is ALSO a required item field on this template,
+ * so the passing baseline necessarily carries it). The legacy `final.disposition` mirror
+ * is deliberately NOT set: the definition declares a single source, so that field is inert.
+ */
 function fullValid(): InspectionData {
   return {
     box: {
@@ -77,7 +82,6 @@ function fullValid(): InspectionData {
       isPremium: true,
       isC2: true,
       isScrap: true,
-      disposition: 'PASS',
     },
   };
 }
@@ -214,65 +218,80 @@ const cases: Case[] = [
     },
   },
   {
-    name: '4a. disposition absent -> missing disposition',
-    serials: [sn('SN-1', withData((d) => delete d.final!.disposition))],
+    // The disposition source (body.emiResult) is ALSO a required item field, so clearing
+    // it flags BOTH failure modes at once — there is no "missing disposition only" state
+    // on drill-pipe. This honestly reflects the single-source reality.
+    name: '4a. disposition source absent -> missing disposition AND missing required field',
+    serials: [sn('SN-1', withData((d) => delete d.body!.emiResult))],
     expected: {
       status: 'failed',
       missingDispositionSerials: ['SN-1'],
-      missingRequiredFields: {},
+      missingRequiredFields: { 'SN-1': ['body.emiResult'] },
     },
   },
   {
-    name: '4b. disposition empty-string -> missing (truthy coalesce)',
-    serials: [sn('SN-1', withData((d) => (d.final!.disposition = '')))],
+    name: '4b. disposition source empty-string -> missing disposition (truthy coalesce) AND missing field',
+    serials: [sn('SN-1', withData((d) => (d.body!.emiResult = '')))],
     expected: {
       status: 'failed',
       missingDispositionSerials: ['SN-1'],
-      missingRequiredFields: {},
+      missingRequiredFields: { 'SN-1': ['body.emiResult'] },
     },
   },
   {
-    name: '4c. disposition via top-level `disposition` only -> present',
+    // Single-source regression guard: a value living ONLY at the legacy top-level
+    // `disposition` is NOT read (the definition declares body.emiResult as the sole
+    // source). It neither satisfies disposition nor fills the required field.
+    name: '4c. legacy top-level `disposition` is NOT a source -> still missing',
     serials: [
       sn(
         'SN-1',
         withData((d) => {
-          delete d.final!.disposition;
+          delete d.body!.emiResult;
           d.disposition = 'PASS';
         }),
       ),
     ],
-    expected: { status: 'ok' },
-    expectedBody: null,
+    expected: {
+      status: 'failed',
+      missingDispositionSerials: ['SN-1'],
+      missingRequiredFields: { 'SN-1': ['body.emiResult'] },
+    },
   },
   {
-    name: '4d. disposition via final.disposition only -> present',
+    // Single-source regression guard: legacy `final.disposition` is inert too.
+    name: '4d. legacy final.disposition is NOT a source -> still missing',
     serials: [
       sn(
         'SN-1',
         withData((d) => {
-          d.final!.disposition = 'ACCEPT';
+          delete d.body!.emiResult;
+          d.final!.disposition = 'PASS';
         }),
       ),
     ],
-    expected: { status: 'ok' },
-    expectedBody: null,
+    expected: {
+      status: 'failed',
+      missingDispositionSerials: ['SN-1'],
+      missingRequiredFields: { 'SN-1': ['body.emiResult'] },
+    },
   },
   {
-    name: '5. missing field AND missing disposition',
+    name: '5. missing (other) field AND missing disposition source',
     serials: [
       sn(
         'SN-1',
         withData((d) => {
           d.box!.minOD = '';
-          delete d.final!.disposition;
+          delete d.body!.emiResult;
         }),
       ),
     ],
     expected: {
       status: 'failed',
       missingDispositionSerials: ['SN-1'],
-      missingRequiredFields: { 'SN-1': ['box.minOD'] },
+      // definition order: box.minOD (early) before body.emiResult (body section)
+      missingRequiredFields: { 'SN-1': ['box.minOD', 'body.emiResult'] },
     },
   },
   {
@@ -324,37 +343,37 @@ const cases: Case[] = [
     },
   },
   {
-    name: '10. multi-serial: valid / missing-field / missing-disposition',
+    name: '10. multi-serial: valid / missing-field / missing-disposition-source',
     serials: [
       sn('SN-A', fullValid()),
       sn('SN-B', withData((d) => (d.box!.minOD = ''))),
-      sn('SN-C', withData((d) => delete d.final!.disposition)),
+      sn('SN-C', withData((d) => delete d.body!.emiResult)),
     ],
     expected: {
       status: 'failed',
+      // SN-C's cleared emiResult is both the disposition source and a required field.
       missingDispositionSerials: ['SN-C'],
-      missingRequiredFields: { 'SN-B': ['box.minOD'] },
+      missingRequiredFields: {
+        'SN-B': ['box.minOD'],
+        'SN-C': ['body.emiResult'],
+      },
     },
   },
   {
-    name: '11. GOTCHA: emiResult set but disposition unset -> missing disposition only',
+    // Corrected behavior (was an inverted gotcha under the phantom source): body.emiResult
+    // IS the disposition source now, so a present emiResult satisfies disposition even
+    // though the legacy final.disposition mirror is absent — it is no longer consulted.
+    name: '11. emiResult present satisfies disposition; legacy final.disposition absent is irrelevant -> ok',
     serials: [
       sn(
         'SN-1',
         withData((d) => {
-          // body.emiResult stays PASS (a required field, present) but the gate's
-          // disposition SOURCE is final.disposition/disposition — both cleared.
           delete d.final!.disposition;
         }),
       ),
     ],
-    expected: {
-      status: 'failed',
-      missingDispositionSerials: ['SN-1'],
-      missingRequiredFields: {},
-    },
-    expectedBody:
-      '{"code":"VALIDATION_FAILED","message":"Validation failed for one or more serial numbers.","missingDispositionSerials":["SN-1"],"missingRequiredFields":{}}',
+    expected: { status: 'ok' },
+    expectedBody: null,
   },
   {
     name: "12. whitespace / '0' values are present (no trim, no truthiness)",
@@ -436,7 +455,12 @@ describe('mutation guard — the harness FAILS on a broken definition', () => {
     const mutant = clone();
     mutant.disposition!.requiredForApproval = false;
 
-    const serials = [sn('SN-1', withData((d) => delete d.final!.disposition))];
+    // Clear the disposition source. Under the real definition this flags a missing
+    // disposition (on top of the coincident missing required field); the mutant, with
+    // requiredForApproval off, reports only the missing field — so the two diverge on the
+    // disposition array. (body.emiResult being both source and required field means both
+    // outcomes carry the field error; only the disposition error distinguishes them.)
+    const serials = [sn('SN-1', withData((d) => delete d.body!.emiResult))];
     const real = engineGate(DEFINITION, serials);
     const engine = engineGate(mutant, serials);
 

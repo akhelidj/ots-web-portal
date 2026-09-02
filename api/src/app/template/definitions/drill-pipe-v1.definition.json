@@ -26,8 +26,7 @@
 
   "disposition": {
     "enum": ["PASS", "REWORK", "SCRAP", "HOLD"],
-    "source": ["final.disposition", "disposition"],
-    "syncedFrom": "body.emiResult",
+    "source": ["body.emiResult"],
     "requiredForApproval": true
   },
 

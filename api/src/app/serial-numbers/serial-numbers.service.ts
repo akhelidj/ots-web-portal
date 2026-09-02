@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { InspectionData } from '../common/inspection-data.types';
+import { resolveDisposition } from '../workflow/approval-gate';
 
 @Injectable()
 export class SerialNumbersService {
@@ -259,8 +260,25 @@ export class SerialNumbersService {
 
       // Sync top-level disposition column
       if (payload.inspectionData) {
-        const bodySection = payload.inspectionData.body;
-        const disp = bodySection?.emiResult;
+        // Resolve disposition through the shared definition-driven resolver — the SAME
+        // reader the approval gate uses — so the persisted column can never diverge from
+        // where the template declares disposition lives. Load the pinned template's
+        // definition; a definition-less template resolves to null (nothing to sync).
+        const template = await this.prisma.template.findUnique({
+          where: {
+            tenantId_templateKey_templateVersion: {
+              tenantId,
+              templateKey: serialToUpdate.inspectionReport.templateKey,
+              templateVersion: serialToUpdate.inspectionReport.templateVersion,
+            },
+          },
+          select: { definitionJson: true },
+        });
+        const definition =
+          (template?.definitionJson as {
+            disposition?: { source?: string[] };
+          } | null) ?? null;
+        const disp = resolveDisposition(payload.inspectionData, definition);
         if (disp) {
           // Detect the enum value honestly in-service instead of letting an
           // arbitrary string reach the column via a cast. Invalid values were

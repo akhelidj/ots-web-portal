@@ -14,6 +14,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { InspectionData } from '../common/inspection-data.types';
+import { resolveDisposition } from '../workflow/approval-gate';
 
 @Injectable()
 export class ChildReportsService {
@@ -191,7 +192,15 @@ export class ChildReportsService {
       where: {
         childReportId_serialNumberId: { childReportId, serialNumberId },
       },
-      include: { childReport: true },
+      include: {
+        childReport: {
+          include: {
+            inspectionReport: {
+              select: { templateKey: true, templateVersion: true },
+            },
+          },
+        },
+      },
     });
 
     if (!crsn || crsn.childReport.tenantId !== tenantId) {
@@ -208,8 +217,25 @@ export class ChildReportsService {
     };
 
     if (payload.inspectionData) {
-      const bodySection = payload.inspectionData.body;
-      const disp = bodySection?.emiResult;
+      // Resolve disposition through the shared definition-driven resolver — keyed on the
+      // PARENT report's pinned template — so a child serial reads disposition from the
+      // same declared source as the gate and the parent serial. A definition-less template
+      // resolves to null (nothing to sync).
+      const template = await this.prisma.template.findUnique({
+        where: {
+          tenantId_templateKey_templateVersion: {
+            tenantId,
+            templateKey: crsn.childReport.inspectionReport.templateKey,
+            templateVersion: crsn.childReport.inspectionReport.templateVersion,
+          },
+        },
+        select: { definitionJson: true },
+      });
+      const definition =
+        (template?.definitionJson as {
+          disposition?: { source?: string[] };
+        } | null) ?? null;
+      const disp = resolveDisposition(payload.inspectionData, definition);
       if (disp) {
         // Detect the enum value honestly in-service instead of casting an
         // arbitrary string into the column. Invalid values were previously

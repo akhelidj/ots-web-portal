@@ -38,13 +38,34 @@ export type GateOutcome =
  * the `acc ?`-guard that short-circuits on a falsy intermediate node (a missing
  * section object yields `undefined`).
  */
-function walk(data: unknown, path: string): unknown {
+export function walk(data: unknown, path: string): unknown {
   return path
     .split('.')
     .reduce<unknown>(
       (acc, part) => (acc ? (acc as Record<string, unknown>)[part] : acc),
       data,
     );
+}
+
+/**
+ * The ONE disposition resolver every server surface shares. A serial's disposition
+ * lives wherever the template's definition declares (`disposition.source`, an ordered
+ * first-truthy coalesce) — never a hardcoded field. This is the single reader the gate,
+ * the revision snapshots, the export sort, and the serial/child column sync all funnel
+ * through, so no two surfaces can disagree on where disposition comes from. A template
+ * that declares no `source` (or none resolves) yields `null` — disposition unknown, which
+ * the gate treats as "not required" unless `requiredForApproval` says otherwise.
+ */
+export function resolveDisposition(
+  data: unknown,
+  definition: { disposition?: { source?: string[] } } | null | undefined,
+): string | null {
+  const sources = definition?.disposition?.source ?? [];
+  for (const path of sources) {
+    const value = walk(data, path);
+    if (value) return String(value);
+  }
+  return null;
 }
 
 /**
@@ -71,9 +92,10 @@ function finalize(
  * Engine gate — derives the check purely from a template definition:
  *   - required item fields = fields where `scope === 'item' && required === true`,
  *     in definition array order (so `missingKeys` order matches the client contract);
- *   - disposition requirement from `disposition.requiredForApproval`, read from the
- *     first truthy `disposition.source` path (the same coalesce as legacy —
- *     NOTE it reads `source`, never `syncedFrom`/`body.emiResult`).
+ *   - disposition requirement from `disposition.requiredForApproval`, resolved through
+ *     the shared `resolveDisposition` (first-truthy `disposition.source` coalesce) — the
+ *     SAME reader every other server surface uses, so the gate can never diverge from
+ *     what display/export/snapshot see.
  */
 export function engineGate(
   definition: GateDefinition,
@@ -86,7 +108,6 @@ export function engineGate(
     .map((f) => f.key);
 
   const dispRequired = definition.disposition?.requiredForApproval === true;
-  const dispSources = definition.disposition?.source ?? [];
 
   const missingDispositionSerials: string[] = [];
   const missingRequiredFields: Record<string, string[]> = {};
@@ -95,9 +116,7 @@ export function engineGate(
     const data = (sn.inspectionData as InspectionData) || {};
 
     if (dispRequired) {
-      const disposition = dispSources
-        .map((p) => walk(data, p))
-        .find((v) => Boolean(v));
+      const disposition = resolveDisposition(data, definition);
       if (!disposition) {
         missingDispositionSerials.push(sn.serial);
       }

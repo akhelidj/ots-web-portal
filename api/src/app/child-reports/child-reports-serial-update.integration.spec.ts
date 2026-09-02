@@ -36,6 +36,7 @@ import { ReworkRulesInterpreter } from './rework-rules.interpreter';
 import {
   resetInspectionDomain,
   seedTenant,
+  seedActiveTemplate,
   seedInspectionReport,
   seedApprovableSerial,
   seedChildReport,
@@ -72,6 +73,10 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
     } = {},
   ) {
     const tenant = await seedTenant(prisma);
+    // updateChildReportSerialNumber now resolves disposition through the PARENT report's
+    // template definition (declared source body.emiResult), so the template row must
+    // exist as it does in production.
+    await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT');
     const report = await seedInspectionReport(prisma, tenant.id);
     const serial = await seedApprovableSerial(
       prisma,

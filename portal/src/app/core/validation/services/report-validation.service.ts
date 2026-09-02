@@ -6,6 +6,8 @@ import {
 import { FormSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
   definitionToFormSchema,
+  dispositionRequired,
+  resolveDisposition,
   TemplateFormDefinition,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
 
@@ -56,26 +58,32 @@ export class ReportValidationService {
     // Resolved once per report (identical for every serial). Soft-NULL: a null/undefined/
     // malformed definition resolves to `null` (no required-field enforcement), NEVER the
     // drill-pipe schema — enforcing another tool's required fields on a definition-less
-    // report is a correctness bug (mirrors the form's empty-state). templateKey guard
-    // unchanged; a drill-pipe report carries a non-null definition and is unaffected.
-    const requiredSchema =
-      report.templateKey === 'DRILL_PIPE_REPORT'
-        ? this.resolveRequiredSchema(report)
-        : null;
+    // report is a correctness bug (mirrors the form's empty-state). No templateKey guard:
+    // the resolver is generic, so EVERY template's declared required fields are enforced
+    // (a non-drill-pipe report used to skip this check entirely — that was the bug).
+    const definition = (report.definitionJson ??
+      null) as TemplateFormDefinition | null;
+    const requiredSchema = this.resolveRequiredSchema(report);
+    // Disposition is required only when the template says so (mirrors the server gate).
+    // A template with no disposition (e.g. a non-drill-pipe tool) neither blocks on a
+    // missing disposition nor counts one — it gates on required fields instead.
+    const dispRequired = dispositionRequired(definition);
 
     for (const sn of serials) {
       const data = sn.inspectionJson || {};
-      const disposition = this.getNestedValue(data, 'body.emiResult') as string;
+      const disposition = resolveDisposition(data, definition);
 
       if (!disposition) {
-        issues.push({
-          code: 'MISSING_DISPOSITION',
-          level: 'BLOCKER',
-          message: `Missing EMI Result on Serial ${sn.value}.`,
-          scope: 'SERIAL',
-          serialId: sn.id,
-          serialLabel: sn.value,
-        });
+        if (dispRequired) {
+          issues.push({
+            code: 'MISSING_DISPOSITION',
+            level: 'BLOCKER',
+            message: `Missing disposition on Serial ${sn.value}.`,
+            scope: 'SERIAL',
+            serialId: sn.id,
+            serialLabel: sn.value,
+          });
+        }
       } else {
         if (dispositionCounts[disposition] !== undefined) {
           dispositionCounts[disposition]++;

@@ -7,6 +7,7 @@ import {
   ChildSnapshot,
 } from '../common/inspection-data.types';
 import { assembleSnapshotHeader } from '../common/snapshot-header';
+import { resolveDisposition } from '../workflow/approval-gate';
 
 @Injectable()
 export class RevisionService {
@@ -72,6 +73,25 @@ export class RevisionService {
       );
     }
 
+    // Load the pinned template's definition so each serial's disposition resolves through
+    // the SAME shared resolver the gate/export/display use — never a hardcoded field. The
+    // prior `final.disposition || disposition` read was phantom on real data, so every
+    // historical snapshot recorded disposition: null; new snapshots record the true value.
+    const template = await tx.template.findUnique({
+      where: {
+        tenantId_templateKey_templateVersion: {
+          tenantId,
+          templateKey: report.templateKey,
+          templateVersion: report.templateVersion,
+        },
+      },
+      select: { definitionJson: true },
+    });
+    const definition =
+      (template?.definitionJson as {
+        disposition?: { source?: string[] };
+      } | null) ?? null;
+
     // 3. Determine Next Revision Number
     const currentRevision = report.revisionNumber || 0;
     const nextRevision = currentRevision + 1;
@@ -92,12 +112,11 @@ export class RevisionService {
         versionId: report.templateVersionId,
       },
       serialNumbers: report.serialNumbers.map((sn) => {
-        const data = sn.inspectionData as InspectionData | null;
         return {
           id: sn.id,
           serial: sn.serial,
           inspectionData: sn.inspectionData as InspectionData,
-          disposition: data?.final?.disposition || data?.disposition || null,
+          disposition: resolveDisposition(sn.inspectionData, definition),
           updatedAt: sn.updatedAt,
         };
       }),
@@ -150,6 +169,8 @@ export class RevisionService {
           select: {
             id: true,
             reportNumber: true,
+            templateKey: true,
+            templateVersion: true,
           },
         },
       },
@@ -160,6 +181,25 @@ export class RevisionService {
         `ChildReport ${childReportId} not found during snapshot creation.`,
       );
     }
+
+    // Resolve child-serial disposition through the shared resolver, keyed on the PARENT
+    // report's pinned template — the same declared source the parent snapshot uses.
+    const childTemplate = childReport.inspectionReport
+      ? await tx.template.findUnique({
+          where: {
+            tenantId_templateKey_templateVersion: {
+              tenantId,
+              templateKey: childReport.inspectionReport.templateKey,
+              templateVersion: childReport.inspectionReport.templateVersion,
+            },
+          },
+          select: { definitionJson: true },
+        })
+      : null;
+    const childDefinition =
+      (childTemplate?.definitionJson as {
+        disposition?: { source?: string[] };
+      } | null) ?? null;
 
     const currentRevision = childReport.revisionNumber || 0;
     const nextRevision = currentRevision + 1;
@@ -175,12 +215,14 @@ export class RevisionService {
         parentReportNumber: childReport.inspectionReport?.reportNumber,
       },
       serialNumbers: childReport.serialNumbers.map((s) => {
-        const data = s.serialNumber.inspectionData as InspectionData | null;
         return {
           linkId: s.id, // Link table ID
           serialId: s.serialNumberId,
           serial: s.serialNumber.serial,
-          disposition: data?.final?.disposition || data?.disposition || null,
+          disposition: resolveDisposition(
+            s.serialNumber.inspectionData,
+            childDefinition,
+          ),
           // Child reports might have their own specific data in future,
           // currently they just link. Inclusion of serial value is key.
         };

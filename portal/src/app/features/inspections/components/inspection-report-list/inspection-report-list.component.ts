@@ -31,6 +31,10 @@ import { ChildReportLocalRepo } from '@portal/core/offline/repos/child-report-lo
 import { SessionService } from '@portal/core/auth/services/session.service';
 import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
 import { APP_ROLES } from '@portal/core/constants/app.constants';
+import {
+  resolveDisposition,
+  TemplateFormDefinition,
+} from '@portal/features/templates/schemas/definition-to-form-schema';
 
 @Component({
   selector: 'app-inspection-report-list',
@@ -137,13 +141,15 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
       newStats[r.id] = {
         serialCount: serials.length,
         passCount: serials.filter((s) => {
-          const finalSection = s.inspectionJson?.['final'] as
-            | Record<string, unknown>
-            | undefined;
-          const rawDisp =
-            (finalSection?.['disposition'] as string) ||
-            (s.inspectionJson?.['disposition'] as string) ||
-            null;
+          // Resolve disposition through the shared definition-driven resolver — the same
+          // reader the gate/detail/validation use — so the list's PASS count matches the
+          // KPIs. The prior hardcoded final.disposition||disposition path was phantom on
+          // real data (disposition lives at the template's declared source) and made this
+          // count always 0.
+          const rawDisp = resolveDisposition(
+            s.inspectionJson,
+            r.definitionJson as TemplateFormDefinition | null,
+          );
           return rawDisp ? rawDisp.toUpperCase() === 'PASS' : false;
         }).length,
         serialValues: serials.map((s) => s.value.toLowerCase()),

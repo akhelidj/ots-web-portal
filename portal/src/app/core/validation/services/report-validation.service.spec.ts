@@ -128,6 +128,51 @@ describe('ReportValidationService — definitionJson cutover (Consumer B)', () =
     expect(JSON.stringify(result.issues)).not.toContain('Min OD');
   });
 
+  it('(d) resolves disposition from the declared source; a missing source blocks only when required', () => {
+    // A definition that declares a disposition source AND requires it for approval.
+    const dispDef = {
+      templateKey: 'DRILL_PIPE_REPORT',
+      templateVersion: 1,
+      sections: [{ key: 'body', title: 'Body' }],
+      fields: [],
+      disposition: {
+        source: ['body.emiResult'],
+        requiredForApproval: true,
+      },
+    };
+    const report = { ...BASE_REPORT, definitionJson: dispDef };
+
+    // Serial WITHOUT the declared source → MISSING_DISPOSITION (required).
+    const missingResult = service.validate(report, [makeSerial({ body: {} })]);
+    expect(
+      missingResult.issues.find((i) => i.code === 'MISSING_DISPOSITION'),
+    ).toBeDefined();
+    expect(missingResult.isReady).toBe(false);
+
+    // Serial WITH the declared source → resolved, counted, no blocker.
+    const okResult = service.validate(report, [
+      makeSerial({ body: { emiResult: 'PASS' } }),
+    ]);
+    expect(
+      okResult.issues.find((i) => i.code === 'MISSING_DISPOSITION'),
+    ).toBeUndefined();
+    expect(okResult.dispositionCounts['PASS']).toBe(1);
+    expect(okResult.isReady).toBe(true);
+  });
+
+  it('(e) a definition with no disposition block neither blocks nor counts a disposition', () => {
+    // SENTINEL_DEFINITION declares no disposition source; even a serial carrying a legacy
+    // body.emiResult is not counted, and its absence is never a blocker.
+    const report = { ...BASE_REPORT, definitionJson: SENTINEL_DEFINITION };
+    const result = service.validate(report, [
+      makeSerial({ box: { sentinelCheck: 'x' }, body: { emiResult: 'PASS' } }),
+    ]);
+    expect(
+      result.issues.find((i) => i.code === 'MISSING_DISPOSITION'),
+    ).toBeUndefined();
+    expect(result.dispositionCounts['PASS']).toBe(0);
+  });
+
   it('(c) does not throw on malformed definitionJson and enforces no required-field set', () => {
     const garbageValues: unknown[] = [
       { nonsense: true }, // object without a fields[] array

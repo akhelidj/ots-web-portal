@@ -20,6 +20,7 @@ import {
 } from '@prisma/client';
 import { InspectionData, Snapshot } from '../common/inspection-data.types';
 import { assembleSnapshotHeader } from '../common/snapshot-header';
+import { resolveDisposition } from '../workflow/approval-gate';
 
 @Injectable()
 export class ExportService {
@@ -119,12 +120,15 @@ export class ExportService {
           versionId: liveReport.templateVersionId,
         },
         serialNumbers: liveReport.serialNumbers.map((sn) => {
-          const data = sn.inspectionData as InspectionData | null;
           return {
             id: sn.id,
             serial: sn.serial,
             inspectionData: sn.inspectionData as InspectionData,
-            disposition: data?.final?.disposition || data?.disposition || null,
+            // Re-derived below once the template definition is loaded (the shared
+            // resolver needs disposition.source). Both this live rev-0 build and any
+            // historical persisted snapshot are normalized in the same pass, so both
+            // resolve disposition identically to the gate.
+            disposition: null,
             updatedAt: sn.updatedAt,
           };
         }),
@@ -278,6 +282,22 @@ export class ExportService {
       throw new PreconditionFailedException(
         `Template ${report.templateKey}@${report.templateVersion} has no export definition`,
       );
+    }
+
+    // Normalize each snapshot serial's disposition through the shared resolver, keyed on
+    // this template's declared `disposition.source`. This is what makes the parent
+    // REWORK-last sort correct for BOTH live rev-0 exports AND historical persisted
+    // snapshots — the latter recorded `disposition: null` under the old phantom
+    // `final.disposition` read but embed the full inspectionData, so the true value is
+    // re-derivable at read time with zero migration. The Excel CELL value is unaffected
+    // (it comes from the `{{emi}}` token → body.emiResult); only this sort key changes.
+    const dispositionView = template.definitionJson as {
+      disposition?: { source?: string[] };
+    } | null;
+    if (snapshot.serialNumbers) {
+      for (const s of snapshot.serialNumbers) {
+        s.disposition = resolveDisposition(s.inspectionData, dispositionView);
+      }
     }
 
     const allFiles: { buffer: Buffer; filename: string }[] = [];
