@@ -45,7 +45,21 @@ needs an integration/device scenario.
 
 ## API-side data / validation
 
-### 4. PENDING_APPROVAL gate reads a disposition field production never writes
+### 4. PENDING_APPROVAL gate reads a disposition field production never writes — RESOLVED (0de2e3f)
+**Update (0de2e3f):** resolved. Disposition is now resolved everywhere through one
+shared `resolveDisposition(data, definition)` (`approval-gate.ts`), a first-truthy
+coalesce over the template's declared `disposition.source`. The drill-pipe definition
+was corrected from the phantom `["final.disposition","disposition"]` (plus a separate,
+contradictory `syncedFrom: body.emiResult`) to the single true path
+`source: ["body.emiResult"]`, and the gate, the serial/child disposition-column sync,
+the revision snapshots (`revision.service.ts`), the export sort (`export.service.ts`),
+and every portal surface (validation, detail KPIs/Findings, list PASS count) all read
+through it — server and its portal mirror (`definition-to-form-schema.ts`) cannot
+diverge on where disposition lives. Existing immutable snapshots recorded
+`disposition: null` under the old read but embed the full `inspectionData`, so export
+re-derives disposition at read time — no backfill. See #18 for the disposition /
+required-field coupling this surfaced. The historical description follows.
+
 The approval gate decides disposition-presence from `inspectionData.final.disposition`
 (falling back to top-level `inspectionData.disposition`)
 (`inspection-report-workflow.service.ts:352`), and the same read builds the snapshot's
@@ -74,6 +88,31 @@ only. Fix: read `.getResponse()` to preserve structured bodies.
 origins) are not checked at application startup. A missing or malformed value surfaces
 only when first used at runtime, not as a fail-fast error at boot.
 **Note:** observation from code — not tied to any particular validation library.
+
+### 18. On drill-pipe the disposition source is also a required field — a missing disposition always reports as two failures
+The drill-pipe definition maps disposition from `body.emiResult`
+(`disposition.source: ["body.emiResult"]`), and `body.emiResult` is *also* a
+`required: true` item field (the EMI-result `select`). So a drill-pipe serial with no
+`body.emiResult` is, by construction, both (a) missing its disposition and (b) missing a
+required field. `engineGate` (`approval-gate.ts`) runs those two checks independently, so
+it reports such a serial in **both** `missingDispositionSerials` **and**
+`missingRequiredFields` — there is no "missing disposition only" state for this template.
+This is an inherent property of the template's field mapping (one field serves two roles),
+**not a defect**; the two validations are simply coupled because they read the same field.
+Confirmed live: a blank-EMI serial surfaces in both arrays of the `VALIDATION_FAILED` body.
+
+**Converse (a template that maps disposition to a non-required field): the gate still
+catches it.** The disposition check is gated solely on
+`disposition.requiredForApproval` and reads the declared source through
+`resolveDisposition` — it does **not** depend on the source path also being a required
+field. So if a future template maps disposition to a field that is *not* `required`,
+a serial with no disposition still fails approval via `missingDispositionSerials`
+whenever `requiredForApproval: true`, even though required-field validation passes. The
+only way a disposition-less serial clears the gate is when `requiredForApproval` is
+`false`/absent — the intended "disposition not required" semantics (e.g. the seeded
+`SQUARE_KELLY` / `BOX_BOX_CROSSOVER` templates, which declare no disposition and gate on
+required fields only), not a gap. Net: `requiredForApproval` is the real control; the
+gate does not rely on drill-pipe's source doubling as a required field. See #4.
 
 ## Export mapping quirks
 
