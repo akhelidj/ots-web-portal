@@ -141,6 +141,9 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     expect(defineTemplate).toHaveBeenCalledWith('t1', EXPECTED_DTO);
     expect(c.success()).toBe(true);
     expect(c.submitError()).toBe('');
+    // On success the wizard leaves the Review step and returns to the templates list
+    // (the save signal is a toast on that list, not a lingering in-wizard banner).
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/admin/templates']);
   });
 
   it('surfaces the server’s per-check rejection inline; nothing marked written', async () => {

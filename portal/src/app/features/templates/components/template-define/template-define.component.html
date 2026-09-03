@@ -1,5 +1,7 @@
-<div class="max-w-7xl mx-auto py-4 sm:py-6 space-y-6">
-  <div class="page-section p-5 sm:p-6">
+<div
+  class="max-w-7xl mx-auto flex flex-col gap-4 sm:gap-5 h-[calc(100dvh-14.5rem)] min-h-[30rem]"
+>
+  <div class="page-section p-5 sm:p-6 shrink-0">
     <button
       (click)="backToList()"
       class="text-sm text-primary hover:underline mb-2"
@@ -12,23 +14,25 @@
       Define Template Form
     </h1>
     <p class="mt-2 text-sm text-neutral-500">
-      Sort the workbook's tokens into metadata fields and repeating serial fields,
-      describe each one, then save. The server validates the whole definition and
-      reports any problem below.
+      Set up this report form in four quick steps. Move through them with Next —
+      what you enter is kept as you go, and you can step back to change anything
+      before saving.
     </p>
   </div>
 
   @if (isLoading()) {
-    <div class="page-section p-6 text-sm text-neutral-500">Loading tokens…</div>
+    <div class="page-section p-6 text-sm text-neutral-500 shrink-0">
+      Loading tokens…
+    </div>
   } @else if (loadError()) {
     <div
-      class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
+      class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm shrink-0"
     >
       <p class="text-sm font-medium">{{ loadError() }}</p>
     </div>
   } @else {
     <!-- PROGRESS RAIL — fixed four-step sequence, aria-current on the active step -->
-    <div class="page-section p-5 sm:p-6">
+    <div class="page-section p-5 sm:p-6 shrink-0">
       <p class="text-sm font-semibold text-neutral-700">
         Step {{ currentStep() + 1 }} of {{ steps.length }} —
         {{ activeStep().label }}
@@ -63,6 +67,14 @@
       </ol>
     </div>
 
+    <!-- STEP BODY — the ONE bounded, internally-scrolling frame. The shell above (title +
+         progress) and the nav below stay put; only this region scrolls, and it resets to the
+         top on every step change (scrollStepBodyToTop). space-y-6 spaces the step's own
+         sections; pr-0.5 keeps content off the scrollbar gutter. -->
+    <div
+      #stepBody
+      class="flex-1 min-h-0 overflow-y-auto space-y-6 pr-0.5"
+    >
     <!-- STEP 1: DETECT TOKENS — read-only inventory of what the workbook contains -->
     @if (activeStep().key === 'detect') {
       <div class="page-section p-5 sm:p-6 space-y-4">
@@ -74,8 +86,8 @@
           </span>
         </div>
         <p class="text-sm text-neutral-500">
-          These are the placeholders found in the uploaded workbook. Nothing to
-          edit here — the next steps sort them into metadata and serial fields.
+          These are the fields we found in the uploaded workbook. There's nothing
+          to do here — just check they look right, then continue.
         </p>
         <div class="overflow-x-auto">
           <table class="table-base divide-y divide-gray-200 w-full">
@@ -107,10 +119,10 @@
       <div class="page-section p-5 sm:p-6 pb-0">
         <h2 class="text-lg text-neutral-900">Metadata Fields</h2>
         <p class="mt-1 mb-0 text-sm text-neutral-500">
-          Check the tokens that are report-level metadata (one value per report).
-          A roled field is system-owned — its value is derived, so it needs no
-          type or required flag. Everything you leave unchecked becomes a serial
-          field in the next step.
+          Tick the fields that describe the whole report — things like report
+          number, PO number, or customer, which have one value per report — and
+          give each a clear name. Anything you leave unticked is recorded for each
+          serial in the next step.
         </p>
       </div>
       <div class="page-section overflow-x-auto">
@@ -212,7 +224,7 @@
                   </td>
                 } @else {
                   <td class="table-td text-xs text-gray-400" colspan="5">
-                    Unchecked — becomes a serial field.
+                    Not ticked — recorded per serial.
                   </td>
                 }
               </tr>
@@ -236,10 +248,11 @@
       <div class="page-section p-5 sm:p-6 pb-0">
         <h2 class="text-lg text-neutral-900">Serial Fields</h2>
         <p class="mt-1 mb-0 text-sm text-neutral-500">
-          These tokens repeat once per inspected serial. Everything not claimed by
-          the Metadata step is pre-checked — uncheck any strays. Mark exactly one
-          field as the <span class="font-semibold">Serial Number</span> (the
-          serial's own token); it identifies the row and is not a form field.
+          These fields are recorded for every serial you inspect. Everything not
+          used as a report detail is already ticked — untick anything that doesn't
+          belong. Mark one field as the
+          <span class="font-semibold">Serial Number</span> so each serial can be
+          told apart.
         </p>
       </div>
 
@@ -490,8 +503,8 @@
           >
         </label>
         <p class="text-sm text-neutral-500">
-          When a serial's chosen field equals a value, a child report is created
-          for every matching serial. Off = no rule.
+          Automatically raise a follow-up report whenever a serial's chosen field
+          matches a set value. Leave this off if you don't need it.
         </p>
 
         @if (reworkEnabled) {
@@ -683,21 +696,16 @@
         </div>
       }
 
-      @if (success()) {
-        <div
-          data-testid="submit-success"
-          class="bg-success-light border-l-4 border-success text-success-dark p-4 rounded-md shadow-sm"
-        >
-          <p class="text-sm font-medium">
-            Definition saved. This template is now defined and can be used for
-            reports.
-          </p>
-        </div>
-      }
     }
+    </div>
+    <!-- /STEP BODY -->
 
-    <!-- WIZARD NAV — Back/Next preserve all entered state; Save only on the final step -->
-    <div class="flex justify-between gap-3">
+    <!-- WIZARD NAV — pinned below the scroll frame. Back/Next preserve all entered state;
+         Save only on the final step (on success the wizard routes to the templates list and
+         confirms with a toast). -->
+    <div
+      class="flex justify-between gap-3 shrink-0 border-t border-neutral-200 pt-4"
+    >
       <button (click)="backToList()" class="btn btn-secondary" type="button">
         Cancel
       </button>

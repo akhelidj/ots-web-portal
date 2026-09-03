@@ -1,4 +1,14 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -11,6 +21,7 @@ import {
   OpsFieldType,
   OpsTokenField,
 } from '@portal/features/templates/services/admin-templates.service';
+import { ToastService } from '@portal/shared/toast/toast.service';
 
 /**
  * Phase D — the Define-Template wizard, reshaped to a fixed FOUR-step flow that mirrors
@@ -107,6 +118,16 @@ export class TemplateDefineComponent implements OnInit {
   private templatesService = inject(AdminTemplatesService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private toast = inject(ToastService);
+  private injector = inject(Injector);
+
+  /**
+   * The scroll region wrapping the active step body. Scroll now lives HERE (the bounded,
+   * internally-scrolling step frame), not on `window`/`main`, so a step change resets THIS
+   * element's scrollTop — see `scrollStepBodyToTop`.
+   */
+  private readonly stepBody =
+    viewChild<ElementRef<HTMLElement>>('stepBody');
 
   public readonly fieldTypes = FIELD_TYPES;
   public readonly childReportTypes = CHILD_REPORT_TYPES;
@@ -408,11 +429,32 @@ export class TemplateDefineComponent implements OnInit {
   }
 
   /** Per-step entry hook. Landing on Serial re-homes the serialNumber marker default onto
-   *  the first still-unclaimed serial field (unless the author has taken it over). */
+   *  the first still-unclaimed serial field (unless the author has taken it over); every
+   *  step entry also returns the step body to the top so a new (often taller) step opens
+   *  scrolled to its start rather than inheriting the previous step's offset. */
   private onStepEntered(): void {
     if (this.activeStep().key === 'serial') {
       this.ensureSerialMarkerDefault();
     }
+    this.scrollStepBodyToTop();
+  }
+
+  /**
+   * Reset the step body's internal scroll to the top on a step change. Scheduled as
+   * POST-RENDER work (`afterNextRender`) rather than a synchronous DOM poke: the step swap is
+   * signal-driven, so the new step's content only exists after the scheduler re-renders —
+   * resetting scrollTop in that after-render hook lands on the fresh content and does not
+   * fight the zoneless change-detection pass. The bound injector lets us call it from a plain
+   * event handler (outside the constructor's injection context).
+   */
+  private scrollStepBodyToTop(): void {
+    afterNextRender(
+      () => {
+        const el = this.stepBody()?.nativeElement;
+        if (el) el.scrollTop = 0;
+      },
+      { injector: this.injector },
+    );
   }
 
   /** The client-checkable minimum for a Save — composed from the same per-step predicates
@@ -504,6 +546,14 @@ export class TemplateDefineComponent implements OnInit {
     try {
       await this.templatesService.defineTemplate(this.templateId, this.buildDto());
       this.success.set(true);
+      // Save landed — leave the wizard for the templates list and carry the confirmation
+      // there as a toast (app-level, survives the navigation), rather than stranding the
+      // author on the Review step behind an inline banner.
+      this.toast.showSuccess(
+        'Template form saved. It can now be used for reports.',
+        'Saved',
+      );
+      await this.router.navigate(['/admin/templates']);
     } catch (e: unknown) {
       const body = (e as { error?: { check?: string; message?: string } })?.error;
       this.failedCheck.set(body?.check ?? '');
