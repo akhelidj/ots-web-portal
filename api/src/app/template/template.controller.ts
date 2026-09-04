@@ -11,6 +11,7 @@ import {
   UseGuards,
   Req,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TemplateService } from './template.service';
@@ -79,11 +80,31 @@ export class TemplateController {
     return this.templateTokensService.getTokens(tenantId, id);
   }
 
+  // Read-only: the template's CURRENT definitionJson (or null for a never-defined
+  // template), for the admin Define page to decide defined-vs-undefined on open and
+  // hydrate the read-only recap. Light read (no fileBlob). Admin-only (class guards).
+  @Get(':id/definition')
+  async getTemplateDefinition(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    const tenantId = req.user.tenantId;
+    return this.templateDefinitionService.getDefinition(tenantId, id);
+  }
+
   // Writes definitionJson from an ops-authored description IF it passes the
   // write-time validation gate (seven checks incl. an engine dry-run). Rejects the
   // whole definition atomically otherwise. Never touches fileBlob/hash/version. In the
   // same transaction, captures the PRIOR definition as an immutable revision (durable
   // edit history — an overwrite can no longer destroy the previous state).
+  //
+  // READ-ONLY BLOCK: a defined template is read-only in the product — once definitionJson
+  // is set, this ops-facing endpoint refuses to overwrite it (409). Ops re-shape a form by
+  // uploading a NEW template version, not by re-defining. This is the server-side half of
+  // the read-only recap (a direct PUT can't bypass the UI block). The guard lives HERE, not
+  // in the service, on purpose: `service.defineTemplate` stays a re-appliable overwrite so
+  // the definition-edit-history/revisions mechanism and `restoreDefinitionRevision` (which
+  // re-applies a prior definition through the same write core) keep working untouched.
   @Put(':id/definition')
   async defineTemplate(
     @Req() req: AuthenticatedRequest,
@@ -92,6 +113,20 @@ export class TemplateController {
   ) {
     const tenantId = req.user.tenantId;
     const userId = req.user.userId;
+
+    const existing = await this.templateDefinitionService.getDefinition(
+      tenantId,
+      id,
+    );
+    if (existing.definitionJson != null) {
+      throw new ConflictException({
+        code: 'DEFINITION_ALREADY_SET',
+        message:
+          'This template already has a saved definition and is read-only. ' +
+          'Upload a new template version to change the form.',
+      });
+    }
+
     return this.templateDefinitionService.defineTemplate(
       tenantId,
       id,

@@ -32,12 +32,14 @@ describe('TemplateDefineComponent — wizard step gating + derived scope', () =>
 
   function setup() {
     const getTokens = jest.fn().mockResolvedValue(TOKENS);
+    // Undefined template: load() reads the definition first (null) → authoring flow.
+    const getDefinition = jest.fn().mockResolvedValue({ definitionJson: null });
     TestBed.configureTestingModule({
       imports: [TemplateDefineComponent],
       providers: [
         {
           provide: AdminTemplatesService,
-          useValue: { getTokens, defineTemplate: jest.fn() },
+          useValue: { getTokens, getDefinition, defineTemplate: jest.fn() },
         },
         { provide: Router, useValue: { navigate: jest.fn() } },
         {

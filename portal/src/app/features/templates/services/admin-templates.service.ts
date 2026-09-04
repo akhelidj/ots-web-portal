@@ -17,6 +17,10 @@ export interface AdminTemplateItem {
   changeNote: string;
   createdAt: string;
   createdById: string;
+  /** The row's CURRENT stored definition (null for a never-defined template). Carried on the
+   *  list so the row action can read DEFINED-vs-undefined via `isTemplateDefined` — the SAME
+   *  predicate the Define page's read-only recap keys off, so the two can never disagree. */
+  definitionJson: StoredDefinition | null;
 }
 
 /** One extracted `{{token}}` from `GET /templates/:id/tokens`. Mirrors the API's
@@ -92,6 +96,70 @@ export interface DefineTemplateDto {
   reworkRule?: OpsReworkRule;
 }
 
+/**
+ * Portal-side mirror of ONE stored field in `Template.definitionJson` (the API's
+ * CandidateDefinition — no shared DTO package, ADR-0008). `key` is the token stripped of its
+ * braces (e.g. `poNumber`); the `serialNumber`-roled field is kept here (it marks the
+ * serial's own token). Only the slice the read-only recap needs is typed.
+ */
+export interface StoredDefinitionField {
+  key: string;
+  label: string;
+  type: OpsFieldType;
+  required: boolean;
+  scope: 'header' | 'item';
+  role?: FieldRole;
+  section?: string;
+  options?: string[];
+}
+
+/** Portal-side mirror of one stored export entry — the recap reads it only to recover the
+ *  exact serial-marker token (`source: 'rowSerial'`), which is not on the field itself. */
+export interface StoredExportEntry {
+  token: string;
+  field?: string;
+  source?: string;
+}
+
+/**
+ * Portal-side mirror of the stored `Template.definitionJson` — the authoritative CURRENT
+ * definition. Only the slice the read-only recap hydrates from is typed here; the engine
+ * carries more (transforms, disposition, computed export). The rework rule is read back from
+ * `rules[0]` in the interpreter's stored shape.
+ */
+export interface StoredDefinition {
+  displayName?: string;
+  regions?: { id: string; label?: string; chunkSize?: number | null }[];
+  fields: StoredDefinitionField[];
+  export?: {
+    global?: StoredExportEntry[];
+    regions?: Record<string, StoredExportEntry[]>;
+  };
+  rules?: unknown[];
+}
+
+/**
+ * DEFINED-STATE detection — the single source of truth for "is this template defined?".
+ * A template counts as defined once its stored `definitionJson` carries at least one field
+ * (the engine rejects an empty definition at the gate, so an empty/garbled `{}` reads as
+ * undefined). Both the templates-list row action (View vs Define) and the Define page's
+ * read-only recap branch call THIS, so the label and the recap can never drift apart.
+ */
+export function isTemplateDefined(
+  def: StoredDefinition | null | undefined,
+): def is StoredDefinition {
+  return !!def && Array.isArray(def.fields) && def.fields.length > 0;
+}
+
+/** The `GET /templates/:id/definition` payload — the light read the Define page opens with.
+ *  `definitionJson` is null for a never-defined template, the stored definition once set. */
+export interface TemplateDefinitionDetail {
+  templateKey: string;
+  templateVersion: number;
+  status: 'ACTIVE' | 'DEPRECATED';
+  definitionJson: StoredDefinition | null;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -135,6 +203,18 @@ export class AdminTemplatesService implements DataHydrationSource {
       this.http.post(`${environment.apiUrl}/templates`, formData),
     );
     await this.fetchAll();
+  }
+
+  /** Read-only: the template's CURRENT stored definition (or null for a never-defined
+   *  template). The Define page hits this on open to decide defined-vs-undefined and, when
+   *  defined, hydrate the read-only recap from the authoritative stored shape — NOT from
+   *  re-extracted tokens (fidelity: show what was saved, not what the workbook holds now). */
+  public async getDefinition(id: string): Promise<TemplateDefinitionDetail> {
+    return firstValueFrom(
+      this.http.get<TemplateDefinitionDetail>(
+        `${environment.apiUrl}/templates/${id}/definition`,
+      ),
+    );
   }
 
   /** Read-only: the workbook's extracted tokens, for the describe screen. */

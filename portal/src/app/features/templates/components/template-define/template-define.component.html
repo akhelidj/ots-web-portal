@@ -11,13 +11,20 @@
     <h1
       class="text-2xl sm:text-3xl tracking-tight text-neutral-900"
     >
-      Define Template Form
+      {{ readOnly() ? 'View Template Form' : 'Define Template Form' }}
     </h1>
-    <p class="mt-2 text-sm text-neutral-500">
-      Set up this report form in four quick steps. Move through them with Next —
-      what you enter is kept as you go, and you can step back to change anything
-      before saving.
-    </p>
+    @if (readOnly()) {
+      <p class="mt-2 text-sm text-neutral-500">
+        This template's form is already defined and is read-only — here is how it
+        was saved. To change the form, upload a new template version.
+      </p>
+    } @else {
+      <p class="mt-2 text-sm text-neutral-500">
+        Set up this report form in four quick steps. Move through them with Next —
+        what you enter is kept as you go, and you can step back to change anything
+        before saving.
+      </p>
+    }
   </div>
 
   @if (isLoading()) {
@@ -29,6 +36,23 @@
       class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm shrink-0"
     >
       <p class="text-sm font-medium">{{ loadError() }}</p>
+    </div>
+  } @else if (readOnly()) {
+    <!-- READ-ONLY RECAP (#6) — a defined template opens straight here: the saved form as a
+         quiet document, with NO progress rail, NO editable step body, and NO save/nav. There
+         is deliberately no route back into authoring; re-shaping the form means uploading a
+         new template. The summary is the SAME digest the authoring Review step shows, fed by
+         the rows() signal hydrated from the stored definition. -->
+    <div class="flex-1 min-h-0 overflow-y-auto space-y-6 pr-0.5" data-testid="readonly-recap">
+      <ng-container
+        [ngTemplateOutlet]="recapSummary"
+        [ngTemplateOutletContext]="{ heading: 'Form Summary' }"
+      ></ng-container>
+    </div>
+    <div class="flex justify-end shrink-0 border-t border-neutral-200 pt-4">
+      <button (click)="backToList()" class="btn btn-secondary" type="button">
+        Back to templates
+      </button>
     </div>
   } @else {
     <!-- PROGRESS RAIL — fixed four-step sequence, aria-current on the active step -->
@@ -610,9 +634,77 @@
         }
       </div>
 
-      <!-- Compact review summary -->
+      <!-- Compact review summary — shared with the read-only recap via #recapSummary -->
+      <ng-container
+        [ngTemplateOutlet]="recapSummary"
+        [ngTemplateOutletContext]="{ heading: 'Review' }"
+      ></ng-container>
+
+      @if (submitError()) {
+        <div
+          data-testid="submit-error"
+          class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
+        >
+          @if (failedCheck()) {
+            <p class="text-xs font-bold uppercase tracking-wider mb-1">
+              Rejected check: {{ failedCheck() }}
+            </p>
+          }
+          <p class="text-sm font-medium">{{ submitError() }}</p>
+        </div>
+      }
+
+    }
+    </div>
+    <!-- /STEP BODY -->
+
+    <!-- WIZARD NAV — pinned below the scroll frame. Back/Next preserve all entered state;
+         Save only on the final step (on success the wizard routes to the templates list and
+         confirms with a toast). -->
+    <div
+      class="flex justify-between gap-3 shrink-0 border-t border-neutral-200 pt-4"
+    >
+      <button (click)="backToList()" class="btn btn-secondary" type="button">
+        Cancel
+      </button>
+      <div class="flex gap-3">
+        @if (!isFirstStep()) {
+          <button (click)="prev()" class="btn btn-secondary" type="button">
+            Back
+          </button>
+        }
+        @if (!isLastStep()) {
+          <button
+            (click)="next()"
+            [disabled]="!canGoNext()"
+            data-testid="wizard-next"
+            class="btn btn-primary"
+            type="button"
+          >
+            Next
+          </button>
+        } @else {
+          <button
+            (click)="submit()"
+            [disabled]="isSubmitting() || !canSave()"
+            class="btn btn-primary"
+            type="button"
+          >
+            {{ isSubmitting() ? 'Saving…' : 'Save Definition' }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Recap summary — the compact definition digest. Reused by the authoring Review step and
+     the read-only recap, so both render an identical, single-source summary. Data derives
+     from the same rows() signal + scalar fields, hydrated from the STORED definition in
+     read-only mode. `heading` labels it per caller. -->
+<ng-template #recapSummary let-heading="heading">
       <div class="page-section p-5 sm:p-6">
-        <h2 class="text-lg text-neutral-900 mb-3">Review</h2>
+        <h2 class="text-lg text-neutral-900 mb-3">{{ heading }}</h2>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
           <div>
             <dt class="font-semibold text-gray-500">Display Name</dt>
@@ -681,61 +773,4 @@
           </div>
         </dl>
       </div>
-
-      @if (submitError()) {
-        <div
-          data-testid="submit-error"
-          class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
-        >
-          @if (failedCheck()) {
-            <p class="text-xs font-bold uppercase tracking-wider mb-1">
-              Rejected check: {{ failedCheck() }}
-            </p>
-          }
-          <p class="text-sm font-medium">{{ submitError() }}</p>
-        </div>
-      }
-
-    }
-    </div>
-    <!-- /STEP BODY -->
-
-    <!-- WIZARD NAV — pinned below the scroll frame. Back/Next preserve all entered state;
-         Save only on the final step (on success the wizard routes to the templates list and
-         confirms with a toast). -->
-    <div
-      class="flex justify-between gap-3 shrink-0 border-t border-neutral-200 pt-4"
-    >
-      <button (click)="backToList()" class="btn btn-secondary" type="button">
-        Cancel
-      </button>
-      <div class="flex gap-3">
-        @if (!isFirstStep()) {
-          <button (click)="prev()" class="btn btn-secondary" type="button">
-            Back
-          </button>
-        }
-        @if (!isLastStep()) {
-          <button
-            (click)="next()"
-            [disabled]="!canGoNext()"
-            data-testid="wizard-next"
-            class="btn btn-primary"
-            type="button"
-          >
-            Next
-          </button>
-        } @else {
-          <button
-            (click)="submit()"
-            [disabled]="isSubmitting() || !canSave()"
-            class="btn btn-primary"
-            type="button"
-          >
-            {{ isSubmitting() ? 'Saving…' : 'Save Definition' }}
-          </button>
-        }
-      </div>
-    </div>
-  }
-</div>
+</ng-template>

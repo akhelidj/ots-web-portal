@@ -58,16 +58,23 @@ const EXPECTED_DTO: DefineTemplateDto = {
 
 describe('TemplateDefineComponent — assembly + submit', () => {
   let getTokens: jest.Mock;
+  let getDefinition: jest.Mock;
   let defineTemplate: jest.Mock;
 
   function make(): TemplateDefineComponent {
     getTokens = jest.fn().mockResolvedValue(FIXTURE_TOKENS);
+    // An UNDEFINED template — load() reads the definition first, sees null, and runs the
+    // full authoring flow (these specs' subject).
+    getDefinition = jest.fn().mockResolvedValue({ definitionJson: null });
     defineTemplate = jest.fn().mockResolvedValue({ id: 't1' });
 
     TestBed.configureTestingModule({
       imports: [TemplateDefineComponent],
       providers: [
-        { provide: AdminTemplatesService, useValue: { getTokens, defineTemplate } },
+        {
+          provide: AdminTemplatesService,
+          useValue: { getTokens, getDefinition, defineTemplate },
+        },
         { provide: Router, useValue: { navigate: jest.fn() } },
         {
           provide: ActivatedRoute,

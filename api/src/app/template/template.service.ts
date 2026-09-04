@@ -131,7 +131,9 @@ export class TemplateService {
         changeNote: true,
         createdAt: true,
         createdById: true,
-        // Exclude fileBlob
+        // The CURRENT definition (null until defined) so the admin list can label a row's
+        // action View-vs-Define off the same shape the Define page reads. Excludes fileBlob.
+        definitionJson: true,
       },
     });
     return templates;

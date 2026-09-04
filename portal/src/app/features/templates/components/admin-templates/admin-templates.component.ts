@@ -2,7 +2,11 @@ import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { AdminTemplatesService } from '@portal/features/templates/services/admin-templates.service';
+import {
+  AdminTemplateItem,
+  AdminTemplatesService,
+  isTemplateDefined,
+} from '@portal/features/templates/services/admin-templates.service';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
 
@@ -28,6 +32,14 @@ export class AdminTemplatesComponent {
   public formFile: File | null = null;
   public isSubmitting = false;
   public formError = '';
+
+  /** The row action's word: a DEFINED template opens as a read-only recap → "View"; an
+   *  undefined one opens the authoring wizard → "Define". Driven off the same
+   *  `isTemplateDefined` predicate the Define page's read-only branch uses (single source of
+   *  truth), so the label and the recap can't drift. */
+  public actionLabel(tmpl: AdminTemplateItem): string {
+    return isTemplateDefined(tmpl.definitionJson) ? 'View' : 'Define';
+  }
 
   public async refreshTemplates() {
     this.formError = '';

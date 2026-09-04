@@ -18,8 +18,10 @@ import {
   DefineTemplateDto,
   ExtractedToken,
   FieldRole,
+  isTemplateDefined,
   OpsFieldType,
   OpsTokenField,
+  StoredDefinition,
 } from '@portal/features/templates/services/admin-templates.service';
 import { ToastService } from '@portal/shared/toast/toast.service';
 
@@ -156,6 +158,13 @@ export class TemplateDefineComponent implements OnInit {
   // auto-defaulting the serialNumber marker (their choice wins).
   private markerTouched = false;
 
+  // READ-ONLY recap mode. A defined template (definitionJson already saved) opens straight
+  // to the recap with no route into the authoring steps — re-definition is a hard block
+  // (#6). A signal because it is set after the async load settles (zoneless: the write
+  // schedules the CD pass that renders the recap); the recap's data derives from the same
+  // `rows()` signal + scalar fields that authoring uses, hydrated from the STORED definition.
+  public readonly readOnly = signal(false);
+
   // UI state (signals — set after async work, read by the template).
   public readonly isLoading = signal(true);
   public readonly isSubmitting = signal(false);
@@ -191,10 +200,23 @@ export class TemplateDefineComponent implements OnInit {
     this.isLoading.set(true);
     this.loadError.set('');
     try {
-      const tokens = await this.templatesService.getTokens(this.templateId);
-      this.rows.set(this.toRows(tokens));
-      this.markerTouched = false;
-      this.ensureSerialMarkerDefault();
+      // #6 — decide defined-vs-undefined FIRST, from the authoritative stored definition
+      // (server read), not from a re-extracted-token guess. A defined template becomes a
+      // read-only recap hydrated from what was SAVED; an undefined one keeps today's full
+      // authoring flow, unchanged.
+      const detail = await this.templatesService.getDefinition(this.templateId);
+      if (this.isDefined(detail.definitionJson)) {
+        this.hydrateFromDefinition(detail.definitionJson);
+        // Signal write LAST — flips the view to the recap and schedules the CD pass that
+        // renders it (also flushing the scalar fields hydrateFromDefinition set).
+        this.readOnly.set(true);
+      } else {
+        const tokens = await this.templatesService.getTokens(this.templateId);
+        this.rows.set(this.toRows(tokens));
+        this.markerTouched = false;
+        this.ensureSerialMarkerDefault();
+        this.readOnly.set(false);
+      }
     } catch (e: unknown) {
       this.loadError.set(
         this.errorMessage(e, 'Failed to load template tokens. Are you online?'),
@@ -202,6 +224,83 @@ export class TemplateDefineComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /**
+   * DEFINED-STATE detection (#6.1). The stored `definitionJson` is the API's built
+   * CandidateDefinition; a real definition always carries at least one field (the engine
+   * rejects an empty one at the gate). We test the actual shape — a non-empty `fields[]` —
+   * rather than trusting a bare truthy check, so an empty/garbled `{}` still reads as
+   * undefined and falls through to authoring.
+   */
+  private isDefined(def: StoredDefinition | null): def is StoredDefinition {
+    return isTemplateDefined(def);
+  }
+
+  /**
+   * Reverse-map a STORED definition into the wizard's describe rows + scalar state, so the
+   * recap reflects exactly what was saved — roles, labels, marker, rework, scope — and never
+   * re-infers from the workbook's current tokens (fidelity: if the file changed under a saved
+   * definition, we show the saved definition). Scope is the source of truth for header-vs-
+   * serial; the serial marker's EXACT token comes from `export.regions` (source `rowSerial`),
+   * which is more precise than reconstructing it from the field key.
+   */
+  private hydrateFromDefinition(def: StoredDefinition): void {
+    const markerToken = this.markerTokenFromExport(def);
+    const rows: DescribeRow[] = (def.fields ?? []).map((f) => {
+      const isMarker = f.role === 'serialNumber';
+      return {
+        token: isMarker && markerToken ? markerToken : `{{${f.key}}}`,
+        cell: '',
+        row: 0,
+        header: f.scope === 'header',
+        serial: f.scope === 'item',
+        label: f.label ?? '',
+        type: f.type ?? 'text',
+        required: !!f.required,
+        section: f.section ?? '',
+        optionsText: Array.isArray(f.options) ? f.options.join(', ') : '',
+        role: f.role ?? '',
+      };
+    });
+    this.rows.set(rows);
+    this.displayName = def.displayName ?? '';
+    this.hydrateRework(def);
+  }
+
+  /** The serial marker's exact token, read back from the stored export (the `rowSerial`
+   *  entry in the region's export list) — the marker's token is stored there, not on the
+   *  field itself. Undefined if the definition carries no such entry. */
+  private markerTokenFromExport(def: StoredDefinition): string | undefined {
+    const regionId = def.regions?.[0]?.id ?? REGION_ID;
+    const byRegion = def.export?.regions?.[regionId];
+    const entry = byRegion?.find((e) => e.source === 'rowSerial') ?? byRegion?.[0];
+    return entry?.token;
+  }
+
+  /** Reverse-map the stored rework rule (`rules[0]`, the interpreter's `when`/`then` shape)
+   *  back onto the recap's scalar fields. Absent/malformed → no rule. */
+  private hydrateRework(def: StoredDefinition): void {
+    const rule = Array.isArray(def.rules) ? def.rules[0] : undefined;
+    const r = (rule ?? {}) as {
+      when?: { field?: string; value?: unknown };
+      then?: { childType?: string; reportNumberSuffix?: string };
+    };
+    const field = r.when?.field;
+    const childType = r.then?.childType;
+    if (!field || !childType) {
+      this.reworkEnabled = false;
+      return;
+    }
+    this.reworkEnabled = true;
+    this.reworkField = field;
+    this.reworkEquals = r.when?.value == null ? '' : String(r.when.value);
+    this.reworkChildType = CHILD_REPORT_TYPES.includes(
+      childType as ChildReportTypeChoice,
+    )
+      ? (childType as ChildReportTypeChoice)
+      : 'REWORK';
+    this.reworkSuffix = r.then?.reportNumberSuffix ?? '';
   }
 
   /**
@@ -521,6 +620,11 @@ export class TemplateDefineComponent implements OnInit {
   }
 
   public async submit(): Promise<void> {
+    // #6.3 — a defined template is read-only: no save path exists in this mode. Defence in
+    // depth behind the hidden nav (and the server's own PUT guard); re-shaping a form means
+    // uploading a new template, not re-defining this one.
+    if (this.readOnly()) return;
+
     this.clearSubmitFeedback();
     this.success.set(false);
 

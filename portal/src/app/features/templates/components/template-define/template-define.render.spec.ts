@@ -30,7 +30,12 @@ describe('TemplateDefineComponent — zoneless DOM rendering (stuck-loading regr
       providers: [
         {
           provide: AdminTemplatesService,
-          useValue: { getTokens, defineTemplate: jest.fn() },
+          useValue: {
+            getTokens,
+            // Undefined template: load() reads the definition first (null) → authoring flow.
+            getDefinition: jest.fn().mockResolvedValue({ definitionJson: null }),
+            defineTemplate: jest.fn(),
+          },
         },
         { provide: Router, useValue: { navigate: jest.fn() } },
         {

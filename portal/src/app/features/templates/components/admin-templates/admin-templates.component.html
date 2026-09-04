@@ -271,7 +271,10 @@
               <a
                 [routerLink]="['/admin/templates', tmpl.id, 'define']"
                 class="text-primary hover:text-primary-dark font-semibold transition-colors focus:outline-none mr-4"
-                >Define</a
+                [attr.aria-label]="
+                  actionLabel(tmpl) + ' form for ' + tmpl.templateKey
+                "
+                >{{ actionLabel(tmpl) }}</a
               >
               @if (tmpl.status === 'ACTIVE' && isOnline()) {
                 <button

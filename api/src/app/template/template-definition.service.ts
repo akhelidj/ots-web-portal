@@ -99,6 +99,40 @@ export class TemplateDefinitionService {
   }
 
   /**
+   * Read the template's CURRENT definition (the authoritative `Template.definitionJson`) for
+   * the admin define surface. Tenant-scoped (NotFound / Forbidden, mirroring the write path),
+   * and deliberately does NOT load `fileBlob` — this is a light read the Define page hits on
+   * open to decide defined-vs-undefined and hydrate the read-only recap. `definitionJson` is
+   * null for a never-defined template (today's full authoring flow) and the stored
+   * CandidateDefinition once defined (the read-only recap source).
+   */
+  async getDefinition(tenantId: string, templateId: string) {
+    const template = await this.prisma.template.findUnique({
+      where: { id: templateId },
+      select: {
+        id: true,
+        tenantId: true,
+        templateKey: true,
+        templateVersion: true,
+        status: true,
+        definitionJson: true,
+      },
+    });
+    if (!template) {
+      throw new NotFoundException('Template not found');
+    }
+    if (template.tenantId !== tenantId) {
+      throw new ForbiddenException('Access denied');
+    }
+    return {
+      templateKey: template.templateKey,
+      templateVersion: template.templateVersion,
+      status: template.status,
+      definitionJson: template.definitionJson,
+    };
+  }
+
+  /**
    * History listing for the admin restore/browse surface: metadata + revisionNumber +
    * tokensChanged + who/when/why, NEWEST first. Deliberately NOT the full definitionJson
    * blob (the list stays light; the blob is fetched only by restore).
