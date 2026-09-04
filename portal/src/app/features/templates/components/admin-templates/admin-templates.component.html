@@ -231,7 +231,7 @@
               class="table-td-strong code-text border-l-[3px] border-transparent"
               [ngClass]="{
                 '!border-success': tmpl.status === 'ACTIVE',
-                '!border-warning': tmpl.status === 'DEPRECATED',
+                '!border-warning-dark': tmpl.status === 'DEPRECATED',
               }"
             >
               {{ tmpl.templateKey }}
@@ -243,7 +243,7 @@
                 [ngClass]="{
                   'bg-success-light text-success-dark border-success/20':
                     tmpl.status === 'ACTIVE',
-                  'bg-warning-light text-warning-dark border-warning/20':
+                  'bg-warning-dark text-white border-warning-dark':
                     tmpl.status === 'DEPRECATED',
                 }"
               >
@@ -253,7 +253,7 @@
                   ></span>
                 } @else {
                   <span
-                    class="w-1.5 h-1.5 rounded-full bg-warning mr-1.5"
+                    class="w-1.5 h-1.5 rounded-full bg-warning-light mr-1.5"
                   ></span>
                 }
                 {{ tmpl.status }}
@@ -279,7 +279,7 @@
               @if (tmpl.status === 'ACTIVE' && isOnline()) {
                 <button
                   (click)="deprecateTemplate(tmpl.id)"
-                  class="text-warning-dark hover:text-warning font-semibold transition-colors focus:outline-none"
+                  class="text-warning-dark hover:underline font-bold transition-colors focus:outline-none"
                 >
                   Deprecate
                 </button>

@@ -267,7 +267,7 @@
       @if (!headerStepValid()) {
         <div
           role="alert"
-          class="page-section p-4 border-l-4 border-warning bg-warning-light/20 text-sm text-warning-dark"
+          class="page-section p-4 border-l-4 border-error bg-error-light/20 text-sm text-error-dark"
         >
           Every included metadata field needs a label before you can continue.
         </div>
@@ -358,7 +358,7 @@
       @if (serialCandidateRows().length === 0) {
         <div
           role="alert"
-          class="page-section p-4 border-l-4 border-warning bg-warning-light/20 text-sm text-warning-dark"
+          class="page-section p-4 border-l-4 border-error bg-error-light/20 text-sm text-error-dark"
         >
           Every token is claimed by the Metadata step. Uncheck at least one there —
           a template needs at least one serial field.
@@ -495,7 +495,7 @@
         @if (!serialStepValid()) {
           <div
             role="alert"
-            class="page-section p-4 border-l-4 border-warning bg-warning-light/20 text-sm text-warning-dark"
+            class="page-section p-4 border-l-4 border-error bg-error-light/20 text-sm text-error-dark"
           >
             @if (serialRows().length === 0) {
               Include at least one serial field to continue.
