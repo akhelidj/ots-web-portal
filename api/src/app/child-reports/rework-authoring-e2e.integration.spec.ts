@@ -26,6 +26,34 @@ import { validateDefinition } from '../template/definition-validator';
 import { DefineTemplateDto } from '../template/definition-authoring.types';
 import { resetInspectionDomain, seedTenant } from '../../../test/seed-helpers';
 
+/**
+ * The six mandatory header-role fields + the item `serialNumber` field, shared by the
+ * authored DTOs so every definition clears the all-seven-roles gate (validator check 4c).
+ * The header roles bind to computed tokens; the `serialNumber` role marks the region's
+ * `{{sn}}` marker. None of these participate in the rework trigger — that stays on the
+ * ordinary item field each template authors.
+ */
+const MANDATORY_ROLE_FIELDS: DefineTemplateDto['fields'] = [
+  { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
+  { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
+  { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
+  { token: '{{inspBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+  { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
+  { token: '{{inspDate}}', label: 'Inspection Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
+  { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
+];
+
+/** The tokens the mandatory role fields reference — merged into each template's token set. */
+const MANDATORY_ROLE_TOKENS = [
+  '{{customer}}',
+  '{{reportNumber}}',
+  '{{poNumber}}',
+  '{{inspBy}}',
+  '{{apprBy}}',
+  '{{inspDate}}',
+  '{{sn}}',
+];
+
 describe('rework authoring — end-to-end, template-agnostic [integration]', () => {
   let prisma: PrismaService;
   let service: ChildReportsService;
@@ -131,6 +159,7 @@ describe('rework authoring — end-to-end, template-agnostic [integration]', () 
       displayName: 'Casing Inspection',
       region: { id: 'serials', marker: '{{sn}}' },
       fields: [
+        ...MANDATORY_ROLE_FIELDS,
         {
           token: '{{emi}}',
           label: 'EMI Result',
@@ -148,7 +177,12 @@ describe('rework authoring — end-to-end, template-agnostic [integration]', () 
         reportNumberSuffix: '_rw',
       },
     };
-    await authorAndPersist(tenant.id, key, dto, new Set(['{{sn}}', '{{emi}}']));
+    await authorAndPersist(
+      tenant.id,
+      key,
+      dto,
+      new Set(['{{sn}}', '{{emi}}', ...MANDATORY_ROLE_TOKENS]),
+    );
 
     const report = await seedReport(tenant.id, key, 'RPT-A');
     await seedSerial(tenant.id, report.id, 'SN-1', { emi: 'REWORK' }); // matches
@@ -174,6 +208,7 @@ describe('rework authoring — end-to-end, template-agnostic [integration]', () 
       displayName: 'Tubing Inspection',
       region: { id: 'rows', marker: '{{sn}}' },
       fields: [
+        ...MANDATORY_ROLE_FIELDS,
         {
           token: '{{status}}',
           label: 'Condition',
@@ -191,7 +226,12 @@ describe('rework authoring — end-to-end, template-agnostic [integration]', () 
         reportNumberSuffix: '-scrap',
       },
     };
-    await authorAndPersist(tenant.id, key, dto, new Set(['{{sn}}', '{{status}}']));
+    await authorAndPersist(
+      tenant.id,
+      key,
+      dto,
+      new Set(['{{sn}}', '{{status}}', ...MANDATORY_ROLE_TOKENS]),
+    );
 
     const report = await seedReport(tenant.id, key, 'RPT-B');
     await seedSerial(tenant.id, report.id, 'T-1', { status: 'BAD' }); // matches

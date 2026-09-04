@@ -26,26 +26,38 @@ import {
 const TOKENS: ReadonlySet<string> = new Set([
   '{{sn}}',
   '{{poNumber}}',
-  '{{grade}}',
-  '{{emi}}',
+  '{{reportNumber}}',
   '{{customer}}',
   '{{inspBy}}',
+  '{{apprBy}}',
+  '{{inspDate}}',
+  '{{grade}}',
+  '{{emi}}',
 ]);
 const META = { templateKey: 'PUMP_REPORT', templateVersion: 1 };
 
+/**
+ * The canonical VALID ops description — now fully roled. Every one of the seven system roles
+ * is mapped: the six header roles (customer/reportNumber/poNumber/inspector/supervisor/
+ * inspectionDate) each on their own header field, and the item role `serialNumber` on the
+ * serial's own token. Roles are MANDATORY to save (validator check 4c), so a valid fixture
+ * must assign them all — a definition missing any is rejected (proven below). No explicit
+ * `computed` entry: the `customer` role already binds `{{customer}}` to the `customerName`
+ * computed via ROLE_TO_COMPUTED.
+ */
 function validDto(): DefineTemplateDto {
   return {
     displayName: 'Pump Inspection',
     region: { id: 'serials', marker: '{{sn}}' },
     disposition: { field: 'emi', requiredForApproval: true },
     fields: [
-      {
-        token: '{{poNumber}}',
-        label: 'PO Number',
-        type: 'text',
-        required: false,
-        scope: 'header',
-      },
+      { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
+      { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
+      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
+      { token: '{{inspBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+      { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
+      { token: '{{inspDate}}', label: 'Inspection Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
+      { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
       {
         token: '{{grade}}',
         label: 'Grade',
@@ -64,8 +76,20 @@ function validDto(): DefineTemplateDto {
         options: ['PASS', 'FAIL'],
       },
     ],
-    computed: [{ token: '{{customer}}', computed: 'customerName' }],
   };
+}
+
+/** validDto stripped of ALL roles — a pre-mandate ("grandfathered") shape. Valid before the
+ *  mandate, now rejected at save by check 4c. Used to prove the mandatory gate. */
+function noRolesDto(): DefineTemplateDto {
+  const dto = validDto();
+  dto.fields = dto.fields.map((f) => {
+    const { role: _role, ...rest } = f;
+    return rest;
+  });
+  // Without the serialNumber role the region marker still names {{sn}}; the builder emits it
+  // as rowSerial regardless, so the shape stays engine-valid — only the role mandate fails.
+  return dto;
 }
 
 const clone = (d: CandidateDefinition): CandidateDefinition =>
@@ -317,59 +341,71 @@ describe('validateDefinition — rework rule (slice A) [unit]', () => {
 /**
  * Field ROLES — a header field bound to a system-derived value via the engine's existing
  * computed tokens. The builder maps the role onto the computed name (no new computed
- * names); the validator enforces header-scope, a known role, and role uniqueness.
+ * names); the validator enforces header-scope, a known role, role uniqueness, and — now —
+ * that every one of the seven system roles is present (check 4c). `validDto` is fully roled,
+ * so these exercise the mapping/scope/uniqueness rules against clones of it.
  */
 describe('validateDefinition — field roles [unit]', () => {
-  /** validDto + one header field carrying the `inspector` role. */
-  function roledDto(): DefineTemplateDto {
-    const dto = validDto();
-    dto.fields.push({
-      token: '{{inspBy}}',
-      label: 'Inspector',
-      type: 'text',
-      required: false,
-      scope: 'header',
-      role: 'inspector',
-    });
-    return dto;
-  }
-
   describe('builder — a roled field binds to the existing computed token', () => {
     it('emits the roled token as a computed export entry, not a user `field`', () => {
-      const built = buildDefinition(META, roledDto());
+      const built = buildDefinition(META, validDto());
       const entry = built.export.global.find((e) => e.token === '{{inspBy}}');
       expect(entry).toEqual({ token: '{{inspBy}}', computed: 'inspectedBy' });
     });
 
     it('keeps the role on the built field (for read-only rendering)', () => {
-      const built = buildDefinition(META, roledDto());
+      const built = buildDefinition(META, validDto());
       expect(built.fields.find((f) => f.key === 'inspBy')?.role).toBe('inspector');
     });
 
-    it('supervisor→approvedBy and inspectionDate→reportDate map likewise', () => {
-      const dto = validDto();
-      dto.fields.push(
-        { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
-        { token: '{{when}}', label: 'Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
-      );
-      const g = buildDefinition(META, dto).export.global;
+    it('supervisor→approvedBy, inspectionDate→reportDate, customer→customerName, reportNumber/poNumber map likewise', () => {
+      const g = buildDefinition(META, validDto()).export.global;
       expect(g.find((e) => e.token === '{{apprBy}}')).toEqual({ token: '{{apprBy}}', computed: 'approvedBy' });
-      expect(g.find((e) => e.token === '{{when}}')).toEqual({ token: '{{when}}', computed: 'reportDate' });
+      expect(g.find((e) => e.token === '{{inspDate}}')).toEqual({ token: '{{inspDate}}', computed: 'reportDate' });
+      expect(g.find((e) => e.token === '{{customer}}')).toEqual({ token: '{{customer}}', computed: 'customerName' });
+      expect(g.find((e) => e.token === '{{reportNumber}}')).toEqual({ token: '{{reportNumber}}', computed: 'reportNumber' });
+      expect(g.find((e) => e.token === '{{poNumber}}')).toEqual({ token: '{{poNumber}}', computed: 'poNumber' });
     });
   });
 
   describe('validator', () => {
-    it('accepts a definition with a valid header role', () => {
-      expect(validateDefinition(buildDefinition(META, roledDto()), TOKENS)).toEqual({ ok: true });
+    it('accepts a definition mapping all seven system roles', () => {
+      expect(validateDefinition(buildDefinition(META, validDto()), TOKENS)).toEqual({ ok: true });
     });
 
-    it('a template with NO roles is valid (roles are optional)', () => {
-      expect(validateDefinition(buildDefinition(META, validDto()), TOKENS)).toEqual({ ok: true });
+    it('a template with NO roles is REJECTED — every system role is mandatory to save', () => {
+      const outcome = validateDefinition(buildDefinition(META, noRolesDto()), TOKENS);
+      expect(outcome).toMatchObject({ ok: false, check: 'roles-mandatory' });
+      // The message names the unassigned roles so ops knows exactly what to add.
+      const reason = (outcome as { reason: string }).reason;
+      for (const role of [
+        'inspector',
+        'supervisor',
+        'inspectionDate',
+        'customer',
+        'reportNumber',
+        'poNumber',
+        'serialNumber',
+      ]) {
+        expect(reason).toContain(role);
+      }
+    });
+
+    it('rejects when a single header role is left unassigned (names it)', () => {
+      const dto = validDto();
+      // Drop just the poNumber role → the field becomes a plain header field.
+      const target = dto.fields.find((f) => f.role === 'poNumber')!;
+      delete target.role;
+      const outcome = validateDefinition(buildDefinition(META, dto), TOKENS);
+      expect(outcome).toMatchObject({ ok: false, check: 'roles-mandatory' });
+      expect((outcome as { reason: string }).reason).toContain('poNumber');
     });
 
     it('rejects a role on an item-scope field', () => {
       const c = clone(buildDefinition(META, validDto()));
-      c.fields.find((f) => f.scope === 'item')!.role = 'inspector';
+      // `grade` is the plain (role-less) item field; giving it a header role trips 4b
+      // (role-header-scope) before the mandatory check 4c is ever reached.
+      c.fields.find((f) => f.key === 'grade')!.role = 'inspector';
       expect(validateDefinition(c, TOKENS)).toMatchObject({
         ok: false,
         check: 'role-header-scope',
@@ -377,7 +413,7 @@ describe('validateDefinition — field roles [unit]', () => {
     });
 
     it('rejects the same role used by two fields', () => {
-      const c = clone(buildDefinition(META, roledDto()));
+      const c = clone(buildDefinition(META, validDto()));
       c.fields.push({
         key: 'inspBy2',
         label: 'Inspector 2',
@@ -393,8 +429,8 @@ describe('validateDefinition — field roles [unit]', () => {
     });
 
     it('rejects an unknown role', () => {
-      const c = clone(buildDefinition(META, roledDto()));
-      (c.fields.find((f) => f.role) as { role: string }).role = 'bogus';
+      const c = clone(buildDefinition(META, validDto()));
+      (c.fields.find((f) => f.role === 'customer') as { role: string }).role = 'bogus';
       expect(validateDefinition(c, TOKENS)).toMatchObject({
         ok: false,
         check: 'role-known',
@@ -406,31 +442,18 @@ describe('validateDefinition — field roles [unit]', () => {
 /**
  * The ITEM role `serialNumber` — marks the serial's own token (the region marker /
  * rowSerial). Item-scope only, unique, kept in `fields` for validation but excluded from
- * the per-serial export entries so it can't shadow rowSerial.
+ * the per-serial export entries so it can't shadow rowSerial. `validDto` already carries it
+ * on `{{sn}}`, so these exercise its wiring against clones of validDto.
  */
 describe('validateDefinition — item role (serialNumber) [unit]', () => {
-  /** validDto + the `{{sn}}` token described as an item field carrying `serialNumber`. */
-  function serialRoleDto(): DefineTemplateDto {
-    const dto = validDto();
-    dto.fields.push({
-      token: '{{sn}}',
-      label: 'Serial Number',
-      type: 'text',
-      required: false,
-      scope: 'item',
-      role: 'serialNumber',
-    });
-    return dto;
-  }
-
-  it('accepts serialNumber on an item field', () => {
+  it('accepts serialNumber on an item field (part of the fully-roled valid definition)', () => {
     expect(
-      validateDefinition(buildDefinition(META, serialRoleDto()), TOKENS),
+      validateDefinition(buildDefinition(META, validDto()), TOKENS),
     ).toEqual({ ok: true });
   });
 
   it('keeps the serialNumber field in candidate.fields but emits its token only as rowSerial', () => {
-    const built = buildDefinition(META, serialRoleDto());
+    const built = buildDefinition(META, validDto());
     // Kept in fields (with its role) so the validator sees it…
     expect(built.fields.find((f) => f.key === 'sn')?.role).toBe('serialNumber');
     // …but the ONLY export entry for its token is the region's rowSerial (no shadowing
@@ -441,7 +464,7 @@ describe('validateDefinition — item role (serialNumber) [unit]', () => {
   });
 
   it('rejects serialNumber on a header-scope field (item-scope only)', () => {
-    const c = clone(buildDefinition(META, serialRoleDto()));
+    const c = clone(buildDefinition(META, validDto()));
     c.fields.find((f) => f.key === 'sn')!.scope = 'header';
     expect(validateDefinition(c, TOKENS)).toMatchObject({
       ok: false,
@@ -450,7 +473,7 @@ describe('validateDefinition — item role (serialNumber) [unit]', () => {
   });
 
   it('rejects two fields carrying serialNumber (role-unique)', () => {
-    const c = clone(buildDefinition(META, serialRoleDto()));
+    const c = clone(buildDefinition(META, validDto()));
     c.fields.push({
       key: 'sn2',
       label: 'Serial 2',

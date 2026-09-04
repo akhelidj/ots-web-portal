@@ -32,18 +32,46 @@ import { InspectionData, Snapshot } from '../common/inspection-data.types';
 
 const META = { templateKey: 'CASING_FLAT', templateVersion: 1 };
 
-/** Header-only description: a header metadata field + a record (item) field. NO region. */
+/**
+ * Header-only description: the six mandatory header ROLE fields, a plain header metadata
+ * field, a plain record (item) field, and the item `serialNumber` role — NO region. Every
+ * one of the seven system roles is mapped, so the definition clears the mandatory-role gate
+ * (check 4c). The roled header fields resolve from computed tokens; the plain `{{siteName}}`
+ * header and `{{casingWeight}}` item field are the ones that prove `source: 'record'` (fork
+ * #2). The `serialNumber`-roled `{{sn}}` field has NO export entry for a flat template
+ * (excluded from item entries, no region → no rowSerial), so its token need not be in the
+ * sheet — it exists only to satisfy the role mandate.
+ */
 function flatDto(): DefineTemplateDto {
   return {
     displayName: 'Flat Casing Report',
     fields: [
-      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header' },
+      { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
+      { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
+      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
+      { token: '{{inspBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+      { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
+      { token: '{{inspDate}}', label: 'Inspection Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
+      { token: '{{siteName}}', label: 'Site Name', type: 'text', required: false, scope: 'header' },
       { token: '{{casingWeight}}', label: 'Casing Weight', type: 'text', required: true, scope: 'item', section: 'Body' },
+      { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
     ],
   };
 }
 
-const FLAT_TOKENS: ReadonlySet<string> = new Set(['{{poNumber}}', '{{casingWeight}}']);
+// Every REFERENCED token (the six computed header roles + the two plain source:'record'
+// fields). `{{sn}}` is deliberately absent — a flat serialNumber field emits no export
+// entry, so it is never referenced and its token is not required in the sheet.
+const FLAT_TOKENS: ReadonlySet<string> = new Set([
+  '{{customer}}',
+  '{{reportNumber}}',
+  '{{poNumber}}',
+  '{{inspBy}}',
+  '{{apprBy}}',
+  '{{inspDate}}',
+  '{{siteName}}',
+  '{{casingWeight}}',
+]);
 const clone = (d: CandidateDefinition): CandidateDefinition =>
   JSON.parse(JSON.stringify(d)) as CandidateDefinition;
 
@@ -52,7 +80,7 @@ async function flatWorkbookBuffer(): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Flat');
   ws.getCell('A1').value = 'Casing Report';
-  ws.getCell('B2').value = '{{poNumber}}';
+  ws.getCell('B2').value = '{{siteName}}';
   ws.getCell('D4').value = '{{casingWeight}}';
   ws.getCell('A6').value = 'End';
   return Buffer.from((await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer);
@@ -83,17 +111,22 @@ describe('Flat authoring — build', () => {
     expect(def.regions).toEqual([]); // no repeating region
     expect(def.export.regions).toEqual({}); // no row-token export
 
-    // FLAT: every field (header + item scope) → global with source:'record', resolved
+    // FLAT: a PLAIN field (header + item scope) → global with source:'record', resolved
     // from the record's inspectionData (step 3b — the report IS one record).
     expect(def.export.global).toContainEqual({
-      token: '{{poNumber}}',
-      field: 'poNumber',
+      token: '{{siteName}}',
+      field: 'siteName',
       source: 'record',
     });
     expect(def.export.global).toContainEqual({
       token: '{{casingWeight}}',
       field: 'casingWeight',
       source: 'record',
+    });
+    // A ROLED header field binds to its computed token instead (never source:'record').
+    expect(def.export.global).toContainEqual({
+      token: '{{poNumber}}',
+      computed: 'poNumber',
     });
     // A flat item field carries no `region` binding (there is no region).
     const item = def.fields.find((f) => f.key === 'casingWeight')!;
@@ -132,15 +165,15 @@ describe('Flat authoring — ties into step-1 engine', () => {
     const buffer = await flatWorkbookBuffer();
     const before = maxRowOf(await canon(buffer));
 
-    // Both fields live in the record's inspectionData now (step 3b). snapshot.header
-    // keeps its default poNumber ('PO-FROZEN'); the record value must win.
+    // Both PLAIN fields live in the record's inspectionData now (step 3b): the flat header
+    // field `siteName` and the record field `casingWeight` both resolve source:'record'.
     const snapshot = recordSnapshot({
-      poNumber: 'PO-9',
+      siteName: 'SITE-9',
       casingWeight: '42.7',
     } as InspectionData);
     const sheets = await runEngine(buffer, def, snapshot, snapshot.serialNumbers);
 
-    expect(sheets[0].cells['B2']).toBe('PO-9'); // flat header token from inspectionData (3b)
+    expect(sheets[0].cells['B2']).toBe('SITE-9'); // flat header token from inspectionData (3b)
     expect(sheets[0].cells['D4']).toBe('42.7'); // record token from inspectionData
     expect(maxRowOf(sheets)).toBe(before); // no clone — flat signature
   });

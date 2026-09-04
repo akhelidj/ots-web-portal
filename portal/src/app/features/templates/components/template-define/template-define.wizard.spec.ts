@@ -169,3 +169,227 @@ describe('TemplateDefineComponent — wizard step gating + derived scope', () =>
     expect(f.componentInstance.allSerialSelected()).toBe(true);
   });
 });
+
+/**
+ * Mandatory seven-role SAVE gate, DOM-level — the live-verify for Roles #1, driven through
+ * real zoneless DOM events exactly as an author does. A workbook carrying a token for each of
+ * the six header roles plus a serial marker: mapping ALL seven enables Save and, on click,
+ * calls defineTemplate then routes to the list (saves + redirects); leaving ONE header role
+ * unmapped renders the named "still unassigned" status and disables Save on Review.
+ *
+ * The role mandate is a SAVE invariant (canSave/submit), NOT a per-step Next gate — walking
+ * past Metadata with a hole is deliberately allowed, so this spec proves the gate bites only
+ * at Save, and names the exact missing role in the DOM.
+ */
+const ROLED_TOKENS: ExtractedToken[] = [
+  { token: '{{sn}}', cell: 'A2', row: 2 }, // first → default serialNumber marker
+  { token: '{{customer}}', cell: 'B1', row: 1 },
+  { token: '{{reportNumber}}', cell: 'C1', row: 1 },
+  { token: '{{poNumber}}', cell: 'D1', row: 1 },
+  { token: '{{inspectedBy}}', cell: 'E1', row: 1 },
+  { token: '{{approvedBy}}', cell: 'F1', row: 1 },
+  { token: '{{reportDate}}', cell: 'G1', row: 1 },
+];
+
+/** token → the header role it must carry (label is free text). */
+const HEADER_ROLE_BY_TOKEN: { token: string; label: string; role: string }[] = [
+  { token: '{{customer}}', label: 'Customer', role: 'customer' },
+  { token: '{{reportNumber}}', label: 'Report No', role: 'reportNumber' },
+  { token: '{{poNumber}}', label: 'PO No', role: 'poNumber' },
+  { token: '{{inspectedBy}}', label: 'Inspector', role: 'inspector' },
+  { token: '{{approvedBy}}', label: 'Supervisor', role: 'supervisor' },
+  { token: '{{reportDate}}', label: 'Date', role: 'inspectionDate' },
+];
+
+describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verify)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  function setup() {
+    const getTokens = jest.fn().mockResolvedValue(ROLED_TOKENS);
+    const getDefinition = jest.fn().mockResolvedValue({ definitionJson: null });
+    const defineTemplate = jest.fn().mockResolvedValue({});
+    const navigate = jest.fn();
+    TestBed.configureTestingModule({
+      imports: [TemplateDefineComponent],
+      providers: [
+        {
+          provide: AdminTemplatesService,
+          useValue: { getTokens, getDefinition, defineTemplate },
+        },
+        { provide: Router, useValue: { navigate } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => 't1' } } },
+        },
+      ],
+    });
+    return { fixture: TestBed.createComponent(TemplateDefineComponent), defineTemplate, navigate };
+  }
+
+  const el = (f: ComponentFixture<TemplateDefineComponent>) =>
+    f.nativeElement as HTMLElement;
+  const q = (f: ComponentFixture<TemplateDefineComponent>, sel: string) =>
+    el(f).querySelector(sel);
+  const nextBtn = (f: ComponentFixture<TemplateDefineComponent>) =>
+    el(f).querySelector('[data-testid="wizard-next"]') as HTMLButtonElement | null;
+  const saveBtn = (f: ComponentFixture<TemplateDefineComponent>) =>
+    [...el(f).querySelectorAll('button')].find((b) =>
+      /Save Definition|Saving/.test(b.textContent ?? ''),
+    ) as HTMLButtonElement | undefined;
+
+  async function clickNext(f: ComponentFixture<TemplateDefineComponent>) {
+    nextBtn(f)?.click();
+    await f.whenStable();
+  }
+  async function click(f: ComponentFixture<TemplateDefineComponent>, sel: string) {
+    (q(f, sel) as HTMLElement).click();
+    await f.whenStable();
+  }
+  async function typeInto(
+    f: ComponentFixture<TemplateDefineComponent>,
+    sel: string,
+    value: string,
+  ) {
+    const input = q(f, sel) as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    await f.whenStable();
+  }
+  async function selectValue(
+    f: ComponentFixture<TemplateDefineComponent>,
+    sel: string,
+    value: string,
+  ) {
+    const s = q(f, sel) as HTMLSelectElement;
+    s.value = value;
+    s.dispatchEvent(new Event('change'));
+    await f.whenStable();
+  }
+
+  /** Include every header token, label it, and map its role — through real DOM events. */
+  async function mapAllHeaderRoles(
+    f: ComponentFixture<TemplateDefineComponent>,
+    { skip }: { skip?: string } = {},
+  ) {
+    for (const { token, label, role } of HEADER_ROLE_BY_TOKEN) {
+      await click(f, `[data-testid="header-include-${token}"]`);
+      await typeInto(f, `[data-testid="header-label-${token}"]`, label);
+      if (token !== skip) {
+        await selectValue(f, `[data-testid="header-role-${token}"]`, role);
+      }
+    }
+  }
+
+  async function render() {
+    const ctx = setup();
+    ctx.fixture.componentInstance.templateId = 't1';
+    ctx.fixture.autoDetectChanges();
+    await ctx.fixture.componentInstance.load();
+    await ctx.fixture.whenStable();
+    return ctx;
+  }
+
+  it('all seven roles mapped → Save enabled → click saves and redirects to the list', async () => {
+    const { fixture: f, defineTemplate, navigate } = await render();
+
+    await clickNext(f); // → Metadata
+    await mapAllHeaderRoles(f);
+    expect(f.componentInstance.missingHeaderRoles()).toEqual([]);
+
+    await clickNext(f); // → Serial ({{sn}} is the default serialNumber marker)
+    await typeInto(f, '[data-testid="serial-label-{{sn}}"]', 'Serial Number');
+    expect(f.componentInstance.serialStepValid()).toBe(true);
+
+    await clickNext(f); // → Review
+    expect(f.componentInstance.canSave()).toBe(true);
+    expect(saveBtn(f)!.disabled).toBe(false);
+
+    saveBtn(f)!.click();
+    await f.whenStable();
+
+    expect(defineTemplate).toHaveBeenCalledTimes(1);
+    const [, dto] = defineTemplate.mock.calls[0];
+    // Every header role rode through to the DTO, plus the serial marker.
+    const rolesInDto = dto.fields
+      .map((x: { role?: string }) => x.role)
+      .filter(Boolean)
+      .sort();
+    expect(rolesInDto).toEqual(
+      [
+        'customer',
+        'inspectionDate',
+        'inspector',
+        'poNumber',
+        'reportNumber',
+        'serialNumber',
+        'supervisor',
+      ].sort(),
+    );
+    expect(dto.region.marker).toBe('{{sn}}');
+    expect(navigate).toHaveBeenCalled(); // redirected to the templates list
+  });
+
+  it('one header role left unmapped → status names it, Save stays blocked, no save fires', async () => {
+    const { fixture: f, defineTemplate } = await render();
+
+    await clickNext(f); // → Metadata
+    await mapAllHeaderRoles(f, { skip: '{{poNumber}}' }); // poNumber included + labelled, role blank
+
+    // Metadata step is NOT blocked (label-only) — the hole shows as an informational status.
+    expect(f.componentInstance.headerStepValid()).toBe(true);
+    expect(f.componentInstance.missingHeaderRoles()).toEqual(['poNumber']);
+    expect(q(f, '[data-testid="missing-roles"]')?.textContent).toContain('PO number');
+
+    await clickNext(f); // → Serial
+    await typeInto(f, '[data-testid="serial-label-{{sn}}"]', 'Serial Number');
+    await clickNext(f); // → Review
+
+    // Save invariant bites here: button disabled, canSave false, nothing sent.
+    expect(f.componentInstance.canSave()).toBe(false);
+    expect(saveBtn(f)!.disabled).toBe(true);
+    saveBtn(f)!.click();
+    await f.whenStable();
+    expect(defineTemplate).not.toHaveBeenCalled();
+  });
+
+  it('grandfathered role-less template loads read-only and shows the saved recap (no re-gate)', async () => {
+    // A definition saved BEFORE roles existed: fields carry no `role`. The validator never runs
+    // on read, so it must still open — as the read-only recap, never forced back through the gate.
+    const legacyDef = {
+      displayName: 'Legacy Casing Report',
+      regions: [{ id: 'serials', chunkSize: null }],
+      fields: [
+        { key: 'sn', label: 'Serial', type: 'text', required: true, scope: 'item' },
+        { key: 'wall', label: 'Wall', type: 'number', required: false, scope: 'item' },
+      ],
+      export: { global: [], regions: { serials: [{ token: '{{sn}}', source: 'rowSerial' }] } },
+    };
+    const getDefinition = jest.fn().mockResolvedValue({ definitionJson: legacyDef });
+    TestBed.configureTestingModule({
+      imports: [TemplateDefineComponent],
+      providers: [
+        {
+          provide: AdminTemplatesService,
+          useValue: { getTokens: jest.fn(), getDefinition, defineTemplate: jest.fn() },
+        },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => 't1' } } },
+        },
+      ],
+    });
+    const f = TestBed.createComponent(TemplateDefineComponent);
+    f.componentInstance.templateId = 't1';
+    f.autoDetectChanges();
+    await f.componentInstance.load();
+    await f.whenStable();
+
+    // Opens read-only — the recap, not the authoring wizard, and no save/next controls.
+    expect(f.componentInstance.readOnly()).toBe(true);
+    expect(el(f).querySelector('[data-testid="readonly-recap"]')).not.toBeNull();
+    expect(el(f).textContent).toContain('Legacy Casing Report');
+    expect(el(f).querySelector('[data-testid="wizard-next"]')).toBeNull();
+    expect(saveBtn(f)).toBeUndefined();
+  });
+});

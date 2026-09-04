@@ -58,8 +58,13 @@ const FIELD_TYPES: OpsFieldType[] = ['text', 'number', 'boolean', 'select', 'dat
 /** The child report types a rework rule may upsert (mirrors the API's ChildReportType). */
 const CHILD_REPORT_TYPES: ChildReportTypeChoice[] = ['REWORK', 'SCRAP', 'HOLD'];
 
-/** The system roles a HEADER field may carry, shown in the Header step's Role select. */
+/** The system roles a HEADER field may carry, shown in the Header step's Role select. All
+ *  six are MANDATORY: a definition cannot be saved until every one is mapped to a token (the
+ *  server enforces the same via check 4c `roles-mandatory`). */
 export const HEADER_ROLE_OPTIONS: { value: FieldRole; label: string }[] = [
+  { value: 'customer', label: 'Customer' },
+  { value: 'reportNumber', label: 'Report number' },
+  { value: 'poNumber', label: 'PO number' },
   { value: 'inspector', label: 'Inspector' },
   { value: 'supervisor', label: 'Supervisor' },
   { value: 'inspectionDate', label: 'Inspection date' },
@@ -480,8 +485,39 @@ export class TemplateDefineComponent implements OnInit {
   // Per-step validity — ONE source of truth (gates "Next"; `submit()` reuses these).
   // ---------------------------------------------------------------------------
 
-  /** Header step: zero header fields is allowed (an all-serial template); every INCLUDED
-   *  header field needs a label. */
+  /** The six mandatory header roles (from the Role select) — every one must be mapped to an
+   *  included header field before a definition can be saved. Mirrors the server's check 4c. */
+  private readonly mandatoryHeaderRoles: FieldRole[] = HEADER_ROLE_OPTIONS.map(
+    (o) => o.value,
+  );
+
+  /** Header roles not yet assigned to any included header field — empty means all six are
+   *  mapped. A METHOD so it reflects in-place role edits every CD pass (zoneless-safe: no
+   *  post-await signal write, the row state IS the source). */
+  public missingHeaderRoles(): FieldRole[] {
+    const assigned = new Set(
+      this.headerRows()
+        .map((r) => r.role)
+        .filter((role): role is FieldRole => role !== ''),
+    );
+    return this.mandatoryHeaderRoles.filter((role) => !assigned.has(role));
+  }
+
+  /** The human labels of the still-unassigned header roles, comma-joined — for the inline
+   *  warning and the submit-time message (one source of truth for the role names). */
+  public missingHeaderRoleLabels(): string {
+    return this.missingHeaderRoles()
+      .map(
+        (role) =>
+          HEADER_ROLE_OPTIONS.find((o) => o.value === role)?.label ?? role,
+      )
+      .join(', ');
+  }
+
+  /** Header step: every INCLUDED header field needs a label — this gates leaving the
+   *  Metadata step. The all-six-roles mandate is a SAVE invariant (see `canSave`), NOT a
+   *  per-step gate: an author can move between steps while still assigning roles; only the
+   *  final Save (and the server's `roles-mandatory` check) requires all six. */
   public headerStepValid(): boolean {
     return this.headerRows().every((r) => !!r.label.trim());
   }
@@ -556,10 +592,15 @@ export class TemplateDefineComponent implements OnInit {
     );
   }
 
-  /** The client-checkable minimum for a Save — composed from the same per-step predicates
-   *  the wizard gates on. The SERVER gate stays the sole authority on the semantic checks. */
+  /** The client-checkable minimum for a Save — the per-step label predicates PLUS the
+   *  all-six-header-roles mandate (mirrors the server's `roles-mandatory` gate, check 4c).
+   *  The SERVER gate stays the sole authority on the full semantic checks. */
   public canSave(): boolean {
-    return this.headerStepValid() && this.serialStepValid();
+    return (
+      this.headerStepValid() &&
+      this.serialStepValid() &&
+      this.missingHeaderRoles().length === 0
+    );
   }
 
   private toField(row: DescribeRow, scope: 'header' | 'item'): OpsTokenField {
@@ -643,6 +684,12 @@ export class TemplateDefineComponent implements OnInit {
     }
     if (!this.headerStepValid()) {
       this.submitError.set('Every included metadata field needs a label.');
+      return;
+    }
+    if (this.missingHeaderRoles().length > 0) {
+      this.submitError.set(
+        `Assign every system role before saving. Unassigned: ${this.missingHeaderRoleLabels()}.`,
+      );
       return;
     }
 

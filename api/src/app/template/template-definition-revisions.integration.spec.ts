@@ -27,14 +27,25 @@ const REAL_TEMPLATE_BYTES = readFileSync(
  * to change the TOKEN SET (a structural edit) vs a pure relabel (cosmetic).
  */
 function dto(displayName: string, opts: { dropBod?: boolean } = {}): DefineTemplateDto {
+  // Fully roled: all six header roles + the item serialNumber, so every edit clears the
+  // mandatory-role gate. The `{{poNumber}}` label varies per edit (the cosmetic dimension);
+  // dropping `{{b_od}}` changes the TOKEN SET (the structural dimension) while every role
+  // stays mapped — so a structural edit is still a valid save.
   const fields: DefineTemplateDto['fields'] = [
+    { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
+    { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
     {
       token: '{{poNumber}}',
       label: `PO ${displayName}`, // label varies per edit (cosmetic dimension)
       type: 'text',
       required: false,
       scope: 'header',
+      role: 'poNumber',
     },
+    { token: '{{inspectedBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+    { token: '{{approvedBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
+    { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
+    { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
     {
       token: '{{emi}}',
       label: 'EMI Result',
@@ -46,7 +57,7 @@ function dto(displayName: string, opts: { dropBod?: boolean } = {}): DefineTempl
     },
   ];
   if (!opts.dropBod) {
-    fields.splice(1, 0, {
+    fields.splice(7, 0, {
       token: '{{b_od}}',
       label: 'Box Min OD',
       type: 'text',
@@ -60,7 +71,6 @@ function dto(displayName: string, opts: { dropBod?: boolean } = {}): DefineTempl
     region: { id: 'serials', marker: '{{sn}}' },
     disposition: { field: 'emi', requiredForApproval: true },
     fields,
-    computed: [{ token: '{{customer}}', computed: 'customerName' }],
   };
 }
 

@@ -199,6 +199,22 @@ export function validateDefinition(
     seenRoles.add(role);
   }
 
+  // 4c — MANDATORY roles: every known role must be mapped to a token by exactly one field.
+  // The six header roles bind to a computed token; the item role `serialNumber` marks the
+  // serial's own token. Unlike 4b (which is per-field and tolerant of absence), this is a
+  // whole-definition presence gate: a NEW/edited definition that leaves any role unassigned
+  // is refused. It runs ONLY here (validateDefinition → applyDefinition, the save path), so
+  // pre-mandate stored definitions still load and export untouched — nothing re-validates on
+  // read. VALID_ROLES is the seven-role universe (keys(ROLE_TO_COMPUTED) ∪ ITEM_ROLES).
+  const missingRoles = [...VALID_ROLES].filter((r) => !seenRoles.has(r));
+  if (missingRoles.length > 0) {
+    return {
+      ok: false,
+      check: 'roles-mandatory',
+      reason: `Every system role must be assigned to a field before saving. Unassigned: ${missingRoles.join(', ')}.`,
+    };
+  }
+
   // 5 — every computed export entry names one of the engine's implemented computed keys.
   const allowedComputed = new Set(COMPUTED_NAMES);
   for (const e of candidate.export.global) {

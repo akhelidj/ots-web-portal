@@ -32,18 +32,31 @@ export type OpsFieldType =
 
 /**
  * A HEADER field's SYSTEM role. A roled header field is not user-writable: its value is
- * always DERIVED at export from the transition log, via the engine's existing computed
- * tokens. Header scope only (the validator rejects one on an item field); each role may
- * appear at most once per definition. Roles are optional — a template with none is valid.
+ * always DERIVED at export from the engine's existing computed tokens — inspector/
+ * supervisor/inspectionDate from the transition log, customer/reportNumber/poNumber from
+ * the report's creation-time metadata. Header scope only (the validator rejects one on an
+ * item field); each role may appear at most once per definition.
+ *
+ * All six are now MANDATORY to SAVE a definition (the validator's presence check, mirrored
+ * client-side) — a NEW/edited template must map every one to a token. They remain
+ * structurally optional on the type so pre-mandate ("grandfathered") stored definitions
+ * still LOAD and EXPORT: the presence check runs only at save, never on read/export.
  */
-export type HeaderFieldRole = 'inspector' | 'supervisor' | 'inspectionDate';
+export type HeaderFieldRole =
+  | 'inspector'
+  | 'supervisor'
+  | 'inspectionDate'
+  | 'customer'
+  | 'reportNumber'
+  | 'poNumber';
 
 /**
- * A field's SYSTEM role. Roles split by scope: the three HEADER roles above bind to a
+ * A field's SYSTEM role. Roles split by scope: the six HEADER roles above bind to a
  * computed token, and the single ITEM role `serialNumber` marks the serial's own token —
  * the one emitted as the region's `rowSerial` export entry (the API's `region.marker`).
  * `serialNumber` is item-scope only (the validator rejects it on a header field) and, like
- * every role, may appear at most once. Roles are optional.
+ * every role, may appear at most once. All seven roles are mandatory to SAVE (see above and
+ * the validator's presence check); they stay structurally optional for grandfathering.
  */
 export type FieldRole = HeaderFieldRole | 'serialNumber';
 
@@ -61,6 +74,10 @@ export const ROLE_TO_COMPUTED: Record<HeaderFieldRole, string> = {
   inspector: 'inspectedBy',
   supervisor: 'approvedBy',
   inspectionDate: 'reportDate',
+  // Name reconciliation: the `customer` role resolves to the `customerName` computed.
+  customer: 'customerName',
+  reportNumber: 'reportNumber',
+  poNumber: 'poNumber',
 };
 
 /** One ops-described field, keyed to a workbook token. */

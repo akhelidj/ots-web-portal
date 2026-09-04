@@ -19,28 +19,41 @@ import {
   ExtractedToken,
 } from '@portal/features/templates/services/admin-templates.service';
 
-/** The fixture's tokens (a superset of what we describe — `{{grade}}` is left out). */
+/**
+ * The fixture's tokens. `{{sn}}` is first so the default serialNumber marker lands on it;
+ * the six header-role tokens follow (so `headerRows()` emits them in that order), then the
+ * two plain serial fields, then a stray `{{grade}}` we leave out of the description.
+ */
 const FIXTURE_TOKENS: ExtractedToken[] = [
   { token: '{{sn}}', cell: 'A2', row: 2 },
-  { token: '{{poNumber}}', cell: 'B1', row: 1 },
-  { token: '{{reportDate}}', cell: 'C1', row: 1 },
+  { token: '{{customer}}', cell: 'B1', row: 1 },
+  { token: '{{reportNumber}}', cell: 'C1', row: 1 },
+  { token: '{{poNumber}}', cell: 'D1', row: 1 },
+  { token: '{{inspectedBy}}', cell: 'E1', row: 1 },
+  { token: '{{approvedBy}}', cell: 'F1', row: 1 },
+  { token: '{{reportDate}}', cell: 'G1', row: 1 },
   { token: '{{b_od}}', cell: 'D2', row: 2 },
   { token: '{{emi}}', cell: 'E2', row: 2 },
-  { token: '{{grade}}', cell: 'F1', row: 1 },
+  { token: '{{grade}}', cell: 'H1', row: 1 },
 ];
 
 /**
- * The exact body the gate proof asserts is accepted. Keep the two in lockstep. Every
- * template is a serial region now: `region` is always present, scope is DERIVED (Header
- * step → `header`, Serial step → `item`), and the serial's own token carries the
- * `serialNumber` role and is echoed as `region.marker`. Field order = header rows first,
- * then serial rows in row order.
+ * The exact body the gate proof asserts is accepted (byte-identical to the API-side
+ * `definition-ui-contract.spec.ts` `uiDto`). Keep the two in lockstep. Every template is a
+ * serial region now: `region` is always present, scope is DERIVED (Header step → `header`,
+ * Serial step → `item`), and the serial's own token carries the `serialNumber` role and is
+ * echoed as `region.marker`. All SIX header roles are mapped (the mandatory gate) plus the
+ * item serialNumber. Field order = header rows first, then serial rows in row order.
  */
 const EXPECTED_DTO: DefineTemplateDto = {
   displayName: 'Casing Report',
   fields: [
-    { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header' },
-    { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header' },
+    { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
+    { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
+    { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
+    { token: '{{inspectedBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+    { token: '{{approvedBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
+    { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
     { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
     { token: '{{b_od}}', label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' },
     {
@@ -97,9 +110,14 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     await c.load();
     c.displayName = 'Casing Report';
 
-    // Header claims two tokens (scope derived from where a token is included).
-    set(c, '{{poNumber}}', { header: true, serial: false, label: 'PO Number', type: 'text' });
-    set(c, '{{reportDate}}', { header: true, serial: false, label: 'Report Date', type: 'date' });
+    // Header claims the six mandatory-role tokens (scope derived from inclusion); every one
+    // of the six system header roles is mapped, so the mandatory gate is satisfied.
+    set(c, '{{customer}}', { header: true, serial: false, label: 'Customer', type: 'text', role: 'customer' });
+    set(c, '{{reportNumber}}', { header: true, serial: false, label: 'Report Number', type: 'text', role: 'reportNumber' });
+    set(c, '{{poNumber}}', { header: true, serial: false, label: 'PO Number', type: 'text', role: 'poNumber' });
+    set(c, '{{inspectedBy}}', { header: true, serial: false, label: 'Inspector', type: 'text', role: 'inspector' });
+    set(c, '{{approvedBy}}', { header: true, serial: false, label: 'Supervisor', type: 'text', role: 'supervisor' });
+    set(c, '{{reportDate}}', { header: true, serial: false, label: 'Report Date', type: 'date', role: 'inspectionDate' });
 
     // Serial fields — {{sn}} is the default serialNumber marker (rows[0]); the rest describe.
     set(c, '{{sn}}', { label: 'Serial Number' });
@@ -188,6 +206,26 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     await c.submit();
     expect(defineTemplate).not.toHaveBeenCalled();
     expect(c.submitError()).toContain('Serial Number');
+  });
+
+  it('mandatory gate: blocks Save until every one of the six header roles is mapped (names the gap)', async () => {
+    const c = make();
+    await describeValid(c);
+    // A fully-described definition clears the gate…
+    expect(c.missingHeaderRoles()).toEqual([]);
+    expect(c.canSave()).toBe(true);
+
+    // …drop ONE header role and the gate closes, naming exactly what is unassigned. The
+    // role mandate is a SAVE invariant (canSave), not a per-step gate: the Metadata step's
+    // own validity (labels) is unaffected.
+    set(c, '{{poNumber}}', { role: '' });
+    expect(c.missingHeaderRoles()).toEqual(['poNumber']);
+    expect(c.headerStepValid()).toBe(true);
+    expect(c.canSave()).toBe(false);
+
+    await c.submit();
+    expect(defineTemplate).not.toHaveBeenCalled();
+    expect(c.submitError()).toContain('PO number');
   });
 
   it('role uniqueness: assigning a role a second time clears it from the first row', async () => {

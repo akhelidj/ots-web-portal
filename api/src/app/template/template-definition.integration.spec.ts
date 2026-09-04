@@ -44,20 +44,26 @@ const REAL_TEMPLATE_BYTES = readFileSync(
   resolve(__dirname, '../../../scripts/valid-template.xlsx'),
 );
 
-/** A valid ops description over tokens that really exist in the fixture. */
+/**
+ * A valid ops description over tokens that really exist in the fixture. Fully roled: all six
+ * header roles (customer/reportNumber/poNumber/inspector/supervisor/inspectionDate) and the
+ * item `serialNumber` are mapped, so the definition clears the mandatory-role gate (check 4c).
+ * A spare `computed` entry (on `{{weight}}`) is kept only so the "unknown computed" rejection
+ * has something to corrupt.
+ */
 function baseDto(): DefineTemplateDto {
   return {
     displayName: 'Fixture Report',
     region: { id: 'serials', marker: '{{sn}}' },
     disposition: { field: 'emi', requiredForApproval: true },
     fields: [
-      {
-        token: '{{poNumber}}',
-        label: 'PO Number',
-        type: 'text',
-        required: false,
-        scope: 'header',
-      },
+      { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
+      { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
+      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
+      { token: '{{inspectedBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+      { token: '{{approvedBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
+      { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
+      { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
       {
         token: '{{b_od}}',
         label: 'Box Min OD',
@@ -76,10 +82,7 @@ function baseDto(): DefineTemplateDto {
         options: ['PASS', 'REWORK', 'SCRAP', 'HOLD'],
       },
     ],
-    computed: [
-      { token: '{{customer}}', computed: 'customerName' },
-      { token: '{{reportNumber}}', computed: 'reportNumber' },
-    ],
+    computed: [{ token: '{{weight}}', computed: 'customerName' }],
   };
 }
 
@@ -189,7 +192,8 @@ describe('Template definition write path [integration]', () => {
 
     it('rejects a select without options — atomically', async () => {
       const dto = baseDto();
-      delete (dto.fields[2] as { options?: string[] }).options;
+      const emi = dto.fields.find((f) => f.token === '{{emi}}')!;
+      delete (emi as { options?: string[] }).options;
       await expectRejectedAndUnchanged(dto);
     });
 

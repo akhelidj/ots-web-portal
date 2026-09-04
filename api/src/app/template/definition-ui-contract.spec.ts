@@ -36,8 +36,12 @@ function uiDto(): DefineTemplateDto {
   return {
     displayName: 'Casing Report',
     fields: [
-      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header' },
-      { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header' },
+      { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
+      { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
+      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
+      { token: '{{inspectedBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+      { token: '{{approvedBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
+      { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
       { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
       { token: '{{b_od}}', label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' },
       {
@@ -66,7 +70,17 @@ describe('describe-screen DTO ⇄ 2a gate contract', () => {
   });
 
   it('the fixture really contains every token the UI DTO references', () => {
-    for (const t of ['{{sn}}', '{{poNumber}}', '{{reportDate}}', '{{b_od}}', '{{emi}}']) {
+    for (const t of [
+      '{{customer}}',
+      '{{reportNumber}}',
+      '{{poNumber}}',
+      '{{inspectedBy}}',
+      '{{approvedBy}}',
+      '{{reportDate}}',
+      '{{sn}}',
+      '{{b_od}}',
+      '{{emi}}',
+    ]) {
       expect(extractedTokens.has(t)).toBe(true);
     }
   });

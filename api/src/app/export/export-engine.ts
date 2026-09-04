@@ -61,6 +61,7 @@ export interface ExportDefinition {
 const COMPUTED: Record<string, (snapshot: Snapshot) => unknown> = {
   customerName: (s) => s.header.customerName,
   reportNumber: (s) => s.header.reportNumber,
+  poNumber: (s) => s.header.poNumber,
   reportDate: (s) => deriveReportDate(s.header),
   inspectedBy: (s) => deriveActors(s).inspectedBy,
   approvedBy: (s) => deriveActors(s).approvedBy,

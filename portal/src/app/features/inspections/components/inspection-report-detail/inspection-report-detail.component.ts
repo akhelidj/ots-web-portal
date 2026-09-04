@@ -841,7 +841,30 @@ export class InspectionReportDetailComponent
     const dateValue = r?.updatedAt
       ? formatDate(r.updatedAt, 'mediumDate', 'en-US')
       : '';
+    const reportNumberValue = r?.reportNumber?.trim() || '';
+    const poNumberValue = r?.poNumber?.trim() || '';
     const newSystemRoleValues: SystemRoleValues = {
+      // Set-at-creation roles: the report already carries these once it exists, so they are
+      // never pending in practice — but keep the neutral pending fallback for a not-yet-
+      // assigned value rather than showing a blank cell.
+      customer: {
+        value: newCustomerName,
+        pending: newCustomerName === 'N/A',
+        pendingLabel: 'Awaiting customer',
+        source: 'Set at creation',
+      },
+      reportNumber: {
+        value: reportNumberValue,
+        pending: !reportNumberValue,
+        pendingLabel: 'Assigned on first sync',
+        source: 'Set at creation',
+      },
+      poNumber: {
+        value: poNumberValue,
+        pending: !poNumberValue,
+        pendingLabel: 'Awaiting PO number',
+        source: 'Set at creation',
+      },
       inspector: {
         value: newInspectedByName,
         pending: newInspectedByName === 'N/A',

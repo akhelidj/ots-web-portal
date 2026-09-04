@@ -148,6 +148,13 @@
           give each a clear name. Anything you leave unticked is recorded for each
           serial in the next step.
         </p>
+        <p class="mt-2 mb-0 text-sm text-neutral-500">
+          Every report also needs its six <span class="font-semibold">system
+          roles</span> assigned here — Customer, Report number, PO number,
+          Inspector, Supervisor, and Inspection date. Tick the token that carries
+          each one and pick its role from the Role column; the report fills these
+          values in for you. You can't save until all six are mapped.
+        </p>
       </div>
       <div class="page-section overflow-x-auto">
         <table class="table-base divide-y divide-gray-200 w-full">
@@ -263,6 +270,19 @@
           class="page-section p-4 border-l-4 border-warning bg-warning-light/20 text-sm text-warning-dark"
         >
           Every included metadata field needs a label before you can continue.
+        </div>
+      }
+      @if (missingHeaderRoles().length > 0) {
+        <div
+          role="status"
+          class="page-section p-4 border-l-4 border-warning bg-warning-light/20 text-sm text-warning-dark"
+        >
+          Assign every system role before this form can be saved. Still
+          unassigned:
+          <span class="font-semibold" data-testid="missing-roles">{{
+            missingHeaderRoleLabels()
+          }}</span
+          >. You can keep setting up the other steps first.
         </div>
       }
     }
