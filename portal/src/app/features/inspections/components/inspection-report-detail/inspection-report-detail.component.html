@@ -839,7 +839,7 @@
                     <h3 class="text-sm text-gray-900">
                       Overall Inspector Comments
                     </h3>
-                    @if (isInspectorCapable() && !isSupervisor()) {
+                    @if (isInspectorCapable() && !isSupervisor() && !isLocked()) {
                       @if (!isEditingGlobalComment()) {
                         <button
                           type="button"
