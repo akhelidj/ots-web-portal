@@ -15,19 +15,21 @@
   <!-- Definition present but no header-scope fields: not an error. Render nothing so a
        customer is never falsely told the template is undefined. -->
 } @else {
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+  <!-- Field GRID, not a full-width row stack: header specs flow into 2 columns on
+       medium and 3 on wide, each cell a compact label-over-value pair. A definition
+       with declared sections keeps them as grouped blocks, the same grid inside each. -->
+  <div class="space-y-10">
     @for (section of schema()!.sections; track section.key) {
       @if (section.fields.length > 0) {
-        <div class="space-y-4" [attr.data-testid]="'header-section-' + section.key">
+        <div [attr.data-testid]="'header-section-' + section.key">
           @if (section.title) {
             <h4
-              class="text-xs font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-2"
-              [ngClass]="isCustomer() ? 'font-sans' : 'font-condensed'"
+              class="mb-5 text-xs font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2"
             >
               {{ section.title }}
             </h4>
           }
-          <div class="space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6">
             @for (field of section.fields; track field.key) {
               @if (field.role) {
                 <!-- System-owned field: derived, read-only, badged. Never user-entered. -->
@@ -39,12 +41,12 @@
                 />
               } @else {
                 <div
-                  class="flex justify-between gap-4"
+                  class="flex flex-col gap-0.5"
                   [attr.data-testid]="'header-field-' + field.key"
                 >
-                  <span class="text-sm text-gray-500">{{ field.label }}</span>
+                  <span class="text-xs text-gray-500">{{ field.label }}</span>
                   <span
-                    class="text-sm font-bold text-neutral-900 text-right"
+                    class="text-sm font-semibold text-neutral-900 tabular-nums"
                     [attr.data-testid]="'header-value-' + field.key"
                     >{{ displayValue(field.key) }}</span
                   >

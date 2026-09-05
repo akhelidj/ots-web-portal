@@ -21,39 +21,38 @@ import { SystemRoleValue } from '@portal/features/templates/schemas/definition-t
   imports: [],
   template: `
     <div
-      class="flex items-start justify-between gap-4"
+      class="flex flex-col gap-0.5"
       [attr.data-testid]="'system-field-' + fieldKey()"
     >
-      <span class="flex flex-col gap-0.5">
-        <span class="flex items-center gap-2">
-          <span class="text-sm text-gray-500">{{ label() }}</span>
-          @if (!isCustomer()) {
-            <span
-              class="text-[10px] font-medium tracking-wide text-gray-400"
-              [attr.data-testid]="'system-badge-' + fieldKey()"
-              >System</span
-            >
-          }
-        </span>
+      <span class="flex items-center gap-2">
+        <span class="text-xs text-gray-500">{{ label() }}</span>
         @if (!isCustomer()) {
-          <span class="text-xs text-gray-400">{{ value()?.source }}</span>
+          <span
+            class="text-[10px] font-medium tracking-wide text-gray-400"
+            [attr.data-testid]="'system-badge-' + fieldKey()"
+            >System</span
+          >
         }
       </span>
 
       @if (value()?.pending) {
         <span
-          class="text-sm font-medium text-gray-400 text-right italic"
+          class="text-sm font-medium text-gray-400 italic tabular-nums"
           [attr.data-testid]="'system-value-' + fieldKey()"
         >
           {{ value()?.pendingLabel }}
         </span>
       } @else {
         <span
-          class="text-sm font-bold text-neutral-900 text-right"
+          class="text-sm font-semibold text-neutral-900 tabular-nums"
           [attr.data-testid]="'system-value-' + fieldKey()"
         >
           {{ value()?.value }}
         </span>
+      }
+
+      @if (!isCustomer()) {
+        <span class="text-[11px] text-gray-400">{{ value()?.source }}</span>
       }
     </div>
   `,
@@ -66,9 +65,10 @@ export class SystemFieldRowComponent {
   /** The derived value for this role (undefined → treated as pending-less blank). */
   value = input<SystemRoleValue | undefined>(undefined);
   /**
-   * Customer document surface flag. Default `false` keeps the shared ops
-   * rendering (Barlow Condensed "System" badge) byte-identical; `true` renders
-   * the badge label in IBM Plex to match the customer surface.
+   * Customer document surface flag. Default `false` keeps the ops rendering — a
+   * quiet "System" marker plus the technical source note. `true` (the customer
+   * surface) drops BOTH: a customer sees only the derived value, never the marker
+   * or where it came from.
    */
   isCustomer = input<boolean>(false);
 }

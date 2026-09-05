@@ -1,5 +1,4 @@
 import { Component, Input, computed, input, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
   TemplateFormDefinition,
@@ -29,7 +28,7 @@ import { SystemFieldRowComponent } from './system-field-row.component';
 @Component({
   selector: 'app-inspection-report-header-fields',
   standalone: true,
-  imports: [CommonModule, SystemFieldRowComponent],
+  imports: [SystemFieldRowComponent],
   templateUrl: './inspection-report-header-fields.component.html',
 })
 export class InspectionReportHeaderFieldsComponent {
@@ -49,10 +48,10 @@ export class InspectionReportHeaderFieldsComponent {
   @Input() systemValues: SystemRoleValues = {};
 
   /**
-   * Customer document surface flag. Default `false` keeps every existing (ops)
-   * call site byte-identical — Barlow Condensed section titles, condensed
-   * "System" badge. When the customer detail passes `true`, the labels drop to
-   * IBM Plex to match that surface's typeface discipline; nothing else changes.
+   * Customer document surface flag. Default `false` is the ops Specs tab; `true`
+   * is the customer Specifications section. It flows down to the system-field-row,
+   * where a customer sees value-only rows (no "System" marker, no source note).
+   * Both surfaces share the same field grid and typography (Manrope).
    */
   isCustomer = input<boolean>(false);
 
