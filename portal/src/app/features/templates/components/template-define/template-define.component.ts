@@ -7,7 +7,6 @@ import {
   Injector,
   OnInit,
   signal,
-  viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -127,14 +126,7 @@ export class TemplateDefineComponent implements OnInit {
   private router = inject(Router);
   private toast = inject(ToastService);
   private injector = inject(Injector);
-
-  /**
-   * The scroll region wrapping the active step body. Scroll now lives HERE (the bounded,
-   * internally-scrolling step frame), not on `window`/`main`, so a step change resets THIS
-   * element's scrollTop — see `scrollStepBodyToTop`.
-   */
-  private readonly stepBody =
-    viewChild<ElementRef<HTMLElement>>('stepBody');
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   public readonly fieldTypes = FIELD_TYPES;
   public readonly childReportTypes = CHILD_REPORT_TYPES;
@@ -565,31 +557,46 @@ export class TemplateDefineComponent implements OnInit {
 
   /** Per-step entry hook. Landing on Serial re-homes the serialNumber marker default onto
    *  the first still-unclaimed serial field (unless the author has taken it over); every
-   *  step entry also returns the step body to the top so a new (often taller) step opens
-   *  scrolled to its start rather than inheriting the previous step's offset. */
+   *  step entry also returns the page to the top so a new (often taller) step opens scrolled
+   *  to its start rather than inheriting the previous step's offset. */
   private onStepEntered(): void {
     if (this.activeStep().key === 'serial') {
       this.ensureSerialMarkerDefault();
     }
-    this.scrollStepBodyToTop();
+    this.scrollWizardToTop();
   }
 
   /**
-   * Reset the step body's internal scroll to the top on a step change. Scheduled as
-   * POST-RENDER work (`afterNextRender`) rather than a synchronous DOM poke: the step swap is
+   * Return the page to the top on a step change (and on a submit failure, so the top-pinned
+   * error is in view). The bounded inner `#stepBody` frame is gone — the wizard flows in
+   * normal document flow and the shell's `<main id="main-content">` owns the scroll — so we
+   * reset the nearest scrollable ANCESTOR of this component (that `main`), not an inner
+   * element or `window`. Scheduled as POST-RENDER work (`afterNextRender`): the step swap is
    * signal-driven, so the new step's content only exists after the scheduler re-renders —
    * resetting scrollTop in that after-render hook lands on the fresh content and does not
    * fight the zoneless change-detection pass. The bound injector lets us call it from a plain
    * event handler (outside the constructor's injection context).
    */
-  private scrollStepBodyToTop(): void {
+  private scrollWizardToTop(): void {
     afterNextRender(
       () => {
-        const el = this.stepBody()?.nativeElement;
+        const el = this.scrollParent(this.host.nativeElement);
         if (el) el.scrollTop = 0;
       },
       { injector: this.injector },
     );
+  }
+
+  /** Walk up from `node` to the first ancestor that actually scrolls vertically (the shell's
+   *  `main`), or null if none is found (e.g. an isolated test render with no scroll host). */
+  private scrollParent(node: HTMLElement): HTMLElement | null {
+    let cur = node.parentElement;
+    while (cur) {
+      const overflowY = getComputedStyle(cur).overflowY;
+      if (overflowY === 'auto' || overflowY === 'scroll') return cur;
+      cur = cur.parentElement;
+    }
+    return null;
   }
 
   /** The client-checkable minimum for a Save — the per-step label predicates PLUS the
@@ -680,19 +687,19 @@ export class TemplateDefineComponent implements OnInit {
             ? 'Mark exactly one serial field as the Serial Number.'
             : 'Every included serial field needs a label.',
       );
-      this.scrollStepBodyToTop();
+      this.scrollWizardToTop();
       return;
     }
     if (!this.headerStepValid()) {
       this.submitError.set('Every included metadata field needs a label.');
-      this.scrollStepBodyToTop();
+      this.scrollWizardToTop();
       return;
     }
     if (this.missingHeaderRoles().length > 0) {
       this.submitError.set(
         `Assign every system role before saving. Unassigned: ${this.missingHeaderRoleLabels()}.`,
       );
-      this.scrollStepBodyToTop();
+      this.scrollWizardToTop();
       return;
     }
 
@@ -712,7 +719,7 @@ export class TemplateDefineComponent implements OnInit {
       const body = (e as { error?: { check?: string; message?: string } })?.error;
       this.failedCheck.set(body?.check ?? '');
       this.submitError.set(this.errorMessage(e, 'Failed to save the definition.'));
-      this.scrollStepBodyToTop();
+      this.scrollWizardToTop();
     } finally {
       this.isSubmitting.set(false);
     }
