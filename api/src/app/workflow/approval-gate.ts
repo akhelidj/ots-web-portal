@@ -69,6 +69,66 @@ export function resolveDisposition(
 }
 
 /**
+ * The fixed OUTCOME buckets, in evaluation order (first match wins). These are a
+ * DISPLAY/COUNTING layer over the raw disposition token — distinct from the raw
+ * `SerialDisposition` enum, which is untouched. A serial whose driving-token value maps
+ * to no bucket is `'other'` (the catch-all). The order matters only when a template maps
+ * different buckets off DIFFERENT tokens and a serial could satisfy more than one.
+ */
+export const OUTCOME_BUCKETS = ['pass', 'reject', 'actionRequired', 'hold'] as const;
+
+/** A classified outcome bucket, including the catch-all `'other'`. */
+export type OutcomeBucket = (typeof OUTCOME_BUCKETS)[number] | 'other';
+
+/**
+ * One bucket's mapping rule. `values` are the driving-token values that land in this
+ * bucket (many→one). `token` is an OPTIONAL dotted path into a serial's inspection data
+ * naming the driving token for THIS bucket; when omitted the bucket reads the template's
+ * shared disposition source (via `resolveDisposition`) — the ergonomic common case, so a
+ * template that maps every bucket off its disposition field never repeats the token.
+ */
+export interface OutcomeRule {
+  token?: string;
+  values: string[];
+}
+
+/** Per-bucket outcome mapping. Optional and may be PARTIAL — map only the buckets you
+ *  need; every unmapped value falls to `'other'`. Absent entirely → everything is `'other'`. */
+export type OutcomeMapping = Partial<Record<(typeof OUTCOME_BUCKETS)[number], OutcomeRule>>;
+
+/**
+ * The ONE outcome classifier every surface shares — the display/counting analogue of
+ * `resolveDisposition`, and BUILT ON it. Given a serial's inspection data and the
+ * template definition's `outcomes` mapping, it returns the bucket the serial lands in.
+ *
+ * Each mapped bucket's driving value is read from its own `token` (a dotted path), or —
+ * when the bucket omits `token` — from the shared disposition source through
+ * `resolveDisposition`, so the mapping never re-declares the disposition field. Matching is
+ * case-insensitive (drill-pipe's options are upper-case; this also mirrors the legacy
+ * `.toUpperCase()` compare the KPI chain used). No mapping, or no bucket matches → `'other'`.
+ * There is no fallback to the old hardcoded PASS/REWORK/SCRAP/HOLD behaviour.
+ */
+export function classifyOutcome(
+  data: unknown,
+  definition:
+    | { disposition?: { source?: string[] }; outcomes?: OutcomeMapping }
+    | null
+    | undefined,
+): OutcomeBucket {
+  const outcomes = definition?.outcomes;
+  if (!outcomes) return 'other';
+  for (const bucket of OUTCOME_BUCKETS) {
+    const rule = outcomes[bucket];
+    if (!rule || !Array.isArray(rule.values) || rule.values.length === 0) continue;
+    const raw = rule.token ? walk(data, rule.token) : resolveDisposition(data, definition);
+    if (raw === undefined || raw === null || raw === '') continue;
+    const value = String(raw).toUpperCase();
+    if (rule.values.some((v) => String(v).toUpperCase() === value)) return bucket;
+  }
+  return 'other';
+}
+
+/**
  * A required value is "missing" iff undefined / null / empty-string. Deliberately
  * NOT truthiness: boolean `false`, number `0`, and `'0'` / whitespace are PRESENT.
  */

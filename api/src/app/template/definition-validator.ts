@@ -6,7 +6,12 @@ import {
   COMPUTED_NAMES,
   ExportDefinition,
 } from '../export/export-engine';
-import { engineGate, GateDefinition } from '../workflow/approval-gate';
+import {
+  engineGate,
+  GateDefinition,
+  classifyOutcome,
+  OUTCOME_BUCKETS,
+} from '../workflow/approval-gate';
 import { selectUpsertRule } from '../child-reports/rework-rules.interpreter';
 import { Snapshot } from '../common/inspection-data.types';
 import { InspectionReportStatus } from '@prisma/client';
@@ -215,6 +220,55 @@ export function validateDefinition(
     };
   }
 
+  // 4d — outcome mapping shape (OPTIONAL). If present, each declared bucket must be a
+  // known one carrying a non-empty `values` string array, and an optional string `token`.
+  // The mapping may be partial (map only some buckets) — an absent mapping is fine and
+  // makes every serial classify as `'other'`. Semantic reachability (does a value ever
+  // occur?) is NOT checked: templates are authored before any serial exists, and the
+  // catch-all `'other'` is the deliberate home for anything unmapped.
+  if (candidate.outcomes !== undefined) {
+    if (
+      candidate.outcomes === null ||
+      typeof candidate.outcomes !== 'object' ||
+      Array.isArray(candidate.outcomes)
+    ) {
+      return {
+        ok: false,
+        check: 'outcomes-shape',
+        reason: 'The outcome mapping must be an object of buckets.',
+      };
+    }
+    const knownBuckets = new Set<string>(OUTCOME_BUCKETS);
+    for (const [bucket, rule] of Object.entries(candidate.outcomes)) {
+      if (!knownBuckets.has(bucket)) {
+        return {
+          ok: false,
+          check: 'outcomes-shape',
+          reason: `Unknown outcome bucket "${bucket}". Allowed: ${OUTCOME_BUCKETS.join(', ')}.`,
+        };
+      }
+      if (
+        !rule ||
+        !Array.isArray(rule.values) ||
+        rule.values.length === 0 ||
+        !rule.values.every((v) => typeof v === 'string' && v.length > 0)
+      ) {
+        return {
+          ok: false,
+          check: 'outcomes-shape',
+          reason: `Outcome bucket "${bucket}" must declare a non-empty list of string values.`,
+        };
+      }
+      if (rule.token !== undefined && typeof rule.token !== 'string') {
+        return {
+          ok: false,
+          check: 'outcomes-shape',
+          reason: `Outcome bucket "${bucket}" has a non-string token.`,
+        };
+      }
+    }
+  }
+
   // 5 — every computed export entry names one of the engine's implemented computed keys.
   const allowedComputed = new Set(COMPUTED_NAMES);
   for (const e of candidate.export.global) {
@@ -254,6 +308,9 @@ export function validateDefinition(
     engineGate(candidate as unknown as GateDefinition, [
       { serial: DRY_RUN_SERIAL.serial, inspectionData: {} },
     ]);
+    // The outcome classifier reads the same definition shape; exercise it so a malformed
+    // mapping (e.g. a token whose walk throws) is refused at WRITE time, not at display.
+    classifyOutcome(DRY_RUN_SERIAL.inspectionData, candidate);
   } catch (err) {
     return {
       ok: false,

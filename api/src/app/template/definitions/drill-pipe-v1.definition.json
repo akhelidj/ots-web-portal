@@ -30,6 +30,13 @@
     "requiredForApproval": true
   },
 
+  "outcomes": {
+    "pass": { "values": ["PASS"] },
+    "reject": { "values": ["SCRAP"] },
+    "actionRequired": { "values": ["REWORK"] },
+    "hold": { "values": ["HOLD"] }
+  },
+
   "fields": [
     { "key": "poNumber", "label": "PO Number", "type": "text", "required": false, "scope": "header" },
     { "key": "standardUsed", "label": "Standard Used", "type": "text", "required": false, "scope": "header" },

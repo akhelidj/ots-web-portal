@@ -6,6 +6,35 @@ import {
   HeaderFieldRole,
   ROLE_TO_COMPUTED,
 } from './definition-authoring.types';
+import { OUTCOME_BUCKETS, OutcomeMapping } from '../workflow/approval-gate';
+
+/**
+ * Normalize an authored outcome mapping into the stored shape: keep only the known
+ * buckets, drop any whose `values` is absent/empty (an empty bucket is "unmapped"), trim
+ * blank values, and carry a per-bucket `token` only when the author set one. Returns
+ * `undefined` when nothing maps, so the builder omits `outcomes` entirely (→ everything
+ * classifies as `'other'`). PURE and total — semantic checks are the validator's job.
+ */
+function normalizeOutcomes(
+  outcomes: OutcomeMapping | undefined,
+): OutcomeMapping | undefined {
+  if (!outcomes || typeof outcomes !== 'object') return undefined;
+  const out: OutcomeMapping = {};
+  for (const bucket of OUTCOME_BUCKETS) {
+    const rule = outcomes[bucket];
+    if (!rule || !Array.isArray(rule.values)) continue;
+    const values = rule.values
+      .map((v) => String(v).trim())
+      .filter((v) => v.length > 0);
+    if (values.length === 0) continue;
+    const token =
+      typeof rule.token === 'string' && rule.token.trim().length > 0
+        ? rule.token.trim()
+        : undefined;
+    out[bucket] = token ? { token, values } : { values };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
 
 /**
  * The repeating region's internal id. It only keys `export.regions[REGION_ID]` and the
@@ -213,6 +242,10 @@ export function buildDefinition(
           },
         }
       : {}),
+    ...((): { outcomes?: OutcomeMapping } => {
+      const outcomes = normalizeOutcomes(dto.outcomes);
+      return outcomes ? { outcomes } : {};
+    })(),
     fields,
     export: {
       global: globalExport,

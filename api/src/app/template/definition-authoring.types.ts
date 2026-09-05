@@ -1,3 +1,8 @@
+import { OutcomeMapping } from '../workflow/approval-gate';
+
+/** Re-exported so template-layer consumers get the outcome-mapping shape from one place. */
+export type { OutcomeMapping };
+
 /**
  * Phase D step 2a — the ops-authored template description accepted by
  * `PUT /templates/:id/definition`, and the engine-shaped candidate definition it
@@ -144,6 +149,14 @@ export interface DefineTemplateDto {
     field: string;
     requiredForApproval: boolean;
   };
+  /**
+   * Optional per-bucket OUTCOME mapping (pass/reject/actionRequired/hold). Names, per
+   * bucket, an item field value-set that lands in it; a bucket omitting `token` reads the
+   * disposition source. OPTIONAL and may be PARTIAL — unmapped values classify as `'other'`,
+   * and an absent mapping makes every serial `'other'`. Passed straight through to the
+   * stored definition (`OutcomeMapping` from the workflow layer).
+   */
+  outcomes?: OutcomeMapping;
   fields: OpsTokenField[];
   computed?: OpsComputedToken[];
   /**
@@ -199,6 +212,9 @@ export interface CandidateDefinition {
   // time (xlsx-token-engine step 4). `id` is an internal constant keying `export.regions`.
   regions: { id: string; label: string; chunkSize: number | null }[];
   disposition?: { source: string[]; requiredForApproval: boolean };
+  /** Per-bucket outcome mapping — the display/counting classifier's source of truth.
+   *  Optional/partial; unmapped values classify as `'other'`. Stored verbatim. */
+  outcomes?: OutcomeMapping;
   fields: {
     key: string;
     label: string;
