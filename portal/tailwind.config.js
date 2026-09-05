@@ -59,11 +59,13 @@ module.exports = {
         },
       },
       fontFamily: {
-        // Body/UI = IBM Plex; headings = Manrope; condensed accents = Barlow Condensed.
-        sans: ['"IBM Plex Sans"', '"Source Sans 3"', 'sans-serif'],
-        heading: ['"Manrope"', '"IBM Plex Sans"', 'sans-serif'],
-        condensed: ['"Barlow Condensed"', '"IBM Plex Sans"', 'sans-serif'],
-        mono: ['"IBM Plex Sans"', '"Source Sans 3"', 'sans-serif'],
+        // One typeface app-wide: Manrope. IBM Plex and Barlow Condensed are retired;
+        // sans/heading/condensed/mono all resolve to Manrope so the ~89 existing
+        // font-* utility usages re-point here with no markup changes.
+        sans: ['"Manrope"', '"Source Sans 3"', 'sans-serif'],
+        heading: ['"Manrope"', '"Source Sans 3"', 'sans-serif'],
+        condensed: ['"Manrope"', '"Source Sans 3"', 'sans-serif'],
+        mono: ['"Manrope"', '"Source Sans 3"', 'sans-serif'],
       },
       // Radius flows from --radius (currently 0): every rectangular-container scale
       // (sm/DEFAULT/md/lg/xl/2xl/3xl) and their directional -t/-b/-l/-r variants

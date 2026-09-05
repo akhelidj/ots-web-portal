@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Manrope:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -88,10 +88,12 @@
   --duration-medium: 440ms; /* 350–550ms — panels, disclosures */
   --duration-slow: 720ms; /* 600–900ms — page/route level */
 
-  /* Type — vars agree with the Tailwind font families wired in tailwind.config.js. */
-  --font-sans: 'IBM Plex Sans', 'Source Sans 3', sans-serif;
-  --font-heading: 'Manrope', 'IBM Plex Sans', sans-serif;
-  --font-condensed: 'Barlow Condensed', 'IBM Plex Sans', sans-serif;
+  /* Type — one typeface app-wide: Manrope. All three slots resolve to it (the
+     heading/condensed distinction is retired; call sites keep their names but
+     render identically). Vars agree with the Tailwind font families in tailwind.config.js. */
+  --font-sans: 'Manrope', 'Source Sans 3', sans-serif;
+  --font-heading: 'Manrope', 'Source Sans 3', sans-serif;
+  --font-condensed: 'Manrope', 'Source Sans 3', sans-serif;
 }
 
 /* Reduced-motion: neutralize all animation/transition app-wide. */

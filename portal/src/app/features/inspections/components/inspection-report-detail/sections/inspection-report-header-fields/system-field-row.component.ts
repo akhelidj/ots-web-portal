@@ -1,5 +1,4 @@
 import { Component, input } from '@angular/core';
-import { StatusBadgeComponent } from '@portal/shared/components/status-badge';
 import { SystemRoleValue } from '@portal/features/templates/schemas/definition-to-form-schema';
 
 /**
@@ -9,14 +8,17 @@ import { SystemRoleValue } from '@portal/features/templates/schemas/definition-t
  * with a static "System" badge, the derived value (or a neutral pending message naming
  * what it waits on), and a one-line note of where the value comes from.
  *
- * Presentational only: no input, no control, nothing emitted on save. The badge is
- * static state (a non-interactive span via `app-status-badge`), per the badge-vs-chip
- * rule — badges communicate state, they are not clickable.
+ * Presentational only: no input, no control, nothing emitted on save.
+ *
+ * Customer surfaces (`isCustomer()`) show NEITHER the "System" marker NOR the
+ * technical source note — a customer never sees where a value is derived from,
+ * only the value. Ops keeps a quiet, de-chromed "System" marker (a small muted
+ * label, no border/chip/uppercase) plus the source note.
  */
 @Component({
   selector: 'app-system-field-row',
   standalone: true,
-  imports: [StatusBadgeComponent],
+  imports: [],
   template: `
     <div
       class="flex items-start justify-between gap-4"
@@ -25,14 +27,17 @@ import { SystemRoleValue } from '@portal/features/templates/schemas/definition-t
       <span class="flex flex-col gap-0.5">
         <span class="flex items-center gap-2">
           <span class="text-sm text-gray-500">{{ label() }}</span>
-          <app-status-badge
-            label="System"
-            severity="neutral"
-            [font]="isCustomer() ? 'sans' : 'condensed'"
-            [attr.data-testid]="'system-badge-' + fieldKey()"
-          />
+          @if (!isCustomer()) {
+            <span
+              class="text-[10px] font-medium tracking-wide text-gray-400"
+              [attr.data-testid]="'system-badge-' + fieldKey()"
+              >System</span
+            >
+          }
         </span>
-        <span class="text-xs text-gray-400">{{ value()?.source }}</span>
+        @if (!isCustomer()) {
+          <span class="text-xs text-gray-400">{{ value()?.source }}</span>
+        }
       </span>
 
       @if (value()?.pending) {

@@ -680,16 +680,19 @@ export class TemplateDefineComponent implements OnInit {
             ? 'Mark exactly one serial field as the Serial Number.'
             : 'Every included serial field needs a label.',
       );
+      this.scrollStepBodyToTop();
       return;
     }
     if (!this.headerStepValid()) {
       this.submitError.set('Every included metadata field needs a label.');
+      this.scrollStepBodyToTop();
       return;
     }
     if (this.missingHeaderRoles().length > 0) {
       this.submitError.set(
         `Assign every system role before saving. Unassigned: ${this.missingHeaderRoleLabels()}.`,
       );
+      this.scrollStepBodyToTop();
       return;
     }
 
@@ -709,6 +712,7 @@ export class TemplateDefineComponent implements OnInit {
       const body = (e as { error?: { check?: string; message?: string } })?.error;
       this.failedCheck.set(body?.check ?? '');
       this.submitError.set(this.errorMessage(e, 'Failed to save the definition.'));
+      this.scrollStepBodyToTop();
     } finally {
       this.isSubmitting.set(false);
     }

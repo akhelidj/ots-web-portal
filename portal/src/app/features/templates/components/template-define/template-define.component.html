@@ -99,6 +99,23 @@
       #stepBody
       class="flex-1 min-h-0 overflow-y-auto space-y-6 pr-0.5"
     >
+    <!-- SUBMIT ERROR — pinned to the TOP of the step body (not the bottom): a failed Save
+         must be seen without scrolling past the whole Review recap. submit() scrolls the
+         step body to top when it sets this, so it's always in view on failure. -->
+    @if (submitError()) {
+      <div
+        data-testid="submit-error"
+        class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
+      >
+        @if (failedCheck()) {
+          <p class="text-xs font-bold uppercase tracking-wider mb-1">
+            Rejected check: {{ failedCheck() }}
+          </p>
+        }
+        <p class="text-sm font-medium">{{ submitError() }}</p>
+      </div>
+    }
+
     <!-- STEP 1: DETECT TOKENS — read-only inventory of what the workbook contains -->
     @if (activeStep().key === 'detect') {
       <div class="page-section p-5 sm:p-6 space-y-4">
@@ -156,6 +173,31 @@
           values in for you. You can't save until all six are mapped.
         </p>
       </div>
+
+      <!-- Blocking guidance pinned ABOVE the table — a long token list must never push the
+           reason Save is disabled below the fold. -->
+      @if (!headerStepValid()) {
+        <div
+          role="alert"
+          class="page-section p-4 border-l-4 border-error bg-error-light/20 text-sm text-error-dark"
+        >
+          Every included metadata field needs a label before you can continue.
+        </div>
+      }
+      @if (missingHeaderRoles().length > 0) {
+        <div
+          role="status"
+          class="page-section p-4 border-l-4 border-warning bg-warning-light/20 text-sm text-warning-dark"
+        >
+          Assign every system role before this form can be saved. Still
+          unassigned:
+          <span class="font-semibold" data-testid="missing-roles">{{
+            missingHeaderRoleLabels()
+          }}</span
+          >. You can keep setting up the other steps first.
+        </div>
+      }
+
       <div class="page-section overflow-x-auto">
         <table class="table-base divide-y divide-gray-200 w-full">
           <thead class="table-head">
@@ -263,28 +305,6 @@
           </tbody>
         </table>
       </div>
-
-      @if (!headerStepValid()) {
-        <div
-          role="alert"
-          class="page-section p-4 border-l-4 border-error bg-error-light/20 text-sm text-error-dark"
-        >
-          Every included metadata field needs a label before you can continue.
-        </div>
-      }
-      @if (missingHeaderRoles().length > 0) {
-        <div
-          role="status"
-          class="page-section p-4 border-l-4 border-warning bg-warning-light/20 text-sm text-warning-dark"
-        >
-          Assign every system role before this form can be saved. Still
-          unassigned:
-          <span class="font-semibold" data-testid="missing-roles">{{
-            missingHeaderRoleLabels()
-          }}</span
-          >. You can keep setting up the other steps first.
-        </div>
-      }
     }
 
     <!-- STEP 3: SERIAL — the repeating-row fields; bulk actions + inline describe -->
@@ -364,6 +384,21 @@
           a template needs at least one serial field.
         </div>
       } @else {
+        <!-- Blocking guidance pinned ABOVE the table (see the Metadata step). -->
+        @if (!serialStepValid()) {
+          <div
+            role="alert"
+            class="page-section p-4 border-l-4 border-error bg-error-light/20 text-sm text-error-dark"
+          >
+            @if (serialRows().length === 0) {
+              Include at least one serial field to continue.
+            } @else if (serialMarkerRow() === undefined) {
+              Mark exactly one serial field as the Serial Number to continue.
+            } @else {
+              Every included serial field needs a label before you can continue.
+            }
+          </div>
+        }
         <div class="page-section overflow-x-auto">
           <table class="table-base divide-y divide-gray-200 w-full">
             <thead class="table-head">
@@ -491,21 +526,6 @@
             </tbody>
           </table>
         </div>
-
-        @if (!serialStepValid()) {
-          <div
-            role="alert"
-            class="page-section p-4 border-l-4 border-error bg-error-light/20 text-sm text-error-dark"
-          >
-            @if (serialRows().length === 0) {
-              Include at least one serial field to continue.
-            } @else if (serialMarkerRow() === undefined) {
-              Mark exactly one serial field as the Serial Number to continue.
-            } @else {
-              Every included serial field needs a label before you can continue.
-            }
-          </div>
-        }
       }
     }
 
@@ -659,21 +679,6 @@
         [ngTemplateOutlet]="recapSummary"
         [ngTemplateOutletContext]="{ heading: 'Review' }"
       ></ng-container>
-
-      @if (submitError()) {
-        <div
-          data-testid="submit-error"
-          class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
-        >
-          @if (failedCheck()) {
-            <p class="text-xs font-bold uppercase tracking-wider mb-1">
-              Rejected check: {{ failedCheck() }}
-            </p>
-          }
-          <p class="text-sm font-medium">{{ submitError() }}</p>
-        </div>
-      }
-
     }
     </div>
     <!-- /STEP BODY -->
