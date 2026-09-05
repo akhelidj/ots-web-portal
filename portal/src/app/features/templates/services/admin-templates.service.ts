@@ -8,6 +8,7 @@ import {
   DataHydrationContext,
   DataHydrationSource,
 } from '@portal/core/offline/services/data-hydration.token';
+import { OutcomeMapping } from '@portal/features/templates/schemas/definition-to-form-schema';
 
 export interface AdminTemplateItem {
   id: string;
@@ -98,6 +99,9 @@ export interface DefineTemplateDto {
   /** Optional single rework trigger (slice A). Omitted → no rule. Mirrors the API's
    *  optional `reworkRule`. */
   reworkRule?: OpsReworkRule;
+  /** Optional per-bucket outcome mapping. Omitted/partial allowed — unmapped values
+   *  classify as `'other'`. Mirrors the API's optional `outcomes`. */
+  outcomes?: OutcomeMapping;
 }
 
 /**
@@ -140,6 +144,12 @@ export interface StoredDefinition {
     regions?: Record<string, StoredExportEntry[]>;
   };
   rules?: unknown[];
+  /** Per-bucket outcome mapping as stored. The Define page hydrates the authoring UI from
+   *  this on open, so a re-defined template shows its existing mapping. */
+  outcomes?: OutcomeMapping;
+  /** Stored disposition slice — the recap/authoring UI reads `source[0]` as the default
+   *  driving field for outcome buckets. */
+  disposition?: { source?: string[]; requiredForApproval?: boolean };
 }
 
 /**

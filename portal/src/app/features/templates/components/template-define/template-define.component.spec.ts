@@ -162,13 +162,47 @@ describe('TemplateDefineComponent — assembly + submit', () => {
 
     expect(c.buildDto()).toEqual(EXPECTED_DTO);
 
+    // This DTO maps NO outcomes (valid — outcome mapping is optional), so the first Save
+    // raises the zero-outcome confirmation instead of persisting. Confirm-and-proceed.
     await c.submit();
+    expect(c.showNoOutcomesConfirm()).toBe(true);
+    expect(defineTemplate).not.toHaveBeenCalled();
+
+    await c.confirmSaveWithoutOutcomes();
     expect(defineTemplate).toHaveBeenCalledWith('t1', EXPECTED_DTO);
     expect(c.success()).toBe(true);
     expect(c.submitError()).toBe('');
     // On success the wizard leaves the Review step and returns to the templates list
     // (the save signal is a toast on that list, not a lingering in-wizard banner).
     expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/admin/templates']);
+  });
+
+  it('maps outcomes → saves straight through (no confirmation) and carries them in the DTO', async () => {
+    const c = make();
+    await describeValid(c);
+
+    // Map two buckets off the EMI Result field (stripped key `emi`) — a partial mapping,
+    // which is allowed and saves silently with no zero-outcome prompt.
+    Object.assign(c.outcomeDrafts.find((d) => d.bucket === 'pass')!, {
+      field: 'emi',
+      valuesText: 'PASS',
+    });
+    Object.assign(c.outcomeDrafts.find((d) => d.bucket === 'reject')!, {
+      field: 'emi',
+      valuesText: 'SCRAP, HOLD',
+    });
+
+    expect(c.mappedOutcomeCount()).toBe(2);
+    expect(c.buildDto().outcomes).toEqual({
+      pass: { token: 'emi', values: ['PASS'] },
+      reject: { token: 'emi', values: ['SCRAP', 'HOLD'] },
+    });
+
+    await c.submit();
+    // A mapped template never raises the confirmation — it persists immediately.
+    expect(c.showNoOutcomesConfirm()).toBe(false);
+    expect(defineTemplate).toHaveBeenCalledTimes(1);
+    expect(c.success()).toBe(true);
   });
 
   it('surfaces the server’s per-check rejection inline; nothing marked written', async () => {
@@ -183,6 +217,8 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     });
 
     await c.submit();
+    // No outcomes mapped → confirm before the save actually reaches the server.
+    await c.confirmSaveWithoutOutcomes();
     expect(c.failedCheck()).toBe('select-options');
     expect(c.submitError()).toContain('must declare non-empty options');
     expect(c.success()).toBe(false);

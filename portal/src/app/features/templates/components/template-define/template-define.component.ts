@@ -22,6 +22,11 @@ import {
   OpsTokenField,
   StoredDefinition,
 } from '@portal/features/templates/services/admin-templates.service';
+import {
+  OUTCOME_BUCKETS,
+  OUTCOME_PRESENTATION,
+  OutcomeMapping,
+} from '@portal/features/templates/schemas/definition-to-form-schema';
 import { ToastService } from '@portal/shared/toast/toast.service';
 
 /**
@@ -99,6 +104,26 @@ export interface DescribeRow {
   role: FieldRole | '';
 }
 
+/** The mappable outcome buckets (every bucket except the catch-all `other`). */
+type MappableBucket = (typeof OUTCOME_BUCKETS)[number];
+
+/**
+ * One authoring row for the outcome-mapping card — one per mappable bucket (Passed, Rejected,
+ * Action Required, Hold). The author picks the serial `field` whose value drives this bucket
+ * and lists the `valuesText` (comma-separated) that land in it. A bucket counts as MAPPED
+ * only when it has BOTH a field and ≥1 value; unmapped buckets are omitted from the saved
+ * `outcomes`, and any serial value not mapped to a bucket classifies as "Other".
+ */
+export interface OutcomeBucketDraft {
+  bucket: MappableBucket;
+  /** Commercial label shown on the card (from OUTCOME_PRESENTATION) — never edited here. */
+  label: string;
+  /** The driving serial field key ('' = this bucket is unmapped). */
+  field: string;
+  /** Comma-separated values of `field` that land in this bucket. */
+  valuesText: string;
+}
+
 export type WizardStepKey = 'detect' | 'header' | 'serial' | 'review';
 
 export interface WizardStep {
@@ -150,6 +175,21 @@ export class TemplateDefineComponent implements OnInit {
   // Bulk-action inputs for the Serial step (apply Type / Section across the included rows).
   public bulkType: OpsFieldType = 'text';
   public bulkSection = '';
+
+  // Outcome-mapping drafts — one plain (ngModel-bound) row per mappable bucket, created once
+  // at construction so the two-way bindings attach to stable objects; load() hydrates their
+  // field/values in place from a stored definition. Order follows the classifier's bucket
+  // evaluation order (OUTCOME_BUCKETS).
+  public outcomeDrafts: OutcomeBucketDraft[] = OUTCOME_BUCKETS.map((bucket) => ({
+    bucket,
+    label: OUTCOME_PRESENTATION[bucket].label,
+    field: '',
+    valuesText: '',
+  }));
+
+  // Save-time confirmation: raised when the author saves with ZERO outcome buckets mapped
+  // (every serial would classify as "Other"). A confirm-and-proceed prompt, NOT a block.
+  public readonly showNoOutcomesConfirm = signal(false);
 
   // Once the author deliberately changes any serial row's role, the wizard stops
   // auto-defaulting the serialNumber marker (their choice wins).
@@ -263,6 +303,21 @@ export class TemplateDefineComponent implements OnInit {
     this.rows.set(rows);
     this.displayName = def.displayName ?? '';
     this.hydrateRework(def);
+    this.hydrateOutcomes(def);
+  }
+
+  /** Reverse-map the stored `outcomes` mapping onto the authoring drafts, so a re-opened
+   *  (read-only) definition shows its saved buckets. A bucket that stored no `token` (e.g. the
+   *  drill-pipe reference, which drives off the disposition source) hydrates `field` as '' and
+   *  still shows its values. Absent mapping → every draft stays blank. */
+  private hydrateOutcomes(def: StoredDefinition): void {
+    const outcomes = (def.outcomes ?? {}) as OutcomeMapping;
+    for (const d of this.outcomeDrafts) {
+      const rule = outcomes[d.bucket];
+      d.field = rule?.token ?? '';
+      d.valuesText =
+        rule && Array.isArray(rule.values) ? rule.values.join(', ') : '';
+    }
   }
 
   /** The serial marker's exact token, read back from the stored export (the `rowSerial`
@@ -474,6 +529,46 @@ export class TemplateDefineComponent implements OnInit {
   }
 
   // ---------------------------------------------------------------------------
+  // Outcome mapping — per-bucket driving field + values (drives classifyOutcome).
+  // ---------------------------------------------------------------------------
+
+  /** Split a comma-separated values string into trimmed, non-empty tokens. */
+  private parseOutcomeValues(text: string): string[] {
+    return text
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+
+  /** A bucket draft is MAPPED only when it names a driving field AND at least one value. */
+  public outcomeBucketMapped(d: OutcomeBucketDraft): boolean {
+    return !!d.field && this.parseOutcomeValues(d.valuesText).length > 0;
+  }
+
+  /** How many buckets are currently mapped — drives the zero-mapping save confirmation. */
+  public mappedOutcomeCount(): number {
+    return this.outcomeDrafts.filter((d) => this.outcomeBucketMapped(d)).length;
+  }
+
+  /** Editing an outcome draft clears any stale submit feedback (mirrors the row handlers). */
+  public onOutcomeChange(): void {
+    this.clearSubmitFeedback();
+  }
+
+  /** Assemble the `outcomes` mapping from the drafts — only fully-mapped buckets are emitted
+   *  (partial mapping is allowed). Returns undefined when nothing maps, so buildDto omits the
+   *  key entirely and every serial classifies as "Other". */
+  private buildOutcomes(): OutcomeMapping | undefined {
+    const mapping: OutcomeMapping = {};
+    for (const d of this.outcomeDrafts) {
+      const values = this.parseOutcomeValues(d.valuesText);
+      if (!d.field || values.length === 0) continue;
+      mapping[d.bucket] = { token: d.field, values };
+    }
+    return Object.keys(mapping).length > 0 ? mapping : undefined;
+  }
+
+  // ---------------------------------------------------------------------------
   // Per-step validity — ONE source of truth (gates "Next"; `submit()` reuses these).
   // ---------------------------------------------------------------------------
 
@@ -664,6 +759,10 @@ export class TemplateDefineComponent implements OnInit {
         dto.reworkRule.reportNumberSuffix = this.reworkSuffix.trim();
       }
     }
+    const outcomes = this.buildOutcomes();
+    if (outcomes) {
+      dto.outcomes = outcomes;
+    }
     return dto;
   }
 
@@ -703,6 +802,31 @@ export class TemplateDefineComponent implements OnInit {
       return;
     }
 
+    // Outcome mapping is OPTIONAL and may be PARTIAL. With ZERO buckets mapped, every serial
+    // classifies as "Other" — allowed, but almost never intended, so confirm first. This is a
+    // confirm-and-proceed prompt, NOT a block; a partial mapping (≥1 bucket) saves silently.
+    if (this.mappedOutcomeCount() === 0) {
+      this.showNoOutcomesConfirm.set(true);
+      return;
+    }
+
+    await this.persist();
+  }
+
+  /** Proceed with the save after the zero-outcome confirmation. */
+  public async confirmSaveWithoutOutcomes(): Promise<void> {
+    this.showNoOutcomesConfirm.set(false);
+    await this.persist();
+  }
+
+  /** Dismiss the zero-outcome confirmation without saving. */
+  public cancelSaveWithoutOutcomes(): void {
+    this.showNoOutcomesConfirm.set(false);
+  }
+
+  /** The actual persist — shared by the normal save path and the zero-outcome confirm path.
+   *  Assumes the client-side validity guards have already passed. */
+  private async persist(): Promise<void> {
     this.isSubmitting.set(true);
     try {
       await this.templatesService.defineTemplate(this.templateId, this.buildDto());

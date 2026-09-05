@@ -307,6 +307,16 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
     saveBtn(f)!.click();
     await f.whenStable();
 
+    // No outcomes mapped → the zero-outcome confirmation intervenes before the save fires.
+    expect(defineTemplate).not.toHaveBeenCalled();
+    const confirmBtn = q(
+      f,
+      '[data-testid="no-outcomes-confirm-save"]',
+    ) as HTMLButtonElement | null;
+    expect(confirmBtn).toBeTruthy();
+    confirmBtn!.click();
+    await f.whenStable();
+
     expect(defineTemplate).toHaveBeenCalledTimes(1);
     const [, dto] = defineTemplate.mock.calls[0];
     // Every header role rode through to the DTO, plus the serial marker.

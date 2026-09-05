@@ -689,6 +689,60 @@
         }
       </div>
 
+      <!-- Outcome mapping — per-bucket driving field + values that classify each serial into a
+           commercial status. OPTIONAL and may be PARTIAL: any value not mapped falls to "Other".
+           Sibling to the rework card; distinct rule — this is the outcome classifier, not the
+           binary rework child-report trigger. -->
+      <div class="page-section p-5 sm:p-6 space-y-4">
+        <div>
+          <h3 class="text-sm font-semibold text-gray-700">Outcome mapping</h3>
+          <p class="mt-1 text-sm text-neutral-500">
+            Decide how each serial's inspection result becomes a status. For each
+            outcome, pick the field that drives it and list the values that land
+            there (comma-separated). Anything you don't map shows as
+            <span class="font-medium text-neutral-700">Other</span>. Optional —
+            leave blank and every serial is grouped under Other.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          @for (d of outcomeDrafts; track d.bucket) {
+            <div
+              class="grid grid-cols-1 md:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1.4fr)] gap-3 md:items-center"
+              [attr.data-testid]="'outcome-row-' + d.bucket"
+            >
+              <span class="text-sm font-semibold text-gray-700">{{
+                d.label
+              }}</span>
+              <select
+                [(ngModel)]="d.field"
+                [name]="'outcome-field-' + d.bucket"
+                (ngModelChange)="onOutcomeChange()"
+                class="field-control"
+                [attr.data-testid]="'outcome-field-' + d.bucket"
+                [attr.aria-label]="'Driving field for ' + d.label"
+              >
+                <option [value]="''">No field — leave unmapped</option>
+                @for (opt of triggerFieldOptions(); track opt.key) {
+                  <option [value]="opt.key">{{ opt.label }}</option>
+                }
+              </select>
+              <input
+                type="text"
+                [(ngModel)]="d.valuesText"
+                [name]="'outcome-values-' + d.bucket"
+                (ngModelChange)="onOutcomeChange()"
+                [disabled]="!d.field"
+                class="field-control"
+                placeholder="Values, comma-separated — e.g. PASS, OK"
+                [attr.data-testid]="'outcome-values-' + d.bucket"
+                [attr.aria-label]="'Values for ' + d.label"
+              />
+            </div>
+          }
+        </div>
+      </div>
+
       <!-- Compact review summary — shared with the read-only recap via #recapSummary -->
       <ng-container
         [ngTemplateOutlet]="recapSummary"
@@ -738,6 +792,56 @@
     </div>
   }
 </div>
+
+<!-- Zero-outcome save confirmation — raised when the author saves with NO outcome buckets
+     mapped (every serial would classify as "Other"). Confirm-and-proceed, NOT a block:
+     partial mappings save silently and never reach here. Reuses the app overlay pattern. -->
+@if (showNoOutcomesConfirm()) {
+  <div
+    class="fixed inset-0 !h-[100dvh] w-screen z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
+    data-testid="no-outcomes-confirm"
+  >
+    <div
+      class="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-in zoom-in-95"
+    >
+      <div class="px-8 pt-8 pb-2">
+        <h2 class="text-lg font-semibold text-neutral-900">
+          Save without outcome mapping?
+        </h2>
+      </div>
+      <div class="px-8 pb-8 pt-2 text-sm text-neutral-600 space-y-2">
+        <p>
+          You haven't mapped any outcomes, so every inspected serial on reports
+          using this template will show as
+          <span class="font-medium text-neutral-700">Other</span>.
+        </p>
+        <p>
+          You can save now and add mapping later, or go back and map at least one
+          outcome first.
+        </p>
+      </div>
+      <div class="p-6 bg-gray-50 border-t flex justify-end gap-3">
+        <button
+          (click)="cancelSaveWithoutOutcomes()"
+          class="btn btn-secondary"
+          type="button"
+          data-testid="no-outcomes-cancel"
+        >
+          Go back
+        </button>
+        <button
+          (click)="confirmSaveWithoutOutcomes()"
+          [disabled]="isSubmitting()"
+          class="btn btn-primary"
+          type="button"
+          data-testid="no-outcomes-confirm-save"
+        >
+          {{ isSubmitting() ? 'Saving…' : 'Save anyway' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
 
 <!-- Recap summary — the compact definition digest. Reused by the authoring Review step and
      the read-only recap, so both render an identical, single-source summary. Data derives
@@ -809,6 +913,32 @@
                 }}{{ reworkSuffix.trim() ? ' (' + reworkSuffix.trim() + ')' : '' }}
               } @else {
                 <span class="text-gray-400">None</span>
+              }
+            </dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="font-semibold text-gray-500">
+              Outcome Mapping ({{ mappedOutcomeCount() }})
+            </dt>
+            <dd class="text-neutral-900">
+              @if (mappedOutcomeCount() === 0) {
+                <span class="text-gray-400"
+                  >None — every serial shows as Other</span
+                >
+              } @else {
+                <ul class="mt-1 space-y-1">
+                  @for (d of outcomeDrafts; track d.bucket) {
+                    @if (outcomeBucketMapped(d)) {
+                      <li class="flex flex-wrap items-baseline gap-1.5">
+                        <span class="font-medium">{{ d.label }}</span>
+                        <span class="text-gray-400">·</span>
+                        <span class="code-text">{{ d.field }}</span>
+                        <span class="text-gray-400">∈</span>
+                        <span class="code-text">{{ d.valuesText.trim() }}</span>
+                      </li>
+                    }
+                  }
+                </ul>
               }
             </dd>
           </div>
