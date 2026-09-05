@@ -384,22 +384,11 @@
               [class.py-1.5]="isCompactMode"
             >
               <div class="flex flex-col items-center gap-2">
-                @if (getDisposition(sn); as disp) {
-                  <span
-                    class="data-chip w-full justify-center gap-1 px-2 py-0.5 text-[10px]"
-                    [ngClass]="{
-                      'data-chip-success': disp === SERIAL_DISPOSITIONS.PASS,
-                      'data-chip-warning': disp === SERIAL_DISPOSITIONS.REWORK,
-                      'data-chip-error': disp === SERIAL_DISPOSITIONS.SCRAP,
-                      'data-chip-info': disp === SERIAL_DISPOSITIONS.HOLD,
-                    }"
-                    >{{ disp }}</span
-                  >
-                } @else {
-                  <span class="text-xs text-gray-400 italic font-medium"
-                    >Pending</span
-                  >
-                }
+                <span
+                  class="data-chip w-full justify-center gap-1 px-2 py-0.5 text-[10px]"
+                  [ngClass]="outcomeChipClass(sn)"
+                  >{{ outcomeLabel(sn) }}</span
+                >
 
                 <div
                   class="flex items-center justify-center gap-1 w-full bg-gray-50 border border-gray-200 rounded p-0.5"

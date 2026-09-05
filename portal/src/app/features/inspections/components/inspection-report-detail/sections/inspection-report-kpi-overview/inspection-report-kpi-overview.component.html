@@ -1,4 +1,11 @@
-<div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+<div
+  class="grid grid-cols-2 gap-4"
+  [ngClass]="{
+    'md:grid-cols-5': visibleCols === 5,
+    'md:grid-cols-6': visibleCols === 6,
+    'md:grid-cols-7': visibleCols === 7,
+  }"
+>
   <div
     class="page-section p-5 flex flex-col justify-center text-center items-center"
   >
@@ -14,42 +21,74 @@
 
   <div
     tabindex="0"
-    (click)="open(SERIAL_DISPOSITIONS.PASS)"
-    (keydown.enter)="open(SERIAL_DISPOSITIONS.PASS)"
+    (click)="open('pass')"
+    (keydown.enter)="open('pass')"
     class="bg-white p-5 rounded-xl shadow-sm border border-success/30 hover:border-success/50 transition-colors cursor-pointer flex flex-col justify-center text-center items-center"
   >
     <span
       class="stat-label"
       >Passed</span
     >
-    <span class="stat-value text-3xl text-success-dark">{{ passed }}</span>
+    <span class="stat-value text-3xl text-success-dark">{{ pass }}</span>
   </div>
 
   <div
     tabindex="0"
-    (click)="open(SERIAL_DISPOSITIONS.REWORK)"
-    (keydown.enter)="open(SERIAL_DISPOSITIONS.REWORK)"
+    (click)="open('actionRequired')"
+    (keydown.enter)="open('actionRequired')"
     class="bg-white p-5 rounded-xl shadow-sm border border-warning/30 hover:border-warning/50 transition-colors cursor-pointer flex flex-col justify-center text-center items-center"
   >
     <span
       class="stat-label"
       >Action Required</span
     >
-    <span class="stat-value text-3xl text-warning-dark">{{ rework }}</span>
+    <span class="stat-value text-3xl text-warning-dark">{{
+      actionRequired
+    }}</span>
   </div>
 
   <div
     tabindex="0"
-    (click)="open(SERIAL_DISPOSITIONS.SCRAP)"
-    (keydown.enter)="open(SERIAL_DISPOSITIONS.SCRAP)"
+    (click)="open('reject')"
+    (keydown.enter)="open('reject')"
     class="bg-white p-5 rounded-xl shadow-sm border border-error/30 hover:border-error/50 transition-colors cursor-pointer flex flex-col justify-center text-center items-center"
   >
     <span
       class="stat-label"
       >Rejected</span
     >
-    <span class="stat-value text-3xl text-error-dark">{{ scrap }}</span>
+    <span class="stat-value text-3xl text-error-dark">{{ rejected }}</span>
   </div>
+
+  @if (hold > 0) {
+    <div
+      tabindex="0"
+      (click)="open('hold')"
+      (keydown.enter)="open('hold')"
+      class="bg-white p-5 rounded-xl shadow-sm border border-primary/20 hover:border-primary/40 transition-colors cursor-pointer flex flex-col justify-center text-center items-center"
+    >
+      <span
+        class="stat-label"
+        >Hold</span
+      >
+      <span class="stat-value text-3xl text-primary">{{ hold }}</span>
+    </div>
+  }
+
+  @if (other > 0) {
+    <div
+      tabindex="0"
+      (click)="open('other')"
+      (keydown.enter)="open('other')"
+      class="bg-white p-5 rounded-xl shadow-sm border border-neutral-300 hover:border-neutral-400 transition-colors cursor-pointer flex flex-col justify-center text-center items-center"
+    >
+      <span
+        class="stat-label"
+        >Other</span
+      >
+      <span class="stat-value text-3xl text-neutral-700">{{ other }}</span>
+    </div>
+  }
 
   <div
     class="page-section p-5 flex flex-col justify-center items-center text-center bg-neutral-50"

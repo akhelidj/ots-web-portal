@@ -1,8 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { SERIAL_DISPOSITIONS } from '@portal/core/constants/app.constants';
 import { LocalSerialNumber } from '@portal/core/offline/models/types';
 import { SectionSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
+import {
+  OUTCOME_PRESENTATION,
+  TemplateFormDefinition,
+} from '@portal/features/templates/schemas/definition-to-form-schema';
 import {
   BadgeSeverity,
   StatusBadgeComponent,
@@ -12,7 +15,7 @@ import {
   SerialTableColumnGroup,
   buildSerialColumnGroups,
   getSerialCellText,
-  getSerialDisposition,
+  classifySerialOutcome,
 } from '../serial-matrix';
 
 /**
@@ -40,6 +43,13 @@ export class CustomerSerialsTableComponent {
    * column header, and cell. Empty → only the identity + result columns render.
    */
   @Input() sections: SectionSchema[] = [];
+  /**
+   * The report's template definition — drives outcome classification (its `outcomes`
+   * mapping). Null/absent → every serial classifies as `'other'` (the presentable
+   * catch-all), never a raw token. The SAME definition the ops table consumes, so the
+   * two result columns can never drift.
+   */
+  @Input() definition: TemplateFormDefinition | null = null;
 
   @Output() openInspection = new EventEmitter<LocalSerialNumber>();
 
@@ -73,30 +83,16 @@ export class CustomerSerialsTableComponent {
     return getSerialCellText(sn, col);
   }
 
-  protected getDisposition(sn: LocalSerialNumber): string | null {
-    return getSerialDisposition(sn);
-  }
-
-  /** Human-facing disposition label; '—' when a serial has no recorded result. */
+  /** Commercial outcome label for a serial's result column — always a real, presentable
+   *  status (`'Other'` for an unmapped/absent value), never a raw token or a blank. */
   protected dispositionLabel(sn: LocalSerialNumber): string {
-    return this.getDisposition(sn) ?? '—';
+    return OUTCOME_PRESENTATION[classifySerialOutcome(sn, this.definition)].label;
   }
 
-  /** Map a disposition to a badge severity for the result column. */
+  /** Badge severity for a serial's result column, from the SAME classifier + presentation
+   *  map the ops table uses — so the two surfaces can never disagree. */
   protected dispositionSeverity(sn: LocalSerialNumber): BadgeSeverity {
-    const disp = this.getDisposition(sn)?.toUpperCase();
-    switch (disp) {
-      case SERIAL_DISPOSITIONS.PASS:
-        return 'success';
-      case SERIAL_DISPOSITIONS.REWORK:
-        return 'warning';
-      case SERIAL_DISPOSITIONS.SCRAP:
-        return 'error';
-      case SERIAL_DISPOSITIONS.HOLD:
-        return 'info';
-      default:
-        return 'neutral';
-    }
+    return OUTCOME_PRESENTATION[classifySerialOutcome(sn, this.definition)].severity;
   }
 
   protected trackBySerial(_index: number, sn: LocalSerialNumber): string {

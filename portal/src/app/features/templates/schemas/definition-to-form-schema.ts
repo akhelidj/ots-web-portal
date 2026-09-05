@@ -5,6 +5,7 @@ import {
   FieldInputType,
   FieldRole,
 } from './drill-pipe-v1.schema';
+import { BadgeSeverity } from '@portal/shared/components/status-badge/status-badge.component';
 
 /**
  * A resolved value for a system-owned (roled) header field, derived once in the detail
@@ -87,7 +88,49 @@ export interface TemplateFormDefinition {
     source?: string[];
     requiredForApproval?: boolean;
   };
+  /**
+   * Per-bucket OUTCOME mapping, mirrored from the backend definition — the display/counting
+   * classifier's source of truth (`classifyOutcome`). Optional and may be PARTIAL: unmapped
+   * driving-token values classify as `'other'`, and an absent mapping makes every serial
+   * `'other'`. Each bucket names the value(s) that land in it, plus an optional `token`
+   * (dotted path); a bucket omitting `token` reads the shared `disposition.source`.
+   */
+  outcomes?: OutcomeMapping;
 }
+
+/** The fixed outcome buckets in evaluation order — mirror of the server's OUTCOME_BUCKETS. */
+export const OUTCOME_BUCKETS = ['pass', 'reject', 'actionRequired', 'hold'] as const;
+
+/** A classified outcome bucket, including the catch-all `'other'`. */
+export type OutcomeBucket = (typeof OUTCOME_BUCKETS)[number] | 'other';
+
+/** One bucket's mapping rule — mirror of the server's OutcomeRule. */
+export interface OutcomeRule {
+  token?: string;
+  values: string[];
+}
+
+/** Per-bucket outcome mapping — mirror of the server's OutcomeMapping. */
+export type OutcomeMapping = Partial<
+  Record<(typeof OUTCOME_BUCKETS)[number], OutcomeRule>
+>;
+
+/**
+ * Commercial presentation for each bucket — the ONE place a bucket's customer-facing label
+ * and badge severity are defined, so ops and customer surfaces can never drift. `'other'`
+ * is deliberately a real, presentable status ("Other" / neutral) — never "unmapped" or an
+ * error tone.
+ */
+export const OUTCOME_PRESENTATION: Record<
+  OutcomeBucket,
+  { label: string; severity: BadgeSeverity }
+> = {
+  pass: { label: 'Passed', severity: 'success' },
+  reject: { label: 'Rejected', severity: 'error' },
+  actionRequired: { label: 'Action Required', severity: 'warning' },
+  hold: { label: 'Hold', severity: 'info' },
+  other: { label: 'Other', severity: 'neutral' },
+};
 
 /** Dotted-path walk with the same falsy-node short-circuit as the server gate's `walk`. */
 function walkPath(data: unknown, path: string): unknown {
@@ -117,6 +160,38 @@ export function resolveDisposition(
     if (value) return String(value);
   }
   return null;
+}
+
+/**
+ * The ONE outcome classifier every portal surface shares — the client mirror of the
+ * server's `classifyOutcome` (approval-gate.ts), and the display/counting analogue of
+ * `resolveDisposition`, BUILT ON it. Given a serial's inspection data and the template's
+ * `outcomes` mapping, returns the bucket the serial lands in.
+ *
+ * Each mapped bucket reads its own `token` (dotted path) or, when omitted, the shared
+ * disposition source via `resolveDisposition`. Matching is case-insensitive (mirrors both
+ * drill-pipe's upper-case options and the legacy `.toUpperCase()` KPI compare). No mapping,
+ * or nothing matches → `'other'` — there is no fallback to the old hardcoded PASS/REWORK/
+ * SCRAP/HOLD behaviour. Every classification/badge/count surface funnels through this so no
+ * two can disagree on how a serial is bucketed.
+ */
+export function classifyOutcome(
+  data: unknown,
+  definition: TemplateFormDefinition | null | undefined,
+): OutcomeBucket {
+  const outcomes = definition?.outcomes;
+  if (!outcomes) return 'other';
+  for (const bucket of OUTCOME_BUCKETS) {
+    const rule = outcomes[bucket];
+    if (!rule || !Array.isArray(rule.values) || rule.values.length === 0) continue;
+    const raw = rule.token
+      ? walkPath(data, rule.token)
+      : resolveDisposition(data, definition);
+    if (raw === undefined || raw === null || raw === '') continue;
+    const value = String(raw).toUpperCase();
+    if (rule.values.some((v) => String(v).toUpperCase() === value)) return bucket;
+  }
+  return 'other';
 }
 
 /** Whether the template requires a disposition for approval — mirrors the server gate. */

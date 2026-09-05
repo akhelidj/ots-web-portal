@@ -39,7 +39,7 @@ import {
   StatusBadgeComponent,
 } from '@portal/shared/components/status-badge/status-badge.component';
 import {
-  resolveDisposition,
+  classifyOutcome,
   TemplateFormDefinition,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
 
@@ -226,18 +226,16 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
       const serials = await this.snRepo.listByReportId(r.id);
       newStats[r.id] = {
         serialCount: serials.length,
-        passCount: serials.filter((s) => {
-          // Resolve disposition through the shared definition-driven resolver — the same
-          // reader the gate/detail/validation use — so the list's PASS count matches the
-          // KPIs. The prior hardcoded final.disposition||disposition path was phantom on
-          // real data (disposition lives at the template's declared source) and made this
-          // count always 0.
-          const rawDisp = resolveDisposition(
-            s.inspectionJson,
-            r.definitionJson as TemplateFormDefinition | null,
-          );
-          return rawDisp ? rawDisp.toUpperCase() === 'PASS' : false;
-        }).length,
+        passCount: serials.filter(
+          (s) =>
+            // Classify through the shared outcome classifier — the same bucketing the
+            // detail KPIs, tables, and server use — so the list's pass count agrees with
+            // every other surface. A serial counts here iff it lands in the `pass` bucket.
+            classifyOutcome(
+              s.inspectionJson ?? null,
+              r.definitionJson as TemplateFormDefinition | null,
+            ) === 'pass',
+        ).length,
         serialValues: serials.map((s) => s.value.toLowerCase()),
       };
     }

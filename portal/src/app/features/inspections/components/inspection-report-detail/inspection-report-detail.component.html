@@ -232,24 +232,24 @@
               <p
                 class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
-                Rework
+                Action Required
               </p>
               <p
                 class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
               >
-                {{ kpiRework }}
+                {{ kpiActionRequired }}
               </p>
             </div>
             <div class="bg-background px-6 py-7">
               <p
                 class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
               >
-                Scrap
+                Rejected
               </p>
               <p
                 class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
               >
-                {{ kpiScrap }}
+                {{ kpiRejected }}
               </p>
             </div>
             <div class="bg-background px-6 py-7">
@@ -264,6 +264,22 @@
                 {{ kpiHold }}
               </p>
             </div>
+            <!-- Other: the presentable catch-all. Shown only when serials actually land
+                 there, so a fully-mapped template's customer grid stays clean. -->
+            @if (kpiOther > 0) {
+              <div class="bg-background px-6 py-7">
+                <p
+                  class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+                >
+                  Other
+                </p>
+                <p
+                  class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
+                >
+                  {{ kpiOther }}
+                </p>
+              </div>
+            }
             <div class="bg-background px-6 py-7">
               <p
                 class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
@@ -294,6 +310,7 @@
             <app-customer-serials-table
               [serials]="filteredSerials()"
               [sections]="itemFormSections()"
+              [definition]="reportDefinition"
               (openInspection)="openInspectionForm($event)"
             />
           </div>
@@ -727,11 +744,13 @@
           @if (isCustomer()) {
             <app-inspection-report-kpi-overview
               [total]="kpiTotal"
-              [passed]="kpiPassed"
-              [rework]="kpiRework"
-              [scrap]="kpiScrap"
+              [pass]="kpiPassed"
+              [actionRequired]="kpiActionRequired"
+              [rejected]="kpiRejected"
+              [hold]="kpiHold"
+              [other]="kpiOther"
               [passRate]="kpiPassRate"
-              (dispositionOpen)="openKpiModal($event)"
+              (bucketOpen)="openKpiModal($event)"
             />
           }
 
@@ -899,11 +918,13 @@
           @if (!isCustomer()) {
             <app-inspection-report-kpi-overview
               [total]="kpiTotal"
-              [passed]="kpiPassed"
-              [rework]="kpiRework"
-              [scrap]="kpiScrap"
+              [pass]="kpiPassed"
+              [actionRequired]="kpiActionRequired"
+              [rejected]="kpiRejected"
+              [hold]="kpiHold"
+              [other]="kpiOther"
               [passRate]="kpiPassRate"
-              (dispositionOpen)="openKpiModal($event)"
+              (bucketOpen)="openKpiModal($event)"
             />
           }
 
@@ -933,6 +954,7 @@
             <app-inspection-report-serials-table
               [serials]="filteredSerials()"
               [sections]="itemFormSections()"
+              [definition]="reportDefinition"
               [childReports]="childReports()"
               [userRole]="userRole()"
               [searchQuery]="snSearchQuery()"
@@ -1221,7 +1243,7 @@
     }
 
     <!-- KPI Equipment Modal -->
-    @if (activeModalStatus(); as activeModalStatusVal) {
+    @if (activeModalStatus()) {
       <div
         class="fixed inset-0 !h-[100dvh] w-screen z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300"
       >
@@ -1236,7 +1258,7 @@
               <span
                 class="px-3 py-1 rounded-none text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20"
               >
-                {{ activeModalStatusVal }}
+                {{ activeModalLabel }}
               </span>
             </h3>
             <button

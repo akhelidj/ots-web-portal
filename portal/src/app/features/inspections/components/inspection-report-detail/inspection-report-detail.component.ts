@@ -66,6 +66,9 @@ import {
   TemplateFormDefinition,
   definitionToFormSchema,
   resolveDisposition,
+  classifyOutcome,
+  OutcomeBucket,
+  OUTCOME_PRESENTATION,
   SystemRoleValues,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { SectionSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
@@ -404,12 +407,15 @@ export class InspectionReportDetailComponent
     childLinked: LocalChildReport | null;
   }[] = [];
 
-  // KPIs
+  // KPIs — one count per OUTCOME bucket (classifier-driven, no hardcoded disposition).
+  // Field names track the buckets: passed=pass, actionRequired, rejected=reject, hold,
+  // other=the presentable catch-all. `passRate` is pass/total.
   public kpiTotal = 0;
   public kpiPassed = 0;
-  public kpiRework = 0;
-  public kpiScrap = 0;
+  public kpiActionRequired = 0;
+  public kpiRejected = 0;
   public kpiHold = 0;
+  public kpiOther = 0;
   public kpiPassRate = 0;
 
   public isInspectorCapable = computed(() => {
@@ -452,11 +458,16 @@ export class InspectionReportDetailComponent
    */
   public systemRoleValues: SystemRoleValues = {};
 
-  // Modal State
-  public activeModalStatus = signal<
-    (typeof SERIAL_DISPOSITIONS)[keyof typeof SERIAL_DISPOSITIONS] | null
-  >(null);
+  // Modal State — the drill-down is keyed by OUTCOME bucket now, not a raw disposition.
+  public activeModalStatus = signal<OutcomeBucket | null>(null);
   public modalEquipmentList: LocalSerialNumber[] = [];
+
+  /** Commercial label for the open KPI drill-down bucket, via the shared presentation
+   *  map — a real status ("Other" included), never a raw token. */
+  public get activeModalLabel(): string {
+    const bucket = this.activeModalStatus();
+    return bucket ? OUTCOME_PRESENTATION[bucket].label : '';
+  }
 
   public inspectingSn = signal<LocalSerialNumber | null>(null);
   public inspectionFormData: Record<string, unknown> = {};
@@ -885,12 +896,15 @@ export class InspectionReportDetailComponent
       },
     };
 
-    // KPI Calcs
+    // KPI Calcs — count each serial into its OUTCOME bucket via the shared classifier
+    // (definition `outcomes` mapping), so the detail KPIs bucket serials identically to
+    // the tables, the list, and the server. Unmapped/absent → `other` (never dropped).
     const total = snList.length;
     let pass = 0;
-    let rework = 0;
-    let scrap = 0;
+    let actionRequired = 0;
+    let reject = 0;
     let hold = 0;
+    let other = 0;
 
     const reworkList: {
       sn: LocalSerialNumber;
@@ -898,18 +912,22 @@ export class InspectionReportDetailComponent
     }[] = [];
 
     for (const sn of snList) {
-      const rawDisp = this.getDisposition(sn);
-      const disp = rawDisp ? rawDisp.toUpperCase() : null;
+      const bucket = classifyOutcome(sn.inspectionJson ?? null, this.reportDefinition);
+      if (bucket === 'pass') pass++;
+      else if (bucket === 'actionRequired') actionRequired++;
+      else if (bucket === 'reject') reject++;
+      else if (bucket === 'hold') hold++;
+      else other++;
 
-      if (disp === SERIAL_DISPOSITIONS.PASS) pass++;
-      else if (disp === SERIAL_DISPOSITIONS.REWORK) {
-        rework++;
+      // Rework child-report linking is a SEPARATE binary trigger, keyed off the raw
+      // disposition enum — NOT the outcome classifier. Kept intact and independent.
+      const rawDisp = this.getDisposition(sn)?.toUpperCase();
+      if (rawDisp === SERIAL_DISPOSITIONS.REWORK) {
         const child =
           childReports.find((cr) => cr.type === CHILD_REPORT_TYPES.REWORK) ||
           null;
         reworkList.push({ sn, childLinked: child });
-      } else if (disp === SERIAL_DISPOSITIONS.SCRAP) scrap++;
-      else if (disp === SERIAL_DISPOSITIONS.HOLD) hold++;
+      }
     }
 
     // --- APPLY ALL STATE SYNCHRONOUSLY AT THE END ---
@@ -951,9 +969,10 @@ export class InspectionReportDetailComponent
 
       this.kpiTotal = total;
       this.kpiPassed = pass;
-      this.kpiRework = rework;
-      this.kpiScrap = scrap;
+      this.kpiActionRequired = actionRequired;
+      this.kpiRejected = reject;
       this.kpiHold = hold;
+      this.kpiOther = other;
       this.kpiPassRate = total > 0 ? Math.round((pass / total) * 100) : 0;
 
       // Header-scope fields are no longer hydrated into a `form*` scaffold — the
@@ -977,9 +996,10 @@ export class InspectionReportDetailComponent
       this.allowedTransitions = [];
       this.kpiTotal = 0;
       this.kpiPassed = 0;
-      this.kpiRework = 0;
-      this.kpiScrap = 0;
+      this.kpiActionRequired = 0;
+      this.kpiRejected = 0;
       this.kpiHold = 0;
+      this.kpiOther = 0;
       this.kpiPassRate = 0;
       this.reworkSerials = [];
     }
@@ -1352,12 +1372,12 @@ export class InspectionReportDetailComponent
     }
   }
 
-  public openKpiModal(
-    status: (typeof SERIAL_DISPOSITIONS)[keyof typeof SERIAL_DISPOSITIONS],
-  ): void {
-    this.activeModalStatus.set(status);
+  public openKpiModal(bucket: OutcomeBucket): void {
+    this.activeModalStatus.set(bucket);
     this.modalEquipmentList = this.serials().filter(
-      (sn) => this.getDisposition(sn) === status,
+      (sn) =>
+        classifyOutcome(sn.inspectionJson ?? null, this.reportDefinition) ===
+        bucket,
     );
   }
 

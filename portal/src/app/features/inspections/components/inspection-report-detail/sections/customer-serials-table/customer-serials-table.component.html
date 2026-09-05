@@ -109,15 +109,11 @@
             }
           }
           <td class="border-l border-border/60 px-4 py-3 text-right">
-            @if (getDisposition(sn)) {
-              <app-status-badge
-                [label]="dispositionLabel(sn)"
-                [severity]="dispositionSeverity(sn)"
-                font="sans"
-              />
-            } @else {
-              <span class="text-primary/40">—</span>
-            }
+            <app-status-badge
+              [label]="dispositionLabel(sn)"
+              [severity]="dispositionSeverity(sn)"
+              font="sans"
+            />
           </td>
         </tr>
       } @empty {

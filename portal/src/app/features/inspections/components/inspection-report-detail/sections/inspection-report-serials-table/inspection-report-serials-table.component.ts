@@ -3,7 +3,6 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   APP_ROLES,
-  SERIAL_DISPOSITIONS,
   SERIAL_STATUSES,
   SYNC_STATES,
 } from '@portal/core/constants/app.constants';
@@ -13,11 +12,15 @@ import {
 } from '@portal/core/offline/models/types';
 import { SectionSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
+  OUTCOME_PRESENTATION,
+  TemplateFormDefinition,
+} from '@portal/features/templates/schemas/definition-to-form-schema';
+import {
   SerialTableColumn,
   SerialTableColumnGroup,
   buildSerialColumnGroups,
   getSerialCellText,
-  getSerialDisposition,
+  classifySerialOutcome,
 } from '../serial-matrix';
 
 @Component({
@@ -53,6 +56,13 @@ export class InspectionReportSerialsTableComponent {
    * special-cased. Empty → no matrix columns render (identity columns only).
    */
   @Input() sections: SectionSchema[] = [];
+  /**
+   * The report's template definition — drives outcome classification via its `outcomes`
+   * mapping. Null/absent → every serial classifies as `'other'` (the presentable
+   * catch-all). The SAME definition the customer table consumes, so the result chips
+   * on both surfaces can never drift.
+   */
+  @Input() definition: TemplateFormDefinition | null = null;
 
   @Output() searchQueryChange = new EventEmitter<string>();
   @Output() toggleAllEligible = new EventEmitter<void>();
@@ -67,7 +77,6 @@ export class InspectionReportSerialsTableComponent {
   @Output() openHistory = new EventEmitter<LocalSerialNumber>();
 
   protected readonly APP_ROLES = APP_ROLES;
-  protected readonly SERIAL_DISPOSITIONS = SERIAL_DISPOSITIONS;
   protected readonly SERIAL_STATUSES = SERIAL_STATUSES;
   protected readonly SYNC_STATES = SYNC_STATES;
 
@@ -103,8 +112,16 @@ export class InspectionReportSerialsTableComponent {
     return getSerialCellText(sn, col);
   }
 
-  protected getDisposition(sn: LocalSerialNumber): string | null {
-    return getSerialDisposition(sn);
+  /** Commercial outcome label for a serial's result chip — always a real, presentable
+   *  status (`'Other'` for an unmapped/absent value), never a raw token. */
+  protected outcomeLabel(sn: LocalSerialNumber): string {
+    return OUTCOME_PRESENTATION[classifySerialOutcome(sn, this.definition)].label;
+  }
+
+  /** The `data-chip-*` modifier for a serial's result chip, derived from the SAME
+   *  classifier + presentation map the customer table uses (severity → chip tone). */
+  protected outcomeChipClass(sn: LocalSerialNumber): string {
+    return `data-chip-${OUTCOME_PRESENTATION[classifySerialOutcome(sn, this.definition)].severity}`;
   }
 
   protected hasHistory(sn: LocalSerialNumber): boolean {

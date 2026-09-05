@@ -1,5 +1,10 @@
 import { LocalSerialNumber } from '@portal/core/offline/models/types';
 import { SectionSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
+import {
+  classifyOutcome,
+  OutcomeBucket,
+  TemplateFormDefinition,
+} from '@portal/features/templates/schemas/definition-to-form-schema';
 
 /**
  * Shared, definition-driven serial-matrix derivation.
@@ -118,15 +123,17 @@ export function getSerialCellText(
 }
 
 /**
- * The serial's recorded disposition (`inspectionJson.body.emiResult`), or null
- * when none has been captured yet.
+ * Classify a serial into its OUTCOME bucket using the template definition's `outcomes`
+ * mapping — the shared, definition-driven classifier both tables funnel through, so the
+ * ops and customer result columns can never drift. A null/absent definition or an
+ * unmapped value yields `'other'` (the presentable catch-all), never a raw token or an
+ * error state. Replaces the former hardcoded `body.emiResult` read.
  */
-export function getSerialDisposition(sn: LocalSerialNumber): string | null {
-  if (!sn.inspectionJson) return null;
-  const bodySection = sn.inspectionJson['body'] as
-    | Record<string, unknown>
-    | undefined;
-  return (bodySection?.['emiResult'] as string) || null;
+export function classifySerialOutcome(
+  sn: LocalSerialNumber,
+  definition: TemplateFormDefinition | null | undefined,
+): OutcomeBucket {
+  return classifyOutcome(sn.inspectionJson ?? null, definition);
 }
 
 function leafOf(key: string): string {
