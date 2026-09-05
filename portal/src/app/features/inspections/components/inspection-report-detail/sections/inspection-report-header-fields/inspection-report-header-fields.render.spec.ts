@@ -101,15 +101,17 @@ describe('InspectionReportHeaderFieldsComponent — definition-driven header ren
     expect(html().textContent).not.toContain('EMI Result');
   });
 
-  it('MUTATION GUARD: a definition with zero header-scope fields shows the empty-state and NO header labels', async () => {
+  it('MUTATION GUARD: a definition with zero header-scope fields renders NOTHING — no header labels AND no false "not defined" alarm', async () => {
     const fixture = setup();
     const c = fixture.componentInstance;
     const html = () => fixture.nativeElement as HTMLElement;
 
-    // Same definition, but every field is ITEM-scope — the header slice is empty. Broken
-    // via input data (not a test literal): if the render assertions were vacuous (labels
-    // present regardless of the header path), this case would still show "Nominal WT" and
-    // go RED. It must instead flip to the empty-state.
+    // Same definition, but every field is ITEM-scope — the header slice is empty. This is a
+    // fully-defined template that simply has no header specs: NOT an error. It must render
+    // nothing — never the "an administrator must define this template" alarm, which would
+    // falsely accuse the admin (and is what a customer wrongly saw). Broken via input data
+    // (not a test literal): if the render assertions were vacuous (labels present regardless
+    // of the header path), this case would still show "Nominal WT" and go RED.
     const ITEM_ONLY_DEFINITION: TemplateFormDefinition = {
       ...DEFINITION,
       fields: DEFINITION.fields.map((f) => ({ ...f, scope: 'item' as const })),
@@ -120,10 +122,11 @@ describe('InspectionReportHeaderFieldsComponent — definition-driven header ren
     fixture.autoDetectChanges();
     await fixture.whenStable();
 
-    // The discriminator goes the OTHER way: empty-state present, header labels absent.
+    // A defined-but-header-less template is not an error: the alarm must be ABSENT…
     expect(
       html().querySelector('[data-testid="header-fields-unavailable"]'),
-    ).not.toBeNull();
+    ).toBeNull();
+    // …and no header field labels/rows render either (the scope filter is load-bearing).
     expect(html().textContent).not.toContain('Nominal WT');
     expect(html().textContent).not.toContain('Nominal OD');
     expect(html().querySelector('[data-testid="header-field-nomWT"]')).toBeNull();

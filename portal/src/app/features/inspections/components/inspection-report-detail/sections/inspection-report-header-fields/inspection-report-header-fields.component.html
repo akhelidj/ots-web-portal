@@ -1,4 +1,4 @@
-@if (schemaUnavailable()) {
+@if (definitionMissing()) {
   <div
     data-testid="header-fields-unavailable"
     class="bg-error-light border-l-4 border-error text-error-dark p-5 rounded-md shadow-sm"
@@ -11,6 +11,9 @@
       shown.
     </p>
   </div>
+} @else if (noHeaderFields()) {
+  <!-- Definition present but no header-scope fields: not an error. Render nothing so a
+       customer is never falsely told the template is undefined. -->
 } @else {
   <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
     @for (section of schema()!.sections; track section.key) {

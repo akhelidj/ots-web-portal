@@ -170,7 +170,22 @@ export class InspectionReportsService {
     if (!report) {
       throw new NotFoundException(`InspectionReport ${id} not found`);
     }
-    return report;
+
+    // Graft the pinned Template's definitionJson onto the detail payload — mirroring
+    // findAll — so the single-report endpoint is self-consistent with the list. Without
+    // this, any portal path that caches a report from the detail/mutation response (the
+    // attachments-hydration merge, publish/update/patch echoes) would overwrite the
+    // list-hydrated definitionJson with `undefined`, transiently breaking the read-only
+    // Specs surface (a customer would see the false "template not defined" empty-state).
+    const template = await this.prisma.template.findFirst({
+      where: {
+        tenantId: user.tenantId,
+        templateKey: report.templateKey,
+        templateVersion: report.templateVersion,
+      },
+      select: { definitionJson: true },
+    });
+    return { ...report, definitionJson: template?.definitionJson ?? null };
   }
 
   async addAttachment(

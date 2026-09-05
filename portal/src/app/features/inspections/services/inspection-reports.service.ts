@@ -414,9 +414,12 @@ export class InspectionReportsService implements DataHydrationSource {
         // Attachments live only on the per-report detail payload — the list
         // endpoint omits them — so hydrate them the same way as serials: through
         // the pull, into the cache, so a read-only consumer (a customer) sees
-        // their documents offline-first. Only SYNCED rows are touched: a PENDING
-        // local edit is never clobbered, and no detail fetch is made for a
-        // not-yet-synced local id (which the server would 404).
+        // their documents offline-first. The detail payload also carries the pinned
+        // template's `definitionJson` (grafted server-side, same as the list), so
+        // re-establish it here too — the read-only Specs surface needs it, and this
+        // guarantees it can never be left null on a hydrated row. Only SYNCED rows
+        // are touched: a PENDING local edit is never clobbered, and no detail fetch
+        // is made for a not-yet-synced local id (which the server would 404).
         try {
           const localRep = await this.irRepo.getById(rep.id);
           if (localRep && localRep.syncState === 'SYNCED') {
@@ -425,12 +428,11 @@ export class InspectionReportsService implements DataHydrationSource {
                 `${environment.apiUrl}/inspection-reports/${rep.id}`,
               ),
             );
-            if (detail.attachments) {
-              await this.irRepo.upsert({
-                ...localRep,
-                attachments: detail.attachments,
-              });
-            }
+            await this.irRepo.upsert({
+              ...localRep,
+              attachments: detail.attachments ?? localRep.attachments,
+              definitionJson: detail.definitionJson ?? localRep.definitionJson,
+            });
           }
         } catch (attErr) {
           console.error(

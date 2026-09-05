@@ -74,11 +74,23 @@ export class InspectionReportHeaderFieldsComponent {
     }
   });
 
-  /** True → render the explicit empty-state (no usable definition, or zero header fields). */
-  public schemaUnavailable = computed(() => {
+  /**
+   * True ONLY when there is no usable definition at all (null/malformed) — the single
+   * genuine error state. This is the only case that tells the viewer the template isn't
+   * defined. A hydrated customer report always carries its `definitionJson`, so this
+   * should never fire falsely there (see the detail component's hydration).
+   */
+  public definitionMissing = computed(() => this.schema() === null);
+
+  /**
+   * True when a definition EXISTS but declares no header-scope fields (e.g. a flat
+   * template, or one whose fields are all item-scope). This is NOT an error — the
+   * template is fully defined, it simply has no header specs — so the surface renders
+   * nothing rather than falsely claiming an administrator failed to define it.
+   */
+  public noHeaderFields = computed(() => {
     const s = this.schema();
-    if (!s) return true;
-    return s.sections.every((sec) => sec.fields.length === 0);
+    return !!s && s.sections.every((sec) => sec.fields.length === 0);
   });
 
   /**
