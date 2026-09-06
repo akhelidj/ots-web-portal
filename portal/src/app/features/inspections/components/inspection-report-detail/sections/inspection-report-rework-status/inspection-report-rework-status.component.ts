@@ -25,16 +25,14 @@ import {
 export class InspectionReportReworkStatusComponent {
   @Input() report: LocalInspectionReport | null = null;
   @Input() userRole = '';
-  /** True when the report's definition carries an authored rework rule. Drives visibility so
-   *  the card explains the automatic collection even before any serial has matched. */
-  @Input() reworkConfigured = false;
   /** The auto-generated rework child report (or null). Its `serialNumbers` are the
    *  authoritative "what's currently in rework". */
   @Input() reworkChild: LocalChildReport | null = null;
 
-  /** Show the card when a rule is configured or a child already exists. */
+  /** Show the card only when at least one serial actually needs rework. A configured rule
+   *  with no matching serial (or a retained-but-empty child) stays hidden — nothing to show. */
   protected get isVisible(): boolean {
-    return this.reworkConfigured || !!this.reworkChild;
+    return this.reworkSerials.length > 0;
   }
 
   /** Serials the server's rule actually matched into the child (empty until one matches). */

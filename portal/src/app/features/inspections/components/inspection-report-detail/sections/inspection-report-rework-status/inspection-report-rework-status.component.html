@@ -48,7 +48,6 @@
         <thead class="bg-white border-b border-gray-100">
           <tr>
             <th scope="col" class="table-th">Serial Number</th>
-            <th scope="col" class="table-th">Disposition</th>
             <th scope="col" class="table-th">Approval</th>
           </tr>
         </thead>
@@ -57,16 +56,13 @@
             <tr class="hover:bg-primary/5 transition-colors">
               <td class="table-td-strong code-text">{{ sn.serial }}</td>
               <td class="table-td text-xs text-gray-600">
-                {{ sn.disposition || '—' }}
-              </td>
-              <td class="table-td text-xs text-gray-600">
                 {{ sn.approvalStatus || '—' }}
               </td>
             </tr>
           } @empty {
             <tr>
               <td
-                colspan="3"
+                colspan="2"
                 class="px-6 py-6 text-center text-xs text-gray-500"
               >
                 No serials match the rework rule yet. Any that do will be added
