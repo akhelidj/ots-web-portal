@@ -3,68 +3,44 @@
     class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8 overflow-hidden max-w-7xl mx-auto"
   >
     <div
-      class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between"
+      class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3"
     >
-      <h2
-        class="text-lg text-neutral-900 flex items-center gap-2"
-      >
-        Rework Status
-        @if (items.length > 0) {
-          <span
-            class="bg-neutral-200 text-neutral-800 text-[11px] font-bold py-0.5 px-2 min-w-[20px] text-center rounded-md whitespace-nowrap"
-            >{{ items.length }}</span
-          >
-        }
-      </h2>
-      <div class="flex items-center gap-3">
-        @if (canGenerate()) {
-          <div class="relative group inline-block">
-            <button
-              type="button"
-              (click)="generateChildReport.emit()"
-              [disabled]="isGenerating || isWaitingForApproval()"
-              [ngClass]="[
-                (missingChildCount() > 0 ||
-                  (items.length === 0 && reworkConfigured)) &&
-                !isWaitingForApproval()
-                  ? 'btn-primary shadow-[0_0_10px_rgb(var(--color-primary)/0.4)]'
-                  : 'btn-secondary',
-                isWaitingForApproval() ? 'opacity-50 cursor-not-allowed' : '',
-              ]"
-              class="btn btn-sm"
+      <div class="flex flex-col gap-0.5">
+        <h2 class="text-lg text-neutral-900 flex items-center gap-2">
+          Rework Status
+          @if (reworkSerials.length > 0) {
+            <span
+              class="bg-neutral-200 text-neutral-800 text-[11px] font-bold py-0.5 px-2 min-w-[20px] text-center rounded-md whitespace-nowrap"
+              >{{ reworkSerials.length }}</span
             >
-              @if (isGenerating) {
-                Generating...
-              } @else if (isWaitingForApproval()) {
-                Waiting for approval from Supervisor (before generating child
-                report).
-              } @else {
-                Generate Child Report
-              }
-            </button>
-          </div>
-        } @else if (existingChildReportId) {
-          <a
-            [routerLink]="childRoute(existingChildReportId)"
-            class="btn btn-primary btn-sm shadow-[0_0_10px_rgb(var(--color-primary)/0.4)] px-4 hover:text-white"
-          >
-            Open Child Report
-            <svg
-              class="w-3.5 h-3.5 ml-1.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-              />
-            </svg>
-          </a>
-        }
+          }
+        </h2>
+        <p class="text-xs text-gray-500">
+          Serials matching the rework rule are collected automatically as you
+          inspect.
+        </p>
       </div>
+      @if (reworkChild) {
+        <a
+          [routerLink]="childRoute(reworkChild.id)"
+          class="btn btn-primary btn-sm px-4 hover:text-white whitespace-nowrap"
+        >
+          Open Child Report
+          <svg
+            class="w-3.5 h-3.5 ml-1.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+            />
+          </svg>
+        </a>
+      }
     </div>
 
     <div class="overflow-x-auto">
@@ -72,48 +48,20 @@
         <thead class="bg-white border-b border-gray-100">
           <tr>
             <th scope="col" class="table-th">Serial Number</th>
-            <th scope="col" class="table-th">Child Report</th>
-            <th scope="col" class="table-th">Status</th>
+            <th scope="col" class="table-th">Disposition</th>
+            <th scope="col" class="table-th">Approval</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 bg-white">
-          @for (item of items; track item.sn.id) {
+          @for (sn of reworkSerials; track sn.id) {
             <tr class="hover:bg-primary/5 transition-colors">
-              <td class="table-td-strong code-text">
-                {{ item.sn.value }}
+              <td class="table-td-strong code-text">{{ sn.serial }}</td>
+              <td class="table-td text-xs text-gray-600">
+                {{ sn.disposition || '—' }}
               </td>
-
-              @if (item.childLinked) {
-                <td class="table-td code-text text-xs text-gray-600">
-                  <a
-                    [routerLink]="childRoute(item.childLinked.id)"
-                    class="text-primary hover:text-primary-light hover:underline transition-colors"
-                  >
-                    {{ reportLabel() }} - Rework
-                  </a>
-                </td>
-                <td class="px-4 py-3 sm:px-6 sm:py-4">
-                  <span
-                    class="data-chip px-2.5 py-1 text-[11px] font-bold border-transparent"
-                    [ngClass]="{
-                      'bg-success-light text-success-dark':
-                        item.childLinked.status === 'APPROVED' ||
-                        item.childLinked.status === 'CLOSED',
-                      'bg-primary/10 text-primary':
-                        item.childLinked.status !== 'APPROVED' &&
-                        item.childLinked.status !== 'CLOSED',
-                    }"
-                    >{{ item.childLinked.status }}</span
-                  >
-                </td>
-              } @else {
-                <td class="px-6 py-4 text-xs text-gray-400 italic">None</td>
-                <td class="px-6 py-4">
-                  <span class="data-chip-warning px-2 py-0.5 text-[10px]"
-                    >Not Generated</span
-                  >
-                </td>
-              }
+              <td class="table-td text-xs text-gray-600">
+                {{ sn.approvalStatus || '—' }}
+              </td>
             </tr>
           } @empty {
             <tr>
@@ -121,9 +69,8 @@
                 colspan="3"
                 class="px-6 py-6 text-center text-xs text-gray-500"
               >
-                A rework rule is configured for this report. No serial currently
-                matches it — generating will evaluate the rule against every
-                serial and create the child report if any match.
+                No serials match the rework rule yet. Any that do will be added
+                here automatically as inspection continues.
               </td>
             </tr>
           }

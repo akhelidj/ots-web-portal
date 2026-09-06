@@ -30,7 +30,6 @@ import {
   ReportStatus,
   REPORT_STATUSES,
   CHILD_REPORT_TYPES,
-  SERIAL_DISPOSITIONS,
   BATCH_STATUSES,
   SERIAL_STATUSES,
   SYNC_STATES,
@@ -211,7 +210,6 @@ export class InspectionReportDetailComponent
   public editingSnValue = '';
   public activeHistorySn = signal<LocalSerialNumber | null>(null);
   public isPublishingReport = signal(false);
-  public isGeneratingChildReport = signal(false);
 
   public selectedForApproval = signal<Set<string>>(new Set());
   public selectedInBatch = signal<Set<string>>(new Set());
@@ -224,7 +222,6 @@ export class InspectionReportDetailComponent
   // Expose constants to template
   public readonly APP_ROLES = APP_ROLES;
   public readonly REPORT_STATUSES = REPORT_STATUSES;
-  public readonly SERIAL_DISPOSITIONS = SERIAL_DISPOSITIONS;
   public readonly CHILD_REPORT_TYPES = CHILD_REPORT_TYPES;
   public readonly BATCH_STATUSES = BATCH_STATUSES;
   public readonly SERIAL_STATUSES = SERIAL_STATUSES;
@@ -260,10 +257,14 @@ export class InspectionReportDetailComponent
       batches.every((batch) => batch.batch.status === BATCH_STATUSES.APPROVED)
     );
   });
-  public hasReworkChildReport = computed(() =>
-    this.childReports().some(
-      (report) => report.type === CHILD_REPORT_TYPES.REWORK,
-    ),
+  /** The auto-generated rework child report (or null). The Rework Status card reads its
+   *  serials directly — the authoritative "what's in rework" — rather than re-deriving from
+   *  client-side dispositions, which can diverge from what the server's rule actually matched. */
+  public reworkChildReport = computed(
+    () =>
+      this.childReports().find(
+        (report) => report.type === CHILD_REPORT_TYPES.REWORK,
+      ) ?? null,
   );
 
   /**
@@ -427,10 +428,6 @@ export class InspectionReportDetailComponent
   } | null = null;
 
   public validationResult: ValidationResult | null = null;
-  public reworkSerials: {
-    sn: LocalSerialNumber;
-    childLinked: LocalChildReport | null;
-  }[] = [];
 
   // KPIs — one count per OUTCOME bucket (classifier-driven, no hardcoded disposition).
   // Field names track the buckets: passed=pass, actionRequired, rejected=reject, hold,
@@ -931,11 +928,6 @@ export class InspectionReportDetailComponent
     let hold = 0;
     let other = 0;
 
-    const reworkList: {
-      sn: LocalSerialNumber;
-      childLinked: LocalChildReport | null;
-    }[] = [];
-
     for (const sn of snList) {
       const bucket = classifyOutcome(sn.inspectionJson ?? null, this.reportDefinition);
       if (bucket === 'pass') pass++;
@@ -943,16 +935,6 @@ export class InspectionReportDetailComponent
       else if (bucket === 'reject') reject++;
       else if (bucket === 'hold') hold++;
       else other++;
-
-      // Rework child-report linking is a SEPARATE binary trigger, keyed off the raw
-      // disposition enum — NOT the outcome classifier. Kept intact and independent.
-      const rawDisp = this.getDisposition(sn)?.toUpperCase();
-      if (rawDisp === SERIAL_DISPOSITIONS.REWORK) {
-        const child =
-          childReports.find((cr) => cr.type === CHILD_REPORT_TYPES.REWORK) ||
-          null;
-        reworkList.push({ sn, childLinked: child });
-      }
     }
 
     // --- APPLY ALL STATE SYNCHRONOUSLY AT THE END ---
@@ -972,7 +954,6 @@ export class InspectionReportDetailComponent
       this.inspectedByName = newInspectedByName;
       this.approvedByName = newApprovedByName;
       this.systemRoleValues = newSystemRoleValues;
-      this.reworkSerials = reworkList;
 
       // Set default tab if not set
       if (this.activeTab() === 'summary') {
@@ -1026,7 +1007,6 @@ export class InspectionReportDetailComponent
       this.kpiHold = 0;
       this.kpiOther = 0;
       this.kpiPassRate = 0;
-      this.reworkSerials = [];
     }
 
     setTimeout(() => this.setupShellScrollTracking(), 0);
@@ -1225,6 +1205,25 @@ export class InspectionReportDetailComponent
         currentSn.id,
         inspectionData as Record<string, unknown>,
       );
+
+      // Auto-collect rework: when the template defines a rework rule, re-sync the child
+      // report after every serial save so each newly-inspected serial that matches the
+      // rule is folded in automatically ("au fil de l'eau") — no button. The server
+      // endpoint re-evaluates the rule against ALL serials and upserts (removing the child
+      // when none match), so it is idempotent and safe to run on each save. Best-effort:
+      // wrapped so a sync hiccup never fails or blocks the serial save the user just made.
+      // Skipped for an unsynced parent (temp local id) — sync-rework needs a real report id;
+      // it is picked up on the next save once the report has synced.
+      if (
+        this.hasReworkRuleConfigured() &&
+        !this.reportId.startsWith('local-ir-')
+      ) {
+        try {
+          await this.crService.generateReworkChildReport(this.reportId);
+        } catch {
+          // non-fatal — the serial save succeeded; rework re-syncs on the next save
+        }
+      }
 
       await this.refreshData();
       this.closeInspectionForm();
@@ -1563,25 +1562,6 @@ export class InspectionReportDetailComponent
     }
   }
 
-  public async onGenerateReworkChildReport(): Promise<void> {
-    if (!this.reportId || this.reportId.startsWith('local-ir-')) {
-      this.formError =
-        'Child report generation requires a synced inspection report.';
-      return;
-    }
-
-    this.isGeneratingChildReport.set(true);
-    this.formError = '';
-    try {
-      await this.crService.generateReworkChildReport(this.reportId);
-      await this.refreshData();
-    } catch (error) {
-      const e = error as Error;
-      this.formError = e.message || 'Failed to generate child report.';
-    } finally {
-      this.isGeneratingChildReport.set(false);
-    }
-  }
 
   public onTabClick(
     tab: 'summary' | 'serials' | 'approvals' | 'specs' | 'history',

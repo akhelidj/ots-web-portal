@@ -927,12 +927,8 @@
           <app-inspection-report-rework-status
             [report]="reportData"
             [userRole]="userRole()"
-            [items]="reworkSerials"
             [reworkConfigured]="hasReworkRuleConfigured()"
-            [hasGeneratedChildReport]="hasReworkChildReport()"
-            [isGenerating]="isGeneratingChildReport()"
-            [isCompactMode]="isCompactMode()"
-            (generateChildReport)="onGenerateReworkChildReport()"
+            [reworkChild]="reworkChildReport()"
           />
           <div class="flex flex-col xl:flex-row gap-6 items-start w-full">
             <app-inspection-report-serials-table

@@ -1,18 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { APP_ROLES } from '@portal/core/constants/app.constants';
 import {
   LocalChildReport,
   LocalInspectionReport,
-  LocalSerialNumber,
 } from '@portal/core/offline/models/types';
 
-type ReworkItem = {
-  sn: LocalSerialNumber;
-  childLinked: LocalChildReport | null;
-};
-
+/**
+ * Read-only status for the report's rework child. Rework is collected AUTOMATICALLY: when the
+ * template defines a rework rule, the parent re-syncs the child after every serial save, so
+ * matching serials — including ones inspected later — are folded in without any action here.
+ * This card therefore only reports state (the child and its serials, a link to open it); it
+ * has no generate button. It surfaces whenever a rule is configured OR a child already exists.
+ */
 @Component({
   selector: 'app-inspection-report-rework-status',
   standalone: true,
@@ -25,66 +25,25 @@ type ReworkItem = {
 export class InspectionReportReworkStatusComponent {
   @Input() report: LocalInspectionReport | null = null;
   @Input() userRole = '';
-  @Input() items: ReworkItem[] = [];
-  /**
-   * True when the report's definition carries an authored rework rule (#8a). The card and
-   * the Generate button surface off THIS as well as off `items`, because the server
-   * evaluates the rule on demand against every serial — so a configured rule must stay
-   * discoverable even before (or without) any serial the client already reads as REWORK.
-   */
+  /** True when the report's definition carries an authored rework rule. Drives visibility so
+   *  the card explains the automatic collection even before any serial has matched. */
   @Input() reworkConfigured = false;
-  @Input() hasGeneratedChildReport = false;
-  @Input() isGenerating = false;
-  @Input() isCompactMode = false;
+  /** The auto-generated rework child report (or null). Its `serialNumbers` are the
+   *  authoritative "what's currently in rework". */
+  @Input() reworkChild: LocalChildReport | null = null;
 
-  @Output() generateChildReport = new EventEmitter<void>();
-
-  protected readonly APP_ROLES = APP_ROLES;
-
-  /** Show the whole card when there are rework serials OR a rule is configured. */
+  /** Show the card when a rule is configured or a child already exists. */
   protected get isVisible(): boolean {
-    return this.items.length > 0 || this.reworkConfigured;
+    return this.reworkConfigured || !!this.reworkChild;
   }
 
-  protected canGenerate(): boolean {
-    return (
-      !this.hasGeneratedChildReport &&
-      (this.items.length > 0 || this.reworkConfigured) &&
-      (this.userRole === APP_ROLES.INSPECTOR ||
-        this.userRole === APP_ROLES.SUPERVISOR ||
-        this.userRole === APP_ROLES.ADMIN)
-    );
-  }
-
-  protected areAllSerialsApproved(): boolean {
-    return (
-      this.items.length > 0 &&
-      this.items.every((item) => item.sn.approvalStatus === 'APPROVED')
-    );
-  }
-
-  protected isWaitingForApproval(): boolean {
-    // Approval-gating only applies when there ARE rework serials to approve. With a rule
-    // configured but no client-side REWORK serials, there is nothing to wait on — the
-    // server evaluates the rule against every serial when the button fires.
-    return (
-      this.items.length > 0 &&
-      this.canGenerate() &&
-      !this.areAllSerialsApproved()
-    );
-  }
-
-  protected missingChildCount(): number {
-    return this.items.filter((item) => !item.childLinked).length;
+  /** Serials the server's rule actually matched into the child (empty until one matches). */
+  protected get reworkSerials(): LocalChildReport['serialNumbers'] {
+    return this.reworkChild?.serialNumbers ?? [];
   }
 
   protected childRoute(childId: string): string[] {
     return ['/', this.userRole.toLowerCase(), 'reports', childId, 'child'];
-  }
-
-  protected get existingChildReportId(): string | null {
-    const item = this.items.find((i) => i.childLinked);
-    return item?.childLinked?.id ?? null;
   }
 
   protected reportLabel(): string {
