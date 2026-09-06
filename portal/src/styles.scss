@@ -24,11 +24,11 @@
   --accent: #ed812d; /* orange */
   --on-accent: #171b1d; /* ink text on orange */
   --accent-hover: #ff9b4c;
-  --background: #f1f0ea; /* paper */
+  --background: #f4f4f5; /* paper — neutral cool grey (de-warmed from #f1f0ea) */
   --foreground: #171b1d; /* ink */
   --card: #ffffff; /* white */
   --card-foreground: #171b1d; /* ink */
-  --muted: #e7e5dd; /* deep-paper */
+  --muted: #e8e9ea; /* deep-paper — neutral cool grey (de-warmed from #e7e5dd) */
   --muted-foreground: #5d6466; /* slate */
   --border: rgba(23, 27, 29, 0.16); /* ink @ 16% */
   --destructive: #9b3d2e; /* brick red — aligned with --error */
@@ -60,7 +60,7 @@
   --primary-rgb: 23 27 29;
   --color-primary: 23 27 29;
   --accent-rgb: 237 129 45;
-  --background-rgb: 241 240 234; /* paper — channel form so bg-background/95 (translucent
+  --background-rgb: 244 244 245; /* paper (#f4f4f5) — channel form so bg-background/95 (translucent
                                     sticky headers) can take an alpha modifier */
 
   /* Spacing — 4pt scale. */
