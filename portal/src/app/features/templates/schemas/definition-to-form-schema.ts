@@ -291,15 +291,25 @@ export function definitionToFormSchema(
   );
 
   const declaredKeys = orderedSectionKeys.filter((key) => bySection.has(key));
-  const appendLeftovers = headerMode || isFlat;
-  const leftoverKeys = appendLeftovers
-    ? [...bySection.keys()].filter((key) => !orderedSectionKeys.includes(key))
-    : [];
+  // Append section-less (undeclared) groups in EVERY mode. A user-authored template can
+  // carry item fields with no `section` (the define wizard does not force one) and an
+  // empty `sections` array; dropping those leftovers silently produced an inspection form
+  // with zero fields ("can't inspect"). Appending them keeps every field renderable. This
+  // does NOT change the drill-pipe golden or the region spec: drill pipe sections every
+  // item field (no leftovers), and the region spec's only section-less field is header
+  // scope, already removed by the item-scope filter above before section grouping.
+  const leftoverKeys = [...bySection.keys()].filter(
+    (key) => !orderedSectionKeys.includes(key),
+  );
 
   const sections: SectionSchema[] = [...declaredKeys, ...leftoverKeys].map(
     (key) => ({
       key,
-      title: titleByKey.get(key) ?? key,
+      // Declared sections keep their title. A leftover group keyed by '' (fields with no
+      // `section`) has no declared title — fall back to a neutral heading instead of an
+      // empty bar. A leftover with a non-empty key (a section a field names but that
+      // `sections` never declares) still titles by its key, as before.
+      title: titleByKey.get(key) ?? (key || 'Details'),
       fields: bySection.get(key) ?? [],
     }),
   );
