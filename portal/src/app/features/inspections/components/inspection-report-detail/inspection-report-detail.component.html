@@ -77,7 +77,7 @@
                       uiState?.actions?.['ADMIN_EXPORT']?.enabled
                     )
                   "
-                  class="cust-sweep group inline-flex items-center gap-2 border border-primary/25 bg-card px-5 py-3 font-sans uppercase tracking-[0.12em] text-[13px] text-primary transition-colors hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 disabled:before:hidden"
+                  class="cust-sweep cust-sweep--accent group inline-flex items-center gap-2 border border-transparent bg-accent px-5 py-3 font-sans uppercase tracking-[0.12em] text-[13px] text-accent-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 disabled:before:hidden"
                 >
                   <svg
                     class="h-4 w-4 cust-nudge group-hover:translate-y-0.5 group-focus-visible:translate-y-0.5"
@@ -93,7 +93,7 @@
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" x2="12" y1="15" y2="3" />
                   </svg>
-                  {{ isExporting ? 'Exporting…' : 'Export Excel' }}
+                  {{ isExporting ? 'Exporting…' : 'Export Report' }}
                 </button>
                 @if (!isOnline) {
                   <p class="mt-2 font-sans text-[12px] text-primary/50">
@@ -200,7 +200,11 @@
             </h2>
           </header>
 
-          <!-- Read summary, not drill-down. One surface, 1px seams, no click-to-filter. -->
+          <!-- Drill-down summary. One surface, 1px seams. Each COUNTABLE bucket
+               (Passed / Action Required / Rejected / On Hold / Other) is a button
+               that opens the shared KPI modal listing the serials it counts; the
+               two aggregates (Total Inspected, Pass Rate) have no single bucket and
+               stay static. Same modal + openKpiModal() the ops/admin views use. -->
           <div
             class="mt-8 grid grid-cols-2 gap-px border border-border bg-border lg:grid-cols-3"
           >
@@ -216,69 +220,159 @@
                 {{ kpiTotal }}
               </p>
             </div>
-            <div class="bg-background px-6 py-7">
+            <button
+              type="button"
+              (click)="openKpiModal('pass')"
+              class="cust-interactive group/kpi block w-full text-left bg-background px-6 py-7 cursor-pointer hover:bg-primary/[0.05] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+            >
               <p
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50 flex items-center gap-1.5"
               >
                 Passed
+                <svg
+                  class="h-3 w-3 text-primary/35 opacity-0 -translate-x-0.5 transition-all duration-200 group-hover/kpi:opacity-100 group-hover/kpi:translate-x-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
               </p>
               <p
                 class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
               >
                 {{ kpiPassed }}
               </p>
-            </div>
-            <div class="bg-background px-6 py-7">
+            </button>
+            <button
+              type="button"
+              (click)="openKpiModal('actionRequired')"
+              class="cust-interactive group/kpi block w-full text-left bg-background px-6 py-7 cursor-pointer hover:bg-primary/[0.05] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+            >
               <p
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50 flex items-center gap-1.5"
               >
                 Action Required
+                <svg
+                  class="h-3 w-3 text-primary/35 opacity-0 -translate-x-0.5 transition-all duration-200 group-hover/kpi:opacity-100 group-hover/kpi:translate-x-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
               </p>
               <p
                 class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
               >
                 {{ kpiActionRequired }}
               </p>
-            </div>
-            <div class="bg-background px-6 py-7">
+            </button>
+            <button
+              type="button"
+              (click)="openKpiModal('reject')"
+              class="cust-interactive group/kpi block w-full text-left bg-background px-6 py-7 cursor-pointer hover:bg-primary/[0.05] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+            >
               <p
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50 flex items-center gap-1.5"
               >
                 Rejected
+                <svg
+                  class="h-3 w-3 text-primary/35 opacity-0 -translate-x-0.5 transition-all duration-200 group-hover/kpi:opacity-100 group-hover/kpi:translate-x-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
               </p>
               <p
                 class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
               >
                 {{ kpiRejected }}
               </p>
-            </div>
-            <div class="bg-background px-6 py-7">
+            </button>
+            <button
+              type="button"
+              (click)="openKpiModal('hold')"
+              class="cust-interactive group/kpi block w-full text-left bg-background px-6 py-7 cursor-pointer hover:bg-primary/[0.05] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+            >
               <p
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50 flex items-center gap-1.5"
               >
                 On Hold
+                <svg
+                  class="h-3 w-3 text-primary/35 opacity-0 -translate-x-0.5 transition-all duration-200 group-hover/kpi:opacity-100 group-hover/kpi:translate-x-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
               </p>
               <p
                 class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
               >
                 {{ kpiHold }}
               </p>
-            </div>
+            </button>
             <!-- Other: the presentable catch-all. Shown only when serials actually land
                  there, so a fully-mapped template's customer grid stays clean. -->
             @if (kpiOther > 0) {
-              <div class="bg-background px-6 py-7">
+              <button
+                type="button"
+                (click)="openKpiModal('other')"
+                class="cust-interactive group/kpi block w-full text-left bg-background px-6 py-7 cursor-pointer hover:bg-primary/[0.05] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+              >
                 <p
-                  class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+                  class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50 flex items-center gap-1.5"
                 >
                   Other
+                  <svg
+                    class="h-3 w-3 text-primary/35 opacity-0 -translate-x-0.5 transition-all duration-200 group-hover/kpi:opacity-100 group-hover/kpi:translate-x-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
                 </p>
                 <p
                   class="mt-2 font-heading text-3xl sm:text-4xl font-semibold text-primary tabular-nums"
                 >
                   {{ kpiOther }}
                 </p>
-              </div>
+              </button>
             }
             <div class="bg-background px-6 py-7">
               <p
