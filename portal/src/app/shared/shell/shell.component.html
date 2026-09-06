@@ -116,14 +116,19 @@
             class="flex items-center gap-3 ml-2 pl-4 border-l border-primary-light/60"
           >
             @if (isAuthenticated()) {
+              <!-- `!` important on the text colours: the global `a:not(.btn)` base rule
+                   (styles.scss) has selector specificity (0,1,1), which out-specifies a
+                   plain `text-neutral-300` utility (0,1,0) and would paint these links ink
+                   on the dark header. Sign Out below is a <button>, unmatched by that rule,
+                   so it needs no override. -->
               <a
                 [routerLink]="['/', APP_ROUTES.HELP]"
-                class="text-sm font-medium text-neutral-300 hover:text-white transition-colors"
+                class="text-sm font-medium !text-neutral-300 hover:!text-white transition-colors"
                 >Help</a
               >
               <a
                 [routerLink]="['/', APP_ROUTES.SETTINGS]"
-                class="text-sm font-medium text-neutral-300 hover:text-white transition-colors mr-3"
+                class="text-sm font-medium !text-neutral-300 hover:!text-white transition-colors mr-3"
                 >Settings</a
               >
               <button
