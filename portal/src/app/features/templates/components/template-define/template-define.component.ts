@@ -484,6 +484,29 @@ export class TemplateDefineComponent implements OnInit {
     return row.role !== '';
   }
 
+  /**
+   * #1 — the header roles offered in a given row's Role select: every role NOT already
+   * assigned to ANOTHER header field, PLUS this row's own current role (so it stays shown
+   * and selectable). Role uniqueness is already enforced on change (onRoleChange), but
+   * hiding taken roles up front keeps the dropdown honest — an author never picks a role
+   * that would silently steal it from another field. A METHOD (not a computed) so it
+   * reflects in-place ngModel role edits on every CD pass, matching the other row-derived
+   * lists (zoneless-safe: the row state IS the source, no post-await signal write).
+   */
+  public availableHeaderRoleOptions(
+    row: DescribeRow,
+  ): { value: FieldRole; label: string }[] {
+    const takenElsewhere = new Set(
+      this.headerRows()
+        .filter((r) => r !== row)
+        .map((r) => r.role)
+        .filter((role): role is FieldRole => role !== ''),
+    );
+    return HEADER_ROLE_OPTIONS.filter(
+      (opt) => opt.value === row.role || !takenElsewhere.has(opt.value),
+    );
+  }
+
   public onSelectAllSerial(checked: boolean): void {
     for (const r of this.serialCandidateRows()) r.serial = checked;
     this.clearSubmitFeedback();

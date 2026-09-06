@@ -858,6 +858,23 @@ export class InspectionReportsService {
         },
       });
 
+      // Record the parent's auto-approval as a transition so the Activity tab shows it —
+      // mirrors the child-report log below. Only when the status actually flips to APPROVED
+      // (guard against re-logging an already-approved parent).
+      if (
+        shouldAutoApproveParent &&
+        report.status !== InspectionReportStatus.APPROVED
+      ) {
+        await tx.inspectionReportTransitionLog.create({
+          data: {
+            inspectionReportId: report.id,
+            fromStatus: report.status,
+            toStatus: InspectionReportStatus.APPROVED,
+            userId,
+          },
+        });
+      }
+
       let updatedChildReport = null;
       if (batch.childReportId) {
         const shouldAutoApproveChild =

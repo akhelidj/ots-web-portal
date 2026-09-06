@@ -1,4 +1,4 @@
-@if (items.length > 0) {
+@if (isVisible) {
   <div
     class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8 overflow-hidden max-w-7xl mx-auto"
   >
@@ -9,10 +9,12 @@
         class="text-lg text-neutral-900 flex items-center gap-2"
       >
         Rework Status
-        <span
-          class="bg-neutral-200 text-neutral-800 text-[11px] font-bold py-0.5 px-2 min-w-[20px] text-center rounded-md whitespace-nowrap"
-          >{{ items.length }}</span
-        >
+        @if (items.length > 0) {
+          <span
+            class="bg-neutral-200 text-neutral-800 text-[11px] font-bold py-0.5 px-2 min-w-[20px] text-center rounded-md whitespace-nowrap"
+            >{{ items.length }}</span
+          >
+        }
       </h2>
       <div class="flex items-center gap-3">
         @if (canGenerate()) {
@@ -22,8 +24,10 @@
               (click)="generateChildReport.emit()"
               [disabled]="isGenerating || isWaitingForApproval()"
               [ngClass]="[
-                missingChildCount() > 0 && !isWaitingForApproval()
-                  ? 'btn-primary shadow-[0_0_10px_rgb(var(--color-primary)/0.4)] animate-pulse'
+                (missingChildCount() > 0 ||
+                  (items.length === 0 && reworkConfigured)) &&
+                !isWaitingForApproval()
+                  ? 'btn-primary shadow-[0_0_10px_rgb(var(--color-primary)/0.4)]'
                   : 'btn-secondary',
                 isWaitingForApproval() ? 'opacity-50 cursor-not-allowed' : '',
               ]"
@@ -110,6 +114,17 @@
                   >
                 </td>
               }
+            </tr>
+          } @empty {
+            <tr>
+              <td
+                colspan="3"
+                class="px-6 py-6 text-center text-xs text-gray-500"
+              >
+                A rework rule is configured for this report. No serial currently
+                matches it — generating will evaluate the rule against every
+                serial and create the child report if any match.
+              </td>
             </tr>
           }
         </tbody>

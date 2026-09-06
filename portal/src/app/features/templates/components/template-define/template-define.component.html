@@ -251,7 +251,7 @@
                     [attr.data-testid]="'header-role-' + row.token"
                   >
                     <option [value]="''">— (none)</option>
-                    @for (opt of headerRoleOptions; track opt.value) {
+                    @for (opt of availableHeaderRoleOptions(row); track opt.value) {
                       <option [value]="opt.value">{{ opt.label }}</option>
                     }
                   </select>

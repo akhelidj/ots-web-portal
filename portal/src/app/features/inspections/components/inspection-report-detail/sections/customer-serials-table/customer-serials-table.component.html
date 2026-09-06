@@ -3,7 +3,7 @@
   band it sits in. Horizontal overflow is owned here so wide matrices scroll
   inside the table rather than pushing the document body sideways.
 -->
-<div class="w-full overflow-x-auto border-y border-border">
+<div class="w-full overflow-x-auto border border-border">
   <table
     class="w-full min-w-full border-collapse text-left align-middle tabular-nums"
   >
@@ -20,11 +20,11 @@
     <thead>
       <!-- Group band: one uppercase IBM Plex title spanning each section's columns. -->
       @if (columnGroups.length > 0) {
-        <tr class="bg-muted">
+        <tr class="bg-card">
           <th
             scope="col"
             rowspan="2"
-            class="sticky left-0 z-10 bg-muted border-b border-r border-border px-4 py-3 font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+            class="sticky left-0 z-10 bg-card border-b border-r border-border px-4 py-3 font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
           >
             Serial
           </th>
@@ -47,11 +47,11 @@
         </tr>
       }
       <!-- Column header row: one uppercase IBM Plex label per rendered column. -->
-      <tr class="bg-muted">
+      <tr class="bg-card">
         @if (columnGroups.length === 0) {
           <th
             scope="col"
-            class="sticky left-0 z-10 bg-muted border-b border-r border-border px-4 py-3 font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+            class="sticky left-0 z-10 bg-card border-b border-r border-border px-4 py-3 font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
           >
             Serial
           </th>

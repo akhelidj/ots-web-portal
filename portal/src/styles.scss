@@ -161,7 +161,11 @@
     @apply font-condensed text-sm font-semibold uppercase tracking-[0.08em] text-neutral-500;
   }
 
-  a {
+  /* Excludes `.btn` anchors: each button variant sets its own text colour, and the
+     global `hover:text-primary-light` here would otherwise override a variant's base
+     text on hover — e.g. a `btn-primary` link's white label turned ink-on-ink and
+     vanished against the dark hover fill (#4). Button anchors own their own colours. */
+  a:not(.btn) {
     @apply text-primary hover:text-primary-light transition-colors cursor-pointer;
   }
 }

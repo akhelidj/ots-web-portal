@@ -241,14 +241,21 @@ export class AdminTemplatesService implements DataHydrationSource {
   }
 
   /** Submit the ops-authored description. Resolves on 200 (definition written);
-   *  rejects with the server's per-check reason on a 4xx gate rejection. */
+   *  rejects with the server's per-check reason on a 4xx gate rejection.
+   *
+   *  On success it REFRESHES the cached `templates` list (like createTemplate/
+   *  deprecateTemplate do) so the row's `definitionJson` — which drives the View-vs-Define
+   *  action — reflects the just-saved definition immediately, rather than showing a stale
+   *  "Define" until the next manual reload (#2). */
   public async defineTemplate(
     id: string,
     dto: DefineTemplateDto,
   ): Promise<unknown> {
-    return firstValueFrom(
+    const result = await firstValueFrom(
       this.http.put(`${environment.apiUrl}/templates/${id}/definition`, dto),
     );
+    await this.fetchAll();
+    return result;
   }
 
   public async deprecateTemplate(id: string): Promise<void> {

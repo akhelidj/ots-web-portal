@@ -266,6 +266,31 @@ export class InspectionReportDetailComponent
     ),
   );
 
+  /**
+   * True when this report's stored definition carries an authored rework rule — a
+   * `rules[]` entry whose `then.action === 'upsertChildReport'`. The manual "Generate
+   * Child Report" button is surfaced off THIS (not off client-side REWORK dispositions),
+   * because the SERVER's ReworkRulesInterpreter evaluates the rule on demand against every
+   * serial when the button POSTs `/child-reports/sync-rework`. Gating the button on serials
+   * the client already sees as REWORK wrongly hid it whenever the trigger disposition was
+   * anything else, or before the classifier had bucketed the rows (#8a). The definition is
+   * read RAW from `definitionJson` — `TemplateFormDefinition` (the typed form view) drops
+   * `rules`, which lives only on the stored shape. Stays manual: this only decides
+   * visibility, never fires the rule.
+   */
+  public hasReworkRuleConfigured = computed(() => {
+    const def = this.report()?.definitionJson as
+      | { rules?: unknown[] }
+      | null
+      | undefined;
+    const rules = def?.rules;
+    if (!Array.isArray(rules)) return false;
+    return rules.some((rule) => {
+      const then = (rule as { then?: { action?: unknown } } | null)?.then;
+      return then?.action === 'upsertChildReport';
+    });
+  });
+
   // Static tab attention badges (no animation). Same conditions the old pulse used,
   // minus any persisted per-tab dismissal (localStorage pulse prefs are no longer read).
   public serialsUninspectedCount = computed(

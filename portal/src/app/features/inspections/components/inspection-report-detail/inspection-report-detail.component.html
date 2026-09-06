@@ -77,7 +77,7 @@
                       uiState?.actions?.['ADMIN_EXPORT']?.enabled
                     )
                   "
-                  class="cust-sweep cust-sweep--accent group inline-flex items-center gap-2 bg-accent px-5 py-3 font-sans uppercase tracking-[0.12em] text-[13px] text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 disabled:before:hidden"
+                  class="cust-sweep group inline-flex items-center gap-2 border border-primary/25 bg-card px-5 py-3 font-sans uppercase tracking-[0.12em] text-[13px] text-primary transition-colors hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 disabled:before:hidden"
                 >
                   <svg
                     class="h-4 w-4 cust-nudge group-hover:translate-y-0.5 group-focus-visible:translate-y-0.5"
@@ -541,12 +541,6 @@
                 [class.font-bold]="activeTab() === 'summary'"
                 >Summary</span
               >
-              @if (tabNeedsAttention('summary')) {
-                <span
-                  class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
-                  aria-hidden="true"
-                ></span>
-              }
             </div>
           </button>
 
@@ -595,11 +589,6 @@
                   "
                   >{{ serialsUninspectedCount() }}</span
                 >
-              } @else if (tabNeedsAttention('serials')) {
-                <span
-                  class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
-                  aria-hidden="true"
-                ></span>
               }
             </div>
           </button>
@@ -690,12 +679,6 @@
               <span class="sm:block" [class.font-bold]="activeTab() === 'specs'"
                 >Specs</span
               >
-              @if (tabNeedsAttention('specs')) {
-                <span
-                  class="ml-0.5 inline-block h-2 w-2 rounded-full bg-accent"
-                  aria-hidden="true"
-                ></span>
-              }
             </div>
           </button>
 
@@ -945,6 +928,7 @@
             [report]="reportData"
             [userRole]="userRole()"
             [items]="reworkSerials"
+            [reworkConfigured]="hasReworkRuleConfigured()"
             [hasGeneratedChildReport]="hasReworkChildReport()"
             [isGenerating]="isGeneratingChildReport()"
             [isCompactMode]="isCompactMode()"

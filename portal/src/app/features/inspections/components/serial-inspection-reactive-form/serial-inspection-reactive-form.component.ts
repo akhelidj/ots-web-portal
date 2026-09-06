@@ -94,6 +94,18 @@ export class SerialInspectionReactiveFormComponent
   }
 
   ngOnChanges(changes: SimpleChanges) {
+    // A definition that ARRIVES or CHANGES after init (async hydration) must rebuild the
+    // schema + form. resolveSchema/initForm otherwise run only in ngOnInit, so a definition
+    // that lands late leaves `schemaUnavailable` stuck true and the empty-state showing —
+    // "the template has no usable definition yet" — even though the report is fully defined
+    // (#2, hydration). The sibling header components derive their schema from a computed
+    // signal and so are already reactive; this @Input-driven form was the outlier. Rebuild
+    // FIRST, before the initialData branch, so a data change in the same pass patches the
+    // freshly-built form rather than the stale one.
+    if (changes['definition'] && !changes['definition'].firstChange) {
+      this.schema = this.resolveSchema();
+      this.initForm();
+    }
     if (changes['initialData'] && !changes['initialData'].firstChange) {
       this.updateFormValues();
     }
