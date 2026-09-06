@@ -224,12 +224,14 @@ export async function expandRegionAndSubstitute(
   const { blocks: ssBlocks, plain: ssPlain } = parseSharedStrings(ssXml);
 
   // 4. Find the clone-template row by inferring it from the row-scope tokens: it is the
-  // worksheet row whose cells reference any `rowTokenKeys` member. A well-formed region
-  // template keeps every row token on one physical row, so exactly one row matches. If
-  // the row tokens are split across multiple rows the sheet is malformed and we must NOT
-  // silently clone the wrong one — collect each matching row with the tokens found on it
-  // and throw a precise error. (Upload-time validation catches this earlier; this is the
-  // engine's own guard against ever emitting a broken sheet.)
+  // worksheet row whose cells reference any `rowTokenKeys` member. A template that
+  // repeats per item keeps every row token on one physical row, so exactly one row
+  // matches and it is cloned once per item. If the row tokens are split across multiple
+  // rows we must NOT silently clone the wrong one — so we collect each matching row with
+  // the tokens found on it and decide below: reject only when there is more than one
+  // item to place (cloning cannot span rows), else treat the tokens as single-item
+  // in-place substitutions. (Upload-time validation may catch the multi-item case
+  // earlier; this stays the engine's own guard against emitting a broken sheet.)
   const rowRegex = /(<row\b[^>]*\br="(\d+)"[^>]*>[\s\S]*?<\/row>)/g;
   let templateRowXml = '';
   let templateRowNumber = -1;
@@ -253,21 +255,49 @@ export async function expandRegionAndSubstitute(
     }
   }
 
-  if (rowsWithTokens.size > 1) {
+  // A stacked layout — row-scope tokens split across MULTIPLE worksheet rows — only
+  // defeats cloning when there is more than one item to place. Cloning repeats a
+  // SINGLE row per item, so N>1 items over a multi-row block is genuinely unsupported
+  // and still rejected here. But with exactly one item there is nothing to repeat:
+  // each row-scope token occurs once and resolves in place, precisely like a
+  // header/global token. A "header + one serial" template — which need not, and often
+  // does not, declare itself single-item — is therefore valid and must export, however
+  // its per-item fields are arranged. (Zero items: nothing to place.)
+  if (rowsWithTokens.size > 1 && chunk.length > 1) {
     const detail = [...rowsWithTokens.entries()]
       .sort((a, b) => a[0] - b[0])
       .map(([r, { tokens }]) => `row ${r} (${[...tokens].sort().join(', ')})`)
       .join('; ');
     throw new Error(
       `Repeating-row tokens span multiple worksheet rows: ${detail}. ` +
-        `All row-scope tokens must live on a single repeating row.`,
+        `A template that repeats per item must keep all row-scope tokens on one row. ` +
+        `(A template carrying a single item may stack them across rows freely.)`,
     );
   }
 
-  for (const [rowNum, { xml }] of rowsWithTokens) {
-    templateRowNumber = rowNum;
-    templateRowXml = xml;
-    break; // size === 1 here (size > 1 threw above; size === 0 leaves the -1 sentinel)
+  if (rowsWithTokens.size > 1) {
+    // Single-item stacked layout: no cloning. Resolve each row-scope token in place
+    // for the one item, exactly as globals are resolved in step 6 below. We never set
+    // `templateRowNumber`, so the clone path (step 5) is skipped entirely. An empty
+    // chunk leaves the tokens untouched — mirroring the single-row path, whose own
+    // clone step is gated behind `chunk.length > 0`.
+    const only = chunk[0];
+    if (only) {
+      const rowTokens = rowTokensFor(only);
+      for (const [token, value] of Object.entries(rowTokens)) {
+        const escaped = token.replace(/[{}]/g, '\\$&');
+        ssXml = ssXml.replace(new RegExp(escaped, 'g'), escapeXml(value));
+      }
+    }
+  } else {
+    // Exactly one token row (or none): infer the clone-template row — the original,
+    // byte-preserving path. size === 1 → one iteration; size === 0 → none, leaving the
+    // -1 sentinel so step 5 is skipped.
+    for (const [rowNum, { xml }] of rowsWithTokens) {
+      templateRowNumber = rowNum;
+      templateRowXml = xml;
+      break;
+    }
   }
 
   // 5. Handle repeated-row expansion (if the inferred template row was found)
