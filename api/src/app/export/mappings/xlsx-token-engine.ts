@@ -14,6 +14,21 @@ import { Snapshot } from '../../common/inspection-data.types';
  * mapper (pinned by export.integration.spec.ts + the B2 equivalence specs).
  */
 
+/**
+ * Collapse inner whitespace inside `{{ token }}` placeholders to the canonical
+ * no-space form `{{token}}`, so template cells authored with spaces (Excel users
+ * naturally type `{{ inspector }}`) match the definition's tokens, which are stored
+ * space-free (`{{inspector}}`). Mirrors the whitespace-insensitivity every real
+ * template engine (Mustache/Handlebars/Jinja) gives `{{ x }}` vs `{{x}}`.
+ *
+ * `[^{}]*?` never crosses a brace, so only genuine placeholders are touched. A token
+ * that already has no inner spaces is returned unchanged — so a drill-pipe template
+ * (space-free tokens) is byte-identical through this pass and the export golden holds.
+ */
+export function canonicalizeTokens(xml: string): string {
+  return xml.replace(/\{\{\s*([^{}]*?)\s*\}\}/g, '{{$1}}');
+}
+
 /** Minimal XML character escaping for cell values */
 export function escapeXml(s: string): string {
   return s
@@ -196,6 +211,14 @@ export async function expandRegionAndSubstitute(
   let ssXml = (await zip.file(ssPath)?.async('string')) ?? '';
 
   if (!sheetXml) throw new Error('Could not read worksheet XML from template');
+
+  // Normalize `{{ token }}` → `{{token}}` up front so every downstream match — row
+  // detection (step 4, `text.includes(tok)`), row substitution (step 5), and the global
+  // replace (step 6) — compares against the definition's space-free tokens. Templates
+  // whose tokens already have no inner spaces (e.g. drill pipe) are unchanged by this,
+  // keeping the export golden byte-identical.
+  sheetXml = canonicalizeTokens(sheetXml);
+  ssXml = canonicalizeTokens(ssXml);
 
   // 3. Parse shared strings — this is where the actual token text lives
   const { blocks: ssBlocks, plain: ssPlain } = parseSharedStrings(ssXml);
