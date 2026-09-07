@@ -20,6 +20,7 @@ import { SerialNumbersModule } from './serial-numbers/serial-numbers.module';
 import { ChildReportsModule } from './child-reports/child-reports.module';
 import { FilesController } from './files/files.controller';
 import { FilesService } from './files/files.service';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { FilesService } from './files/files.service';
       isGlobal: true,
       envFilePath: 'api/.env', // explicit path since monorepo root is CWD
     }),
+    StorageModule,
     PrismaModule,
     AuthModule,
     UsersModule,

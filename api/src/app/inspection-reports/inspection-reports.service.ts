@@ -218,8 +218,18 @@ export class InspectionReportsService {
       },
     });
 
+    // Storage reference from the identifiers in scope at upload — the S3 backend
+    // keys objects by tenant/customer/report/attachmentId; the local backend uses
+    // attachmentId alone.
+    const ref = {
+      tenantId,
+      customerId: report.customerId,
+      reportId: id,
+      attachmentId: attachment.id,
+    };
+
     try {
-      await this.filesService.saveAttachmentBinary(attachment.id, file.buffer);
+      await this.filesService.saveAttachmentBinary(ref, file.buffer);
       const updated = await this.prisma.attachment.update({
         where: { id: attachment.id },
         data: {
@@ -230,7 +240,7 @@ export class InspectionReportsService {
       return updated;
     } catch (error) {
       await this.prisma.attachment.delete({ where: { id: attachment.id } });
-      await this.filesService.removeAttachmentBinary(attachment.id);
+      await this.filesService.removeAttachmentBinary(ref);
       throw error;
     }
   }

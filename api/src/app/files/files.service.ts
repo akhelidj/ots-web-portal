@@ -1,14 +1,18 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
-import { promises as fs } from 'node:fs';
-import * as path from 'node:path';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  ATTACHMENT_STORAGE,
+  AttachmentStorage,
+  StorageObjectRef,
+} from '../storage/attachment-storage.types';
 
 interface AuthUser {
   tenantId: string;
@@ -19,33 +23,26 @@ interface AuthUser {
 @Injectable()
 export class FilesService implements OnModuleInit {
   private readonly logger = new Logger(FilesService.name);
-  private readonly attachmentDir = path.join(
-    process.cwd(),
-    'api',
-    'uploads',
-    'attachments',
-  );
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(ATTACHMENT_STORAGE)
+    private readonly storage: AttachmentStorage,
+  ) {}
 
   public async onModuleInit(): Promise<void> {
     await this.ensureAttachmentStorageConsistency();
   }
 
   public async saveAttachmentBinary(
-    attachmentId: string,
+    ref: StorageObjectRef,
     buffer: Buffer,
   ): Promise<void> {
-    await fs.mkdir(this.attachmentDir, { recursive: true });
-    await fs.writeFile(this.getAttachmentPath(attachmentId), buffer);
+    await this.storage.put(ref, buffer);
   }
 
-  public async removeAttachmentBinary(attachmentId: string): Promise<void> {
-    try {
-      await fs.unlink(this.getAttachmentPath(attachmentId));
-    } catch {
-      // no-op when file is already missing
-    }
+  public async removeAttachmentBinary(ref: StorageObjectRef): Promise<void> {
+    await this.storage.delete(ref);
   }
 
   public async resolveAttachmentForDownload(
@@ -57,6 +54,7 @@ export class FilesService implements OnModuleInit {
       include: {
         inspectionReport: {
           select: {
+            id: true,
             tenantId: true,
             customerId: true,
           },
@@ -80,11 +78,13 @@ export class FilesService implements OnModuleInit {
       throw new ForbiddenException('Attachment access denied');
     }
 
-    const filePath = this.getAttachmentPath(attachment.id);
-    let fileBuffer: Buffer;
-    try {
-      fileBuffer = await fs.readFile(filePath);
-    } catch {
+    const fileBuffer = await this.storage.get({
+      tenantId: ownerReport.tenantId,
+      customerId: ownerReport.customerId,
+      reportId: ownerReport.id,
+      attachmentId: attachment.id,
+    });
+    if (!fileBuffer) {
       throw new NotFoundException('Attachment file missing on server');
     }
 
@@ -99,39 +99,44 @@ export class FilesService implements OnModuleInit {
   }
 
   private async ensureAttachmentStorageConsistency(): Promise<void> {
-    await fs.mkdir(this.attachmentDir, { recursive: true });
-
     const attachments = await this.prisma.attachment.findMany({
       select: {
         id: true,
         filename: true,
         url: true,
+        inspectionReportId: true,
+        inspectionReport: {
+          select: { tenantId: true, customerId: true },
+        },
       },
     });
+
+    // Storage-side reconciliation (disk placeholders for missing binaries on the
+    // local backend; a no-op on S3). Runs even with zero attachments so the local
+    // backend still materializes its upload directory on boot.
+    await this.storage.reconcile(
+      attachments.map((attachment) => ({
+        ref: {
+          tenantId: attachment.inspectionReport.tenantId,
+          customerId: attachment.inspectionReport.customerId,
+          reportId: attachment.inspectionReportId,
+          attachmentId: attachment.id,
+        },
+        filename: attachment.filename,
+      })),
+    );
 
     if (attachments.length === 0) {
       return;
     }
 
+    // DB-side normalization: canonicalize every attachment `url` to the download
+    // endpoint. Independent of the storage backend.
     const updates: Array<{ id: string; url: string }> = [];
-
     for (const attachment of attachments) {
       const canonicalUrl = this.buildAttachmentUrl(attachment.id);
       if (attachment.url !== canonicalUrl) {
         updates.push({ id: attachment.id, url: canonicalUrl });
-      }
-
-      const filePath = this.getAttachmentPath(attachment.id);
-      try {
-        await fs.access(filePath);
-      } catch {
-        const placeholder = Buffer.from(
-          `Attachment '${attachment.filename}' was migrated from legacy storage.\n` +
-            `The original binary is not available on disk.\n` +
-            `Please re-upload this attachment if you need the original file.\n`,
-          'utf-8',
-        );
-        await fs.writeFile(filePath, placeholder);
       }
     }
 
@@ -148,9 +153,5 @@ export class FilesService implements OnModuleInit {
         `Normalized ${updates.length} attachment URL(s) to canonical endpoint.`,
       );
     }
-  }
-
-  private getAttachmentPath(attachmentId: string): string {
-    return path.join(this.attachmentDir, attachmentId);
   }
 }
