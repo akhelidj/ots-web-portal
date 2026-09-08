@@ -224,6 +224,158 @@ describe('S3AttachmentStorage', () => {
   });
 });
 
+describe('S3AttachmentStorage — template workbooks', () => {
+  describe('buildTemplateKey', () => {
+    it('is the backend-agnostic tenant/templateKey/version string (no prefix)', () => {
+      const { client } = makeMockClient();
+      const storage = new S3AttachmentStorage(client, {
+        bucket: 'b',
+        prefix: 'attachments/',
+        templatePrefix: 'templates/',
+      });
+
+      expect(
+        storage.buildTemplateKey({
+          tenantId: 'tenant-1',
+          templateKey: 'DRILL_PIPE_REPORT',
+          version: 3,
+        }),
+      ).toBe('tenant-1/DRILL_PIPE_REPORT/3');
+    });
+  });
+
+  describe('putTemplate', () => {
+    it('sends a PutObjectCommand under the template prefix with the buffer as Body', async () => {
+      const { client, send } = makeMockClient();
+      const storage = new S3AttachmentStorage(client, {
+        bucket: 'my-bucket',
+        prefix: 'attachments/',
+        templatePrefix: 'templates/',
+      });
+      const fileKey = storage.buildTemplateKey({
+        tenantId: 'tenant-1',
+        templateKey: 'DRILL_PIPE_REPORT',
+        version: 1,
+      });
+      const buffer = Buffer.from('workbook-bytes');
+
+      await storage.putTemplate(fileKey, buffer);
+
+      const command = send.mock.calls[0][0];
+      expect(command).toBeInstanceOf(PutObjectCommand);
+      expect(command.input.Key).toBe('templates/tenant-1/DRILL_PIPE_REPORT/1');
+      expect(command.input.Bucket).toBe('my-bucket');
+      expect(command.input.Body).toBe(buffer);
+    });
+
+    it('normalizes an unslashed / over-slashed template prefix to a single trailing slash', async () => {
+      for (const templatePrefix of ['tpl', '/tpl', 'tpl/', '/tpl/']) {
+        const { client, send } = makeMockClient();
+        const storage = new S3AttachmentStorage(client, {
+          bucket: 'b',
+          prefix: '',
+          templatePrefix,
+        });
+        await storage.putTemplate('tenant-1/KEY/1', Buffer.from('x'));
+        const command = send.mock.calls[0][0] as PutObjectCommand;
+        expect(command.input.Key).toBe('tpl/tenant-1/KEY/1');
+      }
+    });
+
+    it('treats an omitted template prefix as empty (key == fileKey)', async () => {
+      const { client, send } = makeMockClient();
+      const storage = new S3AttachmentStorage(client, {
+        bucket: 'b',
+        prefix: 'attachments/',
+      });
+      await storage.putTemplate('tenant-1/KEY/2', Buffer.from('x'));
+      const command = send.mock.calls[0][0] as PutObjectCommand;
+      expect(command.input.Key).toBe('tenant-1/KEY/2');
+    });
+  });
+
+  describe('getTemplate', () => {
+    it('sends a GetObjectCommand under the template prefix and returns the drained bytes', async () => {
+      const { client, send } = makeMockClient();
+      const bytes = new Uint8Array([9, 8, 7]);
+      send.mockResolvedValueOnce(getResult(bytes));
+      const storage = new S3AttachmentStorage(client, {
+        bucket: 'b',
+        prefix: '',
+        templatePrefix: 'templates/',
+      });
+
+      const result = await storage.getTemplate('tenant-1/KEY/1');
+
+      const command = send.mock.calls[0][0];
+      expect(command).toBeInstanceOf(GetObjectCommand);
+      expect(command.input.Key).toBe('templates/tenant-1/KEY/1');
+      expect(result).not.toBeNull();
+      expect(result!.equals(Buffer.from(bytes))).toBe(true);
+    });
+
+    it('returns null on a NoSuchKey error instead of throwing', async () => {
+      const { client, send } = makeMockClient();
+      send.mockRejectedValueOnce(notFoundError('NoSuchKey'));
+      const storage = new S3AttachmentStorage(client, {
+        bucket: 'b',
+        prefix: '',
+        templatePrefix: 'templates/',
+      });
+
+      expect(await storage.getTemplate('tenant-1/KEY/1')).toBeNull();
+    });
+
+    it('rethrows a non-404 error', async () => {
+      const { client, send } = makeMockClient();
+      send.mockRejectedValueOnce({
+        name: 'AccessDenied',
+        $metadata: { httpStatusCode: 403 },
+      });
+      const storage = new S3AttachmentStorage(client, {
+        bucket: 'b',
+        prefix: '',
+        templatePrefix: 'templates/',
+      });
+
+      await expect(
+        storage.getTemplate('tenant-1/KEY/1'),
+      ).rejects.toMatchObject({ name: 'AccessDenied' });
+    });
+  });
+
+  describe('deleteTemplate', () => {
+    it('sends a DeleteObjectCommand under the template prefix', async () => {
+      const { client, send } = makeMockClient();
+      const storage = new S3AttachmentStorage(client, {
+        bucket: 'b',
+        prefix: '',
+        templatePrefix: 'templates/',
+      });
+
+      await storage.deleteTemplate('tenant-1/KEY/1');
+
+      const command = send.mock.calls[0][0];
+      expect(command).toBeInstanceOf(DeleteObjectCommand);
+      expect(command.input.Key).toBe('templates/tenant-1/KEY/1');
+    });
+
+    it('tolerates a NotFound and does not throw', async () => {
+      const { client, send } = makeMockClient();
+      send.mockRejectedValueOnce(notFoundError('NotFound'));
+      const storage = new S3AttachmentStorage(client, {
+        bucket: 'b',
+        prefix: '',
+        templatePrefix: 'templates/',
+      });
+
+      await expect(
+        storage.deleteTemplate('tenant-1/KEY/1'),
+      ).resolves.toBeUndefined();
+    });
+  });
+});
+
 describe('createAttachmentStorage — backend selection', () => {
   function config(values: Record<string, string | undefined>): ConfigService {
     return {

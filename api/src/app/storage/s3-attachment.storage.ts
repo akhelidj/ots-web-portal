@@ -10,12 +10,20 @@ import {
   AttachmentStorage,
   ReconcileItem,
   StorageObjectRef,
+  TemplateObjectRef,
 } from './attachment-storage.types';
 
 export interface S3StorageOptions {
   bucket: string;
-  /** Optional key prefix, e.g. `attachments/`. Normalized to end with `/`. */
+  /** Optional attachment key prefix, e.g. `attachments/`. Normalized to end with `/`. */
   prefix: string;
+  /**
+   * Optional template-workbook key prefix, e.g. `templates/`. Normalized to end
+   * with `/`. Keeps template objects namespaced away from attachments in the same
+   * bucket. Omitted (undefined) is treated as an empty prefix — the storage module
+   * always supplies it in production (default `templates/`).
+   */
+  templatePrefix?: string;
 }
 
 /**
@@ -32,6 +40,7 @@ export class S3AttachmentStorage implements AttachmentStorage {
   private readonly logger = new Logger(S3AttachmentStorage.name);
   private readonly bucket: string;
   private readonly prefix: string;
+  private readonly templatePrefix: string;
 
   constructor(
     private readonly client: S3Client,
@@ -39,8 +48,15 @@ export class S3AttachmentStorage implements AttachmentStorage {
   ) {
     this.bucket = options.bucket;
     // Normalize: no leading slash, exactly one trailing slash when non-empty.
-    const trimmed = options.prefix.replace(/^\/+|\/+$/g, '');
-    this.prefix = trimmed.length > 0 ? `${trimmed}/` : '';
+    this.prefix = S3AttachmentStorage.normalizePrefix(options.prefix);
+    this.templatePrefix = S3AttachmentStorage.normalizePrefix(
+      options.templatePrefix ?? '',
+    );
+  }
+
+  private static normalizePrefix(prefix: string): string {
+    const trimmed = prefix.replace(/^\/+|\/+$/g, '');
+    return trimmed.length > 0 ? `${trimmed}/` : '';
   }
 
   public async put(ref: StorageObjectRef, buffer: Buffer): Promise<void> {
@@ -127,6 +143,66 @@ export class S3AttachmentStorage implements AttachmentStorage {
   private keyFor(ref: StorageObjectRef): string {
     const customer = ref.customerId ?? '_no-customer';
     return `${this.prefix}${ref.tenantId}/${customer}/${ref.reportId}/${ref.attachmentId}`;
+  }
+
+  // -- Template workbooks ---------------------------------------------------
+  //
+  // The stored `fileKey` is the backend-agnostic `tenant/templateKey/version`
+  // string; the S3 object key adds the template prefix on top of it.
+
+  public buildTemplateKey(ref: TemplateObjectRef): string {
+    return `${ref.tenantId}/${ref.templateKey}/${ref.version}`;
+  }
+
+  public async putTemplate(fileKey: string, buffer: Buffer): Promise<void> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: this.templateKeyFor(fileKey),
+        Body: buffer,
+      }),
+    );
+  }
+
+  public async getTemplate(fileKey: string): Promise<Buffer | null> {
+    try {
+      const response = await this.client.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: this.templateKeyFor(fileKey),
+        }),
+      );
+      if (!response.Body) {
+        return null;
+      }
+      const bytes = await response.Body.transformToByteArray();
+      return Buffer.from(bytes);
+    } catch (error) {
+      if (this.isNotFound(error)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  public async deleteTemplate(fileKey: string): Promise<void> {
+    try {
+      await this.client.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucket,
+          Key: this.templateKeyFor(fileKey),
+        }),
+      );
+    } catch (error) {
+      if (this.isNotFound(error)) {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private templateKeyFor(fileKey: string): string {
+    return `${this.templatePrefix}${fileKey}`;
   }
 
   private isNotFound(error: unknown): boolean {
