@@ -56,12 +56,13 @@ describe('GET available-templates (consumption picker source) [integration]', ()
     expect(t.templateKey).toBe('CASING_FLAT');
     expect(t.templateVersion).toBe(1);
     expect(t.displayName).toBe('Casing Flat'); // prettified from the key
-    // Minimal shape — no fileBlob, no definitionJson contents leak through.
+    // Minimal shape — no fileKey, no definitionJson contents leak through.
     expect(Object.keys(t).sort()).toEqual([
       'displayName',
       'templateKey',
       'templateVersion',
     ]);
+    expect('fileKey' in t).toBe(false);
     expect('fileBlob' in t).toBe(false);
     expect('definitionJson' in t).toBe(false);
   });
@@ -89,7 +90,7 @@ describe('GET available-templates (consumption picker source) [integration]', ()
         templateKey: 'OLD_TEMPLATE',
         templateVersion: 1,
         status: 'DEPRECATED',
-        fileBlob: Buffer.from('blob'),
+        fileKey: `${tenant.id}/OLD_TEMPLATE/1`,
         hash: 'hash-old',
         changeNote: 'seed',
         createdById: 'seed-user',
@@ -110,7 +111,7 @@ describe('GET available-templates (consumption picker source) [integration]', ()
         templateKey: 'CASING_FLAT',
         templateVersion: 1,
         status: 'DEPRECATED',
-        fileBlob: Buffer.from('b1'),
+        fileKey: `${tenant.id}/CASING_FLAT/1`,
         hash: 'h1',
         changeNote: 'v1',
         createdById: 'seed-user',
@@ -123,7 +124,7 @@ describe('GET available-templates (consumption picker source) [integration]', ()
         templateKey: 'CASING_FLAT',
         templateVersion: 2,
         status: 'ACTIVE',
-        fileBlob: Buffer.from('b2'),
+        fileKey: `${tenant.id}/CASING_FLAT/2`,
         hash: 'h2',
         changeNote: 'v2',
         createdById: 'seed-user',

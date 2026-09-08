@@ -14,8 +14,10 @@
  * describe what the code does today:
  *   - validateTemplate gate order: extension → MIME → ExcelJS parse → worksheet
  *     count, each throwing BadRequestException with its current message;
- *   - createTemplate persists the blob to Template.fileBlob, returns metadata with
- *     the blob stripped, computes a sha256 hash, and versions/deprecates as designed.
+ *   - createTemplate writes the workbook bytes through the storage abstraction
+ *     (local disk here, keyed tenant/templateKey/version) and records the storage
+ *     key on the row, returns metadata with the key stripped, computes a sha256
+ *     hash, and versions/deprecates as designed.
  *
  * A VALID workbook requires the real tracked bytes (api/scripts/valid-template.xlsx);
  * ExcelJS throws on a dummy buffer (standing fact), which is exactly the parse-reject
@@ -29,7 +31,7 @@ import { TemplateStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TemplateService } from './template.service';
 import { TemplateValidationService } from './template-validation.service';
-import { TemplateFileStoreService } from './template-file-store.service';
+import { LocalAttachmentStorage } from '../storage/local-attachment.storage';
 import { resetInspectionDomain, seedTenant } from '../../../test/seed-helpers';
 
 const REAL_TEMPLATE_BYTES = readFileSync(
@@ -59,6 +61,7 @@ function makeFile(
 describe('Template upload / validation [integration]', () => {
   let prisma: PrismaService;
   let validationService: TemplateValidationService;
+  let storage: LocalAttachmentStorage;
   let templateService: TemplateService;
 
   beforeAll(async () => {
@@ -66,14 +69,11 @@ describe('Template upload / validation [integration]', () => {
     await prisma.onModuleInit();
 
     validationService = new TemplateValidationService();
-    // createTemplate never calls fileStore (the store call is commented out —
-    // the blob is written inline via the Prisma create), so an inert stub is
-    // fine, mirroring the binding spec's stubbed RevisionService.
-    templateService = new TemplateService(
-      prisma,
-      validationService,
-      {} as unknown as TemplateFileStoreService,
-    );
+    // createTemplate writes the workbook through the storage abstraction; use the
+    // real local backend (writes under api/uploads/templates/<key>) so this proves
+    // the actual storage path, matching the default STORAGE_DRIVER=local.
+    storage = new LocalAttachmentStorage();
+    templateService = new TemplateService(prisma, validationService, storage);
   });
 
   afterAll(async () => {
@@ -135,9 +135,10 @@ describe('Template upload / validation [integration]', () => {
   });
 
   describe('createTemplate (persistence — real DB, real bytes)', () => {
-    it('persists a valid upload: stores the blob, returns metadata with the blob stripped, computes the sha256 hash', async () => {
-      // BASELINE: the successful-upload shape — blob written to Template.fileBlob,
-      // excluded from the returned metadata, hash = sha256(bytes), v1 ACTIVE.
+    it('persists a valid upload: stores the workbook through storage, records the key (stripped from metadata), computes the sha256 hash', async () => {
+      // BASELINE: the successful-upload shape — bytes written through the storage
+      // abstraction, the storage key recorded on the row and excluded from the
+      // returned metadata, hash = sha256(bytes), v1 ACTIVE.
       const tenant = await seedTenant(prisma);
       const expectedHash = createHash('sha256')
         .update(REAL_TEMPLATE_BYTES)
@@ -151,22 +152,30 @@ describe('Template upload / validation [integration]', () => {
         'user-1',
       );
 
-      // Returned metadata: identifying fields present, blob stripped.
+      // Returned metadata: identifying fields present, storage key stripped.
       expect(metadata.templateKey).toBe('DRILL_PIPE_REPORT');
       expect(metadata.templateVersion).toBe(1);
       expect(metadata.status).toBe(TemplateStatus.ACTIVE);
       expect(metadata.hash).toBe(expectedHash);
       expect(metadata.changeNote).toBe('initial version');
       expect(metadata.createdById).toBe('user-1');
+      expect(metadata).not.toHaveProperty('fileKey');
       expect(metadata).not.toHaveProperty('fileBlob');
 
-      // Persistence: the blob really landed in the DB row, byte-identical.
+      // Persistence: the row records the canonical key, and the workbook bytes
+      // fetched back from storage under that key are byte-identical to the upload.
       const row = await prisma.template.findUnique({
         where: { id: metadata.id },
-        select: { fileBlob: true },
+        select: { fileKey: true },
       });
       if (!row) throw new Error('expected the created Template row to exist');
-      expect(Buffer.from(row.fileBlob).equals(REAL_TEMPLATE_BYTES)).toBe(true);
+      expect(row.fileKey).toBe(`${tenant.id}/DRILL_PIPE_REPORT/1`);
+
+      const stored = await storage.getTemplate(row.fileKey);
+      if (!stored) throw new Error('expected the workbook to be in storage');
+      expect(stored.equals(REAL_TEMPLATE_BYTES)).toBe(true);
+
+      await storage.deleteTemplate(row.fileKey);
     });
 
     it('versions and deprecates: a second upload of the same key becomes version 2 ACTIVE and moves the prior version to DEPRECATED', async () => {

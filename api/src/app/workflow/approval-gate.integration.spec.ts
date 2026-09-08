@@ -79,7 +79,7 @@ describe('approval gate wiring: engine path + retired-null precondition [integra
         templateKey: 'DRILL_PIPE_REPORT',
         templateVersion,
         status: 'ACTIVE',
-        fileBlob: Buffer.from(`blob-v${templateVersion}`),
+        fileKey: `${tenantId}/DRILL_PIPE_REPORT/${templateVersion}`,
         hash: `hash-v${templateVersion}`,
         changeNote: 'seed',
         createdById: 'seed-user',

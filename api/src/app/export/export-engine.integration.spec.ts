@@ -26,6 +26,7 @@ import { ExportService } from './export.service';
 import { RevisionService } from '../revision/revision.service';
 import { InspectionReportWorkflowService } from '../workflow/inspection-report-workflow.service';
 import { InspectionReportsService } from '../inspection-reports/inspection-reports.service';
+import { LocalAttachmentStorage } from '../storage/local-attachment.storage';
 import {
   seedTenant,
   seedCustomer,
@@ -63,7 +64,11 @@ describe('Layer B — export engine structural behaviour + mutation guards [inte
     prisma = new PrismaService();
     await prisma.onModuleInit();
     const revisionService = new RevisionService(prisma);
-    exportService = new ExportService(prisma, revisionService);
+    exportService = new ExportService(
+      prisma,
+      revisionService,
+      new LocalAttachmentStorage(),
+    );
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
     reports = new InspectionReportsService(prisma, makeFilesServiceStub());
   });

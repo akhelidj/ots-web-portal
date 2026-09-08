@@ -1,12 +1,18 @@
 import {
   Injectable,
+  Inject,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
   InternalServerErrorException,
   PreconditionFailedException,
 } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { RevisionService } from '../revision/revision.service';
+import {
+  ATTACHMENT_STORAGE,
+  AttachmentStorage,
+} from '../storage/attachment-storage.types';
 import * as ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { engineMap, ExportDefinition } from './export-engine';
@@ -27,6 +33,8 @@ export class ExportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly revisionService: RevisionService,
+    @Inject(ATTACHMENT_STORAGE)
+    private readonly storage: AttachmentStorage,
   ) {}
 
   async exportInspectionReport(
@@ -264,7 +272,26 @@ export class ExportService {
       );
     }
 
-    const templateBuffer = template.fileBlob;
+    // Fetch the workbook bytes from the storage abstraction by the row's stored
+    // key (local disk or S3 per STORAGE_DRIVER), then re-verify: the fetched bytes
+    // must hash to the template's recorded sha256. This preserves the original
+    // integrity guarantee now that the bytes live outside Postgres — a corrupted
+    // or wrong object surfaces as a server-side precondition, not a bad export.
+    const templateBuffer = await this.storage.getTemplate(template.fileKey);
+    if (!templateBuffer) {
+      throw new InternalServerErrorException(
+        'Template file could not be loaded',
+      );
+    }
+    const fetchedHash = crypto
+      .createHash('sha256')
+      .update(templateBuffer)
+      .digest('hex');
+    if (fetchedHash !== template.hash) {
+      throw new InternalServerErrorException(
+        'Template hash verification failed',
+      );
+    }
 
     // The template's structured definition drives export. The legacy hardcoded
     // mapDrillPipeReportV1 fallback was retired once every template carried a

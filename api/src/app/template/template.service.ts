@@ -1,12 +1,16 @@
 import {
   Injectable,
+  Inject,
   BadRequestException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TemplateValidationService } from './template-validation.service';
-import { TemplateFileStoreService } from './template-file-store.service';
+import {
+  ATTACHMENT_STORAGE,
+  AttachmentStorage,
+} from '../storage/attachment-storage.types';
 import * as crypto from 'crypto';
 import { TemplateStatus } from '@prisma/client';
 import 'multer';
@@ -16,7 +20,8 @@ export class TemplateService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly validationService: TemplateValidationService,
-    private readonly fileStore: TemplateFileStoreService,
+    @Inject(ATTACHMENT_STORAGE)
+    private readonly storage: AttachmentStorage,
   ) {}
 
   async createTemplate(
@@ -32,12 +37,13 @@ export class TemplateService {
     // 2. Compute Hash
     const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
-    // 3. Store File (Abstracted, currently returns buffer or creates blob reference)
-    // For DB storage, we just use the buffer in the create call directly.
-    // If S3, we would upload here and get a key.
-    // const fileBlob = await this.fileStore.storeFile(file.buffer);
+    // 3. The workbook bytes now live in the storage abstraction (local disk or
+    // S3 per STORAGE_DRIVER), not in Postgres. The row records the storage key;
+    // the actual object is written AFTER the row commits (below), so a rolled-back
+    // insert never leaves a stray object under a key no row references.
+    let fileKey!: string;
 
-    return this.prisma.$transaction(async (tx) => {
+    const metadata = await this.prisma.$transaction(async (tx) => {
       // 4. Determine next version (Locking via transaction execution)
       // Note: In standard Postgres Read Commited, this might race.
       // However, the Unique Constraint on [tenantId, templateKey, templateVersion]
@@ -52,6 +58,14 @@ export class TemplateService {
       });
 
       const nextVersion = (currentMax?.templateVersion ?? 0) + 1;
+
+      // Canonical storage key for this workbook — tenant/templateKey/version, all
+      // in scope here. Persisted on the row and used verbatim by every read path.
+      fileKey = this.storage.buildTemplateKey({
+        tenantId,
+        templateKey,
+        version: nextVersion,
+      });
 
       // 5. Deprecate previous ACTIVE version if exists
       // "If previous ACTIVE exists: Set previous ACTIVE -> DEPRECATED"
@@ -92,7 +106,7 @@ export class TemplateService {
           templateKey,
           templateVersion: nextVersion,
           status: TemplateStatus.ACTIVE,
-          fileBlob: file.buffer, // Storing directly to DB
+          fileKey, // Storage key; bytes are written to storage after commit.
           hash,
           changeNote,
           createdById: userId,
@@ -111,10 +125,17 @@ export class TemplateService {
         },
       });
 
-      // Return metadata (Exclude blob)
-      const { fileBlob, ...metadata } = newTemplate;
-      return metadata;
+      // Return metadata (exclude the storage key — the API never surfaces it).
+      const { fileKey: _fileKey, ...rest } = newTemplate;
+      return rest;
     });
+
+    // Row committed — now persist the workbook bytes at its recorded key. If this
+    // throws, the request fails and the caller sees the error; the deterministic
+    // key means a retry (same version) overwrites cleanly.
+    await this.storage.putTemplate(fileKey, file.buffer);
+
+    return metadata;
   }
 
   async getTemplates(tenantId: string) {
@@ -158,7 +179,9 @@ export class TemplateService {
       }
 
       if (template.status === TemplateStatus.DEPRECATED) {
-        return template; // Already deprecated
+        // Already deprecated — exclude the storage key from the response.
+        const { fileKey: _fileKey, ...metadata } = template;
+        return metadata;
       }
 
       // Check if this is the last ACTIVE version
@@ -192,7 +215,7 @@ export class TemplateService {
         },
       });
 
-      const { fileBlob, ...metadata } = updated;
+      const { fileKey: _fileKey, ...metadata } = updated;
       return metadata;
     });
   }

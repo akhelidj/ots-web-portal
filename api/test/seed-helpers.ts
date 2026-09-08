@@ -3,11 +3,12 @@
  *
  * Factored out of the create-path spec so the create-path, workflow, and upcoming
  * revision-engine specs all agree on valid Tenant/Customer/Template row shapes
- * (e.g. Template requires fileBlob/hash/changeNote/createdById). Per-spec table
+ * (e.g. Template requires fileKey/hash/changeNote/createdById). Per-spec table
  * RESET is intentionally kept inline in each spec, since which tables a spec must
  * clear differs by spec — only the seeding is shared here.
  */
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import {
   InspectionReportStatus,
@@ -18,6 +19,35 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../src/app/prisma/prisma.service';
 import type { FilesService } from '../src/app/files/files.service';
+import { LocalAttachmentStorage } from '../src/app/storage/local-attachment.storage';
+
+/**
+ * The workbook bytes now live in the storage abstraction, not in Postgres. Specs
+ * run with the default STORAGE_DRIVER=local (no env), so seeders write through the
+ * real local backend under api/uploads/templates/<key> — byte-identical to what the
+ * app reads back on export / token / definition paths.
+ */
+const seedStorage = new LocalAttachmentStorage();
+
+/**
+ * Persist a template workbook to storage under the canonical key and return that
+ * key for the row's `fileKey`. Every template seeder funnels through this so the
+ * storage-backed read paths find the bytes.
+ */
+export async function seedTemplateWorkbook(
+  tenantId: string,
+  templateKey: string,
+  bytes: Buffer,
+  version = 1,
+): Promise<string> {
+  const fileKey = seedStorage.buildTemplateKey({
+    tenantId,
+    templateKey,
+    version,
+  });
+  await seedStorage.putTemplate(fileKey, bytes);
+  return fileKey;
+}
 
 /**
  * A stand-in FilesService for specs that construct a service which now takes
@@ -113,19 +143,24 @@ function resolveSeedDefinition(
   return templateKey === 'DRILL_PIPE_REPORT' ? DRILL_PIPE_DEFINITION : undefined;
 }
 
-export function seedActiveTemplate(
+export async function seedActiveTemplate(
   prisma: PrismaService,
   tenantId: string,
   templateKey: string,
   opts?: { definitionJson?: unknown | null },
 ) {
+  const fileKey = await seedTemplateWorkbook(
+    tenantId,
+    templateKey,
+    Buffer.from(`template-blob-${templateKey}`),
+  );
   return prisma.template.create({
     data: {
       tenantId,
       templateKey,
       templateVersion: 1,
       status: 'ACTIVE',
-      fileBlob: Buffer.from(`template-blob-${templateKey}`),
+      fileKey,
       hash: `hash-${templateKey}`,
       changeNote: 'seed',
       createdById: 'seed-user',
@@ -164,35 +199,43 @@ export function seedInspectionReport(
 }
 
 /**
- * Seed a Template whose fileBlob is the REAL tracked DRILL_PIPE_REPORT xlsx
+ * Seed a Template whose workbook is the REAL tracked DRILL_PIPE_REPORT xlsx
  * (api/scripts/valid-template.xlsx) rather than the dummy buffer seedActiveTemplate
- * writes. Export needs a genuine OOXML template — ExcelJS throws on the dummy blob —
- * so this variant exists specifically for the export characterization spec. Other
- * specs keep using seedActiveTemplate (they never load the blob).
+ * writes. Export/token/definition need a genuine OOXML template — ExcelJS throws on
+ * the dummy blob — so this variant writes the real bytes through storage. Other
+ * specs keep using seedActiveTemplate (they never load the workbook).
  *
- * The hash is arbitrary but consistent: createReport copies template.hash onto the
- * report, and export re-verifies report.templateHash === template.hash
- * (export.service.ts:274), so any fixed value round-trips.
+ * The hash DEFAULTS to the real sha256 of the workbook bytes — production's
+ * invariant (createTemplate sets hash = sha256(workbook)). createReport copies
+ * template.hash onto the report, and export both re-verifies
+ * report.templateHash === template.hash AND re-hashes the fetched storage bytes
+ * against template.hash, so seeding the true sha256 makes every export check pass.
+ * `opts.hash` overrides it for a deliberate-mismatch spec.
  */
 const REAL_DRILL_PIPE_TEMPLATE_PATH = resolve(
   __dirname,
   '../scripts/valid-template.xlsx',
 );
 
-export function seedRealDrillPipeTemplate(
+export async function seedRealDrillPipeTemplate(
   prisma: PrismaService,
   tenantId: string,
-  opts?: { definitionJson?: unknown | null },
+  opts?: { definitionJson?: unknown | null; hash?: string },
 ) {
-  const fileBlob = readFileSync(REAL_DRILL_PIPE_TEMPLATE_PATH);
+  const bytes = readFileSync(REAL_DRILL_PIPE_TEMPLATE_PATH);
+  const fileKey = await seedTemplateWorkbook(
+    tenantId,
+    'DRILL_PIPE_REPORT',
+    bytes,
+  );
   return prisma.template.create({
     data: {
       tenantId,
       templateKey: 'DRILL_PIPE_REPORT',
       templateVersion: 1,
       status: 'ACTIVE',
-      fileBlob,
-      hash: 'hash-DRILL_PIPE_REPORT',
+      fileKey,
+      hash: opts?.hash ?? createHash('sha256').update(bytes).digest('hex'),
       changeNote: 'seed-real-xlsx',
       createdById: 'seed-user',
       definitionJson: resolveSeedDefinition('DRILL_PIPE_REPORT', opts) as never,

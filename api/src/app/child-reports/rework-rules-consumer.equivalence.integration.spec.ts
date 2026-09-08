@@ -887,7 +887,7 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
           templateKey: 'DRILL_PIPE_REPORT',
           templateVersion: 1,
           status: 'ACTIVE',
-          fileBlob: Buffer.from('gate-test'),
+          fileKey: `${tenantId}/DRILL_PIPE_REPORT/1`,
           hash: 'hash-DRILL_PIPE_REPORT',
           changeNote: 'gate-test',
           createdById: 'seed-user',

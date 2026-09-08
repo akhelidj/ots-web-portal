@@ -12,8 +12,18 @@ import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import type { ConfigService } from '@nestjs/config';
+import { createAttachmentStorage } from '../src/app/storage/storage.module';
 
 const prisma = new PrismaClient();
+
+// Seed the template workbook through the same storage abstraction the app uses,
+// honoring STORAGE_DRIVER (default local → api/uploads/templates/<key>). A thin
+// shim adapts process.env to the ConfigService shape the factory reads; api/.env
+// is already loaded above.
+const storage = createAttachmentStorage({
+  get: (key: string) => process.env[key],
+} as unknown as ConfigService);
 
 async function provisionTenant(
   name: string,
@@ -84,13 +94,22 @@ async function provisionTenant(
         .update(fileBuffer)
         .digest('hex');
 
+      // Write the workbook through the storage abstraction and record its key on
+      // the row — the bytes no longer live in Postgres.
+      const fileKey = storage.buildTemplateKey({
+        tenantId: tenant.id,
+        templateKey,
+        version: 1,
+      });
+      await storage.putTemplate(fileKey, fileBuffer);
+
       await prisma.template.create({
         data: {
           tenantId: tenant.id,
           templateKey,
           templateVersion: 1,
           status: 'ACTIVE',
-          fileBlob: fileBuffer,
+          fileKey,
           hash: fileHash,
           changeNote: 'Initial automated provision',
           createdById: user.id,

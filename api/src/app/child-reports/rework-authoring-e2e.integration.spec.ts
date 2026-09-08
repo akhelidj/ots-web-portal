@@ -94,7 +94,7 @@ describe('rework authoring — end-to-end, template-agnostic [integration]', () 
         templateKey,
         templateVersion: 1,
         status: 'ACTIVE',
-        fileBlob: Buffer.from(`blob-${templateKey}`),
+        fileKey: `${tenantId}/${templateKey}/1`,
         hash: `hash-${templateKey}`,
         changeNote: 'authored',
         createdById: 'seed-user',

@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TemplateController } from './template.controller';
 import { TemplateService } from './template.service';
 import { TemplateValidationService } from './template-validation.service';
-import { TemplateFileStoreService } from './template-file-store.service';
 import { TemplateTokensService } from './template-tokens.service';
 import { TemplateDefinitionService } from './template-definition.service';
 import { XlsNormalizerService } from './xls-normalizer.service';
@@ -14,7 +13,6 @@ import { PrismaService } from '../prisma/prisma.service';
   providers: [
     TemplateService,
     TemplateValidationService,
-    TemplateFileStoreService,
     TemplateTokensService,
     TemplateDefinitionService,
     XlsNormalizerService,

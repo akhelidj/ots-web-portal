@@ -32,11 +32,13 @@ import {
   ExportDefinition,
 } from '../export/export-engine';
 import { DefineTemplateDto } from './definition-authoring.types';
+import { LocalAttachmentStorage } from '../storage/local-attachment.storage';
 import {
   resetInspectionDomain,
   seedTenant,
   seedCustomer,
   seedActiveTemplate,
+  seedTemplateWorkbook,
   makeFilesServiceStub,
 } from '../../../test/seed-helpers';
 
@@ -97,6 +99,7 @@ describe('Template definition write path [integration]', () => {
       prisma,
       new XlsNormalizerService(),
       new TokenExtractorService(),
+      new LocalAttachmentStorage(),
     );
   });
 
@@ -112,14 +115,20 @@ describe('Template definition write path [integration]', () => {
       await resetInspectionDomain(prisma);
       const tenant = await seedTenant(prisma);
       tenantId = tenant.id;
-      // Seed a template with the REAL fixture bytes and NO definition yet.
+      // Seed a template with the REAL fixture bytes (written through storage) and
+      // NO definition yet — the define path fetches the workbook back by fileKey.
+      const fileKey = await seedTemplateWorkbook(
+        tenantId,
+        'FIXTURE_REPORT',
+        REAL_TEMPLATE_BYTES,
+      );
       const row = await prisma.template.create({
         data: {
           tenantId,
           templateKey: 'FIXTURE_REPORT',
           templateVersion: 1,
           status: 'ACTIVE',
-          fileBlob: REAL_TEMPLATE_BYTES,
+          fileKey,
           hash: 'hash-fixture',
           changeNote: 'seed',
           createdById: 'seed-user',

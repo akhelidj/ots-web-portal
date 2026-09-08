@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Inject,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
@@ -9,6 +10,10 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { XlsNormalizerService } from './xls-normalizer.service';
 import { TokenExtractorService } from './token-extractor.service';
+import {
+  ATTACHMENT_STORAGE,
+  AttachmentStorage,
+} from '../storage/attachment-storage.types';
 import { buildDefinition } from './definition-builder';
 import { validateDefinition, referencedTokens } from './definition-validator';
 import {
@@ -44,6 +49,8 @@ export class TemplateDefinitionService {
     private readonly prisma: PrismaService,
     private readonly normalizer: XlsNormalizerService,
     private readonly extractor: TokenExtractorService,
+    @Inject(ATTACHMENT_STORAGE)
+    private readonly storage: AttachmentStorage,
   ) {}
 
   async defineTemplate(
@@ -163,7 +170,7 @@ export class TemplateDefinitionService {
         tenantId: true,
         templateKey: true,
         templateVersion: true,
-        fileBlob: true,
+        fileKey: true,
       },
     });
     if (!template) {
@@ -185,16 +192,19 @@ export class TemplateDefinitionService {
       tenantId: string;
       templateKey: string;
       templateVersion: number;
-      fileBlob: Uint8Array;
+      fileKey: string;
     },
     candidate: CandidateDefinition,
     userId: string,
     reason: string,
   ) {
-    // Ground truth: the tokens actually in the workbook.
-    const normalized = this.normalizer.normalizeToXlsx(
-      Buffer.from(template.fileBlob),
-    );
+    // Ground truth: the tokens actually in the workbook, fetched from the storage
+    // abstraction by the row's stored key.
+    const buffer = await this.storage.getTemplate(template.fileKey);
+    if (!buffer) {
+      throw new NotFoundException('Template file not found');
+    }
+    const normalized = this.normalizer.normalizeToXlsx(buffer);
     const extracted = await this.extractor.extractTokens(normalized);
     const extractedTokens = new Set(extracted.map((t) => t.token));
 

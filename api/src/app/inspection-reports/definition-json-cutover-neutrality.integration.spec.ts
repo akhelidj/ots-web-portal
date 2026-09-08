@@ -65,6 +65,7 @@ import {
   resetInspectionDomain,
   makeFilesServiceStub,
 } from '../../../test/seed-helpers';
+import { LocalAttachmentStorage } from '../storage/local-attachment.storage';
 
 const TEMPLATE_KEY = 'DRILL_PIPE_REPORT';
 const DEFINITION_PATH = resolve(
@@ -114,7 +115,11 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
     prisma = new PrismaService();
     await prisma.onModuleInit();
     const revisionService = new RevisionService(prisma);
-    exportService = new ExportService(prisma, revisionService);
+    exportService = new ExportService(
+      prisma,
+      revisionService,
+      new LocalAttachmentStorage(),
+    );
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
     reportsService = new InspectionReportsService(
       prisma,

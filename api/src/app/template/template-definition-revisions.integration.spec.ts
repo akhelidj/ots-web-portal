@@ -15,7 +15,12 @@ import { TemplateDefinitionService } from './template-definition.service';
 import { XlsNormalizerService } from './xls-normalizer.service';
 import { TokenExtractorService } from './token-extractor.service';
 import { DefineTemplateDto } from './definition-authoring.types';
-import { resetInspectionDomain, seedTenant } from '../../../test/seed-helpers';
+import { LocalAttachmentStorage } from '../storage/local-attachment.storage';
+import {
+  resetInspectionDomain,
+  seedTenant,
+  seedTemplateWorkbook,
+} from '../../../test/seed-helpers';
 
 const REAL_TEMPLATE_BYTES = readFileSync(
   resolve(__dirname, '../../../scripts/valid-template.xlsx'),
@@ -85,6 +90,7 @@ describe('Template definition-edit history [integration]', () => {
       prisma,
       new XlsNormalizerService(),
       new TokenExtractorService(),
+      new LocalAttachmentStorage(),
     );
   });
 
@@ -99,13 +105,18 @@ describe('Template definition-edit history [integration]', () => {
     await resetInspectionDomain(prisma);
     const tenant = await seedTenant(prisma);
     tenantId = tenant.id;
+    const fileKey = await seedTemplateWorkbook(
+      tenantId,
+      'FIXTURE_REPORT',
+      REAL_TEMPLATE_BYTES,
+    );
     const row = await prisma.template.create({
       data: {
         tenantId,
         templateKey: 'FIXTURE_REPORT',
         templateVersion: 1,
         status: 'ACTIVE',
-        fileBlob: REAL_TEMPLATE_BYTES,
+        fileKey,
         hash: 'hash-fixture',
         changeNote: 'seed',
         createdById: 'seed-user',
