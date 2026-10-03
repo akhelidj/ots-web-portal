@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { signal } from '@angular/core';
 import { UserLocalRepo } from '@portal/core/offline/repos/user-local.repo';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
+import { staleSyncedIds } from '@portal/core/offline/services/stale-synced';
 import { LocalUser } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
@@ -72,7 +73,15 @@ export class AdminUsersService implements DataHydrationSource {
         this.http.get<LocalUser[]>(`${environment.apiUrl}/users`),
       );
       this.connectivity.markApiReachable();
+      const localUsers = await this.repo.list();
       await this.repo.bulkUpsert(serverUsers);
+      // The server's list is the truth: drop synced users it no longer has.
+      for (const id of staleSyncedIds(
+        localUsers,
+        serverUsers.map((u) => u.id),
+      )) {
+        await this.repo.delete(id);
+      }
       const refreshedData = await this.repo.list();
       this.users.set(refreshedData);
     } catch (err) {

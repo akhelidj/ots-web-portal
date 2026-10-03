@@ -72,6 +72,20 @@ export class InspectionReportLocalRepo {
     });
   }
 
+  async delete(id: string): Promise<void> {
+    const db = await this.dbService.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readwrite');
+      const req = tx.objectStore(this.STORE_NAME).delete(id);
+
+      req.onsuccess = () => {
+        this.changesSubject.next();
+        resolve();
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   async remapId(
     oldId: string,
     newReport: LocalInspectionReport,

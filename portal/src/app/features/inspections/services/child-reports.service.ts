@@ -11,6 +11,7 @@ import {
 import { LocalChildReport } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
+import { staleSyncedIds } from '@portal/core/offline/services/stale-synced';
 
 @Injectable({ providedIn: 'root' })
 export class ChildReportsService {
@@ -219,6 +220,14 @@ export class ChildReportsService {
       }
       if (toUpsert.length > 0) {
         await this.crRepo.bulkUpsert(toUpsert);
+      }
+
+      // The server's list is the truth: drop synced child reports it no longer has.
+      for (const id of staleSyncedIds(
+        localList,
+        serverReports.map((c) => c.id),
+      )) {
+        await this.crRepo.delete(id);
       }
     } catch (e) {
       if (this.isOfflineError(e)) {

@@ -5,6 +5,7 @@ import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.rep
 import { LocalCustomer } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
+import { staleSyncedIds } from '@portal/core/offline/services/stale-synced';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { APP_ROLES, ENTITY_TYPES } from '@portal/core/constants/app.constants';
 import {
@@ -49,6 +50,14 @@ export class AdminCustomersService implements DataHydrationSource {
 
       if (toUpsert.length > 0) {
         await this.localRepo.bulkUpsert(toUpsert);
+      }
+
+      // The server's list is the truth: drop synced customers it no longer has.
+      for (const id of staleSyncedIds(
+        localList,
+        customers.map((c) => c.id),
+      )) {
+        await this.localRepo.delete(id);
       }
     } catch (error) {
       if (this.isOfflineError(error)) {

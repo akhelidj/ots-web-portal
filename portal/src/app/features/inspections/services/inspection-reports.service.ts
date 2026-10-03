@@ -31,6 +31,7 @@ import {
   SERIAL_STATUSES,
 } from '@portal/core/constants/app.constants';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
+import { staleSyncedIds } from '@portal/core/offline/services/stale-synced';
 import { OutboxLocalRepo } from '@portal/core/offline/repos/outbox-local.repo';
 import {
   DataHydrationContext,
@@ -310,6 +311,37 @@ export class InspectionReportsService implements DataHydrationSource {
     }
   }
 
+  /**
+   * The server's report list is the truth: a cached, synced report it no longer returns
+   * was deleted there, so it goes — with its serials, child reports, batches and history.
+   * A report that still carries unsynced local work (itself or any serial / child) is
+   * kept: that work is not ours to discard silently.
+   */
+  private async pruneVanishedReports(
+    localReports: LocalInspectionReport[],
+    serverIds: string[],
+  ): Promise<void> {
+    for (const id of staleSyncedIds(localReports, serverIds)) {
+      const serials = await this.snRepo.listByReportId(id);
+      const children = await this.crRepo.listByReportId(id);
+      const hasUnsyncedWork =
+        staleSyncedIds(serials, []).length !== serials.length ||
+        staleSyncedIds(children, []).length !== children.length;
+      if (hasUnsyncedWork) continue;
+
+      for (const sn of serials) await this.snRepo.delete(sn.id);
+      for (const child of children) await this.crRepo.delete(child.id);
+      for (const log of await this.tlRepo.listByReportId(id)) {
+        await this.tlRepo.delete(log.id);
+      }
+      for (const batch of await this.approvalBatchRepo.listByReportId(id)) {
+        await this.batchSnRepo.deleteByBatchId(batch.id);
+        await this.approvalBatchRepo.delete(batch.id);
+      }
+      await this.irRepo.delete(id);
+    }
+  }
+
   public async pullAllAndCache(): Promise<void> {
     if (!this.canUseNetwork) {
       await this.refreshLocalCache();
@@ -340,6 +372,11 @@ export class InspectionReportsService implements DataHydrationSource {
       if (toUpsert.length > 0) {
         await this.irRepo.bulkUpsert(toUpsert);
       }
+
+      await this.pruneVanishedReports(
+        localReports,
+        reports.map((r) => r.id),
+      );
 
       for (const rep of reports) {
         try {
@@ -409,6 +446,13 @@ export class InspectionReportsService implements DataHydrationSource {
 
           if (toUpsertSn.length > 0) {
             await this.snRepo.bulkUpsert(toUpsertSn);
+          }
+
+          for (const id of staleSyncedIds(
+            localSnList,
+            serials.map((s) => s.id),
+          )) {
+            await this.snRepo.delete(id);
           }
         } catch (snErr) {
           console.error(`Failed to pull SNs for report ${rep.id}`, snErr);
