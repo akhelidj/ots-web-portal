@@ -1,0 +1,11 @@
+-- Per-field signatures (customer / supervisor "Signature" fields).
+--
+-- "revisionNumber": the report's revision when the pointer was written. A per-field
+-- signature is only current for that revision — reopening a report bumps the revision,
+-- which clears customer signatures (they must re-sign) while every older row stays as
+-- history, so an old revision still exports the signature it was signed with.
+--
+-- Purely additive: one defaulted column; existing rows (inspector slot) read as 0 and
+-- that slot never consults it.
+-- AlterTable
+ALTER TABLE "ReportSignature" ADD COLUMN "revisionNumber" INTEGER NOT NULL DEFAULT 0;

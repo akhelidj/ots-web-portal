@@ -52,7 +52,8 @@
           "sourceMap": true
         }
       },
-      "defaultConfiguration": "production"
+      "defaultConfiguration": "production",
+      "dependsOn": ["sync-version"]
     },
     "serve": {
       "continuous": true,
@@ -65,10 +66,20 @@
           "buildTarget": "portal:build:development"
         }
       },
-      "defaultConfiguration": "development"
+      "defaultConfiguration": "development",
+      "dependsOn": ["sync-version"]
     },
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/portal"],
+      "options": {
+        "jestConfig": "portal/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "dependsOn": ["sync-version"]
     },
     "serve-static": {
       "continuous": true,
@@ -77,6 +88,13 @@
         "buildTarget": "portal:build",
         "staticFilePath": "dist/portal/browser",
         "spa": true
+      }
+    },
+    "sync-version": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "node scripts/sync-portal-version.mjs"
       }
     }
   }

@@ -1,26 +1,24 @@
 # Export API
 
-This API endpoint generates an immutable output file (Excel or ZIP) representing a snapshot of an Inspection Report.
+Generates an immutable `.xlsx` (or `.zip`) representing a frozen revision of an inspection report.
 
 ## Endpoint
 
 ### `GET /inspection-reports/:id/export`
 
-Downloads the inspection report's frozen data in `.xlsx` format. If there are more than 10 serial numbers to be exported, it returns a `.zip` file containing multiple chunks as `.xlsx` files.
+Authenticated; a `CUSTOMER` may only export their own customer's reports (`403` otherwise). The portal shows the button to CUSTOMER, SUPERVISOR and ADMIN.
 
-**Requirements & Governance:**
-- The `InspectionReport` must belong to the active tenant.
-- The `InspectionReport` must precisely be in `APPROVED` status.
-- The `templateHash` must cryptographically match the bound system template.
+**Query:** `revision` (optional integer; defaults to the report's current `revisionNumber`; non-numeric → `400`).
 
-**Query Parameters (Optional):**
-- `revision`: Explicit revision number integer. If omitted, uses the report's current active `revisionNumber`.
+**Governance:**
 
-**Responses:**
-- `200 OK`: A forced download binary Blob stream.
-  - Generates `Content-Disposition` header defining the filename (`inspection-report-{reportNumber}.xlsx` or `.zip`).
-  - Supports `filename*=` URL-encoded parsing or standard `filename=` parsing for extraction.
-- `400 Bad Request`:
-  - Returned if template mapping validation fails (e.g., mismatching column data layout constraints).
-- `403 Forbidden`: Let through if `TenantId` verification succeeds but the report itself is in the wrong status (e.g. `DRAFT`).
-- `404 Not Found`: Missing report, omitted revision, or report outside the tenant scope.
+- The report must be in the caller's tenant.
+- Export is allowed only when the **parent** is `APPROVED` or `CLOSED`, **or** its REWORK child report is `APPROVED` or `CLOSED` (a child-only export carries no parent signatures). Otherwise `403`.
+- Output is built from the revision's immutable `snapshotJson` (revision 0 — e.g. a batch-auto-approved report with no snapshot, KNOWN-ISSUES #19 — is built live), using the pinned template's workbook (read from storage by `fileKey`) and definition.
+- **Signatures:** the inspector signature frozen at submission, the supervisor's account signature applied at approval, and any customer signature for that revision are embedded. For the report's **current** revision, a `required` signature field that is still unsigned blocks the export with `409` `{ code: "SIGNATURE_PENDING", message }`; unsigned optional fields (and older revisions) are left blank.
+
+**Response `200`:** attachment download.
+
+- A single `.xlsx`, or a `.zip` when the output is several files — serials chunked by the definition's region `chunkSize`, or parent + child files together. The zip is named `OTS_<PO>_<reportNumber>_<revision>.zip`.
+- `400` when template mapping validation fails (e.g. repeating-row tokens that span multiple worksheet rows).
+- `404` for a missing report or revision.

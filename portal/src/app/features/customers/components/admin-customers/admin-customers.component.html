@@ -1,0 +1,402 @@
+<div class="space-y-6">
+  <div class="page-section p-5 sm:p-6">
+    <div>
+      <h2 class="text-2xl tracking-tight text-foreground">
+        Customer Directory
+      </h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Manage customer companies, service status, and sync health.
+      </p>
+    </div>
+  </div>
+
+  <!-- Create Customer Form -->
+  <div class="page-section p-6">
+    <form
+      (ngSubmit)="onSubmitCreate()"
+      #customerForm="ngForm"
+      aria-labelledby="create-customer-legend"
+      class="space-y-6"
+    >
+      <fieldset>
+        <legend id="create-customer-legend" class="section-legend">
+          Register Customer
+        </legend>
+
+        <div
+          class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          <div>
+            <label for="c-name" class="form-label"
+              >Company Name <span class="text-error">*</span></label
+            >
+            <div class="mt-1">
+              <input
+                type="text"
+                id="c-name"
+                name="name"
+                [(ngModel)]="formName"
+                required
+                #nameField="ngModel"
+                class="field-control"
+                [ngClass]="{
+                  'border-error focus:ring-error focus:border-error':
+                    nameField.invalid && (nameField.dirty || nameField.touched),
+                }"
+              />
+            </div>
+            @if (nameField.invalid && (nameField.dirty || nameField.touched)) {
+              <p class="mt-1 text-xs text-error">Company Name is required.</p>
+            }
+          </div>
+
+          <div>
+            <label for="c-code" class="form-label">Code (Optional)</label>
+            <div class="mt-1">
+              <input
+                type="text"
+                id="c-code"
+                name="code"
+                [(ngModel)]="formCode"
+                class="field-control"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="c-email" class="form-label">Email (Optional)</label>
+            <div class="mt-1">
+              <input
+                type="email"
+                id="c-email"
+                name="email"
+                [(ngModel)]="formEmail"
+                email
+                #emailField="ngModel"
+                class="field-control"
+                [ngClass]="{
+                  'border-error focus:ring-error focus:border-error':
+                    emailField.invalid &&
+                    (emailField.dirty || emailField.touched),
+                }"
+              />
+            </div>
+            @if (
+              emailField.invalid && (emailField.dirty || emailField.touched)
+            ) {
+              <p class="mt-1 text-xs text-error">Must be a valid email.</p>
+            }
+          </div>
+
+          <div>
+            <label for="c-phone" class="form-label">Phone (Optional)</label>
+            <div class="mt-1">
+              <input
+                type="text"
+                id="c-phone"
+                name="phone"
+                [(ngModel)]="formPhone"
+                class="field-control"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+          <button
+            type="submit"
+            [disabled]="!customerForm.form.valid"
+            class="btn btn-primary"
+          >
+            Create Customer
+          </button>
+        </div>
+      </fieldset>
+
+      @if (formError) {
+        <div role="alert" class="alert-error mt-4 py-2">
+          {{ formError }}
+        </div>
+      }
+    </form>
+  </div>
+
+  <!-- Inline Edit Form -->
+  @if (editingCustomer) {
+    <div class="page-section p-6 mb-8">
+      <form
+        (ngSubmit)="confirmEdit()"
+        aria-labelledby="edit-customer-legend"
+        class="space-y-6"
+      >
+        <fieldset>
+          <legend
+            id="edit-customer-legend"
+            class="text-base font-semibold text-foreground border-b border-border pb-2 w-full mb-4"
+          >
+            Edit Configuration:
+            <span class="text-foreground">{{ editingCustomer.name }}</span>
+          </legend>
+
+          <div
+            class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4"
+          >
+            <div>
+              <label for="e-name" class="form-label">Name</label>
+              <input
+                type="text"
+                id="e-name"
+                name="ename"
+                [(ngModel)]="editName"
+                required
+                class="field-control mt-1"
+              />
+            </div>
+            <div>
+              <label for="e-code" class="form-label">Code</label>
+              <input
+                type="text"
+                id="e-code"
+                name="ecode"
+                [(ngModel)]="editCode"
+                class="field-control mt-1"
+              />
+            </div>
+            <div>
+              <label for="e-email" class="form-label">Email</label>
+              <input
+                type="email"
+                id="e-email"
+                name="eemail"
+                [(ngModel)]="editEmail"
+                class="field-control mt-1"
+              />
+            </div>
+            <div>
+              <label for="e-phone" class="form-label">Phone</label>
+              <input
+                type="text"
+                id="e-phone"
+                name="ephone"
+                [(ngModel)]="editPhone"
+                class="field-control mt-1"
+              />
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              (click)="cancelEdit()"
+              class="btn btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn bg-accent hover:bg-accent-hover text-accent-foreground focus:ring-accent border border-transparent"
+            >
+              Save Changes
+            </button>
+          </div>
+
+          @if (editError) {
+            <div role="alert" class="alert-error mt-4 py-2 border-l-0">
+              {{ editError }}
+            </div>
+          }
+        </fieldset>
+      </form>
+    </div>
+  }
+
+  <!-- Deactivation Form -->
+  @if (selectedCustomer) {
+    <div class="bg-error-light border border-error/20 p-6 rounded-xl mb-8">
+      <form
+        (ngSubmit)="confirmDeactivate()"
+        aria-labelledby="deactivate-legend"
+        class="space-y-4"
+      >
+        <fieldset>
+          <legend
+            id="deactivate-legend"
+            class="text-base font-semibold text-error-dark border-b border-error/20 pb-2 w-full mb-4"
+          >
+            Deactivate Customer:
+            <span class="font-bold">{{ selectedCustomer.name }}</span>
+          </legend>
+
+          <div>
+            <label
+              for="d-reason"
+              class="block text-sm font-medium text-error-dark mb-1"
+              >Reason for deactivation</label
+            >
+            <input
+              type="text"
+              id="d-reason"
+              name="reason"
+              [(ngModel)]="deactivationReason"
+              required
+              class="field-control field-control-danger max-w-lg"
+              placeholder="Please provide a reason..."
+            />
+          </div>
+
+          <div class="mt-4 flex gap-3">
+            <button type="submit" class="btn btn-danger">
+              Confirm Deactivation
+            </button>
+            <button
+              type="button"
+              (click)="cancelDeactivate()"
+              class="btn btn-secondary"
+            >
+              Cancel
+            </button>
+          </div>
+
+          @if (deactivationError) {
+            <div role="alert" class="alert-error mt-4 py-2 border-l-0">
+              {{ deactivationError }}
+            </div>
+          }
+        </fieldset>
+      </form>
+    </div>
+  }
+
+  <!-- Data Table -->
+  <div class="queue-table-wrap">
+    <table
+      aria-label="Customers List"
+      class="table-base divide-y divide-border"
+    >
+      <thead class="table-head">
+        <tr>
+          <th scope="col" class="table-th">Name</th>
+          <th scope="col" class="table-th">Code</th>
+          @if (!isCompactMode()) {
+            <th scope="col" class="table-th">Email</th>
+            <th scope="col" class="table-th">Active</th>
+            <th scope="col" class="table-th">Sync Status</th>
+          }
+          <th scope="col" class="table-th-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="table-body">
+        @for (cust of customers(); track cust.id) {
+          <tr
+            class="hover:bg-primary/5 transition-all duration-300 transform"
+            [class.opacity-50]="deletingIds.has(cust.id)"
+          >
+            <td class="table-td-strong">
+              {{ cust.name }}
+            </td>
+            <td class="table-td-code">
+              {{ cust.code || '-' }}
+            </td>
+            @if (!isCompactMode()) {
+              <td class="table-td">
+                {{ cust.email || '-' }}
+              </td>
+              <td class="table-td">
+                @if (cust.isActive) {
+                  <span class="data-chip-success-soft">Yes</span>
+                } @else {
+                  <span class="data-chip-neutral-soft">No</span>
+                }
+              </td>
+              <td class="table-td">
+                @if (cust.syncState === 'PENDING') {
+                  <span class="data-chip-warning">Pending Sync</span>
+                } @else if (cust.syncState === 'CONFLICT') {
+                  <div class="flex flex-col">
+                    <span
+                      class="data-chip-error"
+                      title="Refresh from server to resolve"
+                      >Sync Error</span
+                    >
+                    <span class="text-[10px] text-muted-foreground mt-1"
+                      >Refresh to resolve</span
+                    >
+                  </div>
+                } @else if (cust.syncState === 'ERROR') {
+                  <span class="data-chip-error">Error</span>
+                } @else {
+                  <span class="data-chip-success">Synced</span>
+                }
+              </td>
+            }
+            <td class="table-actions flex gap-3 justify-end items-center">
+              <button
+                (click)="promptEdit(cust)"
+                [disabled]="
+                  cust.syncState === 'CONFLICT' || deletingIds.has(cust.id)
+                "
+                class="action-link-primary"
+              >
+                Edit
+              </button>
+              <button
+                (click)="onToggleActive(cust)"
+                [disabled]="
+                  cust.syncState === 'CONFLICT' || deletingIds.has(cust.id)
+                "
+                class="action-link-accent"
+              >
+                {{ cust.isActive ? 'Deactivate' : 'Activate' }}
+              </button>
+              <button
+                (click)="onDelete(cust)"
+                [disabled]="
+                  cust.syncState === 'CONFLICT' || deletingIds.has(cust.id)
+                "
+                class="icon-action-danger"
+                aria-label="Delete Customer"
+              >
+                @if (deletingIds.has(cust.id)) {
+                  <svg
+                    class="animate-spin h-5 w-5 text-error"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                } @else {
+                  <svg
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                }
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

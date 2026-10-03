@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -24,21 +28,35 @@ export class UsersService {
     });
   }
 
-  async createUser(tenantId: string, data: { email: string; name?: string; role: UserRole; password: string; isActive?: boolean; customerId?: string }) {
+  async createUser(
+    tenantId: string,
+    data: {
+      email: string;
+      name?: string;
+      role: UserRole;
+      password: string;
+      isActive?: boolean;
+      customerId?: string;
+    },
+  ) {
     const email = data.email.toLowerCase().trim();
     const existing = await this.prisma.user.findUnique({
       where: { tenantId_email: { tenantId, email } },
     });
 
     if (existing) {
-      throw new ConflictException('User with this email already exists in the tenant');
+      throw new ConflictException(
+        'User with this email already exists in the tenant',
+      );
     }
 
     if (data.role === UserRole.CUSTOMER && !data.customerId) {
       throw new ConflictException('Customer ID is required for Customer role');
     }
     if (data.role !== UserRole.CUSTOMER && data.customerId) {
-      throw new ConflictException('Customer ID is only allowed for Customer role');
+      throw new ConflictException(
+        'Customer ID is only allowed for Customer role',
+      );
     }
 
     // Use provided password
@@ -120,7 +138,11 @@ Please log in to the portal to get started.
     });
   }
 
-  async updateUser(tenantId: string, id: string, data: { name?: string; password?: string }) {
+  async updateUser(
+    tenantId: string,
+    id: string,
+    data: { name?: string; password?: string },
+  ) {
     const user = await this.prisma.user.findFirst({
       where: { id, tenantId },
     });
@@ -133,7 +155,7 @@ Please log in to the portal to get started.
     if (data.name !== undefined) {
       updateData.name = data.name;
     }
-    
+
     if (data.password) {
       updateData.passwordHash = await bcrypt.hash(data.password, 10);
       updateData.mustChangePassword = true; // force the user to rotate it again for security
@@ -153,6 +175,26 @@ Please log in to the portal to get started.
         createdAt: true,
         updatedAt: true,
       },
+    });
+  }
+
+  async deleteUser(tenantId: string, id: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Prisma transactional delete to ensure refresh tokens are cleaned up
+    return this.prisma.$transaction(async (tx) => {
+      await tx.refreshToken.deleteMany({
+        where: { userId: id },
+      });
+      return tx.user.delete({
+        where: { id },
+      });
     });
   }
 }

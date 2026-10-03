@@ -8,13 +8,18 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
     "target": "es2015",
     "module": "esnext",
     "lib": ["es2020", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@portal/*": ["portal/src/app/*"],
+      "@app-env/*": ["portal/src/environments/*"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }

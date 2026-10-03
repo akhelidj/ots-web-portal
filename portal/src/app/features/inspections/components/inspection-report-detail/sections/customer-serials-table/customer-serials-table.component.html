@@ -1,0 +1,129 @@
+<!--
+  Read-only serials matrix, document style. No card chrome: the surface is the
+  band it sits in. Horizontal overflow is owned here so wide matrices scroll
+  inside the table rather than pushing the document body sideways.
+-->
+<div class="w-full overflow-x-auto border border-border">
+  <table
+    class="w-full min-w-full border-collapse text-left align-middle tabular-nums"
+  >
+    <!--
+      No vertical sticky on the header: this wrapper owns overflow-x, which
+      forces overflow-y to a used value of `auto`, making it the sticky
+      containing block — so `position: sticky; top: 0` can never pin against the
+      outer document scroller (it just scrolls away with the rows). A bounded
+      inner scroll region would engage it but is the wrong trade on a reading
+      surface (trapped mid-document scroll, worse on touch). The header scrolls
+      away with the document by design; the horizontal freeze on the Serial
+      column below still works, because that axis IS this wrapper's scroller.
+    -->
+    <thead>
+      <!-- Group band: one uppercase IBM Plex title spanning each section's columns. -->
+      @if (columnGroups.length > 0) {
+        <tr class="bg-card">
+          <th
+            scope="col"
+            rowspan="2"
+            class="sticky left-0 z-10 bg-card border-b border-r border-border px-4 py-3 font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+          >
+            Serial
+          </th>
+          @for (group of columnGroups; track group.key) {
+            <th
+              scope="colgroup"
+              [attr.colspan]="group.columns.length"
+              class="border-b border-r border-border px-4 py-3 font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/70 whitespace-nowrap"
+            >
+              {{ group.title }}
+            </th>
+          }
+          <th
+            scope="col"
+            rowspan="2"
+            class="border-b border-l border-border px-4 py-3 text-right font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+          >
+            Result
+          </th>
+        </tr>
+      }
+      <!-- Column header row: one uppercase IBM Plex label per rendered column. -->
+      <tr class="bg-card">
+        @if (columnGroups.length === 0) {
+          <th
+            scope="col"
+            class="sticky left-0 z-10 bg-card border-b border-r border-border px-4 py-3 font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+          >
+            Serial
+          </th>
+          <th
+            scope="col"
+            class="border-b border-l border-border px-4 py-3 text-right font-sans uppercase tracking-[0.1em] text-[11px] leading-none text-primary/60 whitespace-nowrap"
+          >
+            Result
+          </th>
+        }
+        @for (group of columnGroups; track group.key) {
+          @for (col of group.columns; track col.id) {
+            <th
+              scope="col"
+              class="border-b border-border px-4 py-2.5 font-sans uppercase tracking-[0.08em] text-[11px] leading-tight text-primary/55 whitespace-nowrap"
+              [class.border-r]="col.isSectionEnd"
+            >
+              {{ col.label }}
+            </th>
+          }
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @for (sn of serials; track trackBySerial($index, sn)) {
+        <!--
+          Whole row opens the shared read-only serial drawer. It's a genuine
+          control, so it carries button semantics, keyboard activation, and an
+          orange focus ring — orange stays reserved for focus/selection here.
+        -->
+        <tr
+          role="button"
+          tabindex="0"
+          (click)="openInspection.emit(sn)"
+          (keydown.enter)="openInspection.emit(sn)"
+          (keydown.space)="$event.preventDefault(); openInspection.emit(sn)"
+          class="cust-interactive group cursor-pointer border-b border-border/60 hover:bg-primary/[0.05] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+        >
+          <th
+            scope="row"
+            class="sticky left-0 z-[5] bg-background group-hover:bg-primary/[0.05] transition-colors duration-fast ease-standard border-r border-border/60 px-4 py-3 text-left font-heading font-medium text-primary whitespace-nowrap"
+          >
+            {{ sn.value }}
+          </th>
+          @for (group of columnGroups; track group.key) {
+            @for (col of group.columns; track col.id) {
+              <td
+                class="px-4 py-3 text-primary/80 whitespace-nowrap"
+                [class.border-r]="col.isSectionEnd"
+                [class.border-border]="col.isSectionEnd"
+              >
+                {{ getCellText(sn, col) }}
+              </td>
+            }
+          }
+          <td class="border-l border-border/60 px-4 py-3 text-right">
+            @if (reworkFlag(sn); as flag) {
+              <app-status-badge [label]="flag" severity="warning" font="sans" />
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td
+            [attr.colspan]="totalColumnCount"
+            class="px-4 py-10 text-center font-sans text-sm text-primary/50"
+          >
+            No serials recorded on this report.
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

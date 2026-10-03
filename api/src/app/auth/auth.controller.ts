@@ -1,8 +1,19 @@
-import { Controller, Post, Body, Req, UnauthorizedException, Get, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Req,
+  UnauthorizedException,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { LoginDto } from './dto/login.dto';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Public } from '../common/decorators/public.decorator';
+import { AllowWithoutSignature } from '../common/decorators/allow-without-signature.decorator';
+import { AuthenticatedRequest } from './authenticated-request';
 
 @Controller('auth')
 export class AuthController {
@@ -10,7 +21,7 @@ export class AuthController {
 
   @Public()
   @Post('login')
-  async login(@Body() body: any) {
+  async login(@Body() body: LoginDto) {
     const user = await this.authService.validateUser(body.email, body.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -30,15 +41,24 @@ export class AuthController {
     return this.authService.logout(body.refreshToken);
   }
 
+  // An inspector in the signature gate must still be able to rotate a forced password.
+  @AllowWithoutSignature()
   @UseGuards(AuthGuard('jwt'))
   @Post('change-password')
-  async changePassword(@Req() req, @Body() body: ChangePasswordDto) {
+  async changePassword(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: ChangePasswordDto,
+  ) {
     const userId = req.user.userId || req.user.sub || req.user.id;
-    return this.authService.changePassword(userId, body.currentPassword, body.newPassword);
+    return this.authService.changePassword(
+      userId,
+      body.currentPassword,
+      body.newPassword,
+    );
   }
 
   @Get('me')
-  getProfile(@Req() req) {
+  getProfile(@Req() req: AuthenticatedRequest) {
     return req.user;
   }
 }

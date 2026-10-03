@@ -1,49 +1,36 @@
 # Serial Number Inspection
 
-This document describes the API interactions for managing and updating inspection data for individual Serial Numbers. Note that inspection data structure is dictated by static templates configured in the frontend (e.g., Drill Pipe v1), rather than dynamic backend schemas.
+Inspection data for one serial is written with `PATCH /serial-numbers/:id` (roles ADMIN, INSPECTOR; RECEIVER is refused). Its **shape is defined by the report's template** (`Template.definitionJson`, item-scope fields), not by a backend schema. The portal builds the form from that definition (`definition-to-form-schema.ts`); `DRILL_PIPE_V1_SCHEMA` survives only as a fallback when a template has no definition.
 
-## Offline-First Philosophy
-All state changes relating to inspection data must be optimistically stored by the frontend and dispatched via `SN_UPDATE_INSPECTION` outbox events. The backend guarantees data validation and locking, returning 400 for structural or state errors, and 409 for conflicts.
+## Offline-first
 
-## Editing Serial Number Inspection Data
+The portal writes locally first and dispatches `SN_UPDATE_INSPECTION` outbox items; the backend validates and locks, returning `400` for structural/state errors and `409` for conflicts. See [report lifecycle](../architecture/report-lifecycle.md).
 
-`PATCH /api/serial-numbers/:id`
+## Request
 
-**Request Body**
 ```json
 {
-  "inspectionJson": {
-    "outerDiameter": 5.5,
-    "wallThickness": 0.5,
-    "threadCondition": "GOOD",
+  "inspectionData": {
+    "body": { "emiResult": "PASS", "od_1": 5.5 },
     "remarks": "Minor scuff"
   },
   "version": 2
 }
 ```
 
-**Constraints & Locks:**
-- If the parent Inspection Report is in `APPROVED` or `CLOSED` status, the mutation is rejected with `400 Bad Request` ("Inspection data is locked.").
-- An atomic optimistic concurrency check ensures the provided `version` matches the database `version`. If it doesn't, a `409 Conflict` is returned.
-- Emits an `UPDATE` audit log when inspection data is modified.
+`inspectionData` is a free JSON object (the template's keys, possibly nested). The disposition column is re-derived from it per [Dispositions](dispositions.md).
 
-## Retrieving Inspection Data
+## Constraints and locks
 
-Inspection data is retrieved as part of the Serial Numbers collection fetch for a given report.
+- Parent report `APPROVED`/`CLOSED` → `400` ("Inspection data is locked by report status.").
+- Serial `SUBMITTED_FOR_APPROVAL` or `APPROVED` → `400` ("Cannot edit serial numbers that are …").
+- `version` must match (`409` otherwise; guarded `updateMany`).
+- An `UPDATE` audit log is written.
 
-`GET /api/inspection-reports/:id/serial-numbers`
+## Child-report serials
 
-**Response Example**
-```json
-[
-  {
-    "id": "123",
-    "serialNumber": "SN-001",
-    "version": 2,
-    "inspectionJson": {
-      "outerDiameter": 5.5,
-      ...
-    }
-  }
-]
-```
+Serials of a rework child report are edited with `PATCH /child-reports/:id/serial-numbers/:snId` ([Child Reports](child-reports.md)); the same locks apply and `REWORK` is not an accepted disposition there.
+
+## Reading
+
+Inspection data is returned by `GET /inspection-reports/:id/serial-numbers`.

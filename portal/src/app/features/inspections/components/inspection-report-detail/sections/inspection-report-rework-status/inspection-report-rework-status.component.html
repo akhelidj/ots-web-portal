@@ -1,0 +1,77 @@
+@if (isVisible) {
+  <div
+    class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8 overflow-hidden max-w-7xl mx-auto"
+  >
+    <div
+      class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3"
+    >
+      <div class="flex flex-col gap-0.5">
+        <h2 class="text-lg text-neutral-900 flex items-center gap-2">
+          Rework Status
+          @if (reworkSerials.length > 0) {
+            <span
+              class="bg-neutral-200 text-neutral-800 text-[11px] font-bold py-0.5 px-2 min-w-[20px] text-center rounded-md whitespace-nowrap"
+              >{{ reworkSerials.length }}</span
+            >
+          }
+        </h2>
+        <p class="text-xs text-gray-500">
+          Serials matching the rework rule are collected automatically as you
+          inspect.
+        </p>
+      </div>
+      @if (reworkChild) {
+        <a
+          [routerLink]="childRoute(reworkChild.id)"
+          class="btn btn-primary btn-sm px-4 hover:text-white whitespace-nowrap"
+        >
+          Open Child Report
+          <svg
+            class="w-3.5 h-3.5 ml-1.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+            />
+          </svg>
+        </a>
+      }
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-left border-collapse text-sm">
+        <thead class="bg-white border-b border-gray-100">
+          <tr>
+            <th scope="col" class="table-th">Serial Number</th>
+            <th scope="col" class="table-th">Approval</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50 bg-white">
+          @for (sn of reworkSerials; track sn.id) {
+            <tr class="hover:bg-primary/5 transition-colors">
+              <td class="table-td-strong code-text">{{ sn.serial }}</td>
+              <td class="table-td text-xs text-gray-600">
+                {{ sn.approvalStatus || '—' }}
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td
+                colspan="2"
+                class="px-6 py-6 text-center text-xs text-gray-500"
+              >
+                No serials match the rework rule yet. Any that do will be added
+                here automatically as inspection continues.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

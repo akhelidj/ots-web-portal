@@ -1,46 +1,47 @@
 # Inspection Report Template Binding Architecture
 
 ## Overview
-Every Inspection Report in OTS is permanently bound to a specific version of a Template. This binding happens at the moment of creation and is immutable. This ensures that an inspection report always references the exact template definition (structure, validation rules, field mappings) that was used when the report was started.
 
-## Key Principles
+Every Inspection Report is permanently bound to a specific version of a Template. The binding happens at creation and is immutable, so a report always references the exact definition (form, gate rules, export mapping) in force when it was started.
 
-### 1. Snapshot at Creation
-When a Receiver creates a new Inspection Report, the system looks up the currently **ACTIVE** version of the requested Template (based on `templateKey`).
-The binding fields from that Active Template are **copied** into the Inspection Report record.
+## Key principles
 
-### 2. Field-Based Binding (No Foreign Key)
-We explicitly store the template details as scalar fields on the `InspectionReport` entity, rather than relying solely on a foreign key to a `Template` table.
-**Rationale**:
--   **Immutability**: Even if the `Template` record is later modified (which shouldn't happen, but as a safeguard) or if data archival moves templates, the Inspection Report retains its historical context self-contained.
--   **Determinism**: The `templateHash` guarantees we know exactly what file was used.
+### 1. Chosen at creation, snapshot-bound
 
-### 3. Active-Only Selection
-Inspection reports can ONLY be created from a Template that is in `ACTIVE` status.
--   If a template is `DEPRECATED`, it cannot be used for new reports.
--   If no active version exists, creation fails.
+The create form offers a **template picker** fed by `GET /inspection-reports/available-templates` (newest version per key that is `ACTIVE`, defined, and admin-`APPROVED`). `POST /inspection-reports` carries the chosen `templateKey`; the server resolves the **newest ACTIVE + APPROVED + defined version of that key** in the create transaction and copies its binding fields into the report. The key is required — there is no default or hardcoded template. A key whose newest active version is pending/rejected/undefined is refused (`400`), even if a client names it directly.
 
-## Data Model (Prisma)
-The `InspectionReport` model includes:
+### 2. Field-based binding (no foreign key)
+
+`templateKey`, `templateVersion` and `templateHash` are stored as scalar fields on `InspectionReport`, not only as a relation, so the report stays self-contained even if template rows are archived, and `templateHash` pins exactly which workbook was used. They are validated against the template on every revision snapshot.
+
+### 3. Active, approved, defined only
+
+New reports can only be created from a `Template` that is `ACTIVE`, has a non-null `definitionJson`, and has `approvalStatus == APPROVED`. If none exists for the key, creation fails.
+
+## Data model (Prisma)
 
 ```prisma
 model InspectionReport {
   // ...
   templateKey     String   // e.g. "DRILL_PIPE_REPORT"
-  templateVersion Int      // e.g. 1, 2, 3
-  templateHash    String   // SHA-256 hash of the .xlsx file
-  
-  // Legacy field support (optional)
-  templateVersionId String? 
-  // ...
+  templateVersion Int
+  templateHash    String   // SHA-256 of the .xlsx workbook
+  headerData      Json?    // definition-keyed header values
+  statistics      Json?    // free-entry [{ id, label, value, serials[] }]
+  templateVersionId String? // legacy, nullable — relation `legacyTemplateVersion`
 }
 ```
 
-## Immutability Rules
--   `templateKey`, `templateVersion`, and `templateHash` are written **ONCE** during the `CREATE` transaction.
--   No `UPDATE` endpoint allows modifying these fields.
--   The Service layer enforces this by simply not exposing these fields in any Update DTOs.
--   Any attempt to force-update these fields via direct DB access (if bypassed) would violate the business integrity, but the application code strictly prevents it.
+## Immutability
 
-## Legacy Handling
-The system previously used a `TemplateVersion` entity and `templateVersionId`. This field remains in the schema as `templateVersionId` (nullable) to support legacy data visibility, but new bindings drive logic primarily via the new scalar fields.
+- The three binding fields are written once, in the `CREATE` transaction.
+- No update endpoint accepts them (`PATCH /inspection-reports/:id` takes only `poNumber`, `headerData`, `statistics`, `status`).
+- Consumers that need the definition look it up by `(tenantId, templateKey, templateVersion)`; `GET` endpoints graft `definitionJson` onto the report payload so the portal can render offline.
+
+## Legacy
+
+The old `TemplateVersion` entity / `templateVersionId` stays in the schema (nullable) for legacy data visibility only. Logic runs off the scalar fields.
+
+## Two create paths
+
+The live path is `InspectionReportsService.createReport`. `InspectionReportWorkflowService.create` is a second, divergent implementation (it generates no `reportNumber`) that is **not wired to any route**; do not route to it.

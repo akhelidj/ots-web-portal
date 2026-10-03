@@ -4,6 +4,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DefaultDenyGuard } from './common/guards/default-deny.guard';
+import { SignatureRequiredGuard } from './common/guards/signature-required.guard';
+import { SignaturesModule } from './signatures/signatures.module';
 import { HealthController } from './health/health.controller';
 
 import { PrismaModule } from './prisma/prisma.module';
@@ -18,6 +20,9 @@ import { CustomersModule } from './customers/customers.module';
 import { InspectionReportsModule } from './inspection-reports/inspection-reports.module';
 import { SerialNumbersModule } from './serial-numbers/serial-numbers.module';
 import { ChildReportsModule } from './child-reports/child-reports.module';
+import { FilesController } from './files/files.controller';
+import { FilesService } from './files/files.service';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -25,9 +30,11 @@ import { ChildReportsModule } from './child-reports/child-reports.module';
       isGlobal: true,
       envFilePath: 'api/.env', // explicit path since monorepo root is CWD
     }),
+    StorageModule,
     PrismaModule,
     AuthModule,
     UsersModule,
+    SignaturesModule,
     CustomersModule,
     WorkflowModule,
     TemplateModule,
@@ -37,12 +44,19 @@ import { ChildReportsModule } from './child-reports/child-reports.module';
     SerialNumbersModule,
     ChildReportsModule,
   ],
-  controllers: [AppController, HealthController],
+  controllers: [AppController, HealthController, FilesController],
   providers: [
     AppService,
+    FilesService,
     {
       provide: APP_GUARD,
       useClass: DefaultDenyGuard,
+    },
+    // Order matters: APP_GUARDs run in registration order, and this one relies on
+    // DefaultDenyGuard having populated `req.user` first.
+    {
+      provide: APP_GUARD,
+      useClass: SignatureRequiredGuard,
     },
   ],
 })

@@ -35,4 +35,8 @@ export class CreateCustomerDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  constructor(name: string) {
+    this.name = name;
+  }
 }

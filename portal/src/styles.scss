@@ -1,11 +1,621 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Semantic design-token layer (CSS custom properties).
+ * Source of truth for brand color/type/spacing. Tailwind's theme.extend
+ * points its `primary`/`accent`/etc. classes at these vars, so the existing
+ * bg-primary/text-accent usages flow from here automatically.
+ * NOTE: component-level default-palette usage (gray/neutral/blue/…) is NOT
+ * yet migrated — that happens per-screen in a later pass.
+ */
+:root {
+  /* Color — semantic slots repointed to the marketing palette (ink / paper / orange).
+     Slot names are unchanged so existing utilities keep resolving; only values moved.
+     RGB channel triples live below where a var feeds rgb()/rgba(). */
+  --primary: #171b1d; /* ink */
+  --primary-hover: #242a2d; /* ink-soft — hover/active slot for primary */
+  --on-primary: #ffffff;
+  --secondary: #242a2d; /* ink-soft (former demoted navy) */
+  --on-secondary: #ffffff;
+  --accent: #ed812d; /* orange */
+  --on-accent: #171b1d; /* ink text on orange */
+  --accent-hover: #ff9b4c;
+  --background: #f4f4f5; /* paper — neutral cool grey (de-warmed from #f1f0ea) */
+  --foreground: #171b1d; /* ink */
+  --card: #ffffff; /* white */
+  --card-foreground: #171b1d; /* ink */
+  --muted: #e8e9ea; /* deep-paper — neutral cool grey (de-warmed from #e7e5dd) */
+  --muted-foreground: #5d6466; /* slate */
+  --border: rgba(23, 27, 29, 0.16); /* ink @ 16% */
+  --destructive: #9b3d2e; /* brick red — aligned with --error */
+  --on-destructive: #ffffff;
+  --ring: #ed812d; /* orange */
+
+  /* Caption / secondary-label text. */
+  --light-slate: #7b8081;
+
+  /* Status — muted per brand brief (forest green / ochre / brick red), not Material
+     brights. Re-pointable here; Tailwind's success/error/warning colors map these so
+     bg-success-light, text-error-dark, border-warning/30, … keep working.
+     Stored as R G B channel triples (hex in comments) because these slots are used
+     with Tailwind alpha modifiers (border-success/30, ring-error/25, bg-warning-light/20,
+     bg-error-light/10, …) — a bare var() cannot take an /alpha, a channel triple can. */
+  --success: 63 107 78; /* #3f6b4e forest */
+  --success-light: 228 236 229; /* #e4ece5 */
+  --success-dark: 46 81 57; /* #2e5139 */
+  --warning: 181 127 42; /* #b57f2a ochre */
+  --warning-light: 241 232 214; /* #f1e8d6 */
+  --warning-dark: 138 94 28; /* #8a5e1c */
+  --error: 155 61 46; /* #9b3d2e brick */
+  --error-light: 241 225 221; /* #f1e1dd */
+  --error-dark: 122 46 34; /* #7a2e22 */
+
+  /* RGB channel triples — feed Tailwind's rgb(var(--*) / <alpha-value>) colors
+     (so bg-primary/10, ring-primary/25, bg-accent/… keep working) and rgba() glows.
+     Both accent and primary need channel form now. */
+  --primary-rgb: 23 27 29;
+  --color-primary: 23 27 29;
+  --accent-rgb: 237 129 45;
+  --background-rgb: 244 244 245; /* paper (#f4f4f5) — channel form so bg-background/95 (translucent
+                                    sticky headers) can take an alpha modifier */
+
+  /* Spacing — 4pt scale. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius / shadow / focus. */
+  --radius: 0;
+  --shadow-card: 0 1px 3px rgba(23, 27, 29, 0.08),
+    0 1px 2px rgba(23, 27, 29, 0.06);
+  --focus-ring: 0 0 0 3px rgb(237 129 45 / 0.55); /* visible orange focus outline */
+
+  /* Motion — easing curves + duration tokens at the app scale. Defined only; not
+     yet applied to any transition/animation. */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* general in/out */
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1); /* entrances */
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1); /* exits */
+  --duration-fast: 220ms; /* 180–280ms — hovers, small state flips */
+  --duration-medium: 440ms; /* 350–550ms — panels, disclosures */
+  --duration-slow: 720ms; /* 600–900ms — page/route level */
+
+  /* Type — one typeface app-wide: Manrope. All three slots resolve to it (the
+     heading/condensed distinction is retired; call sites keep their names but
+     render identically). Vars agree with the Tailwind font families in tailwind.config.js. */
+  --font-sans: 'Manrope', 'Source Sans 3', sans-serif;
+  --font-heading: 'Manrope', 'Source Sans 3', sans-serif;
+  --font-condensed: 'Manrope', 'Source Sans 3', sans-serif;
+}
+
+/* Reduced-motion: neutralize all animation/transition app-wide. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @layer base {
+  html,
   body {
-    @apply font-sans antialiased text-gray-800 bg-gray-50;
+    height: 100%;
+    overflow: hidden;
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
+  }
+
+  app-root {
+    display: block;
+    height: 100%;
+    overflow: hidden;
+    overflow-x: hidden;
+  }
+
+  /* Keep keyboard-focused controls clear of the sticky report header / action bar
+     when they are scrolled into view (skill: Focus Not Obscured, WCAG 2.2 AA). */
+  #main-content {
+    scroll-padding-top: 6rem;
+  }
+
+  body {
+    @apply font-sans antialiased text-neutral-800 bg-background;
+  }
+
+  input,
+  textarea,
+  select,
+  button,
+  table {
+    @apply font-sans;
+  }
+
+  /* Headings = Manrope (font-heading), medium weight, tight tracking + compact
+     leading per the brand brief — deliberately not bold. h4 keeps semibold so small
+     subheads stay legible. h5 is an uppercase metadata eyebrow → Barlow Condensed. */
+  h1 {
+    @apply font-heading text-2xl sm:text-3xl font-medium tracking-tight leading-tight text-neutral-900;
+  }
+  h2 {
+    @apply font-heading text-xl sm:text-2xl font-medium tracking-tight leading-tight text-neutral-900;
+  }
+  h3 {
+    @apply font-heading text-lg font-medium tracking-tight leading-tight text-neutral-800;
+  }
+  h4 {
+    @apply font-heading text-base font-semibold tracking-tight text-neutral-800;
+  }
+  h5 {
+    @apply font-condensed text-sm font-semibold uppercase tracking-[0.08em] text-neutral-500;
+  }
+
+  /* Excludes `.btn` anchors: each button variant sets its own text colour, and the
+     global `hover:text-primary-light` here would otherwise override a variant's base
+     text on hover — e.g. a `btn-primary` link's white label turned ink-on-ink and
+     vanished against the dark hover fill (#4). Button anchors own their own colours. */
+  a:not(.btn) {
+    @apply text-primary hover:text-primary-light transition-colors cursor-pointer;
+  }
+}
+
+@layer components {
+  .shell-layout {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .shell-header-sticky {
+    position: relative;
+    z-index: 50;
+  }
+
+  .shell-admin-nav-sticky {
+    position: relative;
+    z-index: 40;
+  }
+
+  .shell-main-scroll {
+    min-height: 0 !important;
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .report-header-condensed-shell {
+    width: auto;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw - var(--shell-scrollbar-width, 0px));
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .sticky-bottom-dock {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+  }
+
+  .page-section {
+    @apply bg-white border border-neutral-200 rounded-xl shadow-sm;
+  }
+
+  .section-title {
+    @apply font-heading text-base sm:text-lg font-medium tracking-tight text-neutral-900;
+  }
+
+  .section-caption {
+    @apply text-sm text-neutral-500;
+  }
+
+  /* Large "important values" — KPI numbers, counts, headline figures. Manrope
+     (font-heading) medium, tight tracking, compact leading, tabular figures.
+     Deliberately not bold, per the brand brief. Size/color set by the call site. */
+  .stat-value {
+    @apply font-heading font-medium tracking-tight leading-none tabular-nums;
+  }
+
+  /* The condensed metadata eyebrow that sits above a stat-value (KPI cards, etc.). */
+  .stat-label {
+    @apply block font-condensed text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-1;
+  }
+
+  .queue-table-wrap {
+    @apply bg-white border border-neutral-200 rounded-xl shadow-sm overflow-x-auto overflow-y-hidden;
+  }
+
+  /* Technical metadata labels → Barlow Condensed (font-condensed), uppercase.
+     Weight held at semibold since only 500/600 are loaded. */
+  .field-label {
+    @apply block font-condensed text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-1.5;
+  }
+
+  .field-label-compact {
+    @apply block font-condensed text-[11px] font-semibold uppercase tracking-[0.06em] text-neutral-500 mb-1;
+  }
+
+  .detail-label {
+    @apply block font-condensed text-[10px] font-semibold text-neutral-500 uppercase tracking-widest mb-1;
+  }
+
+  .detail-value {
+    @apply text-sm font-medium text-neutral-900 tabular-nums;
+  }
+
+  .detail-value-code {
+    @apply detail-value code-text;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-neutral-700 mb-1.5;
+  }
+
+  .form-label-required {
+    @apply text-error;
+  }
+
+  .field-control {
+    @apply block w-full border border-neutral-300 rounded-md bg-white text-sm px-3 py-2 shadow-sm transition-colors;
+    @apply focus:ring-2 focus:ring-primary/25 focus:border-primary outline-none;
+  }
+
+  .field-control-danger {
+    @apply focus:ring-error/25 focus:border-error;
+  }
+
+  .field-control-warning {
+    @apply focus:ring-warning/25 focus:border-warning;
+  }
+
+  .field-error {
+    @apply mt-1 text-xs text-error;
+  }
+
+  .field-help {
+    @apply text-[11px] text-neutral-600 leading-tight;
+  }
+
+  .section-legend {
+    @apply font-heading text-lg font-medium tracking-tight text-neutral-900 border-b border-neutral-200 pb-3 w-full mb-6;
+  }
+
+  .dialog-header {
+    @apply flex justify-between items-center p-6 border-b border-neutral-100 bg-neutral-50/50;
+  }
+
+  .dialog-body {
+    @apply p-6;
+  }
+
+  .alert-error {
+    @apply text-sm text-error bg-error-light py-3 px-4 rounded-md border-l-4 border-error;
+  }
+
+  .alert-success {
+    @apply text-sm text-success-dark bg-success-light py-2 px-3 rounded-md border border-success;
+  }
+
+  /* Serial numbers, codes and other measured strings — tabular figures so digits
+     align in columns. */
+  .code-text {
+    @apply font-sans tracking-[0.06em] tabular-nums;
+  }
+
+  .table-base {
+    @apply min-w-full text-left border-collapse;
+  }
+
+  .table-head {
+    @apply bg-neutral-50 border-b border-neutral-200;
+  }
+
+  .table-th {
+    @apply px-6 py-3 text-left font-condensed text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em];
+  }
+
+  .table-th-right {
+    @apply px-6 py-3 text-right font-condensed text-xs font-semibold text-neutral-500 uppercase tracking-[0.08em];
+  }
+
+  .table-body {
+    @apply bg-white divide-y divide-neutral-200;
+  }
+
+  .table-row {
+    @apply hover:bg-primary/5 transition-colors;
+  }
+
+  .table-td {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-700 tabular-nums;
+  }
+
+  .table-td-strong {
+    @apply px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900 tabular-nums;
+  }
+
+  .table-td-code {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-700 font-sans tracking-[0.06em] tabular-nums;
+  }
+
+  .table-actions {
+    @apply px-6 py-4 whitespace-nowrap text-right text-sm font-medium;
+  }
+
+  .data-chip {
+    @apply inline-flex items-center px-2.5 py-1 rounded-none font-condensed text-[11px] font-semibold uppercase tracking-[0.08em] border;
+  }
+
+  .data-chip-success {
+    @apply data-chip bg-success-light text-success-dark border-success/30;
+  }
+
+  .data-chip-warning {
+    @apply data-chip bg-warning-light text-warning-dark border-warning/30;
+  }
+
+  .data-chip-error {
+    @apply data-chip bg-error-light text-error-dark border-error/30;
+  }
+
+  .data-chip-info {
+    @apply data-chip bg-primary/10 text-primary border-primary/20;
+  }
+
+  .data-chip-neutral {
+    @apply data-chip bg-neutral-100 text-neutral-500 border-neutral-200;
+  }
+
+  .data-chip-success-soft {
+    @apply inline-flex items-center px-2 py-0.5 rounded-none text-xs font-medium bg-success-light text-success-dark;
+  }
+
+  .data-chip-neutral-soft {
+    @apply inline-flex items-center px-2 py-0.5 rounded-none text-xs font-medium bg-neutral-100 text-neutral-600;
+  }
+
+  .action-link {
+    @apply font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .action-link-primary {
+    @apply action-link text-primary hover:text-primary-light;
+  }
+
+  .action-link-accent {
+    /* Resting label is ink (orange text on paper fails contrast); orange returns on
+       hover as an active-state affordance, which the brief allows. */
+    @apply action-link text-primary hover:text-accent-hover;
+  }
+
+  .action-link-neutral {
+    @apply action-link text-neutral-500 hover:text-neutral-900;
+  }
+
+  .action-link-danger {
+    @apply action-link text-error hover:text-error-dark;
+  }
+
+  .icon-action-danger {
+    @apply action-link-danger flex items-center justify-center relative p-1 rounded-md hover:bg-error/10;
+  }
+
+  .dialog-overlay {
+    @apply fixed inset-0 bg-primary/40 transition-opacity z-40 backdrop-blur-sm;
+  }
+
+  .card {
+    @apply bg-white p-4 sm:p-6 rounded-xl border border-neutral-200 shadow-sm;
+  }
+
+  .card-header {
+    @apply flex items-center justify-between border-b border-neutral-100 pb-3 mb-4 -mx-4 px-4 sm:-mx-6 sm:px-6;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 font-semibold text-sm rounded-md transition-colors;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-light text-white focus:ring-primary border border-transparent;
+  }
+
+  .btn-secondary {
+    @apply bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50 focus:ring-primary shadow-sm;
+  }
+
+  .btn-accent {
+    /* Primary action per brief: orange surface, ink label (white on orange fails AA). */
+    @apply bg-accent hover:bg-accent-hover text-accent-foreground focus:ring-accent border border-transparent;
+  }
+
+  .btn-danger {
+    @apply bg-error hover:bg-error/90 text-white focus:ring-error border border-transparent;
+  }
+
+  .btn-success {
+    @apply bg-success hover:bg-success-dark text-white focus:ring-success border border-transparent;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .matrix-cell-base {
+    @apply px-2 py-3 text-center align-top;
+  }
+
+  .matrix-cell-data {
+    @apply matrix-cell-base text-xs text-neutral-700 code-text;
+  }
+
+  .matrix-cell-muted {
+    @apply matrix-cell-base text-[10px] text-neutral-500 code-text whitespace-nowrap;
+  }
+
+  .matrix-cell-flag {
+    @apply matrix-cell-base text-[10px] font-bold text-neutral-500 uppercase;
+  }
+
+  .matrix-cell-flag-strong {
+    @apply matrix-cell-base text-[10px] font-bold text-neutral-700 uppercase;
+  }
+
+  .matrix-cell-divider {
+    @apply border-r border-neutral-100;
+  }
+
+  .matrix-hover-box {
+    @apply group-hover:bg-blue-50/20;
+  }
+
+  .matrix-hover-pin {
+    @apply group-hover:bg-indigo-50/20;
+  }
+
+  .matrix-hover-body {
+    @apply group-hover:bg-purple-50/20;
+  }
+
+  .matrix-hover-final {
+    @apply group-hover:bg-neutral-50/20;
+  }
+
+  /* ============================================================
+     Customer document surface — the marketing site's interaction
+     language, at app scale. Every timing/easing comes from the
+     :root motion tokens (--duration-*, --ease-*); no ad-hoc values.
+     The global reduced-motion block above collapses each transition
+     to ~0ms. These hooks are used ONLY on the customer read-only
+     surfaces — ops markup never references them, so ops behaviour and
+     appearance are unchanged.
+     ============================================================ */
+
+  /* Actionable buttons (filter cells, export): a fill sweeps in from
+     the leading edge on hover/focus instead of the background
+     snapping — the marketing `.button::before` scaleX wipe. The base
+     surface stays its resting colour; the sweep panel rides above it
+     (z-index:-1 within the isolated stacking context) and below the
+     label. Focus ring and label colour ease on the same curve. */
+  .cust-sweep {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
+  }
+  .cust-sweep::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--cust-sweep-fill, rgb(var(--primary-rgb) / 0.05));
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+  .cust-sweep:hover::before,
+  .cust-sweep:focus-visible::before {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  /* The single orange action sweeps a brighter orange over its base. */
+  .cust-sweep--accent {
+    --cust-sweep-fill: var(--accent-hover);
+  }
+
+  /* Document rows / quiet controls: the hover fill and the orange
+     focus ring both arrive on the standard curve rather than
+     snapping. Pair with a `hover:bg-*` and focus-ring utility. */
+  .cust-interactive {
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  /* Directional affordance: supplies the eased transform transition
+     for a ~2px nudge; direction is set at the call site with a
+     translate utility on the parent's :hover/:focus-visible. */
+  .cust-nudge {
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+
+  /* Shared SN drawer, customer entrance only. Applied via
+     [class.*]="isCustomer()", so the ops path never carries these
+     classes and keeps its current instant appear. @starting-style
+     gives the pre-insertion state, so the panel slides + the backdrop
+     fades in on open at the medium duration; close stays instant
+     (Angular removes the node). Reduced-motion collapses the settle. */
+  .cust-drawer-panel {
+    transition:
+      transform var(--duration-medium) var(--ease-decelerate),
+      opacity var(--duration-medium) var(--ease-decelerate);
+    @starting-style {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+  .cust-drawer-backdrop {
+    transition: opacity var(--duration-medium) var(--ease-standard);
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  /* Fade-before-reflow — the marketing site's signature rule. When the
+     customer report list changes while its container resizes (a
+     discrete status/sort change), the body fades + lifts OUT on the
+     accelerate curve, the data swaps and the height reflows while it's
+     invisible, then it settles back IN on the decelerate curve. Driven
+     by a phase signal on the component; search-as-you-type is left
+     instant on purpose so typing feedback isn't held back. */
+  .cust-reflow-out {
+    opacity: 0;
+    transform: translateY(6px);
+    transition:
+      opacity var(--duration-fast) var(--ease-accelerate),
+      transform var(--duration-fast) var(--ease-accelerate);
+  }
+  .cust-reflow-in {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity var(--duration-fast) var(--ease-decelerate),
+      transform var(--duration-fast) var(--ease-decelerate);
+  }
+
+  .custom-scrollbar {
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.2);
+    }
   }
 }

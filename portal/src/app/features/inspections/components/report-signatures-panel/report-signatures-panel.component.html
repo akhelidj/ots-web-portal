@@ -1,0 +1,68 @@
+@if (fields().length > 0) {
+  <section
+    class="border border-border bg-background p-5"
+    aria-labelledby="report-signatures-title"
+    data-testid="report-signatures"
+  >
+    <h2
+      id="report-signatures-title"
+      class="font-sans uppercase tracking-[0.1em] text-[12px] text-primary/60"
+    >
+      Signatures
+    </h2>
+
+    <ul class="mt-3 divide-y divide-border">
+      @for (field of fields(); track field.key) {
+        <li
+          class="flex flex-wrap items-center justify-between gap-3 py-3"
+          [attr.data-testid]="'signature-field-' + field.key"
+        >
+          <div class="min-w-0">
+            <p class="text-sm text-primary">
+              {{ field.label }}
+              <span class="text-xs text-primary/50">
+                · {{ signerLabel(field) }}{{ field.required ? ' · required' : '' }}
+              </span>
+            </p>
+            @if (field.signed) {
+              <p class="text-xs text-primary/60" data-testid="signature-signed">
+                Signed
+                @if (field.signedByName) {
+                  by {{ field.signedByName }}
+                }
+                @if (field.signedAt) {
+                  on {{ field.signedAt | date: 'medium' }}
+                }
+              </p>
+            } @else {
+              <p class="text-xs text-primary/60" data-testid="signature-unsigned">
+                Not signed yet
+              </p>
+            }
+          </div>
+          @if (canSign(field)) {
+            <button
+              type="button"
+              class="btn btn-primary"
+              (click)="openSigning(field)"
+              [attr.data-testid]="'sign-' + field.key"
+            >
+              Sign
+            </button>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+}
+
+@if (signing(); as field) {
+  <app-signature-dialog
+    [heading]="field.label"
+    description="Sign in the box below. This signature applies to this report only."
+    saveLabel="Sign report"
+    [uploader]="uploader()"
+    (saved)="onSigned()"
+    (cancelled)="closeSigning()"
+  />
+}

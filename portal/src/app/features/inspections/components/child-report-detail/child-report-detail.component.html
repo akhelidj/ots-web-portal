@@ -1,0 +1,796 @@
+@if (cr(); as cr) {
+  @if (isCustomer()) {
+    <!--
+      CUSTOMER DOCUMENT VIEW (child report)
+      Mirrors the parent's customer document: identity band → specifications →
+      serials, read-only, in the same editorial layout and seams.
+    -->
+    <article class="w-full bg-background text-foreground">
+      <!-- ============================ SECTION 1 · IDENTITY ============================ -->
+      <section class="animate-in fade-in duration-500 bg-background">
+        <div
+          class="mx-auto w-full max-w-5xl px-6 sm:px-8 pt-8 sm:pt-12 pb-12 sm:pb-16"
+        >
+          <a
+            [routerLink]="
+              parentReport()
+                ? getParentReportLink(parentReport()!.id)
+                : ['/customer', 'reports']
+            "
+            class="group inline-flex items-center gap-2 font-sans uppercase tracking-[0.12em] text-[12px] text-primary/55 transition-colors duration-fast ease-standard hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+          >
+            <svg
+              class="h-3.5 w-3.5 cust-nudge group-hover:-translate-x-0.5 group-focus-visible:-translate-x-0.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+            @if (parentReport(); as parent) {
+              Back to
+              {{ parent.reportNumber || (parent.id.substring(0, 8) | uppercase) }}
+            } @else {
+              All reports
+            }
+          </a>
+
+          <div class="mt-8 min-w-0">
+            <p
+              class="font-sans uppercase tracking-[0.16em] text-[12px] text-primary/45"
+            >
+              {{ childTypeLabel(cr.type) }} Report
+            </p>
+            <h1
+              class="mt-2 font-heading text-4xl sm:text-5xl font-semibold tracking-tight text-primary tabular-nums break-words"
+            >
+              {{ cr.reportNumber || (cr.id.substring(0, 8) | uppercase) }}
+            </h1>
+            <div class="mt-4">
+              <app-status-badge
+                [label]="childStatusLabel(cr.status)"
+                [severity]="statusSeverity()"
+                font="sans"
+              />
+            </div>
+          </div>
+
+          <!-- Identity facts — 1px seams over the line color, paper cells. -->
+          <dl
+            class="mt-10 grid grid-cols-1 gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4"
+          >
+            <div class="bg-background px-5 py-4">
+              <dt
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+              >
+                Customer
+              </dt>
+              <dd class="mt-1.5 font-heading text-base text-primary break-words">
+                {{ customerDisplayName() }}
+              </dd>
+            </div>
+            <div class="bg-background px-5 py-4">
+              <dt
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+              >
+                PO Number
+              </dt>
+              <dd
+                class="mt-1.5 font-heading text-base text-primary tabular-nums break-words"
+              >
+                {{ parentReport()?.poNumber || 'N/A' }}
+              </dd>
+            </div>
+            <div class="bg-background px-5 py-4">
+              <dt
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+              >
+                Parent Report
+              </dt>
+              <dd
+                class="mt-1.5 font-heading text-base text-primary tabular-nums break-words"
+              >
+                {{ parentReport()?.reportNumber || '—' }}
+              </dd>
+            </div>
+            <div class="bg-background px-5 py-4">
+              <dt
+                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
+              >
+                Last updated
+              </dt>
+              <dd class="mt-1.5 font-heading text-base text-primary tabular-nums">
+                {{ cr.updatedAt ? (cr.updatedAt | date: 'mediumDate') : '—' }}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ========================= SECTION 2 · SPECIFICATIONS ========================= -->
+      @if (parentReport()) {
+        <section
+          class="animate-in fade-in duration-500 border-t border-border bg-muted"
+        >
+          <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
+            <header class="max-w-2xl">
+              <h2
+                class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
+              >
+                Specifications
+              </h2>
+            </header>
+            <div class="mt-8">
+              <app-inspection-report-header-fields
+                [definition]="parentDefinition"
+                [data]="parentHeaderView()"
+                [systemValues]="parentSystemValues()"
+                [isCustomer]="true"
+              />
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- ============================= SECTION 3 · SERIALS ============================= -->
+      <section
+        class="animate-in fade-in duration-500 border-t border-border bg-background"
+      >
+        <div class="mx-auto w-full max-w-6xl px-6 sm:px-8 py-12 sm:py-16">
+          <header class="max-w-2xl">
+            <h2
+              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
+            >
+              Serials
+            </h2>
+          </header>
+          <div class="mt-8">
+            <app-customer-serials-table
+              [serials]="customerSerials()"
+              [sections]="itemFormSections()"
+              [definition]="parentDefinition"
+              (openInspection)="openCustomerSerial($event)"
+            />
+          </div>
+        </div>
+      </section>
+    </article>
+  } @else {
+  <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <!-- HEADER (same component as the parent report) -->
+    <div
+      class="transition-all duration-300 ease-out"
+      [style.--shell-scrollbar-width.px]="shellScrollbarWidth()"
+      [ngClass]="
+        isHeaderCondensed()
+          ? 'sticky top-0 z-30 report-header-condensed-shell bg-background/95 backdrop-blur'
+          : ''
+      "
+    >
+      <app-inspection-report-header
+        [report]="headerView()"
+        [titlePrefix]="childTypeLabel(cr.type) + ' Report'"
+        [backLink]="parentLink()"
+        backTitle="Back to parent report"
+        [poLink]="parentLink()"
+        [userRole]="userRole()"
+        [isOnline]="isOnline"
+        [isCondensed]="isHeaderCondensed()"
+        [condenseProgress]="headerCondenseProgress()"
+        [hasWorkflowActions]="allowedTransitions().length > 0"
+        (openWorkflow)="isWorkflowModalOpen.set(true)"
+      />
+    </div>
+
+    <!-- BANNERS -->
+    <app-inspection-report-banners [banners]="uiState()?.banners || []" />
+
+    <!-- SERIALS (same table as the parent report) -->
+    <app-inspection-report-serials-table
+      [serials]="filteredSerialRows()"
+      [sections]="itemFormSections()"
+      [definition]="parentDefinition"
+      [userRole]="userRole()"
+      [searchQuery]="snSearchQuery()"
+      [selectedForApproval]="selectedSnIds()"
+      [isSubmittingBatch]="isSubmittingBatch"
+      [canSubmitBatch]="canSubmitBatch()"
+      [isLocked]="isLocked()"
+      [isAllEligibleSelected]="isAllEligibleSelected"
+      [canInspectInspectionData]="canInspectInspectionData()"
+      [historySerialIds]="historySerialIds()"
+      (searchQueryChange)="snSearchQuery.set($event)"
+      (toggleAllEligible)="toggleAllEligible()"
+      (submitSelected)="submitSelectedForApproval()"
+      (toggleSelection)="toggleRowSelection($event)"
+      (openInspection)="openCustomerSerial($event)"
+      (openHistory)="openRowHistory($event)"
+    />
+
+    @if (formError()) {
+      <div role="alert" class="alert-error">{{ formError() }}</div>
+    }
+
+    <!-- APPROVAL BATCHES (same view as the parent report, limited to this child) -->
+    @if (canAccessBatchApprovals() && approvalBatchViews().length > 0) {
+      @if (batchError) {
+        <div role="alert" class="alert-error">{{ batchError }}</div>
+      }
+      <app-inspection-report-approval-batches
+        [userRole]="userRole()"
+        [roleRoute]="userRole().toLowerCase()"
+        [batches]="approvalBatchViews()"
+        [selectedIds]="selectedInBatch()"
+        [isActioning]="isActioningBatch"
+        (returnBatch)="openReturnBatchModal($event)"
+        (approveBatch)="approveBatch($event)"
+        (toggleSerialSelection)="toggleBatchSnSelection($event)"
+      />
+    }
+
+    <!-- NOTES -->
+    <div class="page-section p-6 flex flex-col">
+      <div class="border-b border-border pb-3 mb-5">
+        <h2 class="text-lg text-foreground">Findings &amp; Notes</h2>
+      </div>
+        <div class="flex-grow flex flex-col">
+          <div class="flex justify-between items-center mb-2">
+            <label for="operatorNotes" class="form-label text-foreground mb-0"
+              >Operator Notes / Findings</label
+            >
+            @if (
+              !isEditingNotes() &&
+              uiState()?.fieldModes?.['inspectionData'] === 'editable'
+            ) {
+              <button
+                (click)="isEditingNotes.set(true)"
+                class="text-xs text-primary hover:underline font-medium"
+              >
+                Edit Notes
+              </button>
+            }
+          </div>
+          @if (isEditingNotes()) {
+            <textarea
+              id="operatorNotes"
+              [ngModel]="notes()"
+              (ngModelChange)="notes.set($event)"
+              rows="4"
+              class="field-control mb-3"
+            ></textarea>
+            <div class="flex gap-2 justify-end">
+              <button
+                (click)="isEditingNotes.set(false); notes.set(cr.notes || '')"
+                class="btn btn-secondary btn-sm"
+              >
+                Cancel
+              </button>
+              <button (click)="saveNotes()" class="btn btn-primary btn-sm">
+                Save Notes
+              </button>
+            </div>
+          } @else {
+            <div
+              class="p-4 border border-border bg-card rounded-lg min-h-[100px] text-sm text-foreground whitespace-pre-wrap flex-grow shadow-inner"
+            >
+              @if (cr.notes) {
+                {{ cr.notes }}
+              } @else {
+                <span class="text-muted-foreground italic">No notes provided.</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    <!-- Footer spacer for sticky navigation -->
+    <div class="h-24 px-4 overflow-hidden pointer-events-none"></div>
+  </div>
+  }
+
+  @if (userRole() !== 'CUSTOMER') {
+    <!-- Workflow Actions Modal -->
+    @if (isWorkflowModalOpen()) {
+      <div
+        class="fixed inset-0 !h-[100dvh] w-screen z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in"
+        (click)="isWorkflowModalOpen.set(false)"
+        (keydown.escape)="isWorkflowModalOpen.set(false)"
+        tabindex="0"
+        role="button"
+        aria-label="Close Workflow Modal"
+      >
+        <div
+          class="bg-muted rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300 cursor-default"
+          (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()"
+          tabindex="-1"
+          role="region"
+          aria-label="Workflow Actions Dialog"
+        >
+          <div
+            class="px-6 py-4 bg-card border-b border-border flex justify-between items-center shrink-0 shadow-sm z-10"
+          >
+            <h2 class="text-xl text-foreground flex items-center gap-3">
+              <span class="p-2 bg-accent/10 rounded-lg">
+                <svg
+                  class="h-6 w-6 text-accent"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  ></path>
+                </svg>
+              </span>
+              Workflow Actions
+            </h2>
+            <button
+              (click)="isWorkflowModalOpen.set(false)"
+              class="p-2 hover:bg-muted rounded-none transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </button>
+          </div>
+
+          <div
+            class="flex-grow overflow-y-auto p-4 sm:p-6 custom-scrollbar bg-card"
+          >
+            <div class="flex flex-col">
+              @if (formError() && !formError().includes('[object Object]')) {
+                <div
+                  class="mb-5 p-4 bg-error-light text-error-dark border-l-4 border-error rounded-r-md text-sm font-medium whitespace-pre-line shadow-sm"
+                >
+                  {{ formError() }}
+                </div>
+              }
+
+              <!-- Transitions Selection Grid -->
+              <div class="mb-6">
+                <span
+                  class="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 block"
+                  >Available Actions</span
+                >
+                <div class="flex flex-wrap gap-3">
+                  @for (
+                    transition of allowedTransitions();
+                    track transition.toStatus
+                  ) {
+                    <button
+                      (click)="openReasonSelect(transition)"
+                      class="btn transition-all duration-200 transform active:scale-95 px-6 py-3 font-semibold shadow-sm border border-transparent flex items-center gap-2"
+                      [class.bg-primary]="
+                        selectedTransition()?.toStatus === transition.toStatus
+                      "
+                      [class.text-white]="
+                        selectedTransition()?.toStatus === transition.toStatus
+                      "
+                      [class.hover:bg-primary]="
+                        selectedTransition()?.toStatus !== transition.toStatus
+                      "
+                      [class.hover:text-white]="
+                        selectedTransition()?.toStatus !== transition.toStatus
+                      "
+                      [class.bg-muted]="
+                        selectedTransition()?.toStatus !== transition.toStatus
+                      "
+                      [class.text-muted-foreground]="
+                        selectedTransition()?.toStatus !== transition.toStatus
+                      "
+                      [class.border-border]="
+                        selectedTransition()?.toStatus !== transition.toStatus
+                      "
+                      [disabled]="!transition.enabled"
+                      [title]="transition.disabledReason || ''"
+                    >
+                      <span>{{ transition.label || transition.toStatus }}</span>
+                      @if (
+                        selectedTransition()?.toStatus === transition.toStatus
+                      ) {
+                        <svg
+                          class="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M5 13l4 4L19 7"
+                          ></path>
+                        </svg>
+                      }
+                    </button>
+                  }
+                  @if (allowedTransitions().length === 0) {
+                    <p class="text-sm text-muted-foreground italic py-2">
+                      No transitions available based on current status and role.
+                    </p>
+                  }
+                </div>
+              </div>
+
+              <!-- Reason / Notes Area -->
+              @if (selectedTransition(); as st) {
+                <div
+                  class="p-6 border border-primary/20 rounded-xl bg-primary/5 space-y-5 animate-in slide-in-from-top-4 duration-300"
+                >
+                  <div class="flex items-center justify-between">
+                    <p
+                      class="text-sm font-bold text-foreground uppercase tracking-widest flex items-center gap-2"
+                    >
+                      Confirm Action:
+                      <span
+                        class="text-primary bg-card px-3 py-1 rounded-none shadow-sm border border-primary/10"
+                      >
+                        {{ st.label || st.toStatus }}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="child-transition-reason"
+                      class="text-xs font-condensed font-semibold text-muted-foreground uppercase tracking-widest"
+                    >
+                      Notes / Reason
+                      {{ st.requiresReason ? '*' : '' }}
+                    </label>
+                    <textarea
+                      id="child-transition-reason"
+                      [ngModel]="formReason()"
+                      (ngModelChange)="formReason.set($event)"
+                      [placeholder]="
+                        st.requiresReason
+                          ? 'A reason or comment is required for this transition...'
+                          : 'Add any optional notes or remarks here...'
+                      "
+                      class="field-control w-full p-4 text-sm min-h-[120px] bg-card border-2 border-primary/20 focus:border-primary shadow-inner rounded-xl"
+                    ></textarea>
+                  </div>
+
+                  <div
+                    class="flex justify-end gap-3 pt-4 border-t border-primary/10"
+                  >
+                    <button
+                      (click)="selectedTransition.set(null); formReason.set('')"
+                      class="btn btn-secondary border-transparent hover:bg-muted"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      (click)="onTransition(); isWorkflowModalOpen.set(false)"
+                      class="btn btn-primary px-8 shadow-md"
+                      [disabled]="st.requiresReason && !formReason().trim()"
+                    >
+                      Confirm Action
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- Return Batch Modal (same as the parent report) -->
+  @if (activeActionBatchId() && !batchError) {
+    <div
+      class="fixed inset-0 !h-[100dvh] w-screen z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden animate-in zoom-in-95"
+      >
+        <div
+          class="p-6 bg-error-light/10 border-b border-error/10 flex justify-between items-center"
+        >
+          <h3 class="text-lg font-bold text-error-dark">Return for Correction</h3>
+          <button
+            type="button"
+            (click)="closeReturnBatchModal()"
+            class="p-2 hover:bg-error/10 rounded-none text-error-dark"
+            aria-label="Close"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="p-8 space-y-6">
+          <p class="text-gray-600 text-sm leading-relaxed">
+            You are returning
+            <span class="font-bold text-gray-900">{{
+              selectedInBatch().size > 0 ? selectedInBatch().size : 'all remaining'
+            }}</span>
+            item(s). Please specify why further attention is required.
+          </p>
+          <div class="space-y-2">
+            <label
+              for="return-notes"
+              class="block text-xs font-bold text-gray-400 uppercase tracking-widest"
+              >Reason for Return</label
+            >
+            <textarea
+              id="return-notes"
+              [(ngModel)]="returnNotes"
+              rows="4"
+              class="field-control w-full p-4 text-sm"
+              placeholder="Provide clear instructions for the inspector..."
+            ></textarea>
+          </div>
+        </div>
+        <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+          <button type="button" (click)="closeReturnBatchModal()" class="btn btn-secondary">
+            Cancel
+          </button>
+          <button
+            type="button"
+            (click)="returnBatch()"
+            [disabled]="isActioningBatch || !returnNotes.trim()"
+            class="btn btn-error min-w-[120px]"
+          >
+            {{ isActioningBatch ? 'Processing...' : 'Confirm Return' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (inspectingSnId() && parentReport(); as parentData) {
+    <div
+      class="fixed inset-0 !h-[100dvh] w-screen z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
+      (click)="closeInspectionForm()"
+      (keydown.escape)="closeInspectionForm()"
+      tabindex="0"
+      role="button"
+      aria-label="Close inspection form"
+    >
+      <div
+        class="bg-card w-full max-w-2xl !h-[100dvh] flex flex-col shadow-2xl border-l border-border animate-in slide-in-from-right duration-500 overflow-hidden"
+        (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
+        tabindex="-1"
+        role="region"
+        aria-label="Serial Inspection Details"
+      >
+        <!-- Drawer Header -->
+        <div
+          class="px-6 py-4 bg-muted border-b border-border flex justify-between items-center shrink-0"
+        >
+          <div class="flex gap-4 items-center">
+            <div class="p-2 bg-primary/10 rounded-xl">
+              <svg
+                class="w-6 h-6 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                ></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-lg text-foreground leading-tight">
+                @if (isCustomer()) {
+                  Inspection Details
+                } @else {
+                  Inspect Serial
+                }
+              </h2>
+              <p class="font-mono text-sm text-primary font-bold">
+                {{ inspectingSnValue() }}
+              </p>
+            </div>
+            <div class="flex gap-1 ml-4 border-l border-border pl-4">
+              <button
+                (click)="goToPrevSn()"
+                [disabled]="!hasPrevSn"
+                class="p-1.5 hover:bg-muted rounded-lg disabled:opacity-20 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+                title="Previous SN"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 19l-7-7 7-7"
+                  ></path>
+                </svg>
+              </button>
+              <button
+                (click)="goToNextSn()"
+                [disabled]="!hasNextSn"
+                class="p-1.5 hover:bg-muted rounded-lg disabled:opacity-20 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+                title="Next SN"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <button
+            (click)="closeInspectionForm()"
+            class="p-2 hover:bg-muted rounded-none transition-colors text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Drawer Body -->
+        <div
+          class="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar bg-card"
+        >
+          @if (parentData) {
+            <app-serial-inspection-reactive-form
+              [initialData]="inspectionFormData()"
+              [schemaKey]="parentData.templateKey"
+              [definition]="parentDefinition"
+              [isReadOnly]="
+                isCustomer() ||
+                inspectingSnApprovalStatus() === 'SUBMITTED_FOR_APPROVAL' ||
+                inspectingSnApprovalStatus() === 'APPROVED' ||
+                (uiState()?.fieldModes?.['inspectionData'] !== 'editable' &&
+                  uiState()?.fieldModes?.['disposition'] !== 'editable')
+              "
+              [excludedDispositions]="['REWORK']"
+              [isSaving]="isSavingInspection()"
+              [saveError]="inspectionSaveError()"
+              (saveData)="saveInspectionForm($event)"
+              (formCancel)="closeInspectionForm()"
+            >
+            </app-serial-inspection-reactive-form>
+          }
+        </div>
+      </div>
+    </div>
+  }
+}
+
+<!-- SN History Modal -->
+@if (activeHistorySn()) {
+  <div
+    class="fixed inset-0 !h-[100dvh] w-screen z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in"
+  >
+    <div
+      class="bg-card rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4"
+    >
+      <div
+        class="p-6 bg-muted border-b border-border flex justify-between items-center"
+      >
+        <div>
+          <h3 class="text-lg text-foreground">Return History</h3>
+          <p class="text-xs font-mono text-primary font-bold mt-1">
+            SN: {{ activeHistorySn()?.serial }}
+          </p>
+        </div>
+        <button
+          (click)="closeHistory()"
+          class="p-2 hover:bg-muted rounded-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+        >
+          <svg
+            class="w-6 h-6 text-muted-foreground"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="p-8 overflow-y-auto flex-grow bg-card custom-scrollbar">
+        @if (historyNotes().length === 0) {
+          <div class="text-center py-12 flex flex-col items-center gap-4">
+            <div class="p-4 bg-muted rounded-full">
+              <svg
+                class="w-8 h-8 text-muted-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+            </div>
+            <p class="text-sm font-medium text-muted-foreground">
+              No return notes found for this serial number.
+            </p>
+          </div>
+        } @else {
+          <div
+            class="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-border"
+          >
+            @for (entry of historyNotes(); track $index) {
+              <div class="relative pl-8">
+                <div
+                  class="absolute left-0 top-1.5 w-6 h-6 rounded-full border-4 border-card bg-primary shadow-sm z-10"
+                ></div>
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-foreground">{{
+                      entry.user || 'System'
+                    }}</span>
+                    <span class="text-[10px] font-bold text-muted-foreground">{{
+                      entry.date | date: 'MMM d, h:mm a'
+                    }}</span>
+                  </div>
+                  <div class="p-4 bg-muted border border-border rounded-xl">
+                    <p class="text-sm text-muted-foreground leading-relaxed italic">
+                      "{{ entry.notes }}"
+                    </p>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+      <div class="p-6 bg-muted border-t border-border flex justify-end">
+        <button (click)="closeHistory()" class="btn btn-secondary">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+}

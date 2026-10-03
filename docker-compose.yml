@@ -12,5 +12,14 @@ services:
     volumes:
       - ots_postgres_data:/var/lib/postgresql/data
 
+  # Headless LibreOffice behind HTTP — converts the filled Excel export to PDF.
+  # The API reads PDF_CONVERTER_URL (http://localhost:3001 for local dev).
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: ots_gotenberg
+    restart: always
+    ports:
+      - '3001:3000'
+
 volumes:
   ots_postgres_data:

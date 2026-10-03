@@ -1,0 +1,66 @@
+@if (confirmService.request(); as req) {
+  <div
+    class="fixed inset-0 z-[200] flex items-center justify-center bg-primary/40 backdrop-blur-sm p-4"
+    (click)="cancel()"
+    (keydown.escape)="cancel()"
+    tabindex="-1"
+    role="presentation"
+  >
+    <div
+      class="w-full max-w-md bg-card rounded-xl shadow-2xl border border-border overflow-hidden"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+      aria-describedby="confirm-dialog-message"
+      tabindex="-1"
+      (click)="$event.stopPropagation()"
+      (keydown)="onKeydown($event)"
+    >
+      <div class="p-6 border-b border-border bg-muted">
+        <h3 id="confirm-dialog-title" class="text-lg text-foreground">
+          {{ req.title }}
+        </h3>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <p id="confirm-dialog-message" class="text-sm text-foreground">
+          {{ req.message }}
+        </p>
+
+        @if (req.reason; as reason) {
+          <div>
+            <label for="confirm-dialog-reason" class="form-label">{{
+              reason.label
+            }}</label>
+            <textarea
+              #reasonInput
+              id="confirm-dialog-reason"
+              rows="3"
+              class="field-control"
+              [placeholder]="reason.placeholder || ''"
+              [ngModel]="reasonText()"
+              (ngModelChange)="reasonText.set($event)"
+            ></textarea>
+          </div>
+        }
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" class="btn btn-secondary" (click)="cancel()">
+            {{ req.cancelLabel || 'Cancel' }}
+          </button>
+          <button
+            #confirmButton
+            type="button"
+            class="btn"
+            [class.btn-primary]="req.tone !== 'danger'"
+            [class.btn-danger]="req.tone === 'danger'"
+            [disabled]="!canConfirm()"
+            (click)="confirm()"
+          >
+            {{ req.confirmLabel || 'Confirm' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

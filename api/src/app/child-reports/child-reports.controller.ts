@@ -1,48 +1,106 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, Request, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  Query,
+  Request,
+  BadRequestException,
+} from '@nestjs/common';
 import { ChildReportsService } from './child-reports.service';
-import { ChildReportStatus, ChildReportType } from '@prisma/client';
+import { ChildReportStatus, SerialDisposition, UserRole } from '@prisma/client';
+import { InspectionData } from '../common/inspection-data.types';
+import { AuthenticatedRequest } from '../auth/authenticated-request';
 
-@Controller('child-reports')
+/** A CUSTOMER only ever sees their own customer's reports; staff are unscoped. */
+function customerScope(req: AuthenticatedRequest): string | undefined {
+  return req.user.role === UserRole.CUSTOMER
+    ? (req.user.customerId ?? '')
+    : undefined;
+}
+
+@Controller()
 export class ChildReportsController {
   constructor(private readonly childReportsService: ChildReportsService) {}
 
-  @Post()
-  async createChildReport(@Request() req: any, @Body() body: Record<string, unknown>) {
-    if (!body['id']) {
-       throw new BadRequestException('Client must provide an id (UUID) for idempotency.');
+  @Post('inspection-reports/:id/child-reports/sync-rework')
+  async syncReworkChildReport(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    if (!id) {
+      throw new BadRequestException(
+        'Inspection Report ID is required for sync.',
+      );
     }
-    return this.childReportsService.createChildReport(
-      req.user.tenantId, 
-      req.user.userId,
-      {
-         id: body['id'] as string,
-         inspectionReportId: body['inspectionReportId'] as string,
-         serialNumberId: body['serialNumberId'] as string,
-         type: body['type'] as ChildReportType,
-         notes: body['notes'] as string
-      }
+    return this.childReportsService.syncReworkChildReport(
+      req.user.tenantId,
+      id,
     );
   }
 
-  @Get()
-  async getChildReports(@Request() req, @Query('inspectionReportId') reportId: string) {
+  @Get('child-reports')
+  async getChildReports(
+    @Request() req: AuthenticatedRequest,
+    @Query('inspectionReportId') reportId: string,
+  ) {
     if (!reportId) {
-       throw new BadRequestException('inspectionReportId is required');
+      throw new BadRequestException('inspectionReportId is required');
     }
-    return this.childReportsService.getChildReports(req.user.tenantId, reportId);
+    return this.childReportsService.getChildReports(
+      req.user.tenantId,
+      reportId,
+      customerScope(req),
+    );
   }
 
-  @Patch(':id')
-  async updateChildReport(@Request() req: any, @Param('id') id: string, @Body() body: Record<string, unknown>) {
+  @Get('child-reports/:id')
+  async getChildReport(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    return this.childReportsService.getChildReportById(
+      req.user.tenantId,
+      id,
+      customerScope(req),
+    );
+  }
+
+  @Patch('child-reports/:id')
+  async updateChildReport(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ) {
     return this.childReportsService.updateChildReport(
-      req.user.tenantId, 
-      id, 
+      req.user.tenantId,
+      id,
       req.user.userId,
       {
-         status: body['status'] as ChildReportStatus,
-         notes: body['notes'] as string
-      }, 
-      body['version'] as number
+        status: body['status'] as ChildReportStatus,
+        notes: body['notes'] as string,
+      },
+      body['version'] as number,
+    );
+  }
+
+  @Patch('child-reports/:id/serial-numbers/:snId')
+  async updateChildReportSerialNumber(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') childReportId: string,
+    @Param('snId') serialNumberId: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.childReportsService.updateChildReportSerialNumber(
+      req.user.tenantId,
+      childReportId,
+      serialNumberId,
+      {
+        inspectionData: body['inspectionData'] as InspectionData,
+        disposition: body['disposition'] as SerialDisposition,
+      },
     );
   }
 }

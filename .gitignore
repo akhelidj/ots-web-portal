@@ -38,6 +38,10 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# Uploaded attachment binaries — local file storage, not source. Regenerated as
+# users upload; must never be tracked.
+/api/uploads/
+
 .nx/cache
 .nx/workspace-data
 
@@ -47,3 +51,21 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+# Committed template for the integration-test DB URL. The real api/.env.test
+# stays ignored (matched by .env.*) so no test credentials are committed.
+!.env.test.example
+
+# Machine-local Claude Code workspace
+.claude/
+
+# Machine-local git attributes (autocrlf etc.)
+.gitattributes
+
+# graphify generated artifacts — regenerable, churn every run; not shipped in the
+# repo. The nested graphify-out/.gitignore (machine internals) stays tracked.
+/graphify-out/graph.json
+/graphify-out/graph.html
+/graphify-out/GRAPH_REPORT.md
+/graphify-out/manifest.json
+/graphify-out/.graphify_labels.json
+/graphify-out/cost.json
