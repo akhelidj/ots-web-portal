@@ -48,7 +48,7 @@
             <h1
               class="mt-2 font-heading text-4xl sm:text-5xl font-semibold tracking-tight text-primary tabular-nums break-words"
             >
-              {{ cr.reportNumber || (cr.id.substring(0, 8) | uppercase) }}
+              {{ childNumber() }}
             </h1>
             <div class="mt-4">
               <app-status-badge

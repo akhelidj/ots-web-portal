@@ -86,16 +86,17 @@ export function getChildReportUiState(
     });
   }
 
-  // Edit rules
+  if (ctx.reportStatus === CHILD_REPORT_STATUSES.DRAFT) {
+    state.banners.push({
+      type: 'info',
+      message: 'Draft — start the inspection before inspecting serials.',
+    });
+  }
+
+  // Edit rules — mirror the server's child workflow matrix: serials are inspected only while
+  // the child is IN_INSPECTION (a DRAFT child must be started first).
   if (ctx.syncState !== 'CONFLICT') {
-    if (
-      (
-        [
-          CHILD_REPORT_STATUSES.DRAFT,
-          CHILD_REPORT_STATUSES.IN_INSPECTION,
-        ] as readonly string[]
-      ).includes(ctx.reportStatus)
-    ) {
+    if (ctx.reportStatus === CHILD_REPORT_STATUSES.IN_INSPECTION) {
       if (
         ([APP_ROLES.INSPECTOR, APP_ROLES.ADMIN] as readonly string[]).includes(
           ctx.role,
@@ -146,12 +147,6 @@ export function getChildReportUiState(
           requiresReason: false,
           enabled: true,
         });
-        state.transitionChoices.push({
-          toStatus: CHILD_REPORT_STATUSES.IN_INSPECTION,
-          label: 'Return',
-          requiresReason: true,
-          enabled: true,
-        });
       }
     } else if (ctx.reportStatus === CHILD_REPORT_STATUSES.APPROVED) {
       if (
@@ -174,16 +169,8 @@ export function getChildReportUiState(
           enabled: true,
         });
       }
-    } else if (ctx.reportStatus === CHILD_REPORT_STATUSES.CLOSED) {
-      if (([APP_ROLES.ADMIN] as readonly string[]).includes(ctx.role)) {
-        state.transitionChoices.push({
-          toStatus: CHILD_REPORT_STATUSES.APPROVED,
-          label: 'Reopen (Approved)',
-          requiresReason: true,
-          enabled: true,
-        });
-      }
     }
+    // CLOSED is terminal in the server's child matrix — no transition is offered.
   }
 
   return state;

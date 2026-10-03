@@ -147,7 +147,22 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     }
   });
 
-  /** The parent's header view — the child shares its specifications. */
+  /**
+   * The child's own report number: the parent's number plus the rework rule's suffix. A child
+   * whose stored number is missing or equals the parent's bare number (a rule saved without a
+   * suffix) still reads distinctly, as `<parent>_<type>` — matching what the export carries.
+   */
+  public childNumber = computed<string>(() => {
+    const cr = this.cr();
+    if (!cr) return '';
+    const parentNumber = this.parentReport()?.reportNumber?.trim() ?? '';
+    const own = cr.reportNumber?.trim() ?? '';
+    if (own && own !== parentNumber) return own;
+    if (parentNumber) return `${parentNumber}_${String(cr.type).toLowerCase()}`;
+    return cr.id.substring(0, 8).toUpperCase();
+  });
+
+  /** The parent's header view — the child shares its specifications (but not its number). */
   public parentHeaderView = computed<Record<string, unknown>>(() => {
     const r = this.parentReport();
     if (!r) return {};
@@ -155,7 +170,11 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       r.headerData && typeof r.headerData === 'object'
         ? (r.headerData as Record<string, unknown>)
         : {};
-    return { ...(r as unknown as Record<string, unknown>), ...generic };
+    return {
+      ...(r as unknown as Record<string, unknown>),
+      ...generic,
+      reportNumber: this.childNumber(),
+    };
   });
 
   /** Derived values for the parent's roled header fields (inspector, approver, …). */
@@ -198,10 +217,14 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     return q ? rows.filter((r) => r.value.toLowerCase().includes(q)) : rows;
   });
 
-  /** Inspectors and admins submit for approval; the table shows checkboxes only for them. */
+  /** Inspectors and admins submit for approval, and only while the child is IN_INSPECTION
+   *  (a DRAFT child must be started first); the table shows checkboxes only for them. */
   public canSubmitBatch = computed(() => {
     const role = this.userRole().toUpperCase();
-    return role === APP_ROLES.INSPECTOR || role === APP_ROLES.ADMIN;
+    return (
+      (role === APP_ROLES.INSPECTOR || role === APP_ROLES.ADMIN) &&
+      this.cr()?.status === CHILD_REPORT_STATUSES.IN_INSPECTION
+    );
   });
 
   public canAccessBatchApprovals = computed(() => {
@@ -250,7 +273,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   public headerView = computed<HeaderReportView>(() => {
     const cr = this.cr();
     return {
-      reportNumber: cr?.reportNumber || (cr ? cr.id.substring(0, 8).toUpperCase() : ''),
+      reportNumber: this.childNumber(),
       status: cr?.status ?? '',
       poNumber: this.parentReport()?.poNumber,
       updatedAt: cr?.updatedAt,
@@ -384,7 +407,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     const date = parent.updatedAt
       ? formatDate(parent.updatedAt, 'mediumDate', 'en-US')
       : '';
-    const reportNumber = parent.reportNumber?.trim() || '';
+    const reportNumber = this.childNumber();
     const poNumber = parent.poNumber?.trim() || '';
     this.parentSystemValues.set({
       customer: {

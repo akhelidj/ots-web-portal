@@ -376,7 +376,13 @@ export class ExportService {
     // their files stay distinguishable.
     const revSuffix = revisionNumber > 0 ? `_${revisionNumber}` : '';
     const baseParentFilename = `OTS_${poStr}_${reportNum}${revSuffix}`;
-    const baseChildFilename = `OTS_${poStr}_${reportNum}_rework${revSuffix}`; // Child naming: _rework
+    // The child's own number (parent + the rule's suffix). A rule with no suffix would give
+    // the child the parent's bare number — fall back to `_<type>` so the files stay distinct.
+    const childNum =
+      childReport?.reportNumber && childReport.reportNumber !== reportNum
+        ? childReport.reportNumber
+        : `${reportNum}_${(childReport?.type ?? 'REWORK').toLowerCase()}`;
+    const baseChildFilename = `OTS_${poStr}_${childNum}${revSuffix}`;
 
     if (isParentApproved) {
       const parentSerials = [...(snapshot.serialNumbers || [])];
@@ -419,9 +425,19 @@ export class ExportService {
         };
       });
 
+      // The child carries its own number (parent number + the rework rule's suffix); the
+      // sheet's {{reportNumber}} must show it, not the parent's bare number.
+      const childSnapshot: Snapshot = {
+        ...snapshot,
+        header: {
+          ...snapshot.header,
+          reportNumber: childNum,
+        },
+      };
+
       const childFiles = await this.generateExcelFiles(
         templateBuffer,
-        snapshot,
+        childSnapshot,
         childSerials,
         baseChildFilename,
         definition,

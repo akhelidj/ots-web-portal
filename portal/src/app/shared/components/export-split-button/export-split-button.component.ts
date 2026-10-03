@@ -9,17 +9,18 @@ import {
   signal,
 } from '@angular/core';
 
-export type ExportFormat = 'pdf' | 'xlsx' | 'template';
+export type ExportFormat = 'pdf' | 'xlsx';
 export type ExportButtonVariant = 'customer' | 'header' | 'bar';
 
 /**
  * Export as a split button: the main click downloads the filled PDF; the chevron opens
- * Excel (the filled workbook) and Template (the blank workbook with its tokens).
+ * PDF and Excel (the filled workbook).
  *
- * `blocked` locks the two filled formats (not approved, required signature pending, …) and
- * `reason` says why — shown in the menu and as the tooltip. Template carries no report
- * data, so it only needs a connection. The chevron stays usable while blocked so the reason
- * and the Template option are always reachable.
+ * `blocked` locks the formats (not approved, required signature pending, …) and
+ * `reason` says why — shown in the menu and as the tooltip. The chevron stays usable while
+ * blocked so the reason is always reachable.
+ *
+ * The menu is clamped to the viewport so it never runs off-screen on a narrow phone.
  */
 @Component({
   selector: 'app-export-split-button',
@@ -42,9 +43,9 @@ export class ExportSplitButtonComponent {
   protected readonly filledDisabled = computed(
     () => this.isExporting() || this.blocked() || !this.isOnline(),
   );
-  protected readonly templateDisabled = computed(
-    () => this.isExporting() || !this.isOnline(),
-  );
+  protected readonly menuWidth = signal(256);
+  /** Offset from the host's left edge, so the menu stays inside the viewport. */
+  protected readonly menuLeft = signal(0);
 
   protected readonly mainClass = computed(() => {
     switch (this.variant()) {
@@ -74,7 +75,22 @@ export class ExportSplitButtonComponent {
   }
 
   protected toggle(): void {
+    if (!this.open()) this.placeMenu();
     this.open.update((v) => !v);
+  }
+
+  /** Right-align under the button, then clamp into the viewport with an 8px margin. */
+  private placeMenu(): void {
+    const margin = 8;
+    const viewport = window.innerWidth;
+    const width = Math.min(256, viewport - margin * 2);
+    const rect = this.host.nativeElement.getBoundingClientRect();
+    const left = Math.min(
+      Math.max(rect.right - width, margin),
+      viewport - width - margin,
+    );
+    this.menuWidth.set(width);
+    this.menuLeft.set(left - rect.left);
   }
 
   @HostListener('document:click', ['$event'])

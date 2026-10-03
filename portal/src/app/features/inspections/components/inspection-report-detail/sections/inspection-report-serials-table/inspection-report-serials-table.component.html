@@ -122,41 +122,13 @@
         <thead
           class="bg-gray-50 sticky top-0 shadow-sm z-[25] border-b border-gray-200"
         >
-          <!-- Group-band row: one colspan band per definition section (titles, order,
-               and span all come from the definition — nothing hardcoded). -->
+          <!-- Same shape as the customer table: Serial and Result span both header rows;
+               one colspan band per definition section (titles, order and span all come
+               from the definition) with that section's column labels beneath. -->
           <tr>
             <th
               scope="col"
-              colspan="2"
-              class="px-5 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-0 bg-gray-50 z-30 md:z-40 md:shadow-[1px_0_0_0_#eee] border-r border-gray-200"
-            >
-              Info / Actions
-            </th>
-            @if (!isCompactMode) {
-              @if (userRole !== APP_ROLES.CUSTOMER) {
-                <th
-                  scope="col"
-                  rowspan="2"
-                  class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 bg-gray-50 z-30 border-r border-gray-200"
-                >
-                  Sync
-                </th>
-              }
-
-              @for (grp of columnGroups; track grp.key) {
-                <th
-                  scope="colgroup"
-                  [attr.colspan]="grp.columns.length"
-                  class="px-3 py-2 text-center text-[10px] font-bold text-gray-600 uppercase tracking-wider bg-gray-100 z-30 border-r border-gray-200 border-b border-gray-200/50"
-                >
-                  {{ grp.title }}
-                </th>
-              }
-            }
-          </tr>
-          <tr>
-            <th
-              scope="col"
+              rowspan="2"
               class="px-5 py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-0 bg-gray-50 z-30 md:z-40 md:shadow-[1px_0_0_0_#eee] w-48 min-w-[12rem] max-w-[12rem] border-r border-gray-200"
             >
               <div class="flex items-center gap-2">
@@ -170,28 +142,47 @@
                     class="rounded border-gray-300 text-accent focus:ring-accent w-3.5 h-3.5 mt-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 }
-                <span>Serial Number</span>
+                <span>Serial</span>
               </div>
             </th>
             <th
               scope="col"
+              rowspan="2"
               class="px-4 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-[12rem] bg-gray-50 z-30 md:z-40 border-r border-gray-200 md:shadow-[1px_0_0_0_#eee] min-w-[120px]"
             >
-              EMI Res. / Act.
+              Result
             </th>
-            @if (!isCompactMode) {
-              @for (grp of columnGroups; track grp.key) {
-                @for (col of grp.columns; track col.id) {
-                  <th
-                    scope="col"
-                    class="px-2 py-2 text-center text-[9px] font-bold text-gray-500 uppercase tracking-wider bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 whitespace-nowrap"
-                    [class.border-r]="col.isSectionEnd"
-                    [class.border-gray-200]="col.isSectionEnd"
-                    [title]="col.label"
-                  >
-                    {{ col.label }}
-                  </th>
-                }
+            @if (userRole !== APP_ROLES.CUSTOMER) {
+              <th
+                scope="col"
+                rowspan="2"
+                class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 bg-gray-50 z-30 border-r border-gray-200"
+              >
+                Sync
+              </th>
+            }
+            @for (grp of columnGroups; track grp.key) {
+              <th
+                scope="colgroup"
+                [attr.colspan]="grp.columns.length"
+                class="px-3 py-2 text-center text-[10px] font-bold text-gray-600 uppercase tracking-wider bg-gray-100 z-30 border-r border-gray-200 border-b border-gray-200/50"
+              >
+                {{ grp.title }}
+              </th>
+            }
+          </tr>
+          <tr>
+            @for (grp of columnGroups; track grp.key) {
+              @for (col of grp.columns; track col.id) {
+                <th
+                  scope="col"
+                  class="px-2 py-2 text-center text-[9px] font-bold text-gray-500 uppercase tracking-wider bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 whitespace-nowrap"
+                  [class.border-r]="col.isSectionEnd"
+                  [class.border-gray-200]="col.isSectionEnd"
+                  [title]="col.label"
+                >
+                  {{ col.label }}
+                </th>
               }
             }
           </tr>
@@ -529,35 +520,31 @@
               </div>
             </td>
 
-            @if (!isCompactMode) {
-              @if (userRole !== APP_ROLES.CUSTOMER) {
-                <td
-                  class="px-2 py-3 align-top text-center border-r border-gray-100"
+            @if (userRole !== APP_ROLES.CUSTOMER) {
+              <td class="px-2 py-3 align-top text-center border-r border-gray-100">
+                <span
+                  class="data-chip px-1.5 py-0.5 text-[9px]"
+                  [ngClass]="{
+                    'data-chip-error':
+                      sn.syncState === SYNC_STATES.CONFLICT ||
+                      sn.syncState === SYNC_STATES.ERROR,
+                    'data-chip-warning': sn.syncState === SYNC_STATES.PENDING,
+                    'data-chip-success': sn.syncState === SYNC_STATES.SYNCED,
+                  }"
+                  >{{ sn.syncState }}</span
                 >
-                  <span
-                    class="data-chip px-1.5 py-0.5 text-[9px]"
-                    [ngClass]="{
-                      'data-chip-error':
-                        sn.syncState === SYNC_STATES.CONFLICT ||
-                        sn.syncState === SYNC_STATES.ERROR,
-                      'data-chip-warning': sn.syncState === SYNC_STATES.PENDING,
-                      'data-chip-success': sn.syncState === SYNC_STATES.SYNCED,
-                    }"
-                    >{{ sn.syncState }}</span
-                  >
-                </td>
-              }
+              </td>
+            }
 
-              @for (grp of columnGroups; track grp.key) {
-                @for (col of grp.columns; track col.id) {
-                  <td
-                    class="matrix-cell-data"
-                    [class.matrix-cell-divider]="col.isSectionEnd"
-                    [title]="getCellText(sn, col)"
-                  >
-                    {{ getCellText(sn, col) }}
-                  </td>
-                }
+            @for (grp of columnGroups; track grp.key) {
+              @for (col of grp.columns; track col.id) {
+                <td
+                  class="matrix-cell-data"
+                  [class.matrix-cell-divider]="col.isSectionEnd"
+                  [title]="getCellText(sn, col)"
+                >
+                  {{ getCellText(sn, col) }}
+                </td>
               }
             }
           </tr>

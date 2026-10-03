@@ -50,7 +50,13 @@ export class AdminTemplatesComponent {
    *  `isTemplateDefined` predicate the Define page's read-only branch uses (single source of
    *  truth), so the label and the recap can't drift. */
   public actionLabel(tmpl: AdminTemplateItem): string {
-    return isTemplateDefined(tmpl.definitionJson) ? 'View' : 'Define';
+    if (!isTemplateDefined(tmpl.definitionJson)) return 'Define';
+    // A rejected version stays definable: re-saving it resubmits it for review.
+    return tmpl.approvalStatus === 'REJECTED' ? 'Edit' : 'View';
+  }
+
+  public isDefined(tmpl: AdminTemplateItem): boolean {
+    return isTemplateDefined(tmpl.definitionJson);
   }
 
   /** The validation badge's word. 'PENDING_APPROVAL' reads as "Pending" in the cell — the

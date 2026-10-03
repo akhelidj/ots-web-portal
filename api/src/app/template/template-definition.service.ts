@@ -5,7 +5,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, TemplateApprovalStatus } from '@prisma/client';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { XlsNormalizerService } from './xls-normalizer.service';
@@ -122,6 +122,8 @@ export class TemplateDefinitionService {
         templateKey: true,
         templateVersion: true,
         status: true,
+        approvalStatus: true,
+        rejectionReason: true,
         definitionJson: true,
       },
     });
@@ -131,11 +133,36 @@ export class TemplateDefinitionService {
     if (template.tenantId !== tenantId) {
       throw new ForbiddenException('Access denied');
     }
+
+    // An undefined version being authored (a new upload of an existing key) can pre-fill from
+    // the nearest earlier DEFINED version of the same key — the upgrade-copy source.
+    const previous =
+      template.definitionJson == null
+        ? await this.prisma.template.findFirst({
+            where: {
+              tenantId,
+              templateKey: template.templateKey,
+              templateVersion: { lt: template.templateVersion },
+              definitionJson: { not: Prisma.DbNull },
+            },
+            orderBy: { templateVersion: 'desc' },
+            select: { templateVersion: true, definitionJson: true },
+          })
+        : null;
+
     return {
       templateKey: template.templateKey,
       templateVersion: template.templateVersion,
       status: template.status,
+      approvalStatus: template.approvalStatus,
+      rejectionReason: template.rejectionReason,
       definitionJson: template.definitionJson,
+      previousDefinition: previous
+        ? {
+            templateVersion: previous.templateVersion,
+            definitionJson: previous.definitionJson,
+          }
+        : null,
     };
   }
 
@@ -171,6 +198,7 @@ export class TemplateDefinitionService {
         templateKey: true,
         templateVersion: true,
         fileKey: true,
+        approvalStatus: true,
       },
     });
     if (!template) {
@@ -193,6 +221,7 @@ export class TemplateDefinitionService {
       templateKey: string;
       templateVersion: number;
       fileKey: string;
+      approvalStatus: TemplateApprovalStatus;
     },
     candidate: CandidateDefinition,
     userId: string,
@@ -258,7 +287,19 @@ export class TemplateDefinitionService {
 
       return tx.template.update({
         where: { id: template.id },
-        data: { definitionJson: candidate as unknown as Prisma.InputJsonValue },
+        data: {
+          definitionJson: candidate as unknown as Prisma.InputJsonValue,
+          // Rejection is not a dead end: re-defining a rejected version resubmits it for
+          // admin review (the rejection reason is cleared; the old verdict is in the audit log).
+          ...(template.approvalStatus === TemplateApprovalStatus.REJECTED
+            ? {
+                approvalStatus: TemplateApprovalStatus.PENDING_APPROVAL,
+                rejectionReason: null,
+                approvedById: null,
+                approvedAt: null,
+              }
+            : {}),
+        },
         select: {
           id: true,
           templateKey: true,

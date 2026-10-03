@@ -91,7 +91,8 @@ export function buildDefinition(
     key: strip(f.token),
     label: f.label,
     type: f.type,
-    required: f.required,
+    // A customer signature is always required: the customer signs every report.
+    required: f.type === 'signature' && f.signer === 'CUSTOMER' ? true : f.required,
     scope: f.scope,
     ...(f.role ? { role: f.role } : {}),
     ...(f.section ? { section: f.section } : {}),

@@ -233,6 +233,14 @@ export class ChildReportsService {
       );
     }
 
+    // Child workflow matrix: inspection data is only writable while the child is
+    // IN_INSPECTION. DRAFT must first be started; PENDING_APPROVAL/APPROVED/CLOSED are locked.
+    if (crsn.childReport.status !== ChildReportStatus.IN_INSPECTION) {
+      throw new BadRequestException(
+        `Child report is ${crsn.childReport.status}: serials can only be inspected while it is ${ChildReportStatus.IN_INSPECTION}.`,
+      );
+    }
+
     const dataToUpdate: Prisma.ChildReportSerialNumberUpdateInput = {
       inspectionData:
         payload.inspectionData !== undefined

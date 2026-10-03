@@ -29,7 +29,11 @@
  *     (previously an opaque Prisma query-time error).
  */
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { SerialApprovalStatus, SerialDisposition } from '@prisma/client';
+import {
+  ChildReportStatus,
+  SerialApprovalStatus,
+  SerialDisposition,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildReportsService } from './child-reports.service';
 import { ReworkRulesInterpreter } from './rework-rules.interpreter';
@@ -70,6 +74,7 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
       disposition?: SerialDisposition;
       inspectionData?: Record<string, unknown>;
       serial?: string;
+      childStatus?: ChildReportStatus;
     } = {},
   ) {
     const tenant = await seedTenant(prisma);
@@ -84,7 +89,10 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
       report.id,
       opts.serial ?? 'SN-CR-1',
     );
-    const child = await seedChildReport(prisma, tenant.id, report.id);
+    // Serials are only writable while the child is IN_INSPECTION (the workflow matrix).
+    const child = await seedChildReport(prisma, tenant.id, report.id, {
+      status: opts.childStatus ?? ChildReportStatus.IN_INSPECTION,
+    });
     await seedChildReportSerial(prisma, child.id, serial.id, {
       approvalStatus: opts.approvalStatus,
       disposition: opts.disposition,
@@ -110,6 +118,24 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
       },
     });
   }
+
+  describe('child workflow gate', () => {
+    it.each([
+      ChildReportStatus.DRAFT,
+      ChildReportStatus.PENDING_APPROVAL,
+      ChildReportStatus.APPROVED,
+      ChildReportStatus.CLOSED,
+    ])('rejects a serial write while the child is %s', async (childStatus) => {
+      const { tenant, serial, child } = await seedCrsnCase({ childStatus });
+      await expect(
+        service.updateChildReportSerialNumber(tenant.id, child.id, serial.id, {
+          inspectionData: { body: { emiResult: 'PASS' } },
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      const row = await readCrsn(child.id, serial.id);
+      expect(row?.approvalStatus).toBe(SerialApprovalStatus.NOT_INSPECTED);
+    });
+  });
 
   describe('successful update — inspectionData persist + auto-transition', () => {
     it('persists inspectionData, syncs disposition from body.emiResult, and promotes NOT_INSPECTED -> INSPECTED_DRAFT', async () => {

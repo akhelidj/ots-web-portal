@@ -28,14 +28,15 @@ describe('ExportSplitButtonComponent', () => {
     expect(emitted).toEqual(['pdf']);
   });
 
-  it('offers PDF, Excel and Template in the menu', () => {
+  it('offers PDF and Excel in the menu', () => {
     buttons()[1].click();
     fixture.detectChanges();
+    expect(menuItems().length).toBe(2);
     menuItems()[1].click();
     expect(emitted).toEqual(['xlsx']);
   });
 
-  it('locks the filled formats but keeps Template reachable, and shows the reason', () => {
+  it('locks the formats but keeps the menu reachable, and shows the reason', () => {
     fixture.componentRef.setInput('blocked', true);
     fixture.componentRef.setInput('reason', 'Waiting for signature: QA (supervisor).');
     fixture.detectChanges();
@@ -45,10 +46,9 @@ describe('ExportSplitButtonComponent', () => {
 
     buttons()[1].click();
     fixture.detectChanges();
-    const [pdf, xlsx, template] = menuItems();
+    const [pdf, xlsx] = menuItems();
     expect(pdf.disabled).toBe(true);
     expect(xlsx.disabled).toBe(true);
-    expect(template.disabled).toBe(false);
     expect(el().querySelector('[data-testid="export-menu-reason"]')?.textContent).toContain(
       'QA (supervisor)',
     );

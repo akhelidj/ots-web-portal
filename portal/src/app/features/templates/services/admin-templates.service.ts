@@ -196,7 +196,15 @@ export interface TemplateDefinitionDetail {
   templateKey: string;
   templateVersion: number;
   status: 'ACTIVE' | 'DEPRECATED';
+  approvalStatus: TemplateApprovalStatus;
+  rejectionReason: string | null;
   definitionJson: StoredDefinition | null;
+  /** For an undefined version: the nearest earlier defined version of the same key, the
+   *  source the wizard pre-fills from on an upgrade. Null when there is none. */
+  previousDefinition: {
+    templateVersion: number;
+    definitionJson: StoredDefinition;
+  } | null;
 }
 
 @Injectable({

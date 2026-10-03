@@ -188,6 +188,10 @@ export class TemplateDefineComponent implements OnInit {
   public readonly submitError = signal('');
   public readonly failedCheck = signal('');
   public readonly success = signal(false);
+  /** Set when the version was rejected by an admin: the reason shown above the wizard. */
+  public readonly rejectionReason = signal<string | null>(null);
+  /** Set when the wizard was pre-filled from an earlier version (its version number). */
+  public readonly prefilledFromVersion = signal<number | null>(null);
 
   // ---------------------------------------------------------------------------
   // Wizard navigation — a fixed four-step sequence.
@@ -221,15 +225,28 @@ export class TemplateDefineComponent implements OnInit {
       // read-only recap hydrated from what was SAVED; an undefined one keeps today's full
       // authoring flow, unchanged.
       const detail = await this.templatesService.getDefinition(this.templateId);
-      if (this.isDefined(detail.definitionJson)) {
+      this.rejectionReason.set(
+        detail.approvalStatus === 'REJECTED' ? (detail.rejectionReason ?? '') : null,
+      );
+      this.prefilledFromVersion.set(null);
+      if (this.isDefined(detail.definitionJson) && detail.approvalStatus !== 'REJECTED') {
         this.hydrateFromDefinition(detail.definitionJson);
         // Signal write LAST — flips the view to the recap and schedules the CD pass that
         // renders it (also flushing the scalar fields hydrateFromDefinition set).
         this.readOnly.set(true);
       } else {
         const tokens = await this.templatesService.getTokens(this.templateId);
-        this.rows.set(this.toRows(tokens));
+        const rows = this.toRows(tokens);
         this.markerTouched = false;
+        // A rejected version is edited from its own stored definition; a fresh upgrade
+        // pre-fills from the previous version (matching tokens only).
+        if (this.isDefined(detail.definitionJson)) {
+          this.prefillRows(rows, detail.definitionJson);
+        } else if (detail.previousDefinition) {
+          this.prefillRows(rows, detail.previousDefinition.definitionJson);
+          this.prefilledFromVersion.set(detail.previousDefinition.templateVersion);
+        }
+        this.rows.set(rows);
         this.ensureSerialMarkerDefault();
         this.readOnly.set(false);
       }
@@ -283,6 +300,45 @@ export class TemplateDefineComponent implements OnInit {
     this.rows.set(rows);
     this.displayName = def.displayName ?? '';
     this.hydrateRework(def);
+  }
+
+  /**
+   * Copy a stored definition onto freshly-extracted rows, for every token the two share
+   * (matched by field key, or the serial marker's exact token). Tokens new to this workbook
+   * stay as untouched defaults for the author to describe; tokens that left it are dropped.
+   * Also carries the display name and the rework rule when its trigger field survives.
+   */
+  private prefillRows(rows: DescribeRow[], def: StoredDefinition): void {
+    const markerToken = this.markerTokenFromExport(def);
+    const byKey = new Map((def.fields ?? []).map((f) => [f.key, f]));
+    const strip = (t: string) => t.replace(/^\{\{\s*/, '').replace(/\s*\}\}$/, '');
+    let matched = 0;
+    for (const row of rows) {
+      const field =
+        byKey.get(strip(row.token)) ??
+        (markerToken && row.token === markerToken
+          ? (def.fields ?? []).find((f) => f.role === 'serialNumber')
+          : undefined);
+      if (!field) continue;
+      matched++;
+      row.header = field.scope === 'header';
+      row.serial = field.scope === 'item';
+      row.label = field.label ?? '';
+      row.type = field.type ?? 'text';
+      row.required = !!field.required;
+      row.section = field.section ?? '';
+      row.optionsText = Array.isArray(field.options) ? field.options.join(', ') : '';
+      row.role = field.role ?? '';
+      row.signer = field.signer ?? '';
+      if (field.role === 'serialNumber') this.markerTouched = true;
+    }
+    if (matched === 0) return;
+    this.displayName = def.displayName ?? '';
+    this.hydrateRework(def);
+    if (this.reworkEnabled && !rows.some((r) => strip(r.token) === this.reworkField)) {
+      this.reworkEnabled = false;
+      this.reworkField = '';
+    }
   }
 
   /** The serial marker's exact token, read back from the stored export (the `rowSerial`
@@ -433,6 +489,17 @@ export class TemplateDefineComponent implements OnInit {
   public onTypeChange(row: DescribeRow): void {
     if (row.type !== 'signature') row.signer = '';
     this.clearSubmitFeedback();
+  }
+
+  /** Signer select handler: a customer signature is always required, so the flag is forced. */
+  public onSignerChange(row: DescribeRow): void {
+    if (row.signer === 'CUSTOMER') row.required = true;
+    this.clearSubmitFeedback();
+  }
+
+  /** A signature the customer signs — implicitly required, so its Required toggle is hidden. */
+  public isCustomerSignature(row: DescribeRow): boolean {
+    return row.type === 'signature' && row.signer === 'CUSTOMER';
   }
 
   /** A signature field was demoted out of Header — back to plain text, signer cleared. */
@@ -681,7 +748,7 @@ export class TemplateDefineComponent implements OnInit {
       token: row.token,
       label: row.label.trim(),
       type: row.type,
-      required: row.required,
+      required: this.isCustomerSignature(row) ? true : row.required,
       scope,
     };
     if (row.role) {
@@ -729,9 +796,9 @@ export class TemplateDefineComponent implements OnInit {
         equals: this.reworkEquals.trim(),
         childType: this.reworkChildType,
       };
-      if (this.reworkSuffix.trim()) {
-        dto.reworkRule.reportNumberSuffix = this.reworkSuffix.trim();
-      }
+      // Always suffixed: a bare suffix would give the child the parent's exact number.
+      dto.reworkRule.reportNumberSuffix =
+        this.reworkSuffix.trim() || `_${this.reworkChildType.toLowerCase()}`;
     }
     return dto;
   }

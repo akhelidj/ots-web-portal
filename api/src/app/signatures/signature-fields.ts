@@ -44,7 +44,9 @@ export function signatureFieldsOf(
       key: f.key,
       label: f.label ?? f.key,
       signer: f.signer,
-      required: f.required === true,
+      // A customer signature is always required (the field's presence is the opt-in); only
+      // a supervisor signature can be optional. No field → no customer signature anywhere.
+      required: f.signer === 'CUSTOMER' ? true : f.required === true,
       slot: fieldSignatureSlot(f.key),
     });
   }

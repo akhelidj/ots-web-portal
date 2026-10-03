@@ -202,15 +202,36 @@
 } @else {
   @if (statistics.length > 0 || editable) {
     <div class="space-y-3">
-      @if (editable) {
-        <div class="flex justify-end">
+      @if (editable && statistics.length === 0) {
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-dashed border-primary/30 bg-primary/[0.03] p-5"
+          data-testid="statistics-empty"
+        >
+          <div>
+            <h3 class="text-sm font-semibold text-neutral-800">Statistics</h3>
+            <p class="text-sm text-neutral-600">
+              Summarise the results (e.g. Accepted, Rejected) and link the serials behind each.
+            </p>
+          </div>
           <button
             type="button"
-            class="btn btn-secondary btn-sm"
+            class="btn btn-primary"
             (click)="startEdit()"
             data-testid="statistics-edit"
           >
-            {{ statistics.length > 0 ? 'Edit statistics' : 'Add statistics' }}
+            + Add statistics
+          </button>
+        </div>
+      } @else if (editable) {
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="text-sm font-semibold text-neutral-800">Statistics</h3>
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            (click)="startEdit()"
+            data-testid="statistics-edit"
+          >
+            Edit statistics
           </button>
         </div>
       }

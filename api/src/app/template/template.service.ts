@@ -209,8 +209,8 @@ export class TemplateService {
    * `createTemplate` deliberately skipped while it was unvalidated.
    *
    * Idempotent on an already-APPROVED row (returns it unchanged, no second handover). A
-   * REJECTED row cannot be approved: rejection is terminal, and the documented retry is a
-   * new version upload.
+   * REJECTED row cannot be approved directly: its author re-defines it, which resubmits it
+   * as PENDING_APPROVAL (see TemplateDefinitionService), or uploads a new version.
    */
   async approveTemplate(tenantId: string, templateId: string, userId: string) {
     return this.prisma.$transaction(async (tx) => {
@@ -223,7 +223,7 @@ export class TemplateService {
 
       if (template.approvalStatus === TemplateApprovalStatus.REJECTED) {
         throw new BadRequestException(
-          'This template version was rejected and cannot be approved. Upload a new version instead.',
+          'This template version was rejected and cannot be approved. It must be re-defined (which resubmits it) or replaced by a new version.',
         );
       }
 
@@ -264,9 +264,9 @@ export class TemplateService {
 
   /**
    * ADMIN refuses a pending template version, with a reason the uploader sees on the
-   * templates list. Terminal: the row keeps its place in the version history (auditable,
-   * never silently vanishes) but can never be consumed or later approved. The retry path
-   * is a new version upload.
+   * templates list. The row keeps its place in the version history (auditable, never
+   * silently vanishes) and cannot be consumed while rejected. It stays definable: saving a
+   * new definition resubmits it as PENDING_APPROVAL; a new version upload also works.
    *
    * Touches no other row — in particular the previously-ACTIVE version is left alone,
    * since a pending upload never displaced it in the first place.

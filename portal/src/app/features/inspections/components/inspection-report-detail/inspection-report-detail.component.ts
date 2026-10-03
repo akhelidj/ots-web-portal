@@ -288,6 +288,19 @@ export class InspectionReportDetailComponent
     return type.charAt(0) + type.slice(1).toLowerCase();
   }
 
+  /** A child's number always carries its suffix (`<parent>_<type>` when none was stored). */
+  public childDisplayNumber(c: {
+    id: string;
+    type: string;
+    reportNumber?: string | null;
+  }): string {
+    const parentNumber = this.report()?.reportNumber?.trim() ?? '';
+    const own = c.reportNumber?.trim() ?? '';
+    if (own && own !== parentNumber) return own;
+    if (parentNumber) return `${parentNumber}_${c.type.toLowerCase()}`;
+    return c.id.substring(0, 8).toUpperCase();
+  }
+
   public childStatusLabel(status: string): string {
     return status.replace(/_/g, ' ');
   }
@@ -1361,9 +1374,7 @@ export class InspectionReportDetailComponent
 
     try {
       const observer = this.http.get(
-        format === 'template'
-          ? `${environment.apiUrl}/inspection-reports/${this.reportId}/export/template`
-          : `${environment.apiUrl}/inspection-reports/${this.reportId}/export?format=${format}`,
+        `${environment.apiUrl}/inspection-reports/${this.reportId}/export?format=${format}`,
         {
           responseType: 'blob',
           observe: 'response',

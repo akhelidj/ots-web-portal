@@ -327,7 +327,7 @@
                 </button>
               }
               <!-- Undo for a wrong upload: only until the template has been defined. -->
-              @if (actionLabel(tmpl) === 'Define' && isOnline()) {
+              @if (!isDefined(tmpl) && isOnline()) {
                 <button
                   (click)="deleteTemplate(tmpl)"
                   class="text-error hover:underline font-bold transition-colors focus:outline-none mr-4"
