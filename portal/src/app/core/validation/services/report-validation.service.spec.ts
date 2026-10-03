@@ -199,3 +199,35 @@ describe('ReportValidationService — definitionJson cutover (Consumer B)', () =
     }
   });
 });
+
+describe('ReportValidationService.scopeToReceiver', () => {
+  const service = new ReportValidationService();
+  const result = (issues: ValidationResult['issues']): ValidationResult => ({
+    isReady: false,
+    issues,
+    serialCount: 0,
+    dispositionCounts: {},
+  });
+
+  it('keeps only the missing-serials issue for a receiver', () => {
+    const scoped = service.scopeToReceiver(
+      result([
+        { code: 'NO_SERIALS', level: 'BLOCKER', message: 'none', scope: 'REPORT' },
+        { code: 'MISSING_FIELDS', level: 'BLOCKER', message: 'x', scope: 'SERIAL' },
+        { code: 'MISSING_DISPOSITION', level: 'BLOCKER', message: 'y', scope: 'SERIAL' },
+      ]),
+    );
+    expect(scoped.issues.map((i) => i.code)).toEqual(['NO_SERIALS']);
+    expect(scoped.isReady).toBe(false);
+  });
+
+  it('is ready when only inspection-side issues remain', () => {
+    const scoped = service.scopeToReceiver(
+      result([
+        { code: 'MISSING_FIELDS', level: 'BLOCKER', message: 'x', scope: 'SERIAL' },
+      ]),
+    );
+    expect(scoped.issues).toEqual([]);
+    expect(scoped.isReady).toBe(true);
+  });
+});

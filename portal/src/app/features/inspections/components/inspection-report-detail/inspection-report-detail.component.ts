@@ -827,6 +827,9 @@ export class InspectionReportDetailComponent
 
     if (r) {
       vResult = this.validationService.validate(r, snList);
+      if (this.isReceiver()) {
+        vResult = this.validationService.scopeToReceiver(vResult);
+      }
 
       const pending = await this.outboxRepo.getPendingItems();
       const conflicts = await this.outboxRepo.getConflictItems();
