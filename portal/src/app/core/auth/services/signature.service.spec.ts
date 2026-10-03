@@ -93,6 +93,23 @@ describe('inspector signature gate (portal)', () => {
       }
     });
 
+    it('gates a supervisor only once the API demanded a signature, until one is saved', () => {
+      session.setSession('a', 'r', profile({ role: 'SUPERVISOR', hasSignature: false }));
+      expect(session.signatureRequired()).toBe(false);
+
+      session.demandSignature();
+      expect(session.signatureRequired()).toBe(true);
+
+      session.setHasSignature(true);
+      expect(session.signatureRequired()).toBe(false);
+    });
+
+    it('does not gate a supervisor who already has a signature, even if demanded', () => {
+      session.setSession('a', 'r', profile({ role: 'SUPERVISOR', hasSignature: true }));
+      session.demandSignature();
+      expect(session.signatureRequired()).toBe(false);
+    });
+
     it('persists a flag change so it survives a reload', () => {
       session.setSession('a', 'r', profile({ hasSignature: false }));
       session.setHasSignature(true);

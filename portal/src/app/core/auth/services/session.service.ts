@@ -36,13 +36,24 @@ export class SessionService {
     () => !!this.profile()?.mustChangePassword,
   );
 
+  /** Set when the API refused an action of a non-inspector (a supervisor approving a
+   *  report whose template requires their signature) with 403 SIGNATURE_REQUIRED. */
+  private readonly signatureDemanded = signal(false);
+
   /** An INSPECTOR whose account has no signature yet is locked out of every report
    *  action (the API answers 403 SIGNATURE_REQUIRED); the shell blurs the UI. An
-   *  undefined flag (stale cache) is not treated as missing — it gets resolved first. */
+   *  undefined flag (stale cache) is not treated as missing — it gets resolved first.
+   *  A supervisor/admin is only gated once an approval was actually refused for it. */
   public readonly signatureRequired = computed(() => {
     const p = this.profile();
-    return p?.role === 'INSPECTOR' && p.hasSignature === false;
+    if (!p || p.hasSignature !== false) return false;
+    return p.role === 'INSPECTOR' || this.signatureDemanded();
   });
+
+  /** The API demanded a signature from this (non-inspector) account: show the gate. */
+  public demandSignature(): void {
+    this.signatureDemanded.set(true);
+  }
 
   public readonly canWorkOffline = computed(
     () => !this.connectivity.isOnline() && this.isAuthenticated(),
@@ -109,6 +120,7 @@ export class SessionService {
 
   /** Updates the signature flag in memory and in the persisted profile. */
   public setHasSignature(hasSignature: boolean): void {
+    if (hasSignature) this.signatureDemanded.set(false);
     const current = this.profile();
     if (!current || current.hasSignature === hasSignature) return;
     const next = { ...current, hasSignature };

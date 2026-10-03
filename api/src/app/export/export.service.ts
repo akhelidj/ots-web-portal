@@ -21,6 +21,8 @@ import JSZip from 'jszip';
 import { engineMap, ExportDefinition } from './export-engine';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  Prisma,
+  ReportSignature,
   UserRole,
   InspectionReportStatus,
   ChildReportStatus,
@@ -33,7 +35,10 @@ import { resolveDisposition } from '../workflow/approval-gate';
 import { embedSignatures, SignatureImage } from './signature-embed';
 import { PdfConverterService } from './pdf-converter.service';
 import { prepareWorkbookForPdf } from './pdf-page-setup';
-import { INSPECTOR_SIGNATURE_SLOT } from '../signatures/freeze-signature';
+import {
+  freezeSignatureForReport,
+  INSPECTOR_SIGNATURE_SLOT,
+} from '../signatures/freeze-signature';
 import {
   currentFieldSignatures,
   SignatureDefinitionView,
@@ -739,6 +744,40 @@ export class ExportService {
     return images;
   }
 
+  /** Freeze the report's approver's current account signature into `slot`; null if none. */
+  private async freezeApproverSignature(
+    tenantId: string,
+    reportId: string,
+    slot: string,
+    revisionNumber: number,
+  ): Promise<ReportSignature | null> {
+    const approval = await this.prisma.inspectionReportTransitionLog.findFirst({
+      where: {
+        inspectionReportId: reportId,
+        toStatus: InspectionReportStatus.APPROVED,
+        userId: { not: null },
+      },
+      orderBy: { timestamp: 'desc' },
+      select: { userId: true },
+    });
+    if (!approval?.userId) return null;
+    const frozen = await freezeSignatureForReport(
+      this.prisma as unknown as Prisma.TransactionClient,
+      {
+        tenantId,
+        inspectionReportId: reportId,
+        slot,
+        userId: approval.userId,
+        revisionNumber,
+      },
+    );
+    if (!frozen) return null;
+    return this.prisma.reportSignature.findFirst({
+      where: { tenantId, inspectionReportId: reportId, slot, revisionNumber },
+      orderBy: { signedAt: 'desc' },
+    });
+  }
+
   /**
    * The pictures for the template's `signature` fields (customer / supervisor), taken from
    * the rows current for the exported revision. An unsigned field is left out — its cell is
@@ -767,7 +806,21 @@ export class ExportService {
     const images: Record<string, SignatureImage> = {};
     const missing: SignatureFieldSpec[] = [];
     for (const spec of specs) {
-      const row = current?.get(spec.slot);
+      let row = current?.get(spec.slot);
+      // A SUPERVISOR field is applied at approval, but an approver who had no signature
+      // then (an optional field lets the approval through) leaves it blank for good. Their
+      // signature must reach the export whenever they have one, so a current approved
+      // revision still missing it adopts the approver's account signature NOW and keeps
+      // it (frozen), so later re-registrations cannot change what this revision exports.
+      if (!row && spec.signer === 'SUPERVISOR' && opts.enforceRequired) {
+        row =
+          (await this.freezeApproverSignature(
+            tenantId,
+            reportId,
+            spec.slot,
+            opts.revisionNumber,
+          )) ?? undefined;
+      }
       const bytes = row ? await this.storage.getSignature(row.storageKey) : null;
       if (bytes) {
         images[spec.slot] = { bytes };

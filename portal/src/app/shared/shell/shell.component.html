@@ -352,8 +352,13 @@
         Signature required
       </h2>
       <p id="signature-gate-text" class="mt-2 text-sm text-muted-foreground">
-        Register your signature to start working on reports. It is saved once on
-        your account and applied automatically when you submit.
+        @if (profile()?.role === 'INSPECTOR') {
+          Register your signature to start working on reports. It is saved once
+          on your account and applied automatically when you submit.
+        } @else {
+          This report needs your signature to be approved. Register it once; it
+          is saved on your account and applied automatically at approval.
+        }
       </p>
       <button
         type="button"
