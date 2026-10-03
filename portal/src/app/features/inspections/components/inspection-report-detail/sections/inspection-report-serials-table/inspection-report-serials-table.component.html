@@ -1,0 +1,621 @@
+<div
+  class="flex-grow w-full bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full max-h-[800px] overflow-hidden"
+>
+  <div
+    class="px-6 py-4 border-b border-gray-200 bg-neutral-50 rounded-t-xl flex flex-col sm:flex-row justify-between sm:items-center gap-4 sticky top-0 z-10"
+  >
+    <h2 class="text-lg text-neutral-900 flex items-center gap-2">
+      Equipment List
+      <span
+        class="bg-neutral-200 text-neutral-800 text-[11px] font-bold py-0.5 px-2 min-w-[20px] text-center rounded-md whitespace-nowrap"
+        >{{ serials.length }}</span
+      >
+    </h2>
+
+    @if (userRole !== APP_ROLES.CUSTOMER) {
+      <div
+        class="flex flex-wrap items-center gap-3 w-full sm:w-auto sm:ml-auto"
+      >
+        @if (selectedForApproval.size > 0 && canSubmitBatch) {
+          <button
+            (click)="submitSelected.emit()"
+            class="btn btn-accent btn-sm gap-2"
+            [disabled]="isSubmittingBatch"
+          >
+            @if (isSubmittingBatch) {
+              <svg
+                class="animate-spin h-4 w-4 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Submitting
+            } @else {
+              <svg
+                class="w-4 h-4 cursor-pointer"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Submit {{ selectedForApproval.size }} for Approval
+            }
+          </button>
+        }
+
+        <div class="relative w-full sm:w-64">
+          <div
+            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+          >
+            <svg
+              class="h-4 w-4 text-gray-400"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+          <input
+            type="text"
+            [ngModel]="searchQuery"
+            (ngModelChange)="searchQueryChange.emit($event)"
+            placeholder="Search S/N..."
+            class="field-control pl-9 py-1.5 placeholder-gray-500"
+          />
+          @if (searchQuery) {
+            <button
+              (click)="searchQueryChange.emit('')"
+              class="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              <svg
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <div
+    class="overflow-x-auto overflow-y-auto flex-grow"
+    [class.compact-table]="isCompactMode"
+  >
+    <table
+      class="min-w-full text-left border-collapse"
+      [class.compact]="isCompactMode"
+    >
+      @if (serials.length > 0) {
+        <thead
+          class="bg-gray-50 sticky top-0 shadow-sm z-[25] border-b border-gray-200"
+        >
+          <!-- Group-band row: one colspan band per definition section (titles, order,
+               and span all come from the definition — nothing hardcoded). -->
+          <tr>
+            <th
+              scope="col"
+              colspan="2"
+              class="px-5 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-0 bg-gray-50 z-30 md:z-40 md:shadow-[1px_0_0_0_#eee] border-r border-gray-200"
+            >
+              Info / Actions
+            </th>
+            @if (!isCompactMode) {
+              @if (userRole !== APP_ROLES.CUSTOMER) {
+                <th
+                  scope="col"
+                  rowspan="2"
+                  class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24 bg-gray-50 z-30 border-r border-gray-200"
+                >
+                  Sync
+                </th>
+              }
+
+              @for (grp of columnGroups; track grp.key) {
+                <th
+                  scope="colgroup"
+                  [attr.colspan]="grp.columns.length"
+                  class="px-3 py-2 text-center text-[10px] font-bold text-gray-600 uppercase tracking-wider bg-gray-100 z-30 border-r border-gray-200 border-b border-gray-200/50"
+                >
+                  {{ grp.title }}
+                </th>
+              }
+            }
+          </tr>
+          <tr>
+            <th
+              scope="col"
+              class="px-5 py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-0 bg-gray-50 z-30 md:z-40 md:shadow-[1px_0_0_0_#eee] w-48 min-w-[12rem] max-w-[12rem] border-r border-gray-200"
+            >
+              <div class="flex items-center gap-2">
+                @if (canSubmitBatch) {
+                  <input
+                    type="checkbox"
+                    [checked]="isAllEligibleSelected"
+                    (change)="toggleAllEligible.emit()"
+                    [disabled]="isLocked"
+                    title="Select eligible for approval"
+                    class="rounded border-gray-300 text-accent focus:ring-accent w-3.5 h-3.5 mt-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                }
+                <span>Serial Number</span>
+              </div>
+            </th>
+            <th
+              scope="col"
+              class="px-4 py-2 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky md:left-[12rem] bg-gray-50 z-30 md:z-40 border-r border-gray-200 md:shadow-[1px_0_0_0_#eee] min-w-[120px]"
+            >
+              EMI Res. / Act.
+            </th>
+            @if (!isCompactMode) {
+              @for (grp of columnGroups; track grp.key) {
+                @for (col of grp.columns; track col.id) {
+                  <th
+                    scope="col"
+                    class="px-2 py-2 text-center text-[9px] font-bold text-gray-500 uppercase tracking-wider bg-gray-50/90 z-20 backdrop-blur-sm shadow-sm pt-2 whitespace-nowrap"
+                    [class.border-r]="col.isSectionEnd"
+                    [class.border-gray-200]="col.isSectionEnd"
+                    [title]="col.label"
+                  >
+                    {{ col.label }}
+                  </th>
+                }
+              }
+            }
+          </tr>
+        </thead>
+      }
+
+      <tbody class="divide-y divide-gray-100 bg-white">
+        @for (sn of serials; track sn.id) {
+          <tr
+            class="hover:bg-primary/5 transition-colors group"
+            [class.compact-row]="isCompactMode"
+          >
+            <td
+              class="align-top md:sticky md:left-0 bg-white md:z-20 md:shadow-[1px_0_0_0_#eee] group-hover:bg-[#f3f4f6] transition-colors border-r border-gray-200 w-48 min-w-[12rem] max-w-[12rem]"
+              [class.px-5]="!isCompactMode"
+              [class.py-3]="!isCompactMode"
+              [class.px-3]="isCompactMode"
+              [class.py-1.5]="isCompactMode"
+            >
+              @if (editingSnId === sn.id) {
+                <div class="flex items-center gap-2 max-w-[180px]">
+                  <input
+                    type="text"
+                    [ngModel]="editingSnValue"
+                    (ngModelChange)="editingSnValueChange.emit($event)"
+                    class="field-control px-2 py-1 text-xs code-text"
+                    (keyup.enter)="saveEdit.emit(sn)"
+                  />
+                  <button
+                    (click)="saveEdit.emit(sn)"
+                    class="p-1 text-white bg-success hover:bg-success-dark rounded shadow-sm transition-colors"
+                    title="Save"
+                  >
+                    <svg
+                      class="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    (click)="cancelEdit.emit()"
+                    class="btn btn-secondary p-1 min-w-0 text-gray-500"
+                    title="Cancel"
+                  >
+                    <svg
+                      class="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              } @else {
+                <div class="flex items-start gap-3 h-full">
+                  @if (canSubmitBatch) {
+                    <div class="pt-0.5 flex-shrink-0">
+                      @if (
+                        sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT
+                      ) {
+                        <input
+                          type="checkbox"
+                          [checked]="selectedForApproval.has(sn.id)"
+                          (change)="toggleSelection.emit(sn)"
+                          [disabled]="isLocked"
+                          class="rounded border-gray-300 text-accent focus:ring-accent w-3.5 h-3.5 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                      } @else if (
+                        sn.approvalStatus ===
+                        SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL
+                      ) {
+                        <svg
+                          class="w-4 h-4 text-warning"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                          title="Submitted for Approval"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                      } @else if (
+                        sn.approvalStatus === SERIAL_STATUSES.APPROVED
+                      ) {
+                        <svg
+                          class="w-4 h-4 text-success"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                          title="Approved"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                      } @else {
+                        <svg
+                          class="w-4 h-4 text-gray-300"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          title="Not Inspected"
+                        >
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="9"
+                            stroke-width="2"
+                          ></circle>
+                        </svg>
+                      }
+                    </div>
+                  }
+
+                  <div
+                    class="flex flex-col gap-1.5 flex-grow min-w-0 justify-center"
+                  >
+                    <!-- Interactive only when there is an inspect action; otherwise
+                         plain text so no dead control is presented (e.g. customers,
+                         or ops on a locked report). -->
+                    @if (canInspectInspectionData) {
+                      <button
+                        type="button"
+                        (click)="openInspection.emit(sn)"
+                        (keydown.enter)="openInspection.emit(sn)"
+                        class="code-text font-bold text-gray-900 text-sm whitespace-nowrap transition-colors text-left bg-transparent border-none p-0 cursor-pointer hover:text-primary"
+                      >
+                        {{ sn.value }}
+                      </button>
+                    } @else {
+                      <span
+                        class="code-text font-bold text-gray-900 text-sm whitespace-nowrap"
+                        >{{ sn.value }}</span
+                      >
+                    }
+                    <div class="space-y-1">
+                      @for (cr of childReports; track cr.id) {
+                        @for (csn of cr.serialNumbers || []; track csn.id) {
+                          @if (csn.id === sn.id) {
+                            <div
+                              class="flex items-center gap-1.5 text-[10px] py-0.5 px-1.5 bg-gray-50 rounded border border-gray-200 w-fit"
+                            >
+                              <span class="font-bold text-gray-700">{{
+                                cr.type
+                              }}</span>
+                              <span
+                                class="data-chip px-1 py-px rounded-sm text-[10px] border-transparent"
+                                [ngClass]="{
+                                  'data-chip-success':
+                                    cr.status === 'APPROVED' ||
+                                    cr.status === 'CLOSED',
+                                  'data-chip-info':
+                                    cr.status !== 'APPROVED' &&
+                                    cr.status !== 'CLOSED',
+                                }"
+                                >{{ cr.status }}</span
+                              >
+                            </div>
+                          }
+                        }
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </td>
+
+            <td
+              class="align-top whitespace-nowrap bg-white group-hover:bg-[#f3f4f6] transition-colors border-r border-gray-200 min-w-[120px] md:sticky md:left-[12rem] md:z-20 md:shadow-[1px_0_0_0_#eee]"
+              [class.px-3]="!isCompactMode"
+              [class.py-3]="!isCompactMode"
+              [class.px-2]="isCompactMode"
+              [class.py-1.5]="isCompactMode"
+            >
+              <div class="flex flex-col items-center gap-2">
+                @if (reworkFlag(sn); as flag) {
+                  <span
+                    class="data-chip data-chip-warning w-full justify-center gap-1 px-2 py-0.5 text-[10px]"
+                    >{{ flag }}</span
+                  >
+                }
+
+                <div
+                  class="flex items-center justify-center gap-1 w-full bg-gray-50 border border-gray-200 rounded p-0.5"
+                >
+                  @if (
+                    canInspectInspectionData &&
+                    sn.approvalStatus !==
+                      SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL &&
+                    sn.approvalStatus !== SERIAL_STATUSES.APPROVED
+                  ) {
+                    <button
+                      (click)="openInspection.emit(sn)"
+                      class="action-link-accent text-[10px] flex items-center gap-0.5 px-1.5 py-0.5 hover:underline"
+                      title="Inspect"
+                    >
+                      <svg
+                        class="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                        /></svg
+                      >Insp.
+                    </button>
+                  } @else {
+                    <button
+                      (click)="openInspection.emit(sn)"
+                      class="action-link-primary text-[10px] flex items-center gap-0.5 px-1.5 py-0.5 hover:underline"
+                      title="View Inspection"
+                    >
+                      <svg
+                        class="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        ></path></svg
+                      >View
+                    </button>
+                  }
+
+                  @if (
+                    canEditSerial &&
+                    sn.approvalStatus !==
+                      SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL &&
+                    sn.approvalStatus !== SERIAL_STATUSES.APPROVED
+                  ) {
+                    <button
+                      (click)="startEdit.emit(sn)"
+                      class="action-link-neutral text-xs px-2 py-1 flex items-center gap-1 hover:bg-neutral-100 rounded"
+                      title="Rename"
+                    >
+                      <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                        ></path>
+                      </svg>
+                      <span class="sr-only">Rename</span>
+                    </button>
+                  }
+
+                  @if (
+                    canRemoveSerial &&
+                    sn.approvalStatus !==
+                      SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL &&
+                    sn.approvalStatus !== SERIAL_STATUSES.APPROVED
+                  ) {
+                    <button
+                      (click)="deleteSn.emit(sn)"
+                      class="action-link-danger text-xs px-2 py-1 border-l border-gray-200 ml-1 pl-3 flex items-center gap-1 hover:bg-error-light rounded"
+                      title="Remove"
+                    >
+                      <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        ></path>
+                      </svg>
+                      <span class="sr-only">Remove</span>
+                    </button>
+                  }
+
+                  @if (hasHistory(sn)) {
+                    <button
+                      (click)="openHistory.emit(sn)"
+                      class="action-link-primary text-xs px-2 py-1 border-l border-gray-200 ml-1 pl-3 flex items-center gap-1 hover:bg-primary/10 rounded"
+                      title="History"
+                    >
+                      <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        ></path>
+                      </svg>
+                      <span class="sr-only">History</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            </td>
+
+            @if (!isCompactMode) {
+              @if (userRole !== APP_ROLES.CUSTOMER) {
+                <td
+                  class="px-2 py-3 align-top text-center border-r border-gray-100"
+                >
+                  <span
+                    class="data-chip px-1.5 py-0.5 text-[9px]"
+                    [ngClass]="{
+                      'data-chip-error':
+                        sn.syncState === SYNC_STATES.CONFLICT ||
+                        sn.syncState === SYNC_STATES.ERROR,
+                      'data-chip-warning': sn.syncState === SYNC_STATES.PENDING,
+                      'data-chip-success': sn.syncState === SYNC_STATES.SYNCED,
+                    }"
+                    >{{ sn.syncState }}</span
+                  >
+                </td>
+              }
+
+              @for (grp of columnGroups; track grp.key) {
+                @for (col of grp.columns; track col.id) {
+                  <td
+                    class="matrix-cell-data"
+                    [class.matrix-cell-divider]="col.isSectionEnd"
+                    [title]="getCellText(sn, col)"
+                  >
+                    {{ getCellText(sn, col) }}
+                  </td>
+                }
+              }
+            }
+          </tr>
+        } @empty {
+          <tr>
+            <td
+              [colSpan]="totalColumnCount"
+              class="px-2 py-4 sm:px-6 sm:py-8 bg-white"
+            >
+              <div
+                class="mx-auto max-w-2xl px-6 py-12 bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center transition-all hover:bg-gray-50 hover:border-gray-300"
+              >
+                <div
+                  class="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4 shadow-sm"
+                >
+                  <svg
+                    class="h-8 w-8 text-primary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                    ></path>
+                  </svg>
+                </div>
+                <h3 class="text-lg text-gray-900 mb-2">
+                  No Equipment Recorded
+                </h3>
+                <p
+                  class="text-sm text-gray-500 max-w-md mx-auto leading-relaxed"
+                >
+                  There are currently no serial numbers available in this
+                  inspection report.
+                  @if (
+                    userRole === APP_ROLES.RECEIVER ||
+                    userRole === APP_ROLES.ADMIN
+                  ) {
+                    <span class="block mt-1 font-medium text-gray-600"
+                      >Please begin by uploading equipment from the Register
+                      Inventory box right next to this equipment list
+                      table.</span
+                    >
+                  } @else {
+                    <span class="block mt-1"
+                      >Pending equipment provisioning from the designated
+                      receiver.</span
+                    >
+                  }
+                </p>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

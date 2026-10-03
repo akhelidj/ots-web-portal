@@ -1,0 +1,80 @@
+@if (schemaUnavailable()) {
+  <div
+    data-testid="header-edit-unavailable"
+    class="bg-error-light border-l-4 border-error text-error-dark p-5 rounded-md shadow-sm"
+  >
+    <p class="text-sm font-medium">
+      This report’s template has no usable field definition yet.
+    </p>
+    <p class="mt-1 text-sm">
+      An administrator must define this template before its metadata fields can be
+      edited.
+    </p>
+  </div>
+} @else {
+  <form [formGroup]="form()" (ngSubmit)="onSave()" class="space-y-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      @for (section of schema()!.sections; track section.key) {
+        @if (section.fields.length > 0) {
+          <div
+            class="space-y-4"
+            [attr.data-testid]="'header-edit-section-' + section.key"
+          >
+            @if (section.title) {
+              <h4
+                class="text-xs font-condensed font-semibold text-gray-400 uppercase tracking-widest"
+              >
+                {{ section.title }}
+              </h4>
+            }
+            @for (field of section.fields; track field.key) {
+              @if (field.role) {
+                <!-- System-owned field: no control, no validator, nothing saved. The
+                     value is derived and shown read-only with a "System" badge. -->
+                <div [attr.data-testid]="'header-edit-field-' + field.key">
+                  <app-system-field-row
+                    [fieldKey]="field.key"
+                    [label]="field.label"
+                    [value]="systemValues[field.role]"
+                  />
+                </div>
+              } @else {
+                <div
+                  class="space-y-1"
+                  [attr.data-testid]="'header-edit-field-' + field.key"
+                >
+                  <!-- The ONE shared field renderer: dispatches by type (scalars + the
+                       generic object-list array editor), no field-name awareness. -->
+                  <app-definition-field-input
+                    [field]="field"
+                    [control]="controlFor(field.key)"
+                    [options]="getFieldOptions(field)"
+                    testidPrefix="header-edit"
+                  />
+                </div>
+              }
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <div class="flex justify-end gap-2 pt-4 border-t border-gray-100">
+      <button
+        type="button"
+        (click)="onCancel()"
+        class="btn btn-secondary btn-sm"
+        data-testid="header-edit-cancel"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        class="btn btn-primary btn-sm"
+        data-testid="header-edit-save"
+      >
+        Save Changes
+      </button>
+    </div>
+  </form>
+}

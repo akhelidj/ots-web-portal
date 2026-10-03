@@ -1,0 +1,61 @@
+@if (definitionMissing()) {
+  <div
+    data-testid="header-fields-unavailable"
+    class="bg-error-light border-l-4 border-error text-error-dark p-5 rounded-md shadow-sm"
+  >
+    <p class="text-sm font-medium">
+      This report’s template has no usable field definition yet.
+    </p>
+    <p class="mt-1 text-sm">
+      An administrator must define this template before its metadata fields can be
+      shown.
+    </p>
+  </div>
+} @else if (noHeaderFields()) {
+  <!-- Definition present but no header-scope fields: not an error. Render nothing so a
+       customer is never falsely told the template is undefined. -->
+} @else {
+  <!-- Field GRID, not a full-width row stack: header specs flow into 2 columns on
+       medium and 3 on wide, each cell a compact label-over-value pair. A definition
+       with declared sections keeps them as grouped blocks, the same grid inside each. -->
+  <div class="space-y-10">
+    @for (section of schema()!.sections; track section.key) {
+      @if (section.fields.length > 0) {
+        <div [attr.data-testid]="'header-section-' + section.key">
+          @if (section.title) {
+            <h4
+              class="mb-5 text-xs font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2"
+            >
+              {{ section.title }}
+            </h4>
+          }
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6">
+            @for (field of section.fields; track field.key) {
+              @if (field.role) {
+                <!-- System-owned field: derived, read-only, badged. Never user-entered. -->
+                <app-system-field-row
+                  [fieldKey]="field.key"
+                  [label]="field.label"
+                  [value]="systemValues[field.role]"
+                  [isCustomer]="isCustomer()"
+                />
+              } @else {
+                <div
+                  class="flex flex-col gap-0.5"
+                  [attr.data-testid]="'header-field-' + field.key"
+                >
+                  <span class="text-xs text-gray-500">{{ field.label }}</span>
+                  <span
+                    class="text-sm font-semibold text-neutral-900 tabular-nums"
+                    [attr.data-testid]="'header-value-' + field.key"
+                    >{{ displayValue(field.key) }}</span
+                  >
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+}

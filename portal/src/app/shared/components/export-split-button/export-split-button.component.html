@@ -1,0 +1,128 @@
+<div class="relative inline-flex items-stretch">
+  <button
+    type="button"
+    class="inline-flex items-center justify-center gap-2 transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    [class]="mainClass()"
+    [disabled]="filledDisabled()"
+    [title]="reason() || 'Download PDF'"
+    (click)="pick('pdf')"
+  >
+    @if (isExporting()) {
+      <svg
+        class="animate-spin h-4 w-4"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
+      </svg>
+      Exporting…
+    } @else {
+      <svg
+        class="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" x2="12" y1="15" y2="3" />
+      </svg>
+      Export PDF
+    }
+  </button>
+
+  <button
+    type="button"
+    class="inline-flex items-center justify-center transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    [class]="chevronClass()"
+    [disabled]="isExporting()"
+    aria-haspopup="menu"
+    [attr.aria-expanded]="open()"
+    aria-label="More export options"
+    (click)="toggle()"
+  >
+    <svg
+      class="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  </button>
+
+  @if (open()) {
+    <div
+      role="menu"
+      aria-label="Export formats"
+      class="absolute right-0 z-50 w-64 border border-border bg-card text-left shadow-lg"
+      [class.bottom-full]="variant() === 'bar'"
+      [class.mb-1]="variant() === 'bar'"
+      [class.top-full]="variant() !== 'bar'"
+      [class.mt-1]="variant() !== 'bar'"
+    >
+      @if (reason()) {
+        <p
+          class="border-b border-border bg-muted px-3 py-2 text-xs text-foreground/70"
+          data-testid="export-menu-reason"
+        >
+          {{ reason() }}
+        </p>
+      }
+      <button
+        type="button"
+        role="menuitem"
+        class="block w-full px-3 py-2 text-left text-sm text-foreground hover:bg-muted focus:bg-muted focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+        [disabled]="filledDisabled()"
+        (click)="pick('pdf')"
+      >
+        <span class="block font-semibold">PDF</span>
+        <span class="block text-xs text-foreground/60">The filled report</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        class="block w-full px-3 py-2 text-left text-sm text-foreground hover:bg-muted focus:bg-muted focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+        [disabled]="filledDisabled()"
+        (click)="pick('xlsx')"
+      >
+        <span class="block font-semibold">Excel</span>
+        <span class="block text-xs text-foreground/60">The filled workbook</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        class="block w-full border-t border-border px-3 py-2 text-left text-sm text-foreground hover:bg-muted focus:bg-muted focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+        [disabled]="templateDisabled()"
+        (click)="pick('template')"
+      >
+        <span class="block font-semibold">Template</span>
+        <span class="block text-xs text-foreground/60"
+          >The blank workbook with its tokens</span
+        >
+      </button>
+    </div>
+  }
+</div>

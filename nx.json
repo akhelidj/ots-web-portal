@@ -31,7 +31,16 @@
       "e2eTestRunner": "none",
       "linter": "eslint",
       "style": "scss",
-      "unitTestRunner": "none"
+      "unitTestRunner": "jest"
+    },
+    "@nx/angular:library": {
+      "unitTestRunner": "jest"
+    },
+    "@nx/nest:application": {
+      "unitTestRunner": "jest"
+    },
+    "@nx/node:application": {
+      "unitTestRunner": "jest"
     }
   },
   "plugins": [

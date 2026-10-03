@@ -22,10 +22,22 @@
       "resources": {
         "files": [
           "/assets/**",
+          "/icons/**",
           "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
         ]
       }
     }
   ],
-  "dataGroups": []
+  "dataGroups": [
+    {
+      "name": "ots-api",
+      "urls": ["https://api.oilfield-tubular-services.com/**"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 100,
+        "maxAge": "1d",
+        "timeout": "10s"
+      }
+    }
+  ]
 }

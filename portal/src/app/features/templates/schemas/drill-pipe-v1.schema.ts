@@ -1,0 +1,283 @@
+export type FieldInputType =
+  | 'text'
+  | 'number'
+  | 'boolean'
+  | 'select'
+  | 'date'
+  // Phase D step 2 — generic array type: a repeated `{ name, number? }` group
+  // rendered with a structured array editor and consumed by the export transforms
+  // as an array. Any array field uses it (no field-name special-casing).
+  | 'object-list';
+
+/**
+ * A field's SYSTEM role (mirrors the API's FieldRole). The seven HEADER roles are
+ * system-owned: their value is DERIVED (inspector/supervisor from the transition log,
+ * inspectionDate automatically; customer/reportNumber/poNumber set at report creation;
+ * inspectorSignature from the inspector's account signature at export),
+ * never user-entered — the header-edit surface renders no input, and both header surfaces
+ * show a read-only "System" row instead. The item role `serialNumber` marks the serial's
+ * own token (the region marker); it is not a form field and is filtered out of the serial
+ * form entirely.
+ */
+export type FieldRole =
+  | 'inspector'
+  | 'supervisor'
+  | 'inspectionDate'
+  | 'customer'
+  | 'reportNumber'
+  | 'poNumber'
+  | 'inspectorSignature'
+  | 'serialNumber';
+
+export interface FieldSchema {
+  key: string; // e.g. "box.minTongSpace" or "final.disposition"
+  label: string;
+  inputType: FieldInputType;
+  required: boolean;
+  options?: string[]; // strictly for select
+  /** System role (header only) — present → render read-only, never as an input. */
+  role?: FieldRole;
+}
+
+export interface SectionSchema {
+  key: string; // e.g. "box"
+  title: string;
+  fields: FieldSchema[];
+}
+
+export interface FormSchema {
+  templateKey: string;
+  templateVersion: number;
+  sections: SectionSchema[];
+}
+
+export const DRILL_PIPE_V1_SCHEMA: FormSchema = {
+  templateKey: 'DRILL_PIPE_REPORT',
+  templateVersion: 1,
+  sections: [
+    {
+      key: 'box',
+      title: 'Box Connection',
+      fields: [
+        {
+          key: 'box.minTongSpace',
+          label: 'Min Tong Space',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'box.minOD',
+          label: 'Min OD',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'box.minBoxThreads',
+          label: 'Min Box Threads',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'box.minEccShoulder',
+          label: 'Min Ecc Shoulder',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'box.maxCounterBoreDiameter',
+          label: 'Max Counter Bore Diameter',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'box.maxCounterBoreLength',
+          label: 'Max Counter Bore Length',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'box.bevelDiameterMin',
+          label: 'Bevel Diameter Min',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'box.bevelDiameterMax',
+          label: 'Bevel Diameter Max',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'box.condition',
+          label: 'Condition',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'box.hardBanding',
+          label: 'Hard Banding',
+          inputType: 'text',
+          required: true,
+        },
+      ],
+    },
+    {
+      key: 'pin',
+      title: 'Pin Connection',
+      fields: [
+        {
+          key: 'pin.minTongSpace',
+          label: 'Min Tong Space',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'pin.minOD',
+          label: 'Min OD',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'pin.maxID',
+          label: 'Max ID',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'pin.minEccShoulder',
+          label: 'Min Ecc Shoulder',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'pin.lengthPinConnMin',
+          label: 'Length Pin Conn Min',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'pin.lengthPinConnMax',
+          label: 'Length Pin Conn Max',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'pin.maxLengthPinBase',
+          label: 'Max Length Pin Base',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'pin.bevelDiameterMin',
+          label: 'Bevel Diameter Min',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'pin.bevelDiameterMax',
+          label: 'Bevel Diameter Max',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'pin.condition',
+          label: 'Condition',
+          inputType: 'text',
+          required: true,
+        },
+      ],
+    },
+    {
+      key: 'body',
+      title: 'Body',
+      fields: [
+        {
+          key: 'body.wallRemaining',
+          label: 'Wall Remaining',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'body.odDecrease',
+          label: 'OD Decrease',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'body.emiResult',
+          label: 'EMI Result',
+          inputType: 'select',
+          required: true,
+          options: ['PASS', 'REWORK', 'SCRAP', 'HOLD'],
+        },
+        {
+          key: 'body.slipArea',
+          label: 'Slip Area',
+          inputType: 'text',
+          required: true,
+        },
+        {
+          key: 'body.corrosionIn',
+          label: 'Corrosion Inside',
+          inputType: 'boolean',
+          required: true,
+        },
+        {
+          key: 'body.corrosionOut',
+          label: 'Corrosion Outside',
+          inputType: 'boolean',
+          required: true,
+        },
+        { key: 'body.ipc', label: 'IPC', inputType: 'boolean', required: true },
+        {
+          key: 'body.bentJoints',
+          label: 'Bent Joints',
+          inputType: 'boolean',
+          required: true,
+        },
+      ],
+    },
+    {
+      key: 'final',
+      title: 'Final Disposition',
+      fields: [
+        {
+          key: 'final.isNew',
+          label: 'Is New',
+          inputType: 'boolean',
+          required: true,
+        },
+        {
+          key: 'final.isPremium',
+          label: 'Is Premium',
+          inputType: 'boolean',
+          required: true,
+        },
+        {
+          key: 'final.isC2',
+          label: 'Is C2',
+          inputType: 'boolean',
+          required: true,
+        },
+        {
+          key: 'final.isScrap',
+          label: 'Is Scrap',
+          inputType: 'boolean',
+          required: true,
+        },
+      ],
+    },
+    {
+      key: 'remarksSection',
+      title: 'Additional Information',
+      fields: [
+        {
+          key: 'remarks',
+          label: 'Remarks',
+          inputType: 'text',
+          required: false,
+        },
+      ],
+    },
+  ],
+};

@@ -1,7 +1,14 @@
-
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import {
+  InspectionData,
+  Snapshot,
+  ChildSnapshot,
+} from '../common/inspection-data.types';
+import { assembleSnapshotHeader } from '../common/snapshot-header';
+import { resolveDisposition } from '../workflow/approval-gate';
+import { isFieldSignatureSlot } from '../signatures/signature-slots';
 
 @Injectable()
 export class RevisionService {
@@ -10,7 +17,7 @@ export class RevisionService {
   /**
    * Creates an immutable snapshot for an InspectionReport.
    * Handles atomic revision number increment and row creation.
-   * 
+   *
    * @param tx Prisma Transaction Client (Must be provided to ensure atomicity)
    * @param reportId ID of the InspectionReport
    * @param reason Reason for the revision
@@ -22,7 +29,7 @@ export class RevisionService {
     reportId: string,
     reason: string,
     userId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<void> {
     // 1. Fetch Full Deterministic Dataset
     // We fetch inside the transaction to ensure we capture exactly what is being committed/exists.
@@ -39,74 +46,108 @@ export class RevisionService {
             reportNumber: true,
             status: true,
             // Minimal linkage info
-          }
+          },
         },
         transitionLogs: {
-          orderBy: { timestamp: 'asc' }
-        }
+          orderBy: { timestamp: 'asc' },
+        },
         // We do NOT include full child report data here, only linkage.
         // Child reports have their own revisions.
       },
     });
 
     if (!report) {
-      throw new Error(`InspectionReport ${reportId} not found during snapshot creation.`);
+      throw new Error(
+        `InspectionReport ${reportId} not found during snapshot creation.`,
+      );
     }
 
     // 2. Validate Binding (Sanity Check)
-    if (!report.templateKey || !report.templateHash || !report.templateVersion) {
-       // Should not happen for valid reports, but critical for snapshot integrity
-       throw new Error(`InspectionReport ${reportId} is missing template binding info.`);
+    if (
+      !report.templateKey ||
+      !report.templateHash ||
+      !report.templateVersion
+    ) {
+      // Should not happen for valid reports, but critical for snapshot integrity
+      throw new Error(
+        `InspectionReport ${reportId} is missing template binding info.`,
+      );
     }
+
+    // Load the pinned template's definition so each serial's disposition resolves through
+    // the SAME shared resolver the gate/export/display use — never a hardcoded field. The
+    // prior `final.disposition || disposition` read was phantom on real data, so every
+    // historical snapshot recorded disposition: null; new snapshots record the true value.
+    const template = await tx.template.findUnique({
+      where: {
+        tenantId_templateKey_templateVersion: {
+          tenantId,
+          templateKey: report.templateKey,
+          templateVersion: report.templateVersion,
+        },
+      },
+      select: { definitionJson: true },
+    });
+    const definition =
+      (template?.definitionJson as {
+        disposition?: { source?: string[] };
+      } | null) ?? null;
 
     // 3. Determine Next Revision Number
     const currentRevision = report.revisionNumber || 0;
     const nextRevision = currentRevision + 1;
 
+    // Signature pointers frozen at submission: the latest per slot. Embedded so this
+    // revision exports with the signature that was in force when IT was made, even
+    // after a later re-submission freezes a newer one. Pointers only (key + hash).
+    const frozen = await tx.reportSignature.findMany({
+      where: { tenantId, inspectionReportId: reportId },
+      orderBy: { signedAt: 'desc' },
+    });
+    const signatures: NonNullable<Snapshot['signatures']> = {};
+    for (const row of frozen) {
+      // Template signature fields (`field:<key>`) are NOT embedded: each belongs to the
+      // revision it was signed on and is resolved from its tagged row at export — a
+      // customer signs only AFTER this snapshot is taken, so it could never be in here.
+      if (isFieldSignatureSlot(row.slot)) continue;
+      signatures[row.slot] ??= {
+        storageKey: row.storageKey,
+        hash: row.hash,
+        signedById: row.signedById,
+        signedAt: row.signedAt,
+      };
+    }
+
     // 4. Construct Snapshot JSON
     // Explicitly selecting fields to ensure deterministic shape.
     // Excluding raw file bytes, large helper columns, etc.
     const snapshotData = {
-      header: {
-        id: report.id,
-        poNumber: report.poNumber,
-        reportNumber: report.reportNumber,
-        status: report.status,
-        customerId: report.customerId,
-        createdAt: report.createdAt,
-        updatedAt: report.updatedAt,
-        // Pipe Specifications
-        grade: report.grade,
-        range: report.range,
-        weight: report.weight,
-        nomWT: report.nomWT,
-        nomOD: report.nomOD,
-        nomID: report.nomID,
-        connection: report.connection,
-        // Job Info
-        inspectionAddress: report.inspectionAddress,
-        standardUsed: report.standardUsed,
-        inspectorComment: report.inspectorComment,
-        equipmentUsed: report.equipmentUsed,
-        inspectionMethod: report.inspectionMethod,
-      },
+      // Phase D step 2 — header assembled generically (definition-keyed `headerData`
+      // overlaid on the legacy named-column bridge) via the shared assembler, so
+      // this and the export-time live rebuild can never drift. See
+      // assembleSnapshotHeader.
+      header: assembleSnapshotHeader(report),
       template: {
         key: report.templateKey,
         version: report.templateVersion,
         hash: report.templateHash,
         versionId: report.templateVersionId,
       },
-      serialNumbers: report.serialNumbers.map(sn => ({
-        id: sn.id,
-        serial: sn.serial,
-        inspectionData: sn.inspectionData,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        disposition: (sn.inspectionData as any)?.final?.disposition || (sn.inspectionData as any)?.disposition || null,
-        updatedAt: sn.updatedAt,
-      })),
+      serialNumbers: report.serialNumbers.map((sn) => {
+        return {
+          id: sn.id,
+          serial: sn.serial,
+          inspectionData: sn.inspectionData as InspectionData,
+          disposition: resolveDisposition(sn.inspectionData, definition),
+          updatedAt: sn.updatedAt,
+        };
+      }),
       childReports: report.childReports, // Already minimal selected above
       transitionLogs: report.transitionLogs,
-    };
+      // Omitted entirely when nothing was frozen (legacy reports, signer without a
+      // signature) so pre-existing snapshot shapes stay byte-identical.
+      ...(Object.keys(signatures).length > 0 ? { signatures } : {}),
+    } satisfies Snapshot;
 
     // 5. Create Revision Record
     await tx.inspectionReportRevision.create({
@@ -117,8 +158,7 @@ export class RevisionService {
         revisionReason: reason,
         revisedById: userId,
         revisedAt: new Date(), // Capture exact time of revision
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        snapshotJson: snapshotData as any, // Cast to Json (Prisma type)
+        snapshotJson: snapshotData as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -139,81 +179,96 @@ export class RevisionService {
     childReportId: string,
     reason: string,
     userId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<void> {
-    
     const childReport = await tx.childReport.findUnique({
       where: { id: childReportId },
       include: {
         serialNumbers: {
           include: {
-             serialNumber: true // Get the actual serial value
+            serialNumber: true, // Get the actual serial value
           },
-          orderBy: { serialNumber: { serial: 'asc' } } // Deterministic
-        },
-        attachments: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            filename: true,
-            url: true, // Only metadata/reference
-            createdAt: true,
-          }
+          orderBy: { serialNumber: { serial: 'asc' } }, // Deterministic
         },
         inspectionReport: {
-            select: {
-                id: true,
-                reportNumber: true,
-            }
-        }
-      }
+          select: {
+            id: true,
+            reportNumber: true,
+            templateKey: true,
+            templateVersion: true,
+          },
+        },
+      },
     });
 
     if (!childReport) {
-        throw new Error(`ChildReport ${childReportId} not found during snapshot creation.`);
+      throw new Error(
+        `ChildReport ${childReportId} not found during snapshot creation.`,
+      );
     }
+
+    // Resolve child-serial disposition through the shared resolver, keyed on the PARENT
+    // report's pinned template — the same declared source the parent snapshot uses.
+    const childTemplate = childReport.inspectionReport
+      ? await tx.template.findUnique({
+          where: {
+            tenantId_templateKey_templateVersion: {
+              tenantId,
+              templateKey: childReport.inspectionReport.templateKey,
+              templateVersion: childReport.inspectionReport.templateVersion,
+            },
+          },
+          select: { definitionJson: true },
+        })
+      : null;
+    const childDefinition =
+      (childTemplate?.definitionJson as {
+        disposition?: { source?: string[] };
+      } | null) ?? null;
 
     const currentRevision = childReport.revisionNumber || 0;
     const nextRevision = currentRevision + 1;
 
     const snapshotData = {
-        header: {
-            id: childReport.id,
-            reportNumber: childReport.reportNumber,
-            status: childReport.status,
-            createdAt: childReport.createdAt,
-            updatedAt: childReport.updatedAt,
-            parentReportId: childReport.inspectionReportId,
-            parentReportNumber: childReport.inspectionReport?.reportNumber,
-        },
-        serialNumbers: childReport.serialNumbers.map(s => ({
-            linkId: s.id, // Link table ID
-            serialId: s.serialNumberId,
-            serial: s.serialNumber.serial,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            disposition: (s.serialNumber.inspectionData as any)?.final?.disposition || (s.serialNumber.inspectionData as any)?.disposition || null,
-            // Child reports might have their own specific data in future, 
-            // currently they just link. Inclusion of serial value is key.
-        })),
-        attachments: childReport.attachments,
-    };
+      header: {
+        id: childReport.id,
+        reportNumber: childReport.reportNumber,
+        status: childReport.status,
+        createdAt: childReport.createdAt,
+        updatedAt: childReport.updatedAt,
+        parentReportId: childReport.inspectionReportId,
+        parentReportNumber: childReport.inspectionReport?.reportNumber,
+      },
+      serialNumbers: childReport.serialNumbers.map((s) => {
+        return {
+          linkId: s.id, // Link table ID
+          serialId: s.serialNumberId,
+          serial: s.serialNumber.serial,
+          disposition: resolveDisposition(
+            s.serialNumber.inspectionData,
+            childDefinition,
+          ),
+          // Child reports might have their own specific data in future,
+          // currently they just link. Inclusion of serial value is key.
+        };
+      }),
+    } satisfies ChildSnapshot;
 
     await tx.childReportRevision.create({
-        data: {
-            tenantId,
-            childReportId: childReportId,
-            revisionNumber: nextRevision,
-            revisionReason: reason,
-            revisedById: userId,
-            revisedAt: new Date(),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            snapshotJson: snapshotData as any,
-        },
+      data: {
+        tenantId,
+        childReportId: childReportId,
+        revisionNumber: nextRevision,
+        revisionReason: reason,
+        revisedById: userId,
+        revisedAt: new Date(),
+        snapshotJson: snapshotData as unknown as Prisma.InputJsonValue,
+      },
     });
 
     await tx.childReport.update({
-        where: { id: childReportId },
-        data: { revisionNumber: nextRevision },
+      where: { id: childReportId },
+      data: { revisionNumber: nextRevision },
     });
   }
 
@@ -223,17 +278,29 @@ export class RevisionService {
    * Call this INSIDE a transaction that performs the actual mutation.
    */
   async createMutationRevision(
-     tx: Prisma.TransactionClient,
-     entityType: 'InspectionReport' | 'ChildReport',
-     entityId: string,
-     reason: string,
-     userId: string,
-     tenantId: string
+    tx: Prisma.TransactionClient,
+    entityType: 'InspectionReport' | 'ChildReport',
+    entityId: string,
+    reason: string,
+    userId: string,
+    tenantId: string,
   ) {
-      if (entityType === 'InspectionReport') {
-          await this.createInspectionReportSnapshot(tx, entityId, reason, userId, tenantId);
-      } else {
-          await this.createChildReportSnapshot(tx, entityId, reason, userId, tenantId);
-      }
+    if (entityType === 'InspectionReport') {
+      await this.createInspectionReportSnapshot(
+        tx,
+        entityId,
+        reason,
+        userId,
+        tenantId,
+      );
+    } else {
+      await this.createChildReportSnapshot(
+        tx,
+        entityId,
+        reason,
+        userId,
+        tenantId,
+      );
+    }
   }
 }

@@ -7,6 +7,7 @@
   "targets": {
     "build": {
       "executor": "nx:run-commands",
+      "dependsOn": [],
       "options": {
         "command": "webpack-cli build",
         "args": ["--node-env=production"],
@@ -42,6 +43,23 @@
     "prune": {
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
       "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/api"],
+      "options": {
+        "jestConfig": "api/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "test-integration": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/api-integration"],
+      "options": {
+        "jestConfig": "api/jest.integration.config.ts",
+        "passWithNoTests": true,
+        "runInBand": true
+      }
     },
     "serve": {
       "continuous": true,

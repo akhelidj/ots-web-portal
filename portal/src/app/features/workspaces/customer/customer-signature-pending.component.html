@@ -1,0 +1,63 @@
+@if (pending().length > 0) {
+  <section
+    class="page-section mb-6 p-5 sm:p-6"
+    aria-labelledby="signature-pending-title"
+    data-testid="signature-pending"
+  >
+    <div class="flex items-baseline justify-between gap-4">
+      <h2 id="signature-pending-title" class="text-lg text-neutral-900">
+        Signature pending
+      </h2>
+      <span class="text-xs text-gray-500" data-testid="signature-pending-count">{{
+        pending().length
+      }}</span>
+    </div>
+    <p class="mt-1 text-sm text-gray-600">
+      These approved reports are waiting for your signature.
+    </p>
+
+    <ul class="mt-4 divide-y divide-border">
+      @for (report of pending(); track report.reportId) {
+        <li class="py-3" [attr.data-testid]="'signature-pending-' + report.reportId">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <a
+              [routerLink]="[report.reportId]"
+              class="code-text text-sm font-medium text-neutral-900 hover:underline"
+              >{{ report.reportNumber || report.reportId.substring(0, 8) }}</a
+            >
+            @if (report.poNumber) {
+              <span class="text-xs text-gray-500">PO {{ report.poNumber }}</span>
+            }
+          </div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            @for (field of report.fields; track field.key) {
+              <button
+                type="button"
+                class="btn btn-primary"
+                (click)="openSigning(report, field)"
+                [attr.data-testid]="'sign-' + report.reportId + '-' + field.key"
+              >
+                Sign: {{ field.label }}
+              </button>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  </section>
+}
+
+@if (target(); as t) {
+  <app-signature-dialog
+    [heading]="t.label"
+    [description]="
+      'Sign in the box below for report ' +
+      (t.reportNumber || t.reportId) +
+      '. This signature applies to this report only.'
+    "
+    saveLabel="Sign report"
+    [uploader]="t.uploader"
+    (saved)="onSigned()"
+    (cancelled)="closeSigning()"
+  />
+}

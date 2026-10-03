@@ -1,0 +1,226 @@
+<div
+  [class.fixed]="isFixed"
+  [class.bottom-0]="isFixed"
+  [class.left-0]="isFixed"
+  [class.right-0]="isFixed"
+  [class.z-[60]]="isFixed"
+  [class.bg-white]="isFixed"
+  [class.border-t]="isFixed"
+  [class.border-gray-200]="isFixed"
+  [class.shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.1)]]="isFixed"
+  class="w-full"
+>
+  <div class="px-4 py-3 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col w-full">
+    @if (isFixed) {
+      <div
+        class="flex justify-between items-center"
+        [ngClass]="{ 'border-b border-gray-100 pb-2 mb-3': expanded }"
+      >
+        <div
+          class="flex items-center gap-3 cursor-pointer"
+          (click)="toggleExpanded()"
+          (keyup.enter)="toggleExpanded()"
+          tabindex="0"
+        >
+          <button
+            class="text-gray-400 hover:text-gray-700 focus:outline-none transition-transform duration-300"
+            [ngClass]="{ 'rotate-180': !expanded }"
+          >
+            <svg
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+          <h2 class="text-base text-gray-900 select-none">
+            Workflow Status
+          </h2>
+        </div>
+
+        @if (showExport) {
+          <app-export-split-button
+            variant="bar"
+            [blocked]="!canExport"
+            [reason]="exportDisabledReason"
+            [isExporting]="isExporting"
+            [isOnline]="isOnline"
+            (exportRequested)="export.emit($event)"
+          />
+        }
+      </div>
+    }
+
+    <div
+      class="grid transition-[grid-template-rows] duration-300 ease-in-out"
+      [ngClass]="!isFixed || expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
+    >
+      <div class="overflow-hidden">
+        <div class="transition-all duration-300 flex flex-col pt-1">
+          <div class="flex flex-wrap items-center gap-2 py-2">
+            @if (report?.pendingTransitionToStatus) {
+              <div
+                class="p-3 bg-warning-light/20 text-warning-dark text-xs rounded-lg border border-warning/20 flex items-center gap-3 w-full"
+              >
+                <svg
+                  class="h-4 w-4 animate-pulse text-warning"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span
+                  >Transition to
+                  <span class="font-bold underline">{{
+                    report?.pendingTransitionToStatus
+                  }}</span>
+                  pending sync...</span
+                >
+              </div>
+            } @else {
+              @for (
+                transition of allowedTransitions;
+                track transition.toStatus
+              ) {
+                <button
+                  (click)="selectTransition.emit(transition)"
+                  class="btn btn-primary btn-sm px-4 py-2 transform active:scale-95"
+                  [disabled]="!transition.enabled"
+                  [title]="transition.disabledReason || ''"
+                >
+                  {{ transition.label || transition.toStatus }}
+                </button>
+              }
+
+              @if (canPublish) {
+                <button
+                  (click)="publish.emit()"
+                  class="btn btn-primary btn-sm px-4 py-2 transform active:scale-95"
+                  [disabled]="isPublishing"
+                >
+                  @if (isPublishing) {
+                    Publishing...
+                  } @else {
+                    Publish Report to Client
+                  }
+                </button>
+              }
+
+              @if (allowedTransitions.length === 0 && !canPublish) {
+                <p class="text-xs text-gray-400 italic">
+                  No actions available for this role at current status.
+                </p>
+              }
+            }
+          </div>
+
+          @if (selectedTransition) {
+            <div
+              class="mt-4 p-5 border border-primary/20 rounded-xl bg-primary/5 space-y-4"
+            >
+              <div class="flex items-center justify-between">
+                <p
+                  class="text-sm font-bold text-gray-900 uppercase tracking-widest"
+                >
+                  Confirm
+                  <span class="text-primary">{{
+                    selectedTransition.label || selectedTransition.toStatus
+                  }}</span>
+                </p>
+                <button
+                  (click)="cancelTransition.emit()"
+                  class="text-gray-400 hover:text-gray-600"
+                >
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="space-y-2">
+                <label
+                  for="transition-reason"
+                  class="text-[10px] font-bold text-gray-500 uppercase tracking-widest"
+                  >Notes / Reason
+                  {{ selectedTransition.requiresReason ? '*' : '' }}</label
+                >
+                <textarea
+                  id="transition-reason"
+                  [ngModel]="formReason"
+                  (ngModelChange)="formReasonChange.emit($event)"
+                  [placeholder]="
+                    selectedTransition.requiresReason
+                      ? 'Reason for transition (Required)'
+                      : 'Notes or remarks (Optional)'
+                  "
+                  class="field-control w-full p-3 text-sm min-h-[80px]"
+                ></textarea>
+              </div>
+
+              <div class="flex justify-end gap-3 pt-2">
+                <button
+                  (click)="confirmTransition.emit()"
+                  class="btn btn-primary"
+                  [disabled]="
+                    (selectedTransition.requiresReason && !formReason.trim()) ||
+                    (selectedTransition.toStatus === 'APPROVED' &&
+                      (!validationResult || !validationResult.isReady))
+                  "
+                >
+                  Confirm Action
+                </button>
+              </div>
+
+              @if (
+                selectedTransition.toStatus === 'APPROVED' &&
+                (!validationResult || !validationResult.isReady)
+              ) {
+                <p
+                  class="text-[10px] text-error font-bold uppercase tracking-wider flex items-center gap-1.5"
+                >
+                  <svg
+                    class="h-3 w-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Resolve all quality issues before approving.
+                </p>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

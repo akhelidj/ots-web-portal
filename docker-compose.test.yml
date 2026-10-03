@@ -1,0 +1,26 @@
+# Dedicated, DISPOSABLE Postgres for API integration tests ONLY.
+#
+# This is NOT the app's dev or prod database. Everything here is deliberately
+# namespaced "test" so it can never be confused with real data:
+#   - container:  ots_postgres_test
+#   - host port:  5433  (the app/dev DB uses 5432 — no collision, can run together)
+#   - database:   ots_test
+#   - volume:     ots_postgres_test_data
+#
+# Bring up:   docker compose -f docker-compose.test.yml up -d
+# Nuke it:    docker compose -f docker-compose.test.yml down -v
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: ots_postgres_test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ots_test
+    ports:
+      - '5433:5432'
+    volumes:
+      - ots_postgres_test_data:/var/lib/postgresql/data
+
+volumes:
+  ots_postgres_test_data:

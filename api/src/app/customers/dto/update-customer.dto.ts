@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsEmail, IsNumber, IsBoolean, IsNotEmpty, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  IsNumber,
+  IsBoolean,
+  IsNotEmpty,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateCustomerDto {
   @IsNumber()
@@ -35,6 +43,10 @@ export class UpdateCustomerDto {
   @IsString()
   @IsOptional()
   country?: string;
+
+  constructor(version: number) {
+    this.version = version;
+  }
 }
 
 export class UpdateCustomerActiveDto {
@@ -44,9 +56,14 @@ export class UpdateCustomerActiveDto {
   @IsNumber()
   version: number;
 
-  @ValidateIf(o => o.isActive === false)
+  @ValidateIf((o) => o.isActive === false)
   @IsNotEmpty({ message: 'reason is required when deactivating' })
   @IsString()
   @IsOptional()
   reason?: string;
+
+  constructor(isActive: boolean, version: number) {
+    this.isActive = isActive;
+    this.version = version;
+  }
 }

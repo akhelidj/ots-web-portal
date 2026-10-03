@@ -1,92 +1,312 @@
-<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:p-4 focus:bg-white focus:text-primary z-50">Skip to content</a>
+<a
+  href="#main-content"
+  class="sr-only focus:not-sr-only focus:absolute focus:p-4 focus:bg-white focus:text-primary z-50"
+  >Skip to content</a
+>
 
-<div class="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-800 transition-colors duration-300">
-  
+<div
+  class="flex flex-col overflow-hidden bg-background font-sans text-neutral-800 transition-colors duration-300 shell-layout"
+>
   <!-- Header App Bar -->
-  <header class="bg-primary text-white shadow-md z-50 sticky top-0">
+  <header
+    class="shell-header-sticky flex-shrink-0 bg-primary text-white shadow-md border-b border-primary-light/50"
+  >
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16 items-center">
         <!-- Logo / Title -->
-        <div class="flex-shrink-0 flex items-center gap-3">
-          <img src="/assets/ots-mark.png" alt="Oilfield Tubular Services" width="44" height="44" class="h-11 w-11 rounded bg-white/95 p-1 shadow-sm" loading="lazy" decoding="async">
-          <h1 class="text-xl font-semibold tracking-tight">Portal</h1>
-        </div>
+        <a
+          routerLink="/"
+          class="flex-shrink-0 flex items-center gap-3 hover:opacity-90 transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary rounded cursor-pointer"
+        >
+          <img
+            src="/assets/ots-mark.png"
+            alt="Oilfield Tubular Services"
+            width="44"
+            height="44"
+            class="h-11 w-11 rounded bg-white/95 p-1 shadow-sm"
+            loading="lazy"
+            decoding="async"
+          />
+          <h1
+            class="text-lg sm:text-xl text-white font-semibold tracking-[0.04em]"
+          >
+            Trackline
+          </h1>
+        </a>
 
-        <!-- Sync & Status Area -->
-        <div class="flex items-center gap-4 text-sm">
-          
-          <!-- Sync Indicator -->
-          <div class="hidden md:flex flex-col items-end text-xs text-gray-300">
+        <!-- Desktop Controls -->
+        <div class="hidden lg:flex items-center gap-4 text-sm">
+          <div class="flex flex-col items-end text-xs text-neutral-300">
             <div class="flex items-center gap-2">
               <span class="flex h-2 w-2 relative">
-                @if ((syncStatus$ | async) === 'Up to date') {
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-light opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
-                } @else if ((syncStatus$ | async) === 'Syncing...') {
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning-light opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
-                } @else if ((syncStatus$ | async) === 'Sync Error') {
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
+                @if (syncState() === 'online') {
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-light opacity-75"
+                  ></span>
+                  <span
+                    class="relative inline-flex rounded-full h-2 w-2 bg-success"
+                  ></span>
+                } @else if (syncState() === 'syncing') {
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning-light opacity-75"
+                  ></span>
+                  <span
+                    class="relative inline-flex rounded-full h-2 w-2 bg-warning"
+                  ></span>
+                } @else if (syncState() === 'sync-error') {
+                  <span
+                    class="relative inline-flex rounded-full h-2 w-2 bg-error"
+                  ></span>
                 } @else {
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-gray-400"></span>
+                  <span
+                    class="relative inline-flex rounded-full h-2 w-2 bg-neutral-400"
+                  ></span>
                 }
               </span>
-              <span class="font-medium tracking-wide font-mono" [title]="(syncStatus$ | async) === 'Sync Error' ? 'Local changes could not be synchronized' : ''">
-                {{ syncStatus$ | async }}
-                @if ((pendingCount$ | async) && (pendingCount$ | async)! > 0) {
-                  ({{ pendingCount$ | async }})
+              <span
+                class="font-medium tracking-wide"
+                [title]="
+                  syncState() === 'sync-error'
+                    ? lastSyncError() ||
+                      'Local changes could not be synchronized'
+                    : ''
+                "
+              >
+                {{ syncStatus() }}
+                @if (pendingCount() > 0) {
+                  ({{ pendingCount() }})
                 }
               </span>
-              @if ((syncStatus$ | async) === 'Sync Error') {
-                <button (click)="clearSyncErrors()" class="bg-error/20 hover:bg-error/90 hover:text-white text-error-light px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider transition-colors ml-2" title="Clear Sync Error">Clear</button>
+              @if (!isCustomer()) {
+                <button
+                  (click)="onSyncNow()"
+                  [disabled]="
+                    !isAuthenticated() ||
+                    !isOnline() ||
+                    syncState() === 'syncing'
+                  "
+                  class="ml-2 rounded border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Sync
+                </button>
               }
             </div>
-            @if (lastSyncedAt$ | async; as lastSynced) {
-               <span class="opacity-70 mt-0.5">Last synced: {{ formatLastSynced(lastSynced) }}</span>
+            @if (lastSyncedAt(); as lastSynced) {
+              <span class="opacity-70 mt-0.5"
+                >Last synced: {{ formatLastSynced(lastSynced) }}</span
+              >
             }
           </div>
 
-          <!-- User Profile -->
-          @if (profile$ | async; as profile) {
-            <div class="hidden sm:flex flex-col items-end ml-4 mr-2 text-xs">
-              @if (profile.role === 'CUSTOMER') {
-                <span class="font-semibold text-white tracking-wide">{{ profile.name || profile.email }}</span>
-                <span class="text-gray-300">{{ profile.customer?.name || 'Customer' }}</span>
-              } @else {
-                <span class="font-semibold text-white tracking-wide">{{ profile.name || profile.email }} <span class="text-gray-400 font-medium ml-0.5">({{ profile.role }})</span></span>
-                <span class="text-gray-300">{{ profile.tenant?.name || 'Internal' }}</span>
-              }
+          @if (profile(); as profile) {
+            <div class="flex flex-col items-end ml-4 mr-2 text-xs">
+              <span class="font-semibold text-white tracking-wide"
+                >{{ profile.name || profile.email }}
+                <span class="text-neutral-400 font-medium ml-0.5"
+                  >({{ profile.role }})</span
+                ></span
+              >
+              <span class="text-neutral-300">{{
+                profile.tenant?.name || profile.customer?.name || 'Internal'
+              }}</span>
             </div>
           }
 
-          <!-- Dev Mode & Auth -->
-          <div class="flex items-center gap-3 ml-2 pl-4 border-l border-gray-700">
-            
-            @if (isAuthenticated$ | async) {
-              <a routerLink="/change-password" class="text-sm font-medium text-gray-300 hover:text-white transition-colors mr-3">Settings</a>
-              <button (click)="onSignOut()" class="text-sm font-medium text-gray-300 hover:text-white transition-colors">Sign Out</button>
-            } @else if ((isOnline$ | async) === false) {
-              <span class="text-warning text-xs font-medium">Offline</span>
+          <div
+            class="flex items-center gap-3 ml-2 pl-4 border-l border-primary-light/60"
+          >
+            @if (isAuthenticated()) {
+              <!-- `!` important on the text colours: the global `a:not(.btn)` base rule
+                   (styles.scss) has selector specificity (0,1,1), which out-specifies a
+                   plain `text-neutral-300` utility (0,1,0) and would paint these links ink
+                   on the dark header. Sign Out below is a <button>, unmatched by that rule,
+                   so it needs no override. -->
+              <a
+                [routerLink]="['/', APP_ROUTES.HELP]"
+                class="text-sm font-medium !text-neutral-300 hover:!text-white transition-colors"
+                >Help</a
+              >
+              <a
+                [routerLink]="['/', APP_ROUTES.SETTINGS]"
+                class="text-sm font-medium !text-neutral-300 hover:!text-white transition-colors mr-3"
+                >Settings</a
+              >
+              <button
+                (click)="onSignOut()"
+                class="text-sm font-medium text-neutral-300 hover:text-white transition-colors"
+              >
+                Sign Out
+              </button>
             }
           </div>
+        </div>
+
+        <!-- Mobile/Tablet Controls -->
+        <div class="lg:hidden flex items-center gap-2">
+          <button
+            type="button"
+            (click)="toggleMobileMenu()"
+            class="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-white hover:bg-white/20 transition-colors"
+            [attr.aria-expanded]="mobileMenuOpen()"
+            aria-label="Open navigation menu"
+          >
+            <span
+              class="inline-flex h-2.5 w-2.5 rounded-full"
+              [ngClass]="{
+                'bg-success': syncState() === 'online',
+                'bg-warning': syncState() === 'syncing',
+                'bg-error': syncState() === 'sync-error',
+                'bg-neutral-300': syncState() === 'offline',
+              }"
+            ></span>
+            <span class="max-w-[130px] truncate">{{ getProfileLabel() }}</span>
+            <svg
+              class="h-4 w-4 transition-transform duration-200"
+              [class.rotate-90]="mobileMenuOpen()"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h16"
+              ></path>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
   </header>
 
+  <button
+    type="button"
+    class="fixed inset-0 z-30 lg:hidden transition-all duration-250"
+    [ngClass]="{
+      'bg-black/40': mobileMenuOpen(),
+      'bg-black/0': !mobileMenuOpen(),
+    }"
+    [class.backdrop-blur-sm]="mobileMenuOpen()"
+    [class.pointer-events-auto]="mobileMenuOpen()"
+    [class.pointer-events-none]="!mobileMenuOpen()"
+    (click)="closeMobileMenu()"
+    aria-label="Close navigation menu"
+    [attr.inert]="!mobileMenuOpen() ? '' : null"
+  ></button>
+  <div
+    class="fixed top-16 inset-x-0 z-40 w-screen max-w-full border-b border-neutral-200 bg-white shadow-lg lg:hidden overflow-x-hidden transition-all duration-300 ease-out origin-top"
+    [class.opacity-100]="mobileMenuOpen()"
+    [class.translate-y-0]="mobileMenuOpen()"
+    [class.scale-y-100]="mobileMenuOpen()"
+    [class.opacity-0]="!mobileMenuOpen()"
+    [class.-translate-y-1]="!mobileMenuOpen()"
+    [class.scale-y-95]="!mobileMenuOpen()"
+    [class.pointer-events-auto]="mobileMenuOpen()"
+    [class.pointer-events-none]="!mobileMenuOpen()"
+    [attr.inert]="!mobileMenuOpen() ? '' : null"
+  >
+    <div
+      class="max-w-7xl mx-auto w-full min-w-0 px-4 sm:px-6 py-4 space-y-4 overflow-x-hidden"
+    >
+      @if (profile(); as profile) {
+        <div
+          class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2"
+        >
+          <p class="text-sm font-semibold text-neutral-900 break-all">
+            {{ profile.name || profile.email }}
+          </p>
+          <p class="text-xs text-neutral-500 mt-0.5 break-words">
+            {{ profile.role }} -
+            {{ profile.tenant?.name || profile.customer?.name || 'Internal' }}
+          </p>
+        </div>
+      }
+
+      @if (isAuthenticated() && profile(); as profile) {
+        <div class="space-y-1">
+          @for (
+            item of navigation.buildNavigation(profile.role);
+            track item.label
+          ) {
+            <a
+              [routerLink]="item.route"
+              (click)="closeMobileMenu()"
+              routerLinkActive="bg-neutral-100 text-primary"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="block rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              {{ item.label }}
+            </a>
+          }
+        </div>
+      }
+
+      @if (!isCustomer()) {
+        <div
+          class="pt-2 border-t border-neutral-200 flex items-center justify-end"
+        >
+          <button
+            (click)="onSyncNow()"
+            [disabled]="
+              !isAuthenticated() || !isOnline() || syncState() === 'syncing'
+            "
+            class="btn btn-secondary btn-sm"
+          >
+            Sync Now
+          </button>
+        </div>
+      }
+
+      @if (isAuthenticated()) {
+        <div class="flex flex-col gap-2 pt-2">
+          <a
+            [routerLink]="['/', APP_ROUTES.HELP]"
+            (click)="closeMobileMenu()"
+            class="btn btn-secondary btn-sm w-full"
+            >Help</a
+          >
+          <a
+            [routerLink]="['/', APP_ROUTES.SETTINGS]"
+            (click)="closeMobileMenu()"
+            class="btn btn-secondary btn-sm w-full"
+            >Settings</a
+          >
+          <button (click)="onSignOut()" class="btn btn-secondary btn-sm w-full">
+            Sign Out
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
   <!-- Navigation -->
-  @if (isAuthenticated$ | async) {
-    @if (profile$ | async; as profile) {
-      <nav class="bg-white border-b border-gray-200 shadow-sm" aria-label="Main Navigation">
+  <!-- Shown for the roles whose navigation has more than one destination: ADMIN, and now
+       SUPERVISOR (approval workspace + templates). Single-destination roles reach their
+       workspace from the landing page and don't need a nav bar. -->
+  @if (
+    isAuthenticated() &&
+    (profile()?.role === 'ADMIN' || profile()?.role === 'SUPERVISOR')
+  ) {
+    @if (profile(); as profile) {
+      <nav
+        class="shell-admin-nav-sticky hidden lg:block flex-shrink-0 bg-white border-b border-neutral-200 shadow-sm"
+        aria-label="Main Navigation"
+      >
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ul class="flex space-x-1 overflow-x-auto py-1">
-            @for (item of navigation.buildNavigation(profile.role); track item.label) {
+          <ul class="flex space-x-1 py-1">
+            @for (
+              item of navigation.buildNavigation(profile.role);
+              track item.label
+            ) {
               <li>
-                <a [routerLink]="item.route" 
-                   routerLinkActive="bg-accent/10 text-accent font-semibold border-b-2 border-accent" 
-                   [routerLinkActiveOptions]="{exact: true}"
-                   class="inline-block px-4 py-3 rounded-t-md text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 transition-all whitespace-nowrap"
-                   ariaCurrentWhenActive="page">
+                <a
+                  [routerLink]="item.route"
+                  routerLinkActive="bg-neutral-100 text-primary font-semibold border-b-2 border-primary"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                  class="inline-block px-4 py-3 rounded-t-md text-sm font-medium text-neutral-600 hover:text-primary hover:bg-neutral-50 transition-all whitespace-nowrap"
+                  ariaCurrentWhenActive="page"
+                >
                   {{ item.label }}
                 </a>
               </li>
@@ -98,26 +318,63 @@
   }
 
   <!-- Main Content Area -->
-  <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-opacity duration-300">
-    <div id="main-content" tabindex="-1" class="outline-none h-full">
-      @if (isAuthenticated$ | async) {
+  <main
+    id="main-content"
+    class="min-h-0 flex-grow overflow-y-auto custom-scrollbar transition-opacity duration-300 shell-main-scroll"
+    [attr.inert]="signatureRequired() ? '' : null"
+  >
+    <div
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-20 outline-none"
+      tabindex="-1"
+    >
+      @if (isAuthenticated()) {
         <router-outlet></router-outlet>
       } @else {
-        <app-auth-required-placeholder></app-auth-required-placeholder>
+        <app-auth-required></app-auth-required>
       }
     </div>
   </main>
-
-  <!-- Footer -->
-  <footer class="bg-white border-t border-gray-200 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center text-sm text-gray-500">
-      <p>&copy; 2026 OTS Dashboard</p>
-      <div class="flex gap-4">
-        <span>Offline-First Architecture</span>
-        <span class="w-1.5 h-1.5 rounded-full bg-gray-300 self-center"></span>
-        <span>Minimal Variant</span>
-      </div>
-    </div>
-  </footer>
-
 </div>
+
+<!-- Signature gate: glass overlay (same treatment as the modal overlay) over everything
+     below the header, so Sign Out / the mobile menu stay reachable. -->
+@if (signatureRequired()) {
+  <div
+    class="fixed inset-x-0 bottom-0 top-16 z-20 flex items-center justify-center bg-primary/40 backdrop-blur-md px-4"
+  >
+    <section
+      role="alertdialog"
+      aria-labelledby="signature-gate-title"
+      aria-describedby="signature-gate-text"
+      class="w-full max-w-md rounded-xl border border-border bg-card p-6 text-center shadow-2xl"
+    >
+      <h2 id="signature-gate-title" class="text-lg text-foreground">
+        Signature required
+      </h2>
+      <p id="signature-gate-text" class="mt-2 text-sm text-muted-foreground">
+        Register your signature to start working on reports. It is saved once on
+        your account and applied automatically when you submit.
+      </p>
+      <button
+        type="button"
+        class="btn btn-accent mt-5 w-full"
+        (click)="openSignatureDialog()"
+        [disabled]="!isOnline()"
+      >
+        Register my signature
+      </button>
+      @if (!isOnline()) {
+        <p class="mt-3 text-xs text-error-dark">
+          Cannot reach the server. Reconnect to register your signature.
+        </p>
+      }
+    </section>
+  </div>
+}
+
+@if (signatureDialogOpen()) {
+  <app-signature-dialog
+    (saved)="closeSignatureDialog()"
+    (cancelled)="closeSignatureDialog()"
+  />
+}

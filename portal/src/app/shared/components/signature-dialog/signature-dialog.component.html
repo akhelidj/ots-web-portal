@@ -1,0 +1,72 @@
+<div class="dialog-overlay !z-[60]" aria-hidden="true"></div>
+<dialog
+  open
+  aria-labelledby="signature-dialog-title"
+  class="fixed inset-0 z-[70] overflow-y-auto w-full max-w-xl p-0 bg-card rounded-xl shadow-2xl m-auto border border-border"
+>
+  <div class="p-6 border-b border-border bg-muted">
+    <h3 id="signature-dialog-title" class="text-lg text-foreground">
+      {{ heading() }}
+    </h3>
+    <p class="text-sm text-muted-foreground mt-1">{{ description() }}</p>
+  </div>
+
+  <div class="p-6 space-y-4">
+    <div
+      class="relative w-full rounded-lg border border-dashed border-border bg-white"
+      style="aspect-ratio: 3 / 1"
+    >
+      <canvas
+        #canvas
+        class="absolute inset-0 w-full h-full touch-none cursor-crosshair"
+        aria-label="Signature drawing area"
+      ></canvas>
+      @if (isEmpty()) {
+        <span
+          class="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground"
+          >Sign here</span
+        >
+      }
+    </div>
+
+    @if (error()) {
+      <div role="alert" class="alert-error">{{ error() }}</div>
+    }
+
+    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="clear()"
+        [disabled]="isEmpty() || isSaving()"
+      >
+        Clear
+      </button>
+      <div class="flex items-center gap-3">
+        @if (dismissible()) {
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="cancelled.emit()"
+            [disabled]="isSaving()"
+          >
+            Cancel
+          </button>
+        }
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="save()"
+          [disabled]="isEmpty() || isSaving() || !connectivity.isOnline()"
+        >
+          {{ isSaving() ? 'Saving...' : saveLabel() }}
+        </button>
+      </div>
+    </div>
+    @if (!connectivity.isOnline()) {
+      <p class="text-xs text-error-dark">
+        You are offline. Reconnect to save your signature.
+      </p>
+    }
+  </div>
+</dialog>

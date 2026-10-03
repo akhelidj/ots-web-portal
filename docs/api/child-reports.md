@@ -1,58 +1,33 @@
 # Child Reports API
 
-The Child Reports API handles the creation and management of secondary inspection flows triggered when a Serial Number fails its initial pass (e.g., REWORK, SCRAP, HOLD).
+A child report is the follow-up report for serials flagged by the template's **rework rule** (`definition.rules`). The shipped (drill-pipe) rule generates `REWORK` child reports; the rule's `childType` may also be `SCRAP` or `HOLD` (the `ChildReportType` enum), and the export and customer views currently treat the `REWORK` child as the exportable one. Child reports are **not** created through a POST endpoint — they are derived. See [rework rules consumer](../architecture/rework-rules-consumer.md).
 
 ## Endpoints
 
-### `POST /api/child-reports`
+### `POST /inspection-reports/:id/child-reports/sync-rework`
 
-Creates a new Child Report.
+Reconciles the parent's REWORK child report with the serials that currently match the template's rework rule: creates it (`DRAFT`, number = parent number + suffix), adds newly matching serials blank, removes serials that no longer match, preserves data on those that still do, and deletes a still-`DRAFT` child that has no serials left. Tenant-scoped.
 
-**Idempotency & Concurrency:**
-The POST endpoint requires the client to supply an `id` (UUID). The server uses deterministic idempotency `findUnique({ where: { id, tenantId } })` resolving to `200 OK` (returning the existing record) if the `id` already exists. It creates the record if it does not.
-The server returns the created/existing entity with an initialized `version=1` so the client can begin tracking optimistic concurrency.
+### `GET /child-reports?inspectionReportId={id}`
 
-**Requirements & Governance:**
-- The parent `InspectionReport` must belong to the active tenant.
-- The `SerialNumber` must belong to the active tenant and be linked to the parent `InspectionReport`.
-- The parent `InspectionReport` must **not** be in `APPROVED` or `CLOSED` status.
-- The `SerialNumber`'s `inspectionData.disposition` must strictly match the invoked `type`. For example, a `REWORK` Child Report can only be created if the serial's disposition is `REWORK`. Cannot be `PASS`.
+Child reports of a parent (with their serials). `inspectionReportId` is required (`400`). **A CUSTOMER only receives child reports of their own customer's reports.**
 
-**Request Body:**
-```json
-{
-  "id": "uuid-generated-by-client",
-  "inspectionReportId": "uuid-of-parent",
-  "serialNumberId": "uuid-of-serial",
-  "type": "REWORK", // REWORK, SCRAP, or HOLD
-  "notes": "Optional notes string"
-}
-```
+### `GET /child-reports/:id`
 
----
+One child report (customer-scoped the same way; `404` otherwise).
 
-### `PATCH /api/child-reports/:id`
+### `PATCH /child-reports/:id`
 
-Updates an existing Child Report.
+`{ status?, notes?, version }` — optimistic concurrency (`409` on mismatch).
 
-**Idempotency & Concurrency:**
-Implements atomic optimistic concurrency. The `version` integer must be provided in the payload. The update queries with `{ id, tenantId, version }` and atomically increments the version. If the `version` fails to match, a `409 Conflict` is returned.
+### `PATCH /child-reports/:id/serial-numbers/:snId`
 
-**Requirements & Governance:**
-- The given `ChildReport` must belong to the active tenant.
-- The parent `InspectionReport` must **not** be in `APPROVED` or `CLOSED` status.
+`{ inspectionData?, disposition? }` — inspection data and disposition for one serial inside the child report. A child serial cannot be given disposition `REWORK`.
 
-**Request Body:**
-```json
-{
-  "status": "COMPLETED", // OPEN or COMPLETED
-  "notes": "Updated notes",
-  "version": 1 // Required integer for concurrency lock
-}
-```
+### Workflow
 
----
+`POST /child-reports/:id/transition` and `GET /child-reports/:id/transitions/available` — see [transitions](inspection-report-transitions.md).
 
-### `GET /api/child-reports?inspectionReportId={id}`
+### Approval
 
-Fetches all Child Reports for a specific parent `InspectionReport`. Fully tenant-scoped. Returns an array of Child Report objects.
+Child serials are submitted and reviewed through the parent's approval-batch endpoints with `childReportId` (see [Inspection Reports](inspection-reports-endpoints.md#7-approval-batches)). A child report moves to `PENDING_APPROVAL` automatically once all its serials are submitted, and to `APPROVED` once all are approved.

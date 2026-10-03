@@ -1,0 +1,63 @@
+<div class="max-w-7xl mx-auto py-4 sm:py-8">
+  <section
+    class="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 shadow-sm"
+  >
+    <div class="relative">
+      <div class="mb-4">
+        <a
+          routerLink=".."
+          class="inline-flex items-center gap-2 text-sm font-medium text-neutral-500 hover:text-neutral-900 transition-colors"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Back
+        </a>
+      </div>
+      <p class="text-xs uppercase tracking-[0.14em] text-neutral-500">
+        Help Center
+      </p>
+      <h1
+        class="mt-2 text-2xl sm:text-3xl tracking-tight text-neutral-900"
+      >
+        How to use Trackline
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm sm:text-base text-neutral-600">
+        This guide is tailored to your role. It lists exactly the capabilities
+        and workflows available in your current scope.
+      </p>
+
+      <div class="mt-6 flex flex-wrap gap-3">
+        <span
+          class="inline-flex items-center rounded-none bg-neutral-100 border border-neutral-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-neutral-700"
+        >
+          Role: {{ roleLabel() }}
+        </span>
+        <span
+          class="inline-flex items-center rounded-none bg-neutral-100 border border-neutral-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-neutral-700"
+        >
+          App Version: v{{ appVersion }}
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <div class="mt-12 flex flex-col gap-6">
+    @for (section of sections(); track section.id) {
+      <div class="block">
+        <ng-container
+          *ngComponentOutlet="section.component; inputs: { role: role() }"
+        ></ng-container>
+      </div>
+    }
+  </div>
+</div>

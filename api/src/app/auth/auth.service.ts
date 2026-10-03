@@ -1,10 +1,30 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { User } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
+
+/**
+ * The authenticated user returned by `validateUser` / consumed by `login`:
+ * the Prisma user row with the tenant/customer name includes, minus the
+ * password hash (stripped before it ever leaves the service).
+ */
+type ValidatedUser = Omit<
+  Prisma.UserGetPayload<{
+    include: {
+      tenant: { select: { name: true } };
+      customer: { select: { name: true } };
+      signature: { select: { id: true } };
+    };
+  }>,
+  'passwordHash'
+>;
 
 @Injectable()
 export class AuthService {
@@ -14,7 +34,10 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<any> {
+  async validateUser(
+    email: string,
+    pass: string,
+  ): Promise<ValidatedUser | null> {
     if (!email || !pass) {
       return null;
     }
@@ -24,37 +47,52 @@ export class AuthService {
       include: {
         tenant: { select: { name: true } },
         customer: { select: { name: true } },
-      }
+        // Only existence is exposed (as `hasSignature`); see `login`.
+        signature: { select: { id: true } },
+      },
     });
 
-    if (user && await bcrypt.compare(pass, user.passwordHash)) {
+    if (user && (await bcrypt.compare(pass, user.passwordHash))) {
       const { passwordHash, ...result } = user;
       return result;
     }
     return null;
   }
 
-  async login(user: any) {
-    if (user.role === 'CUSTOMER' && !user.customerId) {
-      throw new UnauthorizedException('Customer access denied: Invalid user entity binding.');
+  async login(user: ValidatedUser) {
+    if (user.role === UserRole.CUSTOMER && !user.customerId) {
+      throw new UnauthorizedException(
+        'Customer access denied: Invalid user entity binding.',
+      );
     }
 
-    const payload = { sub: user.id, email: user.email, tenantId: user.tenantId, role: user.role, customerId: user.customerId };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      tenantId: user.tenantId,
+      role: user.role,
+      customerId: user.customerId,
+    };
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = crypto.randomBytes(32).toString('hex');
-    
+
     await this.storeRefreshToken(user.id, refreshToken);
 
+    // Expose only whether a signature exists, never the row (storage key / hash).
+    const { signature, ...profile } = user;
     return {
       accessToken,
       refreshToken,
-      user
+      user: { ...profile, hasSignature: !!signature },
     };
   }
 
   async refreshTokens(refreshToken: string) {
-    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
+
     const tokenRecord = await this.prisma.refreshToken.findFirst({
       where: { tokenHash },
       include: { user: true },
@@ -71,32 +109,37 @@ export class AuthService {
 
     // Rotate token
     const newRefreshToken = crypto.randomBytes(32).toString('hex');
-    
+
     // Revoke old token
     await this.prisma.refreshToken.update({
       where: { id: tokenRecord.id },
-      data: { 
+      data: {
         revokedAt: new Date(),
-        replacedByTokenId: 'NEXT_ID_PLACEHOLDER' // Ideally we create first then update, but simplifying for T0.3
-      }
+        replacedByTokenId: 'NEXT_ID_PLACEHOLDER', // Ideally we create first then update, but simplifying for T0.3
+      },
     });
 
     // Create new token
     await this.storeRefreshToken(tokenRecord.userId, newRefreshToken);
-    
-    if (tokenRecord.user.role === 'CUSTOMER' && !tokenRecord.user.customerId) {
-      throw new UnauthorizedException('Customer access denied: Invalid user entity binding.');
+
+    if (
+      tokenRecord.user.role === UserRole.CUSTOMER &&
+      !tokenRecord.user.customerId
+    ) {
+      throw new UnauthorizedException(
+        'Customer access denied: Invalid user entity binding.',
+      );
     }
 
     // Issue new access token
-    const payload = { 
-      sub: tokenRecord.user.id, 
-      email: tokenRecord.user.email, 
-      tenantId: tokenRecord.user.tenantId, 
+    const payload = {
+      sub: tokenRecord.user.id,
+      email: tokenRecord.user.email,
+      tenantId: tokenRecord.user.tenantId,
       role: tokenRecord.user.role,
-      customerId: tokenRecord.user.customerId
+      customerId: tokenRecord.user.customerId,
     };
-    
+
     return {
       accessToken: this.jwtService.sign(payload),
       refreshToken: newRefreshToken,
@@ -104,9 +147,14 @@ export class AuthService {
   }
 
   async logout(refreshToken: string) {
-    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    const tokenRecord = await this.prisma.refreshToken.findFirst({ where: { tokenHash } });
-    
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
+    const tokenRecord = await this.prisma.refreshToken.findFirst({
+      where: { tokenHash },
+    });
+
     if (tokenRecord) {
       await this.prisma.refreshToken.update({
         where: { id: tokenRecord.id },
@@ -147,7 +195,8 @@ export class AuthService {
         mustChangePassword: true,
         tenant: { select: { name: true } },
         customer: { select: { name: true } },
-      }
+        signature: { select: { id: true } },
+      },
     });
 
     // Revoke all existing refresh tokens for this user
@@ -156,33 +205,39 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
 
-    if (updatedUser.role === 'CUSTOMER' && !updatedUser.customerId) {
-      throw new UnauthorizedException('Customer access denied: Invalid user entity binding.');
+    if (updatedUser.role === UserRole.CUSTOMER && !updatedUser.customerId) {
+      throw new UnauthorizedException(
+        'Customer access denied: Invalid user entity binding.',
+      );
     }
 
     // Issue new tokens transparently
-    const payload = { 
-      sub: updatedUser.id, 
-      email: updatedUser.email, 
-      tenantId: updatedUser.tenantId, 
+    const payload = {
+      sub: updatedUser.id,
+      email: updatedUser.email,
+      tenantId: updatedUser.tenantId,
       role: updatedUser.role,
-      customerId: updatedUser.customerId
+      customerId: updatedUser.customerId,
     };
-    
+
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = crypto.randomBytes(32).toString('hex');
     await this.storeRefreshToken(updatedUser.id, refreshToken);
 
+    const { signature, ...profile } = updatedUser;
     return {
       accessToken,
       refreshToken,
-      user: updatedUser
+      user: { ...profile, hasSignature: !!signature },
     };
   }
 
   private async storeRefreshToken(userId: string, token: string) {
     const hash = crypto.createHash('sha256').update(token).digest('hex');
-    const ttlDays = parseInt(this.configService.get('REFRESH_TOKEN_TTL_DAYS') || '7', 10);
+    const ttlDays = parseInt(
+      this.configService.get('REFRESH_TOKEN_TTL_DAYS') || '7',
+      10,
+    );
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + ttlDays);
 
