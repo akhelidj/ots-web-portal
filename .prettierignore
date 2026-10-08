@@ -23,3 +23,5 @@ package-lock.json
 
 # Prisma migrations are generated SQL — leave them byte-for-byte as emitted.
 api/prisma/migrations/
+
+.nx/self-healing

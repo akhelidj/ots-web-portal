@@ -69,3 +69,6 @@ Thumbs.db
 /graphify-out/manifest.json
 /graphify-out/.graphify_labels.json
 /graphify-out/cost.json
+
+.nx/polygraph
+.nx/self-healing
