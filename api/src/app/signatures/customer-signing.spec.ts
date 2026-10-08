@@ -1,7 +1,4 @@
-import {
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InspectionReportStatus, UserRole } from '@prisma/client';
 import { SignaturesService } from './signatures.service';
 import { PrismaService } from '../prisma/prisma.service';

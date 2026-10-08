@@ -33,8 +33,12 @@ export default [
           allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
           depConstraints: [
             {
-              sourceTag: '*',
-              onlyDependOnLibsWithTags: ['*'],
+              sourceTag: 'scope:api',
+              onlyDependOnLibsWithTags: ['scope:api'],
+            },
+            {
+              sourceTag: 'scope:portal',
+              onlyDependOnLibsWithTags: ['scope:portal'],
             },
           ],
         },

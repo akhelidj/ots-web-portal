@@ -1,0 +1,44 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      angular:
+        patterns:
+          [
+            '@angular/*',
+            '@angular-devkit/*',
+            'angular-eslint',
+            '@angular-eslint/*',
+            'jest-preset-angular',
+          ]
+      nx:
+        patterns: ['nx', '@nx/*']
+      nestjs:
+        patterns: ['@nestjs/*']
+      prisma:
+        patterns: ['prisma', '@prisma/*']
+      lint-and-format:
+        patterns:
+          [
+            'eslint',
+            'eslint-*',
+            '@eslint/*',
+            'typescript-eslint',
+            '@typescript-eslint/*',
+            'prettier',
+            '@commitlint/*',
+            'lint-staged',
+            'simple-git-hooks',
+          ]
+    ignore:
+      # Angular's builder pins TypeScript <6 until the next Angular release.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

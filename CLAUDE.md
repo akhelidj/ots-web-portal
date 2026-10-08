@@ -45,13 +45,15 @@ Flow: optimistic local write (IndexedDB) → **outbox** enqueue → **SyncOrches
 
 ## Testing / CI Reality
 
-- **Tests exist; CI does not.** Unit (`*.spec.ts`) and integration (`*.integration.spec.ts`) suites run via `npm run test` / `test:api` / `test:portal`; API integration tests need the test Postgres (`npm run test:db:up`, then `test:api:integration`, via `docker-compose.test.yml`). Coverage is partial — concentrated on the audited, high-risk paths (revision snapshots, export, workflow transitions, offline-sync).
-- **No CI.** There are no `.github/workflows`; nothing runs the suites automatically. With real production clients and no automated gate, **every change still needs manual verification** — be conservative, especially around sync, audited workflows, and migrations.
+- **Tests + CI exist.** Unit (`*.spec.ts`) and integration (`*.integration.spec.ts`) suites run via `npm run test` / `test:api` / `test:portal`; API integration tests need the test Postgres (`npm run test:db:up`, then `test:api:integration`, via `docker-compose.test.yml`). Coverage is partial — concentrated on the audited, high-risk paths (revision snapshots, export, workflow transitions, offline-sync).
+- **Gates.** `.github/workflows/ci.yml` runs format check, lint, typecheck (app **and** specs), unit tests, builds, and the API integration suite on every push/PR. Locally, `simple-git-hooks` runs prettier on staged files (pre-commit), conventional-commit linting (commit-msg) and affected typecheck/lint/tests (pre-push). `npm run typecheck` / `npm run lint` / `npm run format:check` mirror CI. Unit tests (swc) do not typecheck — use `typecheck`.
+- **Still be conservative** around sync, audited workflows and migrations: coverage is partial and CI cannot catch behavioural regressions in untested paths.
+- **Toolchain notes.** TypeScript is `5.9.x` on purpose: Angular 21's builder peers `<6.0`. The tsconfigs are already TS 6-ready (no `baseUrl`, no `node10` resolution). The portal's type-aware lint rules (`no-floating-promises` etc.) are warnings pending the front-end pass; in the API they are errors.
 
 ## Conventions & Tooling
 
 - **Use Context7** for version-accurate NestJS 11 / Angular 21 / Prisma docs when changing framework internals.
-- Match surrounding code style; read-then-write territory — verify manually given partial coverage and no CI.
+- Match surrounding code style; read-then-write territory — verify given partial coverage.
 
 ## Documentation
 
