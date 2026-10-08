@@ -1,5 +1,5 @@
 /**
- * Unit test — AllExceptionsFilter (the global exception filter in main.ts). Pins
+ * Unit test — AllExceptionsFilter (the global exception filter). Pins
  * the current flatten behavior of the exception-handling site. These assertions are
  * a documented baseline the filter must hold.
  *
@@ -15,24 +15,12 @@
  * pinned here as current fact and is deliberately not fixed here — a separate change
  * owns that fix.
  */
-jest.mock('@nestjs/core', () => ({
-  ...jest.requireActual('@nestjs/core'),
-  NestFactory: {
-    create: jest.fn().mockResolvedValue({
-      useGlobalFilters: jest.fn(),
-      useGlobalPipes: jest.fn(),
-      enableCors: jest.fn(),
-      listen: jest.fn().mockResolvedValue(undefined),
-    }),
-  },
-}));
-
 import {
   ArgumentsHost,
   HttpException,
   BadRequestException,
 } from '@nestjs/common';
-import { AllExceptionsFilter } from './main';
+import { AllExceptionsFilter } from './all-exceptions.filter';
 
 /** Build a mock ArgumentsHost whose HTTP response exposes chainable status/json spies. */
 function makeHost() {
@@ -121,5 +109,56 @@ describe('AllExceptionsFilter (global exception filter) [unit]', () => {
       statusCode: 500,
       message: 'Internal server error',
     });
+  });
+});
+
+// ---- Production hardening: no internals leak to clients ----
+function runIn(exception: unknown) {
+  const json = jest.fn();
+  const status = jest.fn().mockReturnValue({ json });
+  const host = {
+    switchToHttp: () => ({
+      getResponse: () => ({ status }),
+      getRequest: () => ({ method: 'GET', url: '/x' }),
+    }),
+  };
+  jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  new AllExceptionsFilter().catch(exception, host as never);
+  return { status: status.mock.calls[0][0], body: json.mock.calls[0][0] };
+}
+
+describe('AllExceptionsFilter — production hardening', () => {
+  const env = process.env.NODE_ENV;
+  afterEach(() => {
+    process.env.NODE_ENV = env;
+    jest.restoreAllMocks();
+  });
+
+  it('keeps HTTP exception messages in production, without a stack', () => {
+    process.env.NODE_ENV = 'production';
+    const { status, body } = runIn(new BadRequestException('bad input'));
+    expect(status).toBe(400);
+    expect(body.message).toBe('bad input');
+    expect(body.stack).toBeUndefined();
+  });
+
+  it('hides the message and stack of an unexpected fault in production', () => {
+    process.env.NODE_ENV = 'production';
+    const { status, body } = runIn(new Error('connect ECONNREFUSED db:5432'));
+    expect(status).toBe(500);
+    expect(body.message).toBe('Internal server error');
+    expect(body.stack).toBeUndefined();
+  });
+
+  it('keeps full detail outside production', () => {
+    process.env.NODE_ENV = 'development';
+    const { body } = runIn(new Error('boom'));
+    expect(body.message).toBe('boom');
+    expect(body.stack).toContain('boom');
+  });
+
+  it('is an HttpException-aware filter', () => {
+    expect(runIn(new HttpException('x', 418)).status).toBe(418);
   });
 });

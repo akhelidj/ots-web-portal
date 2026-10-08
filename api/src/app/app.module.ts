@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DefaultDenyGuard } from './common/guards/default-deny.guard';
@@ -31,6 +32,8 @@ import { MetricsModule } from './metrics/metrics.module';
       isGlobal: true,
       envFilePath: 'api/.env', // explicit path since monorepo root is CWD
     }),
+    // Generous global ceiling (the offline sync bursts); credential endpoints override it.
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 600 }]),
     StorageModule,
     PrismaModule,
     AuthModule,
@@ -50,6 +53,11 @@ import { MetricsModule } from './metrics/metrics.module';
   providers: [
     AppService,
     FilesService,
+    // Throttle first, so unauthenticated floods are rejected before any auth work.
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: DefaultDenyGuard,

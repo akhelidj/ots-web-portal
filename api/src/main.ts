@@ -3,16 +3,11 @@
  * This is only a minimal backend to get started.
  */
 
-import {
-  ValidationPipe,
-  ConsoleLogger,
-  LogLevel,
-  Catch,
-  ExceptionFilter,
-  ArgumentsHost,
-  HttpException,
-} from '@nestjs/common';
+import { ValidationPipe, ConsoleLogger, LogLevel } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
+import { AllExceptionsFilter } from './app/common/filters/all-exceptions.filter';
 import { AppModule } from './app/app.module';
 
 /**
@@ -40,47 +35,22 @@ function logLevels(): LogLevel[] | undefined {
   return raw ? (raw.split(',').map((l) => l.trim()) as LogLevel[]) : undefined;
 }
 
-@Catch()
-export class AllExceptionsFilter implements ExceptionFilter {
-  catch(exception: unknown, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse();
-
-    const status =
-      exception instanceof HttpException ? exception.getStatus() : 500;
-
-    // Expected client errors (401/403/404/409/400…) are one line, not a stack dump;
-    // only a genuine server fault (5xx) gets the full exception.
-    if (status < 500) {
-      const req = ctx.getRequest();
-      console.warn(
-        `[${status}] ${req?.method} ${req?.url} — ${
-          exception instanceof Error ? exception.message : 'error'
-        }`,
-      );
-    } else {
-      console.error('===== FATAL SERVER ERROR =====');
-      console.error(exception);
-    }
-
-    // NOTE: intentionally reads `.message`, NOT `.getResponse()` — the resulting
-    // flattening of structured HttpException bodies is a known gap documented in
-    // docs/KNOWN-ISSUES.md (#5), owned by a separate fix. Preserve it.
-    response.status(status).json({
-      statusCode: status,
-      message:
-        exception instanceof Error
-          ? exception.message
-          : 'Internal server error',
-      stack: exception instanceof Error ? exception.stack : undefined,
-    });
-  }
-}
-
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: new QuietLogger('', { logLevels: logLevels() }),
   });
+
+  // Behind a reverse proxy (Render, nginx, ...) set TRUST_PROXY=1 so rate limiting sees the
+  // real client IP instead of the proxy's.
+  if (process.env.TRUST_PROXY) {
+    app.set(
+      'trust proxy',
+      Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY,
+    );
+  }
+  // API-only: no HTML is served, so the strictest CSP is safe; cross-origin reads of files
+  // are governed by CORS below.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
