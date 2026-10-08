@@ -53,8 +53,7 @@
           "tsc -p api/tsconfig.app.json --noEmit",
           "tsc -p api/tsconfig.spec.json --noEmit"
         ],
-        "parallel": false,
-        "cwd": "{workspaceRoot}"
+        "parallel": false
       }
     },
     "test": {

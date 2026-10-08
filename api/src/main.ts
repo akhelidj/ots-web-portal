@@ -99,7 +99,11 @@ async function bootstrap() {
 
   await app.listen(port);
   // console, not the Nest logger: it must show whatever LOG_LEVELS is set to.
+  // eslint-disable-next-line no-console
   console.log(`🚀 Application is running on: http://localhost:${port}/`);
 }
 
-bootstrap();
+bootstrap().catch((err: unknown) => {
+  console.error('Fatal: failed to start the API', err);
+  process.exit(1);
+});

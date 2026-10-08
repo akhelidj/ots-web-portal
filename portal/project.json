@@ -69,9 +69,6 @@
       "defaultConfiguration": "development",
       "dependsOn": ["sync-version"]
     },
-    "lint": {
-      "executor": "@nx/eslint:lint"
-    },
     "typecheck": {
       "executor": "nx:run-commands",
       "cache": true,
@@ -81,8 +78,7 @@
           "tsc -p portal/tsconfig.app.json --noEmit",
           "tsc -p portal/tsconfig.spec.json --noEmit"
         ],
-        "parallel": false,
-        "cwd": "{workspaceRoot}"
+        "parallel": false
       }
     },
     "test": {

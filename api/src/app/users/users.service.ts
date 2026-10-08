@@ -104,6 +104,8 @@ ${data.role === UserRole.CUSTOMER ? '\\nNote: As a customer user, you will be pr
 Please log in to the portal to get started.
 =========================================
 `;
+    // Development stand-in for a real mailer (see the API hardening list: it logs the temp password).
+    // eslint-disable-next-line no-console
     console.log(sampleEmail);
 
     return {

@@ -115,7 +115,6 @@ describe('Region export — frozen structural baseline (engine, no DB)', () => {
       // FREEZE (run once on the un-edited engine). Captures the pre-change canon.
       mkdirSync(dirname(BASELINE_PATH), { recursive: true });
       writeFileSync(BASELINE_PATH, JSON.stringify(current, null, 2) + '\n');
-      // eslint-disable-next-line no-console
       console.warn(`[baseline] wrote frozen canon → ${BASELINE_PATH}`);
       return;
     }

@@ -55,6 +55,7 @@ import { ReworkRulesInterpreter } from '../child-reports/rework-rules.interprete
 // TS (zero Angular imports), so swc/jest transpiles it like any other .ts file. The
 // hardcoded DRILL_PIPE_V1_SCHEMA is NOT imported across the app boundary; the oracle is a
 // self-contained golden materialized locally below (GOLDEN_FORM_SCHEMA).
+// eslint-disable-next-line @nx/enforce-module-boundaries -- deliberate cross-app oracle (see above)
 import { definitionToFormSchema } from '../../../../portal/src/app/features/templates/schemas/definition-to-form-schema';
 import {
   seedTenant,

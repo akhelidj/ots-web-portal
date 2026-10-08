@@ -78,7 +78,6 @@ describe('Region builder output — frozen structural baseline', () => {
     if (!existsSync(BASELINE_PATH)) {
       mkdirSync(dirname(BASELINE_PATH), { recursive: true });
       writeFileSync(BASELINE_PATH, JSON.stringify(built, null, 2) + '\n');
-      // eslint-disable-next-line no-console
       console.warn(
         `[baseline] wrote frozen region builder output → ${BASELINE_PATH}`,
       );

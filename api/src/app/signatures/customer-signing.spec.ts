@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
