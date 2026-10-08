@@ -74,6 +74,7 @@ function setup(opts: { status?: InspectionReportStatus; alreadySigned?: number }
     },
     reportSignature: {
       findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
       count: jest.fn().mockResolvedValue(0),
     },
     user: { findMany: jest.fn().mockResolvedValue([]) },
@@ -231,6 +232,75 @@ describe('SignaturesService — customer signature fields', () => {
         ['custSig', 'CUSTOMER', false],
         ['supSig', 'SUPERVISOR', false],
       ]);
+      expect(states.inspector).toBeNull();
+    });
+
+    it('reports the inspector signature frozen at submission', async () => {
+      const { service, prisma } = setup();
+      prisma.reportSignature.findFirst.mockResolvedValue({
+        storageKey: 't1/u9/obj',
+        hash: 'h',
+        signedById: 'u9',
+        signedAt: new Date('2026-01-02T08:00:00Z'),
+      });
+      prisma.user.findMany.mockResolvedValue([
+        { id: 'u9', name: 'Inspector Nine', email: 'i@x.test' },
+      ]);
+      const states = await service.getFieldStates(customer, 'r1');
+      expect(states.inspector).toEqual({
+        signed: true,
+        signedAt: new Date('2026-01-02T08:00:00Z'),
+        signedByName: 'Inspector Nine',
+      });
+    });
+  });
+
+  describe('getSignatureImage', () => {
+    it('serves the inspector signature frozen on the report', async () => {
+      const { service, prisma, storage } = setup();
+      const png = makePng();
+      prisma.reportSignature.findFirst.mockResolvedValue({ storageKey: 'k-insp' });
+      storage.getSignature.mockResolvedValue(png);
+      await expect(service.getSignatureImage(customer, 'r1', 'inspector')).resolves.toBe(png);
+      expect(storage.getSignature).toHaveBeenCalledWith('k-insp');
+    });
+
+    it("serves a field's current-revision signature", async () => {
+      const { service, prisma, storage } = setup();
+      const png = makePng();
+      prisma.reportSignature.findMany.mockResolvedValue([
+        {
+          inspectionReportId: 'r1',
+          slot: 'field:custSig',
+          revisionNumber: 1,
+          storageKey: 'k-cust',
+          signedAt: new Date(),
+        },
+      ]);
+      storage.getSignature.mockResolvedValue(png);
+      await expect(service.getSignatureImage(customer, 'r1', 'custSig')).resolves.toBe(png);
+      expect(storage.getSignature).toHaveBeenCalledWith('k-cust');
+    });
+
+    it('404s when nothing is signed, and for an unknown key', async () => {
+      const { service } = setup();
+      await expect(service.getSignatureImage(customer, 'r1', 'custSig')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await expect(service.getSignatureImage(customer, 'r1', 'nope')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it("never resolves another customer's report", async () => {
+      const { service, prisma } = setup();
+      prisma.inspectionReport.findFirst.mockResolvedValue(null);
+      await expect(service.getSignatureImage(customer, 'r1', 'inspector')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(prisma.inspectionReport.findFirst.mock.calls[0][0].where).toMatchObject({
+        customerId: 'c1',
+      });
     });
   });
 });

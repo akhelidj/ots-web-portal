@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Req,
@@ -15,6 +16,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import 'multer';
 import { InspectionReportsService } from './inspection-reports.service';
+import { ReportDeletionService } from './report-deletion.service';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 import { CreateApprovalBatchDto } from './dto/create-approval-batch.dto';
 import { ApproveBatchDto } from './dto/approve-batch.dto';
@@ -36,7 +38,10 @@ export interface UploadedFileDto {
 @UseGuards(RolesGuard)
 @Controller('inspection-reports')
 export class InspectionReportsController {
-  constructor(private readonly reportsService: InspectionReportsService) {}
+  constructor(
+    private readonly reportsService: InspectionReportsService,
+    private readonly deletion: ReportDeletionService,
+  ) {}
 
   @Roles(
     UserRole.ADMIN,
@@ -58,13 +63,13 @@ export class InspectionReportsController {
   // The consumption picker's source. Declared BEFORE @Get(':id') so the literal path
   // is not captured as an :id param. ADMIN + RECEIVER are the report-creating roles;
   // RECEIVER has no other way to list templates (TemplateController is admin-only).
-  @Roles(UserRole.ADMIN, UserRole.RECEIVER)
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR)
   @Get('available-templates')
   async getAvailableTemplates(@Req() req: AuthenticatedRequest) {
     return this.reportsService.getAvailableTemplates(req.user.tenantId);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.RECEIVER)
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR)
   @Post()
   async createReport(
     @Req() req: AuthenticatedRequest,
@@ -114,6 +119,33 @@ export class InspectionReportsController {
     );
   }
 
+  /** ADMIN-only, read-only: what deleting this report would take with it. */
+  @Roles(UserRole.ADMIN)
+  @Get(':id/delete-impact')
+  async getDeleteImpact(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    return this.deletion.getDeleteImpact(req.user.tenantId, id);
+  }
+
+  /** ADMIN-only permanent delete of a report and everything under it. */
+  @Roles(UserRole.ADMIN)
+  @Delete(':id')
+  async deleteReport(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: { version?: number; reason?: string },
+  ) {
+    return this.deletion.deleteReport(
+      req.user.tenantId,
+      req.user.id,
+      id,
+      Number(body?.version),
+      body?.reason,
+    );
+  }
+
   @Roles(
     UserRole.ADMIN,
     UserRole.RECEIVER,
@@ -130,10 +162,15 @@ export class InspectionReportsController {
     if (!file) {
       throw new BadRequestException('File is required');
     }
-    return this.reportsService.addAttachment(req.user.tenantId, id, file);
+    return this.reportsService.addAttachment(
+      req.user.tenantId,
+      id,
+      file,
+      req.user.sub || req.user.id,
+    );
   }
 
-  @Roles(UserRole.ADMIN, UserRole.INSPECTOR)
+  @Roles(UserRole.ADMIN, UserRole.INSPECTOR, UserRole.SUPERVISOR)
   @Post(':id/approval-batches')
   async createApprovalBatch(
     @Req() req: AuthenticatedRequest,

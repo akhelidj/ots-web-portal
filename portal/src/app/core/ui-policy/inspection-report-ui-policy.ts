@@ -46,6 +46,9 @@ export interface InspectionReportUiState {
 export function getInspectionReportUiState(
   ctx: UiPolicyContext,
 ): InspectionReportUiState {
+  // SUPERVISOR has the same powers as ADMIN on a report.
+  const isAdminLike =
+    ctx.role === APP_ROLES.ADMIN || ctx.role === APP_ROLES.SUPERVISOR;
   const state: InspectionReportUiState = {
     actions: {},
     fieldModes: {
@@ -87,7 +90,7 @@ export function getInspectionReportUiState(
       type: 'info',
       message:
         'Locked — Approved (exportable).' +
-        (ctx.role === APP_ROLES.ADMIN ? ' Admin edits create a Revision.' : ''),
+        (isAdminLike ? ' Admin edits create a Revision.' : ''),
     });
   }
   if (ctx.reportStatus === REPORT_STATUSES.CLOSED) {
@@ -121,7 +124,7 @@ export function getInspectionReportUiState(
   // Apply Role + Status constraints
   if (ctx.syncState !== 'CONFLICT') {
     if (ctx.reportStatus === REPORT_STATUSES.DRAFT) {
-      if (ctx.role === APP_ROLES.RECEIVER || ctx.role === APP_ROLES.ADMIN) {
+      if (ctx.role === APP_ROLES.RECEIVER || isAdminLike) {
         state.fieldModes['customerId'] = 'editable';
         state.fieldModes['poNumber'] = 'editable';
         state.fieldModes['serialNumbers'] = 'editable';
@@ -133,19 +136,19 @@ export function getInspectionReportUiState(
       ctx.reportStatus === REPORT_STATUSES.RECEIVED ||
       ctx.reportStatus === REPORT_STATUSES.READY_FOR_CLEANING
     ) {
-      if (ctx.role === APP_ROLES.RECEIVER || ctx.role === APP_ROLES.ADMIN) {
+      if (ctx.role === APP_ROLES.RECEIVER || isAdminLike) {
         state.fieldModes['serialNumbers'] = 'editable';
         state.actions['IR_ADD_SERIAL'] = { visible: true, enabled: true };
         state.actions['IR_EDIT_SERIAL'] = { visible: true, enabled: true };
         state.actions['IR_REMOVE_SERIAL'] = { visible: true, enabled: true };
       }
     } else if (ctx.reportStatus === REPORT_STATUSES.READY_FOR_INSPECTION) {
-      if (ctx.role === APP_ROLES.ADMIN) {
+      if (isAdminLike) {
         state.fieldModes['serialNumbers'] = 'editable';
         state.actions['IR_EDIT_SERIAL'] = { visible: true, enabled: true };
       }
     } else if (ctx.reportStatus === REPORT_STATUSES.IN_INSPECTION) {
-      if (ctx.role === APP_ROLES.INSPECTOR || ctx.role === APP_ROLES.ADMIN) {
+      if (ctx.role === APP_ROLES.INSPECTOR || isAdminLike) {
         state.fieldModes['inspectionData'] = 'editable';
         state.fieldModes['disposition'] = 'editable';
         state.actions['IR_EDIT_META'] = { visible: true, enabled: true };
@@ -168,7 +171,7 @@ export function getInspectionReportUiState(
         }
       }
     } else if (ctx.reportStatus === REPORT_STATUSES.APPROVED) {
-      if (ctx.role === APP_ROLES.ADMIN) {
+      if (isAdminLike) {
         state.actions['ADMIN_EDIT_ANYTIME'] = {
           visible: true,
           enabled: true,
@@ -206,7 +209,7 @@ export function getInspectionReportUiState(
   // Transition logic
   if (ctx.syncState !== 'CONFLICT') {
     if (ctx.reportStatus === REPORT_STATUSES.DRAFT) {
-      if ([APP_ROLES.RECEIVER, APP_ROLES.ADMIN].some((r) => r === ctx.role)) {
+      if ([APP_ROLES.RECEIVER, APP_ROLES.ADMIN, APP_ROLES.SUPERVISOR].some((r) => r === ctx.role)) {
         state.transitionChoices.push({
           toStatus: REPORT_STATUSES.RECEIVED,
           label: 'Receive',
@@ -251,7 +254,7 @@ export function getInspectionReportUiState(
           enabled: true,
         });
       }
-      if ([APP_ROLES.ADMIN].some((r) => r === ctx.role)) {
+      if (isAdminLike) {
         state.transitionChoices.push({
           toStatus: REPORT_STATUSES.CLOSED,
           label: 'Close',
@@ -280,7 +283,7 @@ export function getInspectionReportUiState(
           enabled: true,
         });
       }
-      if ([APP_ROLES.ADMIN].some((r) => r === ctx.role)) {
+      if (isAdminLike) {
         state.transitionChoices.push({
           toStatus: REPORT_STATUSES.CLOSED,
           label: 'Close',
@@ -309,7 +312,7 @@ export function getInspectionReportUiState(
           enabled: true,
         });
       }
-      if ([APP_ROLES.ADMIN].some((r) => r === ctx.role)) {
+      if (isAdminLike) {
         state.transitionChoices.push({
           toStatus: REPORT_STATUSES.CLOSED,
           label: 'Close',
@@ -331,7 +334,7 @@ export function getInspectionReportUiState(
           enabled: true,
         });
       }
-      if ([APP_ROLES.ADMIN].some((r) => r === ctx.role)) {
+      if (isAdminLike) {
         state.transitionChoices.push({
           toStatus: REPORT_STATUSES.CLOSED,
           label: 'Close',
@@ -364,7 +367,7 @@ export function getInspectionReportUiState(
           enabled: true,
         });
       }
-      if ([APP_ROLES.ADMIN].some((r) => r === ctx.role)) {
+      if (isAdminLike) {
         state.transitionChoices.push({
           toStatus: REPORT_STATUSES.CLOSED,
           label: 'Close',
@@ -387,7 +390,7 @@ export function getInspectionReportUiState(
           enabled: true,
         });
       }
-      if ([APP_ROLES.ADMIN].some((r) => r === ctx.role)) {
+      if (isAdminLike) {
         state.transitionChoices.push({
           toStatus: REPORT_STATUSES.IN_INSPECTION,
           label: 'Reopen (Revision)',
@@ -411,7 +414,7 @@ export function getInspectionReportUiState(
         });
       }
     } else if (ctx.reportStatus === REPORT_STATUSES.CLOSED) {
-      if ([APP_ROLES.ADMIN].some((r) => r === ctx.role)) {
+      if (isAdminLike) {
         state.transitionChoices.push({
           toStatus: REPORT_STATUSES.APPROVED,
           label: 'Reopen (Approved)',

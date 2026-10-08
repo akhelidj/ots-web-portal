@@ -2,6 +2,8 @@ import {
   BadRequestException,
   Controller,
   Get,
+  Header,
+  StreamableFile,
   Param,
   Put,
   Req,
@@ -46,6 +48,27 @@ export class ReportSignaturesController {
   @Get('inspection-reports/:id/signatures')
   getStates(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.signatures.getFieldStates(req.user, id);
+  }
+
+  /** One signature image (`inspector` or a field key) — same visibility as the state read. */
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.RECEIVER,
+    UserRole.SUPERVISOR,
+    UserRole.INSPECTOR,
+    UserRole.CUSTOMER,
+  )
+  @Get('inspection-reports/:id/signatures/:key/image')
+  @Header('Content-Type', 'image/png')
+  @Header('Cache-Control', 'private, max-age=300')
+  async getImage(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Param('key') key: string,
+  ) {
+    return new StreamableFile(
+      await this.signatures.getSignatureImage(req.user, id, key),
+    );
   }
 
   @Roles(UserRole.CUSTOMER)

@@ -27,6 +27,7 @@ Templates can declare header-only `signature` fields whose signer is `CUSTOMER` 
 
 - `GET /inspection-reports/:id/signatures` (all roles; CUSTOMER only for their own customer's reports) →
   `{ reportId, revisionNumber, signable, fields: [{ key, label, signer, required, signed, signedAt, signedByName }] }`. `signable` is true when the report is `APPROVED` or `CLOSED`.
+- `GET /inspection-reports/:id/signatures/:key/image` (all roles; CUSTOMER only for their own customer's reports) → the signature PNG. `:key` is a template signature field key (the current revision's signature) or the fixed key `inspector` (the signature frozen at submission). `404` when nothing is signed for that key. The states response also carries an `inspector` object (`{ signed, signedAt, signedByName }`, or `null`) so a client knows whether `inspector` has an image.
 - `PUT /inspection-reports/:id/signatures/:fieldKey` — **CUSTOMER only**, multipart `file`; only while `signable`, only for a field whose signer is `CUSTOMER`.
 - `GET /customer-signatures/pending` — **CUSTOMER only**: their reports still waiting on a customer signature (drives the "Signature pending" panel).
 

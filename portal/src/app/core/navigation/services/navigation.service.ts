@@ -37,6 +37,11 @@ export class NavigationService {
             route: ['/', AppRoutes.ADMIN, 'templates'],
             exact: false,
           },
+          {
+            label: 'Metrics',
+            route: ['/', AppRoutes.ADMIN, 'metrics'],
+            exact: false,
+          },
         ];
       case APP_ROLES.RECEIVER:
         return [

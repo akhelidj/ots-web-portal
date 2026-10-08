@@ -209,17 +209,32 @@ export class TemplateController {
     );
   }
 
-  // Admin/Supervisor (class guards): undo a mistaken upload. The service refuses any
-  // template that has already been defined.
+  // ADMIN-ONLY: what deleting this version would take with it (reports, serials,
+  // attachments, ...), for the confirmation dialog. Read-only.
+  @Get(':id/delete-impact')
+  @Roles(UserRole.ADMIN)
+  async getDeleteImpact(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    return this.templateService.getDeleteImpact(req.user.tenantId, id);
+  }
+
+  // Admin/Supervisor (class guards). A SUPERVISOR can only undo a mistaken upload — the
+  // service refuses any template that has been defined or referenced. An ADMIN deletes
+  // any version and everything bound to it (reports and their files); a reason is
+  // required whenever that removes data, and lands in the audit log.
   @Delete(':id')
   async deleteTemplate(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
+    @Body() body?: { reason?: string },
   ) {
     return this.templateService.deleteTemplate(
       req.user.tenantId,
       id,
       req.user.userId,
+      { role: req.user.role, reason: body?.reason },
     );
   }
 

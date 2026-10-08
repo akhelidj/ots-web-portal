@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -91,16 +91,235 @@
   /* Type — one typeface app-wide: Manrope. All three slots resolve to it (the
      heading/condensed distinction is retired; call sites keep their names but
      render identically). Vars agree with the Tailwind font families in tailwind.config.js. */
-  --font-sans: 'Manrope', 'Source Sans 3', sans-serif;
-  --font-heading: 'Manrope', 'Source Sans 3', sans-serif;
-  --font-condensed: 'Manrope', 'Source Sans 3', sans-serif;
+  --font-sans: 'Geist', 'Source Sans 3', sans-serif;
+  --font-heading: 'Geist', 'Source Sans 3', sans-serif;
+  --font-condensed: 'Geist', 'Source Sans 3', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+}
+
+/*
+ * Customer themes. Set on <html data-theme="light|dark"> by ThemeService, and ONLY for the
+ * CUSTOMER role — ops roles never carry the attribute, so their palette is untouched.
+ * Both themes use the brand blue (#0f2741) and the brand orange; every utility that reads a
+ * token (bg-background, text-primary/60, border-border, …) re-themes without markup changes.
+ */
+html[data-theme='light'] {
+  color-scheme: light;
+  --primary: #0f2741;
+  --primary-hover: #1b3a5c;
+  --primary-rgb: 15 39 65;
+  --color-primary: 15 39 65;
+  --on-primary: #ffffff;
+  --foreground: #0f2741;
+  --background: #f7f9fb;
+  --background-rgb: 247 249 251;
+  --card: #ffffff;
+  --card-foreground: #0f2741;
+  --muted: #eaeff4;
+  --muted-foreground: #55657a;
+  --light-slate: #627184;
+  --border: rgba(15, 39, 65, 0.16);
+  --on-accent: #0f2741;
+  --shadow-card: 0 1px 3px rgba(15, 39, 65, 0.08), 0 1px 2px rgba(15, 39, 65, 0.06);
+  --accent-text: #a85319;
+  --tl-surface: #ffffff;
+  --tl-line: rgba(15, 39, 65, 0.16);
+  --tl-ghost: rgba(15, 39, 65, 0.09);
+  --nav-bg: #0f2741;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --primary: #f7f9fb;
+  --primary-hover: #ffffff;
+  --primary-rgb: 247 249 251;
+  --color-primary: 247 249 251;
+  --on-primary: #0f2741;
+  --foreground: #f7f9fb;
+  --background: #0a1a2e;
+  --background-rgb: 10 26 46;
+  --card: #0f2741;
+  --card-foreground: #f7f9fb;
+  --muted: #0d2138;
+  --muted-foreground: #aebbcc;
+  --light-slate: #94a3b8;
+  --border: rgba(255, 255, 255, 0.16);
+  --on-accent: #0f2741;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --success: 112 190 140;
+  --success-light: 24 58 42;
+  --success-dark: 158 222 178;
+  --warning: 226 172 80;
+  --warning-light: 62 46 16;
+  --warning-dark: 236 190 112;
+  --error: 226 120 102;
+  --error-light: 72 32 28;
+  --error-dark: 244 168 154;
+  --accent-text: #ff9b4c;
+  --tl-surface: #0f2741;
+  --tl-line: rgba(255, 255, 255, 0.16);
+  --tl-ghost: rgba(255, 255, 255, 0.09);
+  --nav-bg: #08182b;
+}
+
+/* Dark theme: shared components still carry a few hard-coded neutral utilities. Remap them to
+   the token layer (customer-only: ops never has data-theme). */
+html[data-theme='dark'] {
+  /* The whole gray AND neutral scales are remapped (not just the shades seen so far) so a new
+     template using any shade cannot render light-on-light / dark-on-dark in dark mode. */
+  .text-neutral-900,
+  .text-neutral-800,
+  .text-neutral-700,
+  .text-gray-900,
+  .text-gray-800,
+  .text-gray-700,
+  .hover\:text-gray-700:hover,
+  .hover\:text-neutral-900:hover {
+    color: var(--foreground);
+  }
+  .text-neutral-600,
+  .text-neutral-500,
+  .text-neutral-400,
+  .text-neutral-300,
+  .text-gray-600,
+  .text-gray-500,
+  .text-gray-400,
+  .text-gray-300,
+  .hover\:text-gray-600:hover,
+  .hover\:text-gray-500:hover,
+  .placeholder-gray-500::placeholder {
+    color: var(--muted-foreground);
+  }
+  .bg-white {
+    background-color: var(--card);
+  }
+  .bg-neutral-50,
+  .bg-neutral-100,
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-gray-50\/50,
+  .bg-gray-50\/90,
+  .bg-gray-100\/80,
+  .bg-neutral-50\/50,
+  .hover\:bg-neutral-50:hover,
+  .hover\:bg-neutral-100:hover,
+  .hover\:bg-gray-50:hover {
+    background-color: var(--muted);
+  }
+  /* Keep brand hover tints winning over the surface remap above (same specificity, later wins). */
+  .hover\:bg-primary\/5:hover {
+    background-color: rgb(var(--primary-rgb) / 0.1);
+  }
+  .bg-neutral-200,
+  .hover\:bg-gray-200:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+  .border-neutral-200,
+  .border-neutral-300,
+  .border-neutral-100,
+  .border-gray-100,
+  .border-gray-200,
+  .border-gray-300,
+  .border-gray-200\/50,
+  .hover\:border-gray-300:hover {
+    border-color: var(--border);
+  }
+  .divide-neutral-200 > :not([hidden]) ~ :not([hidden]),
+  .divide-neutral-100 > :not([hidden]) ~ :not([hidden]),
+  .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+  .divide-gray-50 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border);
+  }
+}
+
+html[data-theme] body {
+  background: var(--background);
+  color: var(--foreground);
+}
+/*
+ * Accent scoping. ThemeService writes the page accent (--accent…) and a nav-bar accent
+ * (--nav-accent…) on <html> (brand-palette.ts): the nav bar is always a dark surface, so
+ * inside it the accent switches to the nav variant. Dropdowns opened from the header sit on
+ * page surfaces and switch back via the --page-* copies (resolved here, at <html>).
+ */
+html[data-theme] {
+  --page-accent: var(--accent);
+  --page-accent-hover: var(--accent-hover);
+  --page-on-accent: var(--on-accent);
+}
+html[data-theme] .shell-header-sticky {
+  --accent: var(--nav-accent, #ffffff);
+  --accent-hover: var(--nav-accent-hover, #dfe7f0);
+  --on-accent: var(--nav-on-accent, #0f2741);
+}
+html[data-theme] .shell-header-sticky .hdr-menu {
+  --accent: var(--page-accent);
+  --accent-hover: var(--page-accent-hover);
+  --on-accent: var(--page-on-accent);
+}
+html[data-theme] .shell-header-sticky {
+  background: var(--nav-bg);
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: none;
+}
+html[data-theme] .shell-header-sticky h1 {
+  color: #ffffff; /* headings otherwise take the ink token, invisible on the navy bar in light mode */
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+html[data-theme] .btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+html[data-theme] .btn-primary:hover {
+  background: var(--accent-hover);
+}
+html[data-theme='dark'] .btn-secondary {
+  background: transparent;
+  color: var(--foreground);
+  border-color: var(--border);
+}
+html[data-theme] .shell-mobile-menu {
+  background: var(--card);
+  border-color: var(--border);
+}
+html[data-theme] .shell-mobile-menu :where(a, p, span):not(.btn) {
+  color: var(--foreground);
+}
+html[data-theme] a:not(.btn) {
+  color: var(--primary);
+}
+html[data-theme] h1,
+html[data-theme] h2,
+html[data-theme] h3,
+html[data-theme] h4 {
+  color: var(--foreground);
 }
 
 /* Reduced-motion: neutralize all animation/transition app-wide. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  .cx-reveal,
+  .cx-reveal:not(.is-in) .cx-stagger > * {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  /* Customers keep hover / focus transitions (colour, underline and fill sweeps are not
+     motion sickness triggers); entrance animations and smooth scrolling are still removed.
+     Every other role keeps the blanket neutralisation. */
+  html[data-theme] *,
+  html[data-theme] *::before,
+  html[data-theme] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  html:not([data-theme]) *,
+  html:not([data-theme]) *::before,
+  html:not([data-theme]) *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
@@ -558,27 +777,6 @@
     transition: transform var(--duration-fast) var(--ease-standard);
   }
 
-  /* Shared SN drawer, customer entrance only. Applied via
-     [class.*]="isCustomer()", so the ops path never carries these
-     classes and keeps its current instant appear. @starting-style
-     gives the pre-insertion state, so the panel slides + the backdrop
-     fades in on open at the medium duration; close stays instant
-     (Angular removes the node). Reduced-motion collapses the settle. */
-  .cust-drawer-panel {
-    transition:
-      transform var(--duration-medium) var(--ease-decelerate),
-      opacity var(--duration-medium) var(--ease-decelerate);
-    @starting-style {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-  }
-  .cust-drawer-backdrop {
-    transition: opacity var(--duration-medium) var(--ease-standard);
-    @starting-style {
-      opacity: 0;
-    }
-  }
 
   /* Fade-before-reflow — the marketing site's signature rule. When the
      customer report list changes while its container resizes (a
@@ -602,6 +800,1733 @@
       transform var(--duration-fast) var(--ease-decelerate);
   }
 
+  /* ============================================================
+     Customer experience ("cx") — the TrackLine language at app scale.
+     Full-bleed themed surface, oversized tight headings, mono labels,
+     1px seams with registration marks, scroll reveals. Used only by the
+     customer screens; every colour comes from the theme tokens.
+     ============================================================ */
+  .cx-page {
+    --cx-gutter: clamp(1.25rem, 4.5vw, 4rem);
+    position: relative;
+    margin-inline: calc(50% - 50vw);
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  .cx-wrap {
+    width: min(100% - 2 * var(--cx-gutter, 1.25rem), 80rem);
+    margin-inline: auto;
+  }
+  .cx-section {
+    position: relative;
+    padding-block: clamp(4.5rem, 9vw, 8rem);
+    border-top: 1px solid var(--border);
+  }
+  .cx-section--alt {
+    background-color: var(--muted);
+  }
+  .cx-section::before,
+  .cx-section::after {
+    position: absolute;
+    top: 1.4rem;
+    z-index: 2;
+    width: 13px;
+    height: 13px;
+    color: rgb(var(--primary-rgb) / 0.4);
+    background:
+      linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat,
+      linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat;
+    pointer-events: none;
+    content: '';
+  }
+  .cx-section::before {
+    left: calc(var(--cx-gutter, 1.25rem) - 6px);
+  }
+  .cx-section::after {
+    right: calc(var(--cx-gutter, 1.25rem) - 6px);
+  }
+  .cx-head {
+    max-width: 48rem;
+    margin-bottom: clamp(2rem, 4.5vw, 3.6rem);
+  }
+  .cx-eyebrow {
+    margin: 0 0 1.1rem;
+    color: rgb(var(--primary-rgb) / 0.66);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .cx-eyebrow b {
+    margin-right: 0.9rem;
+    color: var(--accent-text, var(--accent-hover));
+    font-weight: 500;
+  }
+  .cx-h2 {
+    margin: 0;
+    color: var(--foreground);
+    font-size: clamp(2.4rem, 5vw, 4.4rem);
+    font-weight: 500;
+    line-height: 0.95;
+    letter-spacing: -0.055em;
+  }
+  .cx-title {
+    margin: 0;
+    color: var(--foreground);
+    font-size: clamp(2.6rem, 8.2vw, 7rem);
+    font-weight: 500;
+    line-height: 0.92;
+    letter-spacing: -0.06em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .cx-lede {
+    max-width: 34rem;
+    margin: 1.4rem 0 0;
+    color: rgb(var(--primary-rgb) / 0.72);
+    font-size: 1.02rem;
+    line-height: 1.6;
+  }
+  .cx-hero {
+    padding-block: clamp(2rem, 4vw, 3.5rem) clamp(4rem, 8vw, 7rem);
+  }
+  .cx-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: rgb(var(--primary-rgb) / 0.7);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  .cx-back:hover {
+    color: var(--foreground);
+  }
+  .cx-back svg {
+    width: 0.9rem;
+    height: 0.9rem;
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+  .cx-back:hover svg {
+    transform: translateX(-3px);
+  }
+  .cx-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--accent);
+    color: var(--accent-text, var(--accent-hover));
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .cx-tag::before {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    content: '';
+  }
+  .cx-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 0;
+    margin: clamp(2.5rem, 5vw, 4rem) 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .cx-fact {
+    padding: 1.3rem 1.5rem 0 0;
+  }
+  .cx-fact dt {
+    color: rgb(var(--primary-rgb) / 0.62);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .cx-fact dd {
+    margin: 0.55rem 0 0;
+    color: var(--foreground);
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  /* Scroll reveal (see RevealDirective). */
+  .cx-reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition:
+      opacity 0.9s var(--ease-decelerate),
+      transform 0.9s var(--ease-decelerate);
+  }
+  .cx-reveal.is-in {
+    opacity: 1;
+    transform: none;
+  }
+  .cx-stagger > * {
+    transition:
+      opacity 0.8s var(--ease-decelerate),
+      transform 0.8s var(--ease-decelerate);
+  }
+  .cx-reveal:not(.is-in) .cx-stagger > *,
+  .cx-stagger.cx-reveal:not(.is-in) > * {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  .cx-stagger > :nth-child(2) { transition-delay: 70ms; }
+  .cx-stagger > :nth-child(3) { transition-delay: 140ms; }
+  .cx-stagger > :nth-child(4) { transition-delay: 210ms; }
+  .cx-stagger > :nth-child(5) { transition-delay: 280ms; }
+  .cx-stagger > :nth-child(6) { transition-delay: 350ms; }
+  .cx-stagger > :nth-child(n + 7) { transition-delay: 420ms; }
+
+  /* Primary action: orange, ink label, brighter orange sweeps in on hover. */
+  .cx-btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  /* ---- Customer list: numerals, fields, report rows ------------------- */
+  .cx-numbers {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .cx-number {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    gap: 0.9rem;
+    padding: 1.4rem 1.5rem 1.6rem 1.25rem;
+    border: 0;
+    background: transparent;
+    color: var(--foreground);
+    text-align: left;
+    cursor: pointer;
+  }
+  /* Fill: faint on hover, stronger when selected. Transform/opacity only, so it glides. */
+  .cx-number::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: rgb(var(--primary-rgb) / 0.05);
+    opacity: 0;
+    transform: scaleX(0.97);
+    transform-origin: left;
+    transition:
+      opacity var(--duration-medium) var(--ease-standard),
+      transform 0.6s var(--ease-decelerate),
+      background-color var(--duration-medium) var(--ease-standard);
+    content: '';
+  }
+  /* Underline: a short stub on hover, the full width when selected. */
+  .cx-number::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.6s var(--ease-decelerate);
+    content: '';
+  }
+  .cx-number__label,
+  .cx-number__value {
+    transition:
+      color var(--duration-medium) var(--ease-standard),
+      transform 0.6s var(--ease-decelerate);
+  }
+  .cx-number:hover::before,
+  .cx-number:focus-visible::before {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  .cx-number:hover::after,
+  .cx-number:focus-visible::after {
+    transform: scaleX(0.3);
+  }
+  .cx-number:hover .cx-number__value,
+  .cx-number:focus-visible .cx-number__value {
+    transform: translateX(0.5rem);
+  }
+  .cx-number[aria-pressed='true']::before {
+    opacity: 1;
+    transform: scaleX(1);
+    background: rgb(var(--accent-rgb, var(--primary-rgb)) / 0.1);
+  }
+  .cx-number[aria-pressed='true']::after {
+    transform: scaleX(1);
+  }
+  .cx-number[aria-pressed='true'] .cx-number__label {
+    color: var(--accent-text, var(--accent-hover));
+  }
+  .cx-number:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .cx-number__label {
+    color: rgb(var(--primary-rgb) / 0.66);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .cx-number__value {
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    font-weight: 500;
+    line-height: 0.9;
+    letter-spacing: -0.06em;
+    font-variant-numeric: tabular-nums;
+  }
+  .cx-field-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: rgb(var(--primary-rgb) / 0.66);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .cx-field {
+    display: block;
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 0.9rem;
+    transition: border-color var(--duration-fast) var(--ease-standard);
+  }
+  .cx-field::placeholder {
+    color: rgb(var(--primary-rgb) / 0.5);
+  }
+  .cx-field:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+  .cx-report {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) auto 2rem;
+    align-items: center;
+    gap: 1.5rem 2.5rem;
+    padding: 2rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--foreground);
+    isolation: isolate;
+    animation: cx-row-in 0.8s calc(var(--i, 0) * 60ms) var(--ease-decelerate) both;
+  }
+  .cx-report:last-child {
+    border-bottom: 0;
+  }
+  .cx-report::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transition: transform var(--duration-medium) var(--ease-decelerate);
+    content: '';
+  }
+  /* Hover is transform/opacity only (no layout), so every part glides on the same curve. */
+  .cx-report::after {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: rgb(var(--primary-rgb) / 0.05);
+    opacity: 0;
+    transform: scaleX(0.985);
+    transform-origin: left;
+    transition:
+      opacity var(--duration-medium) var(--ease-standard),
+      transform 0.6s var(--ease-decelerate);
+    content: '';
+  }
+  .cx-report__main,
+  .cx-report__meta,
+  .cx-report__rail {
+    transition: transform 0.6s var(--ease-decelerate);
+  }
+  .cx-report:hover,
+  .cx-report:focus-visible {
+    outline: none;
+  }
+  .cx-report:hover::after,
+  .cx-report:focus-visible::after {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  .cx-report:hover .cx-report__main,
+  .cx-report:hover .cx-report__meta,
+  .cx-report:hover .cx-report__rail,
+  .cx-report:focus-visible .cx-report__main,
+  .cx-report:focus-visible .cx-report__meta,
+  .cx-report:focus-visible .cx-report__rail {
+    transform: translateX(1rem);
+  }
+  .cx-report:hover::before,
+  .cx-report:focus-visible::before {
+    transform: scaleY(1);
+  }
+  .cx-report__label,
+  .cx-report__meta dt {
+    margin: 0;
+    color: rgb(var(--primary-rgb) / 0.62);
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .cx-report__number {
+    margin: 0.5rem 0 0;
+    font-size: clamp(1.5rem, 2.8vw, 2.3rem);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .cx-report__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2.5rem;
+    margin: 0;
+  }
+  .cx-report__meta dd {
+    margin: 0.45rem 0 0;
+    font-size: 0.92rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .cx-report__arrow {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    color: rgb(var(--primary-rgb) / 0.5);
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      transform var(--duration-medium) var(--ease-decelerate);
+  }
+  .cx-report__arrow svg {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+  .cx-report:hover .cx-report__arrow {
+    color: var(--accent-text, var(--accent-hover));
+    transform: translate(3px, -3px);
+  }
+  @keyframes cx-row-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @media (max-width: 55rem) {
+    .cx-numbers {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .cx-number {
+      padding-right: 0.6rem;
+    }
+    .cx-report {
+      grid-template-columns: minmax(0, 1fr) 2rem;
+    }
+    .cx-report__meta,
+    .cx-report__rail {
+      grid-column: 1 / -1;
+      grid-row: auto;
+    }
+    .cx-report__arrow {
+      grid-column: 2;
+      grid-row: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cx-report {
+      animation: none;
+    }
+  }
+
+  /* Signature pending: an orange-edged callout above the customer list. */
+  .cx-pending {
+    position: relative;
+    margin: 0 0 clamp(1.5rem, 3vw, 2.5rem);
+    padding: clamp(1.4rem, 3vw, 2rem) clamp(1.4rem, 3vw, 2.4rem);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    background: var(--card);
+  }
+
+  /* ---- Hover language (the static site's): fills sweep in, accents slide, arrows nudge ---- */
+  .cx-page .btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 0;
+    transition:
+      color 0.5s var(--ease-standard),
+      border-color 0.5s var(--ease-standard);
+  }
+  .cx-page .btn::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--accent-hover);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.6s var(--ease-decelerate);
+    content: '';
+  }
+  .cx-page .btn:hover::before,
+  .cx-page .btn:focus-visible::before {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  .cx-page .btn-secondary::before {
+    background: rgb(var(--primary-rgb) / 0.1);
+  }
+  .cx-row {
+    position: relative;
+    isolation: isolate;
+  }
+  .cx-row::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transition: transform var(--duration-medium) var(--ease-decelerate);
+    content: '';
+  }
+  .cx-row::after {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: rgb(var(--primary-rgb) / 0.05);
+    opacity: 0;
+    transform: scaleX(0.985);
+    transform-origin: left;
+    transition:
+      opacity var(--duration-medium) var(--ease-standard),
+      transform 0.6s var(--ease-decelerate);
+    content: '';
+  }
+  .cx-row > * {
+    transition: transform 0.6s var(--ease-decelerate);
+  }
+  .cx-row:hover,
+  .cx-row:focus-visible {
+    outline: none;
+  }
+  .cx-row:hover::after,
+  .cx-row:focus-visible::after {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  .cx-row:hover > *,
+  .cx-row:focus-visible > * {
+    transform: translateX(0.9rem);
+  }
+  .cx-row:hover::before,
+  .cx-row:focus-visible::before {
+    transform: scaleY(1);
+  }
+  .cx-page .cust-sweep {
+    --cust-sweep-fill: rgb(var(--primary-rgb) / 0.07);
+  }
+  .cx-page .cust-sweep:hover {
+    border-color: var(--accent);
+  }
+
+  /* ============================================================
+     Customer app frame ("cxa") — the cx language as a desktop-app
+     window: toolbar → sidebar | pane | inspector → status bar. The
+     window never scrolls; panes do. Chrome is non-selectable and uses
+     the default cursor, data stays selectable. Every colour is a theme
+     token, so light/dark come for free.
+     ============================================================ */
+  .cxa-app {
+    --cxa-gutter: clamp(1rem, 2.4vw, 2rem);
+    --cxa-sidebar-w: 13.75rem;
+    /* Flex column, not grid rows: the export notice row is optional. */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  .cxa-toolbar,
+  .cxa-sidebar,
+  .cxa-statusbar,
+  .cxa-inspector-head {
+    cursor: default;
+    user-select: none;
+  }
+
+  /* ---- Toolbar ---- */
+  .cxa-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 3.75rem;
+    padding: 0.5rem var(--cxa-gutter);
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+  }
+  .cxa-toolbar-back {
+    flex-shrink: 0;
+  }
+  .cxa-sep {
+    flex-shrink: 0;
+    align-self: stretch;
+    width: 1px;
+    margin-block: 0.35rem;
+    background: var(--border);
+  }
+  .cxa-ident {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .cxa-ident-eyebrow {
+    margin: 0;
+    color: rgb(var(--primary-rgb) / 0.62);
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cxa-ident-eyebrow b {
+    margin-right: 0.75rem;
+    color: var(--accent-text, var(--accent-hover));
+    font-weight: 500;
+  }
+  .cxa-ident-title {
+    margin: 0.1rem 0 0;
+    color: var(--foreground);
+    font-size: 1.35rem;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cxa-toolbar-actions {
+    flex-shrink: 0;
+  }
+  .cxa-notice {
+    margin: 0;
+    padding: 0.5rem var(--cxa-gutter);
+    border-bottom: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    background: rgb(var(--primary-rgb) / 0.035);
+    color: rgb(var(--primary-rgb) / 0.75);
+    font-size: 0.78rem;
+  }
+  .cxa-notice--error {
+    border-left-color: rgb(var(--error));
+    color: rgb(var(--error-dark));
+  }
+
+  /* ---- Body: sidebar | pane | inspector ---- */
+  .cxa-body {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+  }
+  .cxa-toolbar,
+  .cxa-notice,
+  .cxa-statusbar {
+    flex-shrink: 0;
+  }
+  .cxa-sidebar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 var(--cxa-sidebar-w);
+    padding: 1.25rem 0 1rem;
+    border-right: 1px solid var(--border);
+    background: var(--muted);
+    overflow-y: auto;
+  }
+  /* Registration marks where the sidebar seam meets the toolbar and status bar
+     (on the body, so they never add overflow to the scrolling sidebar). */
+  .cxa-body::before,
+  .cxa-body::after {
+    position: absolute;
+    left: calc(var(--cxa-sidebar-w) - 7px);
+    z-index: 2;
+    width: 13px;
+    height: 13px;
+    color: rgb(var(--primary-rgb) / 0.4);
+    background:
+      linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat,
+      linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat;
+    pointer-events: none;
+    content: '';
+  }
+  .cxa-body::before {
+    top: -7px;
+  }
+  .cxa-body::after {
+    bottom: -7px;
+  }
+  .cxa-sidebar-label {
+    margin: 0 0 0.6rem;
+    padding-inline: 1.25rem;
+    color: rgb(var(--primary-rgb) / 0.5);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .cxa-nav {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .cxa-nav-item {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.62rem 1.25rem;
+    color: rgb(var(--primary-rgb) / 0.68);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-align: left;
+    text-transform: uppercase;
+    cursor: default;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  .cxa-nav-item::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transition: transform var(--duration-medium) var(--ease-decelerate);
+    content: '';
+  }
+  .cxa-nav-item::after {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: rgb(var(--primary-rgb) / 0.06);
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+    content: '';
+  }
+  .cxa-nav-item:hover {
+    color: var(--foreground);
+  }
+  .cxa-nav-item:hover::after {
+    opacity: 0.6;
+  }
+  .cxa-nav-item.is-active {
+    color: var(--foreground);
+  }
+  .cxa-nav-item.is-active::before {
+    transform: scaleY(1);
+  }
+  .cxa-nav-item.is-active::after {
+    opacity: 1;
+  }
+  .cxa-nav-item:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+  .cxa-count {
+    min-width: 1.6rem;
+    padding: 0.1rem 0.4rem;
+    border: 1px solid var(--border);
+    font-size: 0.64rem;
+    letter-spacing: 0.04em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .cxa-nav-item.is-active .cxa-count {
+    border-color: var(--accent);
+    color: var(--accent-text, var(--accent-hover));
+  }
+  .cxa-shortcuts {
+    margin: auto 0 0;
+    padding: 1rem 1.25rem 0;
+    color: rgb(var(--primary-rgb) / 0.45);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .cxa-shortcuts kbd {
+    display: inline-block;
+    min-width: 1.15rem;
+    margin-right: 0.25rem;
+    padding: 0 0.25rem;
+    border: 1px solid var(--border);
+    font-family: inherit;
+    text-align: center;
+  }
+
+  .cxa-pane {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: clamp(1.25rem, 2.6vw, 2.25rem) var(--cxa-gutter) 2.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* Serials: the table owns both scroll axes so its header can stay pinned. */
+  .cxa-pane--fill {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: clamp(1rem, 2vw, 1.5rem);
+    overflow: hidden;
+  }
+  .cxa-pane-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: clamp(1.25rem, 2.4vw, 2rem);
+  }
+  .cxa-h2 {
+    margin: 0;
+    color: var(--foreground);
+    font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.045em;
+  }
+  .cxa-pane-meta {
+    color: rgb(var(--primary-rgb) / 0.6);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+  .cxa-subhead {
+    margin: clamp(2rem, 4vw, 3rem) 0 1.25rem;
+    color: rgb(var(--primary-rgb) / 0.62);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .cxa-facts {
+    margin-top: 0;
+  }
+
+  /* ---- Findings: a row of statistic tiles, then the selected one's serials ---- */
+  .cxa-finding-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .cxa-finding-list > li {
+    display: flex;
+  }
+  .cxa-finding-detail {
+    min-width: 0;
+  }
+  .cxa-finding-detail-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .cxa-finding-detail-head .cxa-subhead {
+    margin-bottom: 1rem;
+  }
+  .cxa-finding {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.35rem 1rem;
+    width: 100%;
+    padding: 0.9rem 1rem 0.95rem 1.15rem;
+    border: 1px solid var(--border);
+    background: var(--card);
+    text-align: left;
+    cursor: default;
+    transition:
+      border-color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard);
+  }
+  .cxa-finding::before {
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    left: -1px;
+    width: 3px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transition: transform var(--duration-medium) var(--ease-decelerate);
+    content: '';
+  }
+  .cxa-finding:hover {
+    background: rgb(var(--primary-rgb) / 0.035);
+  }
+  .cxa-finding.is-active {
+    border-color: rgb(var(--primary-rgb) / 0.3);
+  }
+  .cxa-finding.is-active::before {
+    transform: scaleY(1);
+  }
+  .cxa-finding:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+  .cxa-finding-label {
+    min-width: 0;
+    color: rgb(var(--primary-rgb) / 0.68);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+  .cxa-finding-value {
+    color: var(--foreground);
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .cxa-finding-meter {
+    grid-column: 1 / -1;
+    height: 3px;
+    background: rgb(var(--primary-rgb) / 0.1);
+  }
+  .cxa-finding-meter > span {
+    display: block;
+    height: 100%;
+    background: rgb(var(--primary-rgb) / 0.55);
+    transition: width var(--duration-medium) var(--ease-decelerate);
+  }
+  .cxa-finding.is-active .cxa-finding-meter > span {
+    background: var(--accent);
+  }
+  .cxa-finding-meta {
+    grid-column: 1 / -1;
+    color: rgb(var(--primary-rgb) / 0.55);
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+  }
+  .cxa-empty {
+    margin: 0;
+    padding: 2rem 1.25rem;
+    border: 1px dashed var(--border);
+    color: rgb(var(--primary-rgb) / 0.55);
+    font-size: 0.88rem;
+    text-align: center;
+  }
+
+  /* ---- History: stage bar + legend + event table ---- */
+  .cxa-stagebar {
+    display: flex;
+    gap: 2px;
+    height: 2.25rem;
+  }
+  .cxa-stagebar-seg {
+    display: flex;
+    align-items: center;
+    flex-basis: 0;
+    min-width: 6px;
+    padding-inline: 0.5rem;
+    overflow: hidden;
+    color: var(--foreground);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: default;
+  }
+  .cxa-stagebar-seg > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  [data-tone='0'].cxa-stagebar-seg,
+  [data-tone='0'].cxa-stagelegend-swatch {
+    background: rgb(var(--primary-rgb) / 0.22);
+  }
+  [data-tone='1'].cxa-stagebar-seg,
+  [data-tone='1'].cxa-stagelegend-swatch {
+    background: rgb(var(--primary-rgb) / 0.13);
+  }
+  [data-tone='2'].cxa-stagebar-seg,
+  [data-tone='2'].cxa-stagelegend-swatch {
+    background: rgb(var(--primary-rgb) / 0.32);
+  }
+  .cxa-stagelegend {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: 0;
+    margin: 1rem 0 0;
+    padding: 0;
+    border-top: 1px solid var(--border);
+    list-style: none;
+  }
+  .cxa-stagelegend li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1rem 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .cxa-stagelegend-swatch {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+  }
+  .cxa-stagelegend-label {
+    flex: 1 1 auto;
+    color: rgb(var(--primary-rgb) / 0.75);
+  }
+  .cxa-stagelegend-value {
+    color: var(--foreground);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .cxa-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    background: var(--card);
+  }
+  .cxa-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  .cxa-table th {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: rgb(var(--primary-rgb) / 0.55);
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .cxa-table td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid rgb(var(--primary-rgb) / 0.08);
+    color: rgb(var(--primary-rgb) / 0.8);
+    font-size: 0.88rem;
+    white-space: nowrap;
+  }
+  .cxa-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .cxa-table tbody tr:hover td {
+    background: rgb(var(--primary-rgb) / 0.03);
+  }
+  .cxa-table .is-num {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+  .cxa-table-event {
+    color: var(--foreground) !important;
+  }
+  .cxa-dot-sq {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 0.6rem;
+    vertical-align: 1px;
+    background: rgb(var(--primary-rgb) / 0.35);
+  }
+  .cxa-table tr.is-latest .cxa-dot-sq {
+    background: var(--accent);
+  }
+
+  /* ---- Child report detail (inside the Child reports view) ---- */
+  .cxa-child-back {
+    margin-bottom: 1.25rem;
+    cursor: default;
+  }
+  .cxa-child-card {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1.1rem 1.25rem 1.1rem 1.5rem;
+    border: 1px solid var(--border);
+    background: var(--card);
+  }
+  /* Orange spine: this card is the selected child. */
+  .cxa-child-card::before {
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    left: -1px;
+    width: 3px;
+    background: var(--accent);
+    content: '';
+  }
+  .cxa-child-ident {
+    min-width: 0;
+  }
+  .cxa-child-title {
+    margin: 0.2rem 0 0;
+    color: var(--foreground);
+    font-family: var(--font-heading);
+    font-size: clamp(1.3rem, 2.2vw, 1.65rem);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .cxa-child-notes {
+    max-width: 48rem;
+    margin: 0;
+    padding: 1rem 1.25rem;
+    border-left: 2px solid var(--border);
+    background: rgb(var(--primary-rgb) / 0.03);
+    color: rgb(var(--primary-rgb) / 0.82);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  /* Each view settles in on mount and whenever [hidden] lifts (display none → block). */
+  .cxa-view {
+    animation: cxa-view-in var(--duration-fast) var(--ease-decelerate) both;
+  }
+  .cxa-view[hidden] {
+    display: none;
+  }
+  .cxa-view--fill {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .cxa-view--fill .cx-serials-scroll {
+    height: 100%;
+    overflow: auto;
+  }
+  .cxa-view--fill .cx-serials-head {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    box-shadow: 0 1px 0 var(--border);
+  }
+  @keyframes cxa-view-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Selected serial row: the cx-row accent bar, held while its inspector is open. */
+  .cx-serials-scroll tr.is-selected,
+  .cx-serials-scroll tr.is-selected > th {
+    background-color: rgb(var(--primary-rgb) / 0.07);
+  }
+  .cx-serials-scroll tr.is-selected > th {
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+
+  /* ---- Docked inspector ---- */
+  .cxa-inspector {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    width: var(--cxa-inspector-w, 27.5rem);
+    max-width: 50%;
+    min-width: 22rem;
+    border-left: 1px solid var(--border);
+    background: var(--card);
+    animation: cxa-inspector-in var(--duration-medium) var(--ease-decelerate) both;
+  }
+  @keyframes cxa-inspector-in {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .cxa-resize {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -3px;
+    z-index: 5;
+    width: 6px;
+    cursor: col-resize;
+    touch-action: none;
+  }
+  .cxa-resize::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 2px;
+    width: 2px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+    content: '';
+  }
+  .cxa-resize:hover::after,
+  .cxa-resize:focus-visible::after,
+  .cxa-resize:active::after {
+    opacity: 1;
+  }
+  .cxa-resize:focus-visible {
+    outline: none;
+  }
+  .cxa-inspector-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .cxa-inspector-title {
+    margin: 0.15rem 0 0;
+    color: var(--foreground);
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+    user-select: text;
+  }
+  .cxa-inspector-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .cxa-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid transparent;
+    color: rgb(var(--primary-rgb) / 0.7);
+    cursor: default;
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard);
+  }
+  .cxa-icon-btn svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  .cxa-icon-btn:hover:not(:disabled) {
+    border-color: var(--border);
+    background: rgb(var(--primary-rgb) / 0.06);
+    color: var(--foreground);
+  }
+  .cxa-icon-btn:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .cxa-icon-btn:disabled {
+    opacity: 0.3;
+  }
+  .cxa-inspector-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 1.25rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* ---- Status bar ---- */
+  .cxa-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-height: 2rem;
+    padding: 0 var(--cxa-gutter);
+    border-top: 1px solid var(--border);
+    background: var(--card);
+    color: rgb(var(--primary-rgb) / 0.72);
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .cxa-statusbar > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0 1rem;
+    border-left: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  .cxa-statusbar > span:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .cxa-statusbar i {
+    color: rgb(var(--primary-rgb) / 0.45);
+    font-style: normal;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .cxa-statusbar-end {
+    margin-left: auto;
+  }
+  .cxa-dot {
+    width: 6px;
+    height: 6px;
+    background: rgb(var(--success));
+  }
+  .cxa-statusbar-end.is-offline .cxa-dot {
+    background: rgb(var(--primary-rgb) / 0.35);
+  }
+
+  /* ---- Below 1024px: segmented bar + full-screen inspector sheet ---- */
+  @media (max-width: 1023.98px) {
+    .cxa-body {
+      flex-direction: column;
+    }
+    .cxa-sidebar {
+      flex: 0 0 auto;
+      flex-direction: row;
+      padding: 0;
+      border-right: 0;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+    }
+    .cxa-body::before,
+    .cxa-body::after,
+    .cxa-sidebar-label,
+    .cxa-shortcuts {
+      display: none;
+    }
+    .cxa-nav {
+      display: flex;
+    }
+    .cxa-nav-item {
+      width: auto;
+      padding: 0.8rem 1rem;
+      white-space: nowrap;
+    }
+    .cxa-nav-item::before {
+      top: auto;
+      right: 0;
+      width: auto;
+      height: 2px;
+      transform: scaleX(0);
+    }
+    .cxa-nav-item.is-active::before {
+      transform: scaleX(1);
+    }
+    .cxa-pane {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    .cxa-inspector {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      width: 100%;
+      max-width: none;
+      min-width: 0;
+      border-left: 0;
+      animation-name: cxa-sheet-in;
+    }
+    .cxa-resize {
+      display: none;
+    }
+    .cxa-hide-md {
+      display: none !important;
+    }
+  }
+  @media (max-width: 639.98px) {
+    /* The export action takes its own full-width row so the report number keeps room. */
+    .cxa-toolbar {
+      flex-wrap: wrap;
+      gap: 0.5rem 0.75rem;
+    }
+    .cxa-toolbar-actions {
+      flex-basis: 100%;
+    }
+    .cxa-toolbar-actions app-export-split-button > div {
+      display: flex;
+      width: 100%;
+    }
+    .cxa-toolbar-actions app-export-split-button > div > button:first-of-type {
+      flex: 1 1 auto;
+    }
+    .cxa-hide-sm {
+      display: none !important;
+    }
+    .cxa-ident-title {
+      font-size: 1.1rem;
+    }
+  }
+  @keyframes cxa-sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(32px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  /* Header links: an orange underline draws in from the left. */
+  html[data-theme] .shell-header-sticky a[href]:not(:has(img)):not(.btn):not(.hdr-icon-btn):not(.hdr-menu-item) {
+    background: linear-gradient(var(--accent), var(--accent)) left bottom / 0 1px no-repeat;
+    padding-bottom: 2px;
+    transition:
+      background-size 0.5s var(--ease-decelerate),
+      color 0.4s var(--ease-standard);
+  }
+  html[data-theme] .shell-header-sticky a[href]:not(:has(img)):not(.btn):not(.hdr-icon-btn):not(.hdr-menu-item):hover {
+    background-size: 100% 1px;
+  }
+  html[data-theme] .shell-header-sticky button:not(.theme-switch):not(.hdr-menu-item):hover {
+    color: var(--accent-hover);
+  }
+
+  /* ---- Customer brand in the header (replaces the OTS mark + product name) ---- */
+  .hdr-brand-logo {
+    height: 2.5rem;
+    width: auto;
+    max-width: 9rem;
+    padding: 0.25rem;
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.96); /* a plate, so dark logos stay visible on the bar */
+    object-fit: contain;
+  }
+  .hdr-brand-name {
+    overflow: hidden;
+    max-width: 22rem;
+    color: #ffffff;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ---- Desktop header actions: sync pill · icon buttons · account menu (all roles) ---- */
+  .hdr-icon-btn,
+  .hdr-sync,
+  .hdr-account {
+    display: inline-flex;
+    align-items: center;
+    height: 2.5rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    color: rgba(255, 255, 255, 0.82);
+    background: transparent;
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast, 150ms) var(--ease-standard, ease),
+      border-color var(--duration-fast, 150ms) var(--ease-standard, ease),
+      color var(--duration-fast, 150ms) var(--ease-standard, ease);
+  }
+  .shell-header-sticky .hdr-icon-btn,
+  .shell-header-sticky .hdr-icon-btn:visited {
+    color: rgba(255, 255, 255, 0.82);
+  }
+  .hdr-icon-btn:hover,
+  .hdr-sync:not([aria-disabled='true']):hover,
+  .hdr-account:hover,
+  .hdr-account[aria-expanded='true'] {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+  }
+  .shell-header-sticky .hdr-icon-btn:hover {
+    color: #ffffff;
+  }
+  .hdr-icon-btn:focus-visible,
+  .hdr-sync:focus-visible,
+  .hdr-account:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .hdr-icon-btn {
+    justify-content: center;
+    width: 2.5rem;
+  }
+  .hdr-icon-btn svg {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .hdr-sync {
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+    border-color: rgba(255, 255, 255, 0.18);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .hdr-sync[aria-disabled='true'] {
+    cursor: default;
+  }
+  .hdr-sync-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.4);
+    flex: none;
+  }
+  /* --success / --warning / --error are space-separated RGB triples. */
+  .hdr-sync[data-state='online'] .hdr-sync-dot {
+    background: color-mix(in srgb, rgb(var(--success)) 55%, #ffffff);
+    box-shadow: 0 0 0 3px rgb(var(--success) / 0.45);
+  }
+  .hdr-sync[data-state='syncing'] .hdr-sync-dot {
+    background: color-mix(in srgb, rgb(var(--warning)) 60%, #ffffff);
+    animation: hdr-pulse 1.2s ease-in-out infinite;
+  }
+  .hdr-sync[data-state='sync-error'] {
+    border-color: rgb(var(--error) / 0.7);
+  }
+  .hdr-sync[data-state='sync-error'] .hdr-sync-dot {
+    background: color-mix(in srgb, rgb(var(--error)) 60%, #ffffff);
+  }
+  .hdr-sync-count {
+    min-width: 1.25rem;
+    padding: 0 0.3rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.16);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.68rem;
+    text-align: center;
+  }
+  .hdr-sync-icon {
+    width: 0.95rem;
+    height: 0.95rem;
+    opacity: 0.75;
+  }
+  .hdr-sync[data-state='syncing'] .hdr-sync-icon {
+    animation: hdr-spin 1s linear infinite;
+  }
+  @keyframes hdr-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @keyframes hdr-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .hdr-account-wrap {
+    position: relative;
+    margin-left: 0.5rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.18);
+  }
+  .hdr-account {
+    gap: 0.6rem;
+    height: 2.75rem;
+    padding: 0 0.5rem 0 0.35rem;
+    text-align: left;
+  }
+  .hdr-avatar {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .hdr-account-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    max-width: 14rem;
+    line-height: 1.2;
+  }
+  .hdr-account-name {
+    overflow: hidden;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hdr-account-org {
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hdr-chevron {
+    width: 1rem;
+    height: 1rem;
+    opacity: 0.7;
+    transition: transform var(--duration-fast, 150ms) var(--ease-standard, ease);
+  }
+  .hdr-account[aria-expanded='true'] .hdr-chevron {
+    transform: rotate(180deg);
+  }
+
+  .hdr-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 60;
+    width: 16rem;
+    padding: 0.35rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    color: var(--card-foreground);
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.18),
+      0 2px 6px rgba(0, 0, 0, 0.08);
+    transform-origin: top right;
+    animation: hdr-menu-in 160ms var(--ease-decelerate, ease-out);
+  }
+  @keyframes hdr-menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+  }
+  .hdr-menu-head {
+    margin-bottom: 0.25rem;
+    padding: 0.6rem 0.65rem 0.7rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .hdr-menu-name {
+    overflow: hidden;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hdr-menu-meta {
+    overflow: hidden;
+    margin-top: 0.15rem;
+    color: var(--muted-foreground);
+    font-size: 0.72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hdr-menu-role {
+    margin-right: 0.35rem;
+    padding: 0.05rem 0.35rem;
+    border: 1px solid var(--border);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+  }
+  .shell-header-sticky .hdr-menu .hdr-menu-item {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--card-foreground);
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .shell-header-sticky .hdr-menu .hdr-menu-item:hover,
+  .shell-header-sticky .hdr-menu .hdr-menu-item:focus-visible {
+    outline: none;
+    background: var(--muted);
+    color: var(--card-foreground);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .shell-header-sticky .hdr-menu .hdr-menu-item--signout,
+  .shell-header-sticky .hdr-menu .hdr-menu-item--signout:hover,
+  .shell-header-sticky .hdr-menu .hdr-menu-item--signout:focus-visible {
+    /* Pulled toward the card's text colour: lighter on dark cards, deeper on light ones. */
+    color: color-mix(in srgb, var(--destructive) 65%, var(--card-foreground));
+  }
+  .hdr-menu-note {
+    padding: 0.35rem 0.65rem 0.15rem;
+    color: var(--muted-foreground);
+    font-size: 0.68rem;
+  }
+  .hdr-menu-sep {
+    height: 1px;
+    margin: 0.3rem 0;
+    background: var(--border);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hdr-menu,
+    .hdr-sync-icon,
+    .hdr-sync-dot {
+      animation: none !important;
+    }
+  }
+
   .custom-scrollbar {
     &::-webkit-scrollbar {
       width: 6px;
@@ -618,4 +2543,58 @@
       background: rgba(0, 0, 0, 0.2);
     }
   }
+}
+
+/* ---- Toasts: top-layer popover + native enter/leave animations (toast.component) ---- */
+.toast-layer[popover] {
+  /* Undo the UA popover box: the layer is a transparent, full-viewport, click-through frame. */
+  margin: 0;
+  padding: 1.5rem 1rem;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  color: inherit;
+}
+@media (min-width: 640px) {
+  .toast-layer[popover] {
+    padding: 1.5rem;
+  }
+}
+.toast-enter {
+  animation: toast-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.toast-leave {
+  animation: toast-out 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-1rem) scale(0.95);
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-0.5rem) scale(0.95);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter,
+  .toast-leave {
+    animation-duration: 1ms;
+  }
+}
+
+/* Export split-button menu: a top-layer popover placed by viewport coordinates. Undo the UA
+   popover box (centred, inset 0, padding) so the component's top/left/width apply. */
+.export-menu[popover] {
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  color: inherit;
 }

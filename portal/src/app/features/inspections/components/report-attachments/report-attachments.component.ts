@@ -7,6 +7,7 @@ import {
   effect,
   inject,
   input,
+  output,
   signal,
   untracked,
 } from '@angular/core';
@@ -52,6 +53,8 @@ export class ReportAttachmentsComponent implements OnDestroy {
    *  hidden entirely and the panel reads as a documents list. Downloads and
    *  thumbnails are unaffected. */
   public readonly viewerOnly = input(false);
+  /** Emits the number of attachments, so a host can omit its section when there are none. */
+  public readonly countChange = output<number>();
 
   private readonly uid = `report-attachments-${nextReportAttachmentsId++}`;
   public readonly docInputId = `${this.uid}-doc`;
@@ -70,6 +73,10 @@ export class ReportAttachmentsComponent implements OnDestroy {
       this.reportsService.reports().find((r) => r.id === id)?.attachments ?? []
     );
   });
+
+  private readonly emitCount = effect(() =>
+    this.countChange.emit(this.attachments().length),
+  );
 
   // All post-await state lives in signals — the app is zoneless, so a plain
   // field set in a catch() would not repaint.

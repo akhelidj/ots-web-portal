@@ -40,6 +40,18 @@ export interface AdminTemplateItem {
 
 /** One extracted `{{token}}` from `GET /templates/:id/tokens`. Mirrors the API's
  *  ExtractedToken (no shared DTO package — see ADR-0008). */
+/** What an admin delete of a template version would remove (GET /templates/:id/delete-impact). */
+export interface TemplateDeleteImpact {
+  templateKey: string;
+  templateVersion: number;
+  defined: boolean;
+  reports: number;
+  childReports: number;
+  serialNumbers: number;
+  attachments: number;
+  signatures: number;
+}
+
 export interface ExtractedToken {
   token: string;
   cell: string;
@@ -196,7 +208,15 @@ export interface TemplateDefinitionDetail {
   templateKey: string;
   templateVersion: number;
   status: 'ACTIVE' | 'DEPRECATED';
+  approvalStatus: TemplateApprovalStatus;
+  rejectionReason: string | null;
   definitionJson: StoredDefinition | null;
+  /** For an undefined version: the nearest earlier defined version of the same key, the
+   *  source the wizard pre-fills from on an upgrade. Null when there is none. */
+  previousDefinition: {
+    templateVersion: number;
+    definitionJson: StoredDefinition;
+  } | null;
 }
 
 @Injectable({
@@ -295,12 +315,25 @@ export class AdminTemplatesService implements DataHydrationSource {
     await this.fetchAll();
   }
 
-  /** Delete a never-defined template (e.g. the wrong workbook was uploaded). */
-  public async deleteTemplate(id: string): Promise<void> {
+  /** Delete a template version. A supervisor can only remove a never-defined one (the undo
+   *  for a wrong upload); an ADMIN removes any version together with its reports and
+   *  files, and must give a `reason` whenever that removes data. */
+  public async deleteTemplate(id: string, reason?: string): Promise<void> {
     await firstValueFrom(
-      this.http.delete(`${environment.apiUrl}/templates/${id}`),
+      this.http.delete(`${environment.apiUrl}/templates/${id}`, {
+        body: reason ? { reason } : {},
+      }),
     );
     await this.fetchAll();
+  }
+
+  /** ADMIN-only, read-only: what deleting this version would take with it. */
+  public async getDeleteImpact(id: string): Promise<TemplateDeleteImpact> {
+    return firstValueFrom(
+      this.http.get<TemplateDeleteImpact>(
+        `${environment.apiUrl}/templates/${id}/delete-impact`,
+      ),
+    );
   }
 
   /** ADMIN clears the validation gate: the version becomes usable for reports and retires

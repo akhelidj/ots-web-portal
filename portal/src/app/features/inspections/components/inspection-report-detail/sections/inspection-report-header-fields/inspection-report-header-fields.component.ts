@@ -1,4 +1,4 @@
-import { Component, Input, computed, input, signal } from '@angular/core';
+import { Component, Input, computed, effect, input, output, signal } from '@angular/core';
 import { FormSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
   TemplateFormDefinition,
@@ -89,8 +89,22 @@ export class InspectionReportHeaderFieldsComponent {
    */
   public noHeaderFields = computed(() => {
     const s = this.schema();
-    return !!s && s.sections.every((sec) => sec.fields.length === 0);
+    return (
+      !!s &&
+      s.sections.every(
+        (sec) =>
+          sec.fields.filter(
+            (f) => !(this.isCustomer() && f.role === 'inspectorSignature'),
+          ).length === 0,
+      )
+    );
   });
+
+  /** Whether there is anything to render, so a host can omit its section when there is not. */
+  public readonly hasContent = output<boolean>();
+  private readonly emitContent = effect(() =>
+    this.hasContent.emit(!this.definitionMissing() && !this.noHeaderFields()),
+  );
 
   /**
    * Display string for a field's value, coerced generically (no field-name coupling):

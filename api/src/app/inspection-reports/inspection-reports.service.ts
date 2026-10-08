@@ -25,6 +25,7 @@ import {
   freezeSignatureForReport,
   INSPECTOR_SIGNATURE_SLOT,
 } from '../signatures/freeze-signature';
+import { resolveInspector } from './last-inspector';
 
 /**
  * A human-readable label for a templateKey, derived PURELY from the scalar key —
@@ -200,13 +201,23 @@ export class InspectionReportsService {
       },
       select: { definitionJson: true },
     });
-    return { ...report, definitionJson: template?.definitionJson ?? null };
+    return {
+      ...report,
+      definitionJson: template?.definitionJson ?? null,
+      // Derived (not stored): the inspector's NAME, resolved here so every role sees it
+      // (the portal's local user cache is admin-only). Rides on the detail payload the
+      // portal's pull already fetches per report.
+      inspectorName: (
+        await resolveInspector(this.prisma, user.tenantId, report.id)
+      ).name,
+    };
   }
 
   async addAttachment(
     tenantId: string,
     id: string,
     file: { originalname: string; buffer: Buffer },
+    userId?: string,
   ) {
     const report = await this.prisma.inspectionReport.findFirst({
       where: { id, tenantId },
@@ -249,6 +260,19 @@ export class InspectionReportsService {
         where: { id: attachment.id },
         data: {
           url: this.filesService.buildAttachmentUrl(attachment.id),
+        },
+      });
+
+      // An action on the report (counts toward who the inspector is while IN_INSPECTION).
+      await this.prisma.auditLog.create({
+        data: {
+          action: 'CREATE',
+          entity: 'Attachment',
+          entityId: attachment.id,
+          tenantId,
+          userId: userId ?? null,
+          reason: 'Added attachment',
+          inspectionReportId: id,
         },
       });
 

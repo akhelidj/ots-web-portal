@@ -362,8 +362,9 @@ export function seedApprovableSerial(
  * status/type/version and a unique (tenantId, inspectionReportId, type) constraint, so
  * a report holds at most one child per type. The updateChildReportSerialNumber path
  * (Block 3b characterization) does not gate on the child's status, so this defaults to
- * a DRAFT REWORK child at version 1. FK-safe extension added for the child-reports
- * spec; no existing caller is affected.
+ * a DRAFT REWORK child at version 1. (updateChildReportSerialNumber now DOES gate on
+ * status — IN_INSPECTION only — so callers that write serials pass that status.)
+ * FK-safe extension added for the child-reports spec.
  */
 export function seedChildReport(
   prisma: PrismaService,

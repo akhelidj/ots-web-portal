@@ -75,13 +75,14 @@
 
   @if (open()) {
     <div
+      #menu
+      popover="manual"
       role="menu"
       aria-label="Export formats"
-      class="absolute right-0 z-50 w-64 border border-border bg-card text-left shadow-lg"
-      [class.bottom-full]="variant() === 'bar'"
-      [class.mb-1]="variant() === 'bar'"
-      [class.top-full]="variant() !== 'bar'"
-      [class.mt-1]="variant() !== 'bar'"
+      class="export-menu fixed z-50 border border-border bg-card text-left shadow-lg"
+      [style.width.px]="menuWidth()"
+      [style.left.px]="menuLeft()"
+      [style.top.px]="menuTop()"
     >
       @if (reason()) {
         <p
@@ -110,18 +111,6 @@
       >
         <span class="block font-semibold">Excel</span>
         <span class="block text-xs text-foreground/60">The filled workbook</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        class="block w-full border-t border-border px-3 py-2 text-left text-sm text-foreground hover:bg-muted focus:bg-muted focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
-        [disabled]="templateDisabled()"
-        (click)="pick('template')"
-      >
-        <span class="block font-semibold">Template</span>
-        <span class="block text-xs text-foreground/60"
-          >The blank workbook with its tokens</span
-        >
       </button>
     </div>
   }

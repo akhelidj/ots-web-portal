@@ -21,6 +21,8 @@ import JSZip from 'jszip';
 import { engineMap, ExportDefinition } from './export-engine';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  Prisma,
+  ReportSignature,
   UserRole,
   InspectionReportStatus,
   ChildReportStatus,
@@ -33,7 +35,11 @@ import { resolveDisposition } from '../workflow/approval-gate';
 import { embedSignatures, SignatureImage } from './signature-embed';
 import { PdfConverterService } from './pdf-converter.service';
 import { prepareWorkbookForPdf } from './pdf-page-setup';
-import { INSPECTOR_SIGNATURE_SLOT } from '../signatures/freeze-signature';
+import { resolveInspector } from '../inspection-reports/last-inspector';
+import {
+  freezeSignatureForReport,
+  INSPECTOR_SIGNATURE_SLOT,
+} from '../signatures/freeze-signature';
 import {
   currentFieldSignatures,
   SignatureDefinitionView,
@@ -116,6 +122,8 @@ export class ExportService {
     }
 
     let snapshot: Snapshot;
+    // A persisted revision is exported "as of" when it was taken; the live build is now.
+    let asOf: Date | undefined;
 
     if (revisionNumber === 0) {
       // Build an equivalent snapshot on-the-fly from live data so export still works.
@@ -175,6 +183,7 @@ export class ExportService {
         throw new NotFoundException(`Revision ${revisionNumber} not found`);
       }
 
+      asOf = revision.revisedAt;
       snapshot = revision.snapshotJson as unknown as Snapshot;
       if (!snapshot) {
         throw new InternalServerErrorException('Snapshot data is missing');
@@ -211,6 +220,15 @@ export class ExportService {
         select: { reviewedByUserId: true },
       });
 
+    // Inspector = whoever last acted on the inspection (see resolveInspector); a report
+    // with no recorded inspection action falls back to who first started it.
+    const inspector = await resolveInspector(
+      this.prisma,
+      report.tenantId,
+      reportId,
+      asOf,
+    );
+
     const userIds = new Set<string>();
     for (const log of liveTransitionLogs) {
       if (log.userId) {
@@ -232,18 +250,11 @@ export class ExportService {
       );
     }
 
-    const latestInspectorLog = [...liveTransitionLogs]
-      .reverse()
-      .find((log) => log.toStatus === 'IN_INSPECTION');
     const latestApproveLog = [...liveTransitionLogs]
       .reverse()
       .find((log) => log.toStatus === 'APPROVED' || log.toStatus === 'CLOSED');
 
-    const inspectedByName = latestInspectorLog?.userId
-      ? usersById.get(latestInspectorLog.userId)?.name ||
-        usersById.get(latestInspectorLog.userId)?.email ||
-        'N/A'
-      : 'N/A';
+    const inspectedByName = inspector.name || 'N/A';
 
     let approvedByName = 'N/A';
     if (latestApproveLog?.userId) {
@@ -371,7 +382,13 @@ export class ExportService {
     // their files stay distinguishable.
     const revSuffix = revisionNumber > 0 ? `_${revisionNumber}` : '';
     const baseParentFilename = `OTS_${poStr}_${reportNum}${revSuffix}`;
-    const baseChildFilename = `OTS_${poStr}_${reportNum}_rework${revSuffix}`; // Child naming: _rework
+    // The child's own number (parent + the rule's suffix). A rule with no suffix would give
+    // the child the parent's bare number — fall back to `_<type>` so the files stay distinct.
+    const childNum =
+      childReport?.reportNumber && childReport.reportNumber !== reportNum
+        ? childReport.reportNumber
+        : `${reportNum}_${(childReport?.type ?? 'REWORK').toLowerCase()}`;
+    const baseChildFilename = `OTS_${poStr}_${childNum}${revSuffix}`;
 
     if (isParentApproved) {
       const parentSerials = [...(snapshot.serialNumbers || [])];
@@ -414,9 +431,19 @@ export class ExportService {
         };
       });
 
+      // The child carries its own number (parent number + the rework rule's suffix); the
+      // sheet's {{reportNumber}} must show it, not the parent's bare number.
+      const childSnapshot: Snapshot = {
+        ...snapshot,
+        header: {
+          ...snapshot.header,
+          reportNumber: childNum,
+        },
+      };
+
       const childFiles = await this.generateExcelFiles(
         templateBuffer,
-        snapshot,
+        childSnapshot,
         childSerials,
         baseChildFilename,
         definition,
@@ -739,6 +766,40 @@ export class ExportService {
     return images;
   }
 
+  /** Freeze the report's approver's current account signature into `slot`; null if none. */
+  private async freezeApproverSignature(
+    tenantId: string,
+    reportId: string,
+    slot: string,
+    revisionNumber: number,
+  ): Promise<ReportSignature | null> {
+    const approval = await this.prisma.inspectionReportTransitionLog.findFirst({
+      where: {
+        inspectionReportId: reportId,
+        toStatus: InspectionReportStatus.APPROVED,
+        userId: { not: null },
+      },
+      orderBy: { timestamp: 'desc' },
+      select: { userId: true },
+    });
+    if (!approval?.userId) return null;
+    const frozen = await freezeSignatureForReport(
+      this.prisma as unknown as Prisma.TransactionClient,
+      {
+        tenantId,
+        inspectionReportId: reportId,
+        slot,
+        userId: approval.userId,
+        revisionNumber,
+      },
+    );
+    if (!frozen) return null;
+    return this.prisma.reportSignature.findFirst({
+      where: { tenantId, inspectionReportId: reportId, slot, revisionNumber },
+      orderBy: { signedAt: 'desc' },
+    });
+  }
+
   /**
    * The pictures for the template's `signature` fields (customer / supervisor), taken from
    * the rows current for the exported revision. An unsigned field is left out — its cell is
@@ -767,7 +828,21 @@ export class ExportService {
     const images: Record<string, SignatureImage> = {};
     const missing: SignatureFieldSpec[] = [];
     for (const spec of specs) {
-      const row = current?.get(spec.slot);
+      let row = current?.get(spec.slot);
+      // A SUPERVISOR field is applied at approval, but an approver who had no signature
+      // then (an optional field lets the approval through) leaves it blank for good. Their
+      // signature must reach the export whenever they have one, so a current approved
+      // revision still missing it adopts the approver's account signature NOW and keeps
+      // it (frozen), so later re-registrations cannot change what this revision exports.
+      if (!row && spec.signer === 'SUPERVISOR' && opts.enforceRequired) {
+        row =
+          (await this.freezeApproverSignature(
+            tenantId,
+            reportId,
+            spec.slot,
+            opts.revisionNumber,
+          )) ?? undefined;
+      }
       const bytes = row ? await this.storage.getSignature(row.storageKey) : null;
       if (bytes) {
         images[spec.slot] = { bytes };

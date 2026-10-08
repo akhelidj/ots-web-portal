@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import {
   AttachmentStorage,
+  LogoObjectRef,
   ReconcileItem,
   SignatureObjectRef,
   StorageObjectRef,
@@ -36,6 +37,12 @@ export class LocalAttachmentStorage implements AttachmentStorage {
     'api',
     'uploads',
     'signatures',
+  );
+  private readonly brandingDir = path.join(
+    process.cwd(),
+    'api',
+    'uploads',
+    'branding',
   );
 
   public async put(ref: StorageObjectRef, buffer: Buffer): Promise<void> {
@@ -168,6 +175,43 @@ export class LocalAttachmentStorage implements AttachmentStorage {
     const resolved = path.resolve(this.signatureDir, ...storageKey.split('/'));
     if (!resolved.startsWith(path.resolve(this.signatureDir) + path.sep)) {
       throw new Error(`Invalid signature storage key '${storageKey}'.`);
+    }
+    return resolved;
+  }
+
+  // -- Customer logos ---------------------------------------------------------
+
+  public buildLogoKey(ref: LogoObjectRef): string {
+    return `${ref.tenantId}/${ref.customerId}/${ref.objectId}`;
+  }
+
+  public async putLogo(storageKey: string, buffer: Buffer): Promise<void> {
+    const target = this.logoPathFor(storageKey);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, buffer);
+  }
+
+  public async getLogo(storageKey: string): Promise<Buffer | null> {
+    try {
+      return await fs.readFile(this.logoPathFor(storageKey));
+    } catch {
+      return null;
+    }
+  }
+
+  public async deleteLogo(storageKey: string): Promise<void> {
+    try {
+      await fs.unlink(this.logoPathFor(storageKey));
+    } catch {
+      // no-op when file is already missing
+    }
+  }
+
+  /** Same traversal guard as {@link signaturePathFor}, under the branding root. */
+  private logoPathFor(storageKey: string): string {
+    const resolved = path.resolve(this.brandingDir, ...storageKey.split('/'));
+    if (!resolved.startsWith(path.resolve(this.brandingDir) + path.sep)) {
+      throw new Error(`Invalid logo storage key '${storageKey}'.`);
     }
     return resolved;
   }

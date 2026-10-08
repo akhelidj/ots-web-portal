@@ -1,0 +1,81 @@
+@let h = timeline();
+<div data-testid="report-timeline">
+  <dl class="cx-facts cxa-facts">
+    <div class="cx-fact">
+      <dt>Turnaround</dt>
+      <dd>
+        @if (h.turnaround !== null) {
+          {{ formatDuration(h.turnaround) }}
+        } @else if (h.elapsed !== null) {
+          {{ formatDuration(h.elapsed) }} so far
+        } @else {
+          —
+        }
+      </dd>
+    </div>
+    <div class="cx-fact">
+      <dt>Current stage</dt>
+      <dd>{{ h.current ? stageLabel(h.current) : '—' }}</dd>
+    </div>
+    <div class="cx-fact">
+      <dt>Events</dt>
+      <dd>{{ h.rows.length }}</dd>
+    </div>
+  </dl>
+
+  @if (h.stages.length > 0) {
+    <h3 class="cxa-subhead">Time in each stage</h3>
+    <div class="cxa-stagebar" role="img" aria-label="Time spent in each stage">
+      @for (s of h.stages; track s.id; let i = $index) {
+        <span
+          class="cxa-stagebar-seg"
+          [style.flex-grow]="s.share"
+          [attr.data-tone]="i % 3"
+          [title]="stageLabel(s.status) + ' · ' + formatDuration(s.duration)"
+        >
+          <span>{{ stageLabel(s.status) }}</span>
+        </span>
+      }
+    </div>
+    <ul class="cxa-stagelegend" role="list">
+      @for (s of h.stages; track s.id; let i = $index) {
+        <li>
+          <span class="cxa-stagelegend-swatch" [attr.data-tone]="i % 3" aria-hidden="true"></span>
+          <span class="cxa-stagelegend-label">{{ stageLabel(s.status) }}</span>
+          <span class="cxa-stagelegend-value">{{ formatDuration(s.duration) }}</span>
+        </li>
+      }
+    </ul>
+  }
+
+  <h3 class="cxa-subhead">Events</h3>
+  @if (h.rows.length > 0) {
+    <div class="cxa-table-wrap">
+      <table class="cxa-table">
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Time</th>
+            <th scope="col">Event</th>
+            <th scope="col" class="is-num">Step took</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of h.rows; track row.id; let first = $first) {
+            <tr [class.is-latest]="first">
+              <td>{{ row.at | date: 'd MMM y' }}</td>
+              <td>{{ row.at | date: 'HH:mm' }}</td>
+              <td class="cxa-table-event">
+                <span class="cxa-dot-sq" aria-hidden="true"></span>
+                {{ eventLabel(row.status) }}
+              </td>
+              <td class="is-num">{{ formatDuration(row.took) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="cxa-empty">No workflow events recorded yet.</p>
+  }
+</div>

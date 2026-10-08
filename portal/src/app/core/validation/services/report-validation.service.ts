@@ -131,6 +131,20 @@ export class ReportValidationService {
   }
 
   /**
+   * A receiver does intake only: the one thing they can act on is attaching serial
+   * numbers. Inspection-side conditions (required fields, dispositions) belong to the
+   * inspector and approver, so they are not the receiver's problem and are not shown.
+   */
+  scopeToReceiver(result: ValidationResult): ValidationResult {
+    const issues = result.issues.filter((i) => i.code === 'NO_SERIALS');
+    return {
+      ...result,
+      issues,
+      isReady: issues.every((i) => i.level !== 'BLOCKER'),
+    };
+  }
+
+  /**
    * Resolve the schema whose `required` fields gate MISSING_FIELDS readiness. When the
    * report carries a template definitionJson, derive the schema through the SAME
    * definitionToFormSchema transform the inspection form consumes, so the required set

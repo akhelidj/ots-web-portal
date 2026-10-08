@@ -159,6 +159,13 @@ export class ChildReportWorkflowService {
           user.id,
           user.tenantId,
         );
+
+        // A reopened child is inspectable again: its approved serial rows return to
+        // INSPECTED_DRAFT (after the snapshot, so the approved revision is untouched).
+        await tx.childReportSerialNumber.updateMany({
+          where: { childReportId: reportId, approvalStatus: 'APPROVED' },
+          data: { approvalStatus: 'INSPECTED_DRAFT' },
+        });
       }
 
       // Create Transition Log

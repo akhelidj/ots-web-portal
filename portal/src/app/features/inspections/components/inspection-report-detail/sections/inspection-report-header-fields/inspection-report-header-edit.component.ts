@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { sameContent } from '@portal/shared/utils/same-content';
 import {
   AbstractControl,
   FormBuilder,
@@ -77,8 +78,13 @@ export class InspectionReportHeaderEditComponent {
   /** Emits when the user cancels the edit. */
   @Output() cancelEdit = new EventEmitter<void>();
 
-  private _definition = signal<TemplateFormDefinition | null>(null);
-  private _data = signal<Record<string, unknown>>({});
+  // Content-equality, not reference-equality: window-focus hydration hands the parent a
+  // fresh-but-identical report object, which would otherwise rebuild the form and wipe
+  // whatever the user has typed.
+  private _definition = signal<TemplateFormDefinition | null>(null, {
+    equal: sameContent,
+  });
+  private _data = signal<Record<string, unknown>>({}, { equal: sameContent });
   private fb = inject(FormBuilder);
 
   /** The header schema, or null when there is no usable definition. Soft-null. */

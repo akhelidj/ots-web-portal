@@ -3,21 +3,19 @@
   band it sits in. Horizontal overflow is owned here so wide matrices scroll
   inside the table rather than pushing the document body sideways.
 -->
-<div class="w-full overflow-x-auto border border-border">
+<div class="cx-serials-scroll w-full overflow-x-auto border border-border">
   <table
     class="w-full min-w-full border-collapse text-left align-middle tabular-nums"
   >
     <!--
-      No vertical sticky on the header: this wrapper owns overflow-x, which
-      forces overflow-y to a used value of `auto`, making it the sticky
-      containing block — so `position: sticky; top: 0` can never pin against the
-      outer document scroller (it just scrolls away with the rows). A bounded
-      inner scroll region would engage it but is the wrong trade on a reading
-      surface (trapped mid-document scroll, worse on touch). The header scrolls
-      away with the document by design; the horizontal freeze on the Serial
-      column below still works, because that axis IS this wrapper's scroller.
+      This wrapper owns overflow-x, which forces overflow-y to `auto`, so it is
+      the sticky containing block for the header. Inside the customer app frame
+      the wrapper is height-bounded (`.cxa-pane--fill .cx-serials-scroll`) and
+      scrolls both axes itself, so the sticky `thead` pins while rows scroll
+      under it and the Serial column stays frozen horizontally. Unbounded, the
+      header simply scrolls away with its container.
     -->
-    <thead>
+    <thead class="cx-serials-head">
       <!-- Group band: one uppercase IBM Plex title spanning each section's columns. -->
       @if (columnGroups.length > 0) {
         <tr class="bg-card">
@@ -86,6 +84,9 @@
         <tr
           role="button"
           tabindex="0"
+          [attr.data-sn-id]="sn.id"
+          [attr.aria-current]="sn.id === selectedId ? 'true' : null"
+          [class.is-selected]="sn.id === selectedId"
           (click)="openInspection.emit(sn)"
           (keydown.enter)="openInspection.emit(sn)"
           (keydown.space)="$event.preventDefault(); openInspection.emit(sn)"

@@ -1,6 +1,6 @@
 {
   "name": "@ots/source",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "license": "MIT",
   "scripts": {
     "sync:portal-version": "node scripts/sync-portal-version.mjs",

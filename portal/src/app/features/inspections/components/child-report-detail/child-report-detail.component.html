@@ -1,165 +1,4 @@
 @if (cr(); as cr) {
-  @if (isCustomer()) {
-    <!--
-      CUSTOMER DOCUMENT VIEW (child report)
-      Mirrors the parent's customer document: identity band → specifications →
-      serials, read-only, in the same editorial layout and seams.
-    -->
-    <article class="w-full bg-background text-foreground">
-      <!-- ============================ SECTION 1 · IDENTITY ============================ -->
-      <section class="animate-in fade-in duration-500 bg-background">
-        <div
-          class="mx-auto w-full max-w-5xl px-6 sm:px-8 pt-8 sm:pt-12 pb-12 sm:pb-16"
-        >
-          <a
-            [routerLink]="
-              parentReport()
-                ? getParentReportLink(parentReport()!.id)
-                : ['/customer', 'reports']
-            "
-            class="group inline-flex items-center gap-2 font-sans uppercase tracking-[0.12em] text-[12px] text-primary/55 transition-colors duration-fast ease-standard hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
-          >
-            <svg
-              class="h-3.5 w-3.5 cust-nudge group-hover:-translate-x-0.5 group-focus-visible:-translate-x-0.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-            @if (parentReport(); as parent) {
-              Back to
-              {{ parent.reportNumber || (parent.id.substring(0, 8) | uppercase) }}
-            } @else {
-              All reports
-            }
-          </a>
-
-          <div class="mt-8 min-w-0">
-            <p
-              class="font-sans uppercase tracking-[0.16em] text-[12px] text-primary/45"
-            >
-              {{ childTypeLabel(cr.type) }} Report
-            </p>
-            <h1
-              class="mt-2 font-heading text-4xl sm:text-5xl font-semibold tracking-tight text-primary tabular-nums break-words"
-            >
-              {{ cr.reportNumber || (cr.id.substring(0, 8) | uppercase) }}
-            </h1>
-            <div class="mt-4">
-              <app-status-badge
-                [label]="childStatusLabel(cr.status)"
-                [severity]="statusSeverity()"
-                font="sans"
-              />
-            </div>
-          </div>
-
-          <!-- Identity facts — 1px seams over the line color, paper cells. -->
-          <dl
-            class="mt-10 grid grid-cols-1 gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4"
-          >
-            <div class="bg-background px-5 py-4">
-              <dt
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
-              >
-                Customer
-              </dt>
-              <dd class="mt-1.5 font-heading text-base text-primary break-words">
-                {{ customerDisplayName() }}
-              </dd>
-            </div>
-            <div class="bg-background px-5 py-4">
-              <dt
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
-              >
-                PO Number
-              </dt>
-              <dd
-                class="mt-1.5 font-heading text-base text-primary tabular-nums break-words"
-              >
-                {{ parentReport()?.poNumber || 'N/A' }}
-              </dd>
-            </div>
-            <div class="bg-background px-5 py-4">
-              <dt
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
-              >
-                Parent Report
-              </dt>
-              <dd
-                class="mt-1.5 font-heading text-base text-primary tabular-nums break-words"
-              >
-                {{ parentReport()?.reportNumber || '—' }}
-              </dd>
-            </div>
-            <div class="bg-background px-5 py-4">
-              <dt
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
-              >
-                Last updated
-              </dt>
-              <dd class="mt-1.5 font-heading text-base text-primary tabular-nums">
-                {{ cr.updatedAt ? (cr.updatedAt | date: 'mediumDate') : '—' }}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-
-      <!-- ========================= SECTION 2 · SPECIFICATIONS ========================= -->
-      @if (parentReport()) {
-        <section
-          class="animate-in fade-in duration-500 border-t border-border bg-muted"
-        >
-          <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
-            <header class="max-w-2xl">
-              <h2
-                class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-              >
-                Specifications
-              </h2>
-            </header>
-            <div class="mt-8">
-              <app-inspection-report-header-fields
-                [definition]="parentDefinition"
-                [data]="parentHeaderView()"
-                [systemValues]="parentSystemValues()"
-                [isCustomer]="true"
-              />
-            </div>
-          </div>
-        </section>
-      }
-
-      <!-- ============================= SECTION 3 · SERIALS ============================= -->
-      <section
-        class="animate-in fade-in duration-500 border-t border-border bg-background"
-      >
-        <div class="mx-auto w-full max-w-6xl px-6 sm:px-8 py-12 sm:py-16">
-          <header class="max-w-2xl">
-            <h2
-              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-            >
-              Serials
-            </h2>
-          </header>
-          <div class="mt-8">
-            <app-customer-serials-table
-              [serials]="customerSerials()"
-              [sections]="itemFormSections()"
-              [definition]="parentDefinition"
-              (openInspection)="openCustomerSerial($event)"
-            />
-          </div>
-        </div>
-      </section>
-    </article>
-  } @else {
   <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
     <!-- HEADER (same component as the parent report) -->
     <div
@@ -289,7 +128,6 @@
     <!-- Footer spacer for sticky navigation -->
     <div class="h-24 px-4 overflow-hidden pointer-events-none"></div>
   </div>
-  }
 
   @if (userRole() !== 'CUSTOMER') {
     <!-- Workflow Actions Modal -->
@@ -565,11 +403,9 @@
   @if (inspectingSnId() && parentReport(); as parentData) {
     <div
       class="fixed inset-0 !h-[100dvh] w-screen z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
-      (click)="closeInspectionForm()"
-      (keydown.escape)="closeInspectionForm()"
-      tabindex="0"
-      role="button"
-      aria-label="Close inspection form"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Serial inspection"
     >
       <div
         class="bg-card w-full max-w-2xl !h-[100dvh] flex flex-col shadow-2xl border-l border-border animate-in slide-in-from-right duration-500 overflow-hidden"
@@ -693,6 +529,8 @@
               [excludedDispositions]="['REWORK']"
               [isSaving]="isSavingInspection()"
               [saveError]="inspectionSaveError()"
+              [recordId]="inspectingSnId()"
+              [autosaveFn]="autosaveInspection"
               (saveData)="saveInspectionForm($event)"
               (formCancel)="closeInspectionForm()"
             >

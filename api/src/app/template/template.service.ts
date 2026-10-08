@@ -6,10 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { deleteReportGraph } from '../inspection-reports/delete-report-graph';
 import { TemplateValidationService } from './template-validation.service';
 import {
   ATTACHMENT_STORAGE,
   AttachmentStorage,
+  StorageObjectRef,
 } from '../storage/attachment-storage.types';
 import * as crypto from 'crypto';
 import {
@@ -209,8 +211,8 @@ export class TemplateService {
    * `createTemplate` deliberately skipped while it was unvalidated.
    *
    * Idempotent on an already-APPROVED row (returns it unchanged, no second handover). A
-   * REJECTED row cannot be approved: rejection is terminal, and the documented retry is a
-   * new version upload.
+   * REJECTED row cannot be approved directly: its author re-defines it, which resubmits it
+   * as PENDING_APPROVAL (see TemplateDefinitionService), or uploads a new version.
    */
   async approveTemplate(tenantId: string, templateId: string, userId: string) {
     return this.prisma.$transaction(async (tx) => {
@@ -223,7 +225,7 @@ export class TemplateService {
 
       if (template.approvalStatus === TemplateApprovalStatus.REJECTED) {
         throw new BadRequestException(
-          'This template version was rejected and cannot be approved. Upload a new version instead.',
+          'This template version was rejected and cannot be approved. It must be re-defined (which resubmits it) or replaced by a new version.',
         );
       }
 
@@ -264,9 +266,9 @@ export class TemplateService {
 
   /**
    * ADMIN refuses a pending template version, with a reason the uploader sees on the
-   * templates list. Terminal: the row keeps its place in the version history (auditable,
-   * never silently vanishes) but can never be consumed or later approved. The retry path
-   * is a new version upload.
+   * templates list. The row keeps its place in the version history (auditable, never
+   * silently vanishes) and cannot be consumed while rejected. It stays definable: saving a
+   * new definition resubmits it as PENDING_APPROVAL; a new version upload also works.
    *
    * Touches no other row — in particular the previously-ACTIVE version is left alone,
    * since a pending upload never displaced it in the first place.
@@ -377,93 +379,179 @@ export class TemplateService {
    * (the "System deprecation due to release of version N" audit entry), that predecessor
    * is reinstated so the key isn't left with no usable version.
    */
-  async deleteTemplate(tenantId: string, templateId: string, userId: string) {
+  async deleteTemplate(
+    tenantId: string,
+    templateId: string,
+    userId: string,
+    opts: { role?: UserRole; reason?: string } = {},
+  ) {
+    const cascade = opts.role === UserRole.ADMIN;
+    const reason = opts.reason?.trim();
     let fileKey!: string;
+    let reportsDeleted = 0;
+    const attachmentRefs: StorageObjectRef[] = [];
 
-    await this.prisma.$transaction(async (tx) => {
-      const template = await this.loadForApproval(tx, tenantId, templateId);
-      fileKey = template.fileKey;
+    await this.prisma.$transaction(
+      async (tx) => {
+        const template = await this.loadForApproval(tx, tenantId, templateId);
+        fileKey = template.fileKey;
 
-      if (template.definitionJson != null) {
-        throw new BadRequestException(
-          'Only templates that have not been defined yet can be deleted. Deprecate this version instead.',
-        );
-      }
-
-      const [reportCount, revisionCount] = await Promise.all([
-        tx.inspectionReport.count({
-          where: {
-            tenantId,
-            templateKey: template.templateKey,
-            templateVersion: template.templateVersion,
-          },
-        }),
-        tx.templateDefinitionRevision.count({ where: { templateId } }),
-      ]);
-      if (reportCount > 0 || revisionCount > 0) {
-        throw new BadRequestException(
-          'This template version is already referenced and cannot be deleted.',
-        );
-      }
-
-      await tx.template.delete({ where: { id: templateId } });
-
-      // Hand the key back to the version this upload displaced, if it did displace one.
-      if (template.status === TemplateStatus.ACTIVE) {
-        const stillActive = await tx.template.count({
-          where: {
-            tenantId,
-            templateKey: template.templateKey,
-            status: TemplateStatus.ACTIVE,
+        const reportScope = { tenantId, ...this.reportWhere(template) };
+        const reports = await tx.inspectionReport.findMany({
+          where: reportScope,
+          select: {
+            id: true,
+            customerId: true,
+            attachments: { select: { id: true } },
           },
         });
-        if (stillActive === 0) {
-          // The audit reason carries only the version number (not the key), so narrow the
-          // candidates to this key's own deprecated rows before reinstating the newest.
-          const displacedLogs = await tx.auditLog.findMany({
-            where: {
-              tenantId,
-              action: 'DEPRECATE_VERSION',
-              entity: 'Template',
-              reason: `System deprecation due to release of version ${template.templateVersion}`,
-            },
-            select: { entityId: true },
+        const reportIds = reports.map((r) => r.id);
+
+        if (!cascade) {
+          if (template.definitionJson != null) {
+            throw new BadRequestException(
+              'Only templates that have not been defined yet can be deleted. Deprecate this version instead.',
+            );
+          }
+          const revisionCount = await tx.templateDefinitionRevision.count({
+            where: { templateId },
           });
-          const displaced = await tx.template.findFirst({
+          if (reportIds.length > 0 || revisionCount > 0) {
+            throw new BadRequestException(
+              'This template version is already referenced and cannot be deleted.',
+            );
+          }
+        } else if (
+          (template.definitionJson != null || reportIds.length > 0) &&
+          !reason
+        ) {
+          throw new BadRequestException(
+            'A reason is required to delete a defined or referenced template.',
+          );
+        }
+
+        reportsDeleted = reportIds.length;
+        if (reportIds.length > 0) {
+          for (const r of reports) {
+            for (const a of r.attachments) {
+              attachmentRefs.push({
+                tenantId,
+                customerId: r.customerId,
+                reportId: r.id,
+                attachmentId: a.id,
+              });
+            }
+          }
+          await deleteReportGraph(tx, reportIds);
+        }
+
+        await tx.templateDefinitionRevision.deleteMany({ where: { templateId } });
+        await tx.template.delete({ where: { id: templateId } });
+
+        // Hand the key back to the version this upload displaced, if it did displace one.
+        if (template.status === TemplateStatus.ACTIVE) {
+          const stillActive = await tx.template.count({
             where: {
               tenantId,
               templateKey: template.templateKey,
-              status: TemplateStatus.DEPRECATED,
-              id: { in: displacedLogs.map((l) => l.entityId) },
+              status: TemplateStatus.ACTIVE,
             },
-            orderBy: { templateVersion: 'desc' },
           });
-          if (displaced) {
-            await tx.template.update({
-              where: { id: displaced.id },
-              data: { status: TemplateStatus.ACTIVE },
+          if (stillActive === 0) {
+            // The audit reason carries only the version number (not the key), so narrow the
+            // candidates to this key's own deprecated rows before reinstating the newest.
+            const displacedLogs = await tx.auditLog.findMany({
+              where: {
+                tenantId,
+                action: 'DEPRECATE_VERSION',
+                entity: 'Template',
+                reason: `System deprecation due to release of version ${template.templateVersion}`,
+              },
+              select: { entityId: true },
             });
+            const displaced = await tx.template.findFirst({
+              where: {
+                tenantId,
+                templateKey: template.templateKey,
+                status: TemplateStatus.DEPRECATED,
+                id: { in: displacedLogs.map((l) => l.entityId) },
+              },
+              orderBy: { templateVersion: 'desc' },
+            });
+            if (displaced) {
+              await tx.template.update({
+                where: { id: displaced.id },
+                data: { status: TemplateStatus.ACTIVE },
+              });
+            }
           }
         }
-      }
 
-      await tx.auditLog.create({
-        data: {
-          tenantId,
-          action: 'DELETE_VERSION',
-          entity: 'Template',
-          entityId: templateId,
-          reason: `Undefined version ${template.templateVersion} of ${template.templateKey} deleted`,
-          userId,
-        },
-      });
-    });
+        const label = `version ${template.templateVersion} of ${template.templateKey}`;
+        await tx.auditLog.create({
+          data: {
+            tenantId,
+            action: 'DELETE_VERSION',
+            entity: 'Template',
+            entityId: templateId,
+            reason: cascade
+              ? `${template.definitionJson != null ? 'Defined' : 'Undefined'} ${label} deleted with ${reportIds.length} report(s) [${reportIds.join(', ')}]. Reason: ${reason ?? 'n/a'}`
+              : `Undefined ${label} deleted`,
+            userId,
+          },
+        });
+      },
+      // The cascade can touch many rows across a dozen tables.
+      { timeout: 60_000, maxWait: 10_000 },
+    );
 
-    // Row gone — drop the workbook. Best effort: an orphaned object is harmless, and the
-    // delete itself must not fail after the row is already removed.
+    // Rows gone — drop the binaries. Best effort: an orphaned object is harmless, and the
+    // delete itself must not fail after the rows are already removed. Signature images are
+    // deliberately kept: the same objects back users' registered signatures.
     await this.storage.deleteTemplate(fileKey).catch(() => undefined);
+    await Promise.all(
+      attachmentRefs.map((ref) => this.storage.delete(ref).catch(() => undefined)),
+    );
 
-    return { deleted: true };
+    return { deleted: true, reportsDeleted };
+  }
+
+  /**
+   * What an admin delete would remove, for the confirmation dialog. Read-only.
+   */
+  async getDeleteImpact(tenantId: string, templateId: string) {
+    const template = await this.loadForApproval(this.prisma, tenantId, templateId);
+    const reportIds = (
+      await this.prisma.inspectionReport.findMany({
+        where: { tenantId, ...this.reportWhere(template) },
+        select: { id: true },
+      })
+    ).map((r) => r.id);
+    const inReports = { inspectionReportId: { in: reportIds } };
+    const [childReports, serialNumbers, attachments, signatures] =
+      await Promise.all([
+        this.prisma.childReport.count({ where: inReports }),
+        this.prisma.serialNumber.count({ where: inReports }),
+        this.prisma.attachment.count({ where: inReports }),
+        this.prisma.reportSignature.count({ where: inReports }),
+      ]);
+    return {
+      templateKey: template.templateKey,
+      templateVersion: template.templateVersion,
+      defined: template.definitionJson != null,
+      reports: reportIds.length,
+      childReports,
+      serialNumbers,
+      attachments,
+      signatures,
+    };
+  }
+
+  private reportWhere(template: { templateKey: string; templateVersion: number }) {
+    return {
+      templateKey: template.templateKey,
+      templateVersion: template.templateVersion,
+    };
   }
 
   async deprecateTemplate(

@@ -37,6 +37,10 @@ export interface LocalInspectionReport {
   // GET /inspection-reports payload (null for every report until cutover). Drives
   // the definition-driven inspection form; absent/null → legacy hardcoded schema.
   definitionJson?: unknown | null;
+  // Derived server-side (detail payload only): the inspector's NAME — the user behind the
+  // most recent action taken during IN_INSPECTION. Resolved by the API so every role sees
+  // it (the local user cache is admin-only). Absent until the detail has been pulled.
+  inspectorName?: string | null;
   version: number;
   // Phase D step 3 — the generic, definition-keyed header store (fieldKey -> value)
   // is the sole header-field carrier. The generic header edit writes header-scope
@@ -121,6 +125,10 @@ export interface LocalCustomer {
   updatedAt?: string;
   deactivatedAt?: string | null;
   deactivationReason?: string | null;
+  /** Branding (online-only, admin): `#rrggbb` or null for the default palette. */
+  brandColor?: string | null;
+  /** Storage key of the customer's logo; null/absent when there is none. */
+  logoKey?: string | null;
 }
 
 export type OutboxStatus = 'PENDING' | 'SYNCED' | 'FAILED' | 'CONFLICT';

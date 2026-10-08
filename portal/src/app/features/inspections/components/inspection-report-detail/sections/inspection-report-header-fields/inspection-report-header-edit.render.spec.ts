@@ -201,7 +201,7 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
     expect('inspBy' in emitted[0]!).toBe(false);
 
     // Once a value is derived, the same row shows it (no pending). Re-set `data` (a
-    // signal input) to a fresh ref so the zoneless scheduler re-runs CD and re-reads
+    // signal input) to a content-different value so the zoneless scheduler re-runs CD and re-reads
     // the (plain-input) systemValues — no manual detectChanges.
     c.systemValues = {
       inspector: {
@@ -211,7 +211,7 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
         source: 'Set at inspection',
       },
     };
-    c.data = {};
+    c.data = { refreshed: true };
     fixture.autoDetectChanges();
     await fixture.whenStable();
     expect(el().querySelector('[data-testid="system-value-inspBy"]')?.textContent).toContain('Ivy Inspector');

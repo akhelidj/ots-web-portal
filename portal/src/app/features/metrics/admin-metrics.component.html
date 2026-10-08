@@ -1,0 +1,223 @@
+<div class="space-y-6" data-testid="admin-metrics">
+  <div class="page-section p-5 sm:p-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h2 class="text-2xl tracking-tight text-foreground">Metrics</h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          How long reports take, end to end and stage by stage. Derived from every
+          report's workflow history.
+        </p>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="load()" [disabled]="loading()">
+        {{ loading() ? 'Loading…' : 'Refresh' }}
+      </button>
+    </div>
+
+    <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <label for="m-customer" class="form-label">Customer</label>
+        <select
+          id="m-customer"
+          class="field-control mt-1"
+          [ngModel]="customerFilter()"
+          (ngModelChange)="customerFilter.set($event)"
+        >
+          <option value="">All customers</option>
+          @for (c of customers(); track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label for="m-period" class="form-label">Created</label>
+        <select
+          id="m-period"
+          class="field-control mt-1"
+          [ngModel]="period()"
+          (ngModelChange)="period.set($event)"
+        >
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last 12 months</option>
+          <option value="all">All time</option>
+        </select>
+      </div>
+      <div>
+        <label for="m-search" class="form-label">Report or PO</label>
+        <input
+          id="m-search"
+          type="search"
+          class="field-control mt-1"
+          placeholder="Search…"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+        />
+      </div>
+      <div>
+        <label for="m-sort" class="form-label">Sort reports by</label>
+        <select
+          id="m-sort"
+          class="field-control mt-1"
+          [ngModel]="sort()"
+          (ngModelChange)="sort.set($event)"
+        >
+          <option value="newest">Newest first</option>
+          <option value="turnaround">Longest turnaround</option>
+          <option value="slowest">Longest single stage</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div role="alert" class="alert-error">{{ error() }}</div>
+  }
+
+  @if (!loading() && !error()) {
+    @let k = kpis();
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6" data-testid="metrics-kpis">
+      <div class="page-section p-4">
+        <span class="stat-label">Reports</span>
+        <span class="stat-value text-2xl text-foreground">{{ k.total }}</span>
+      </div>
+      <div class="page-section p-4">
+        <span class="stat-label">Completed</span>
+        <span class="stat-value text-2xl text-foreground">{{ k.completed }}</span>
+      </div>
+      <div class="page-section p-4">
+        <span class="stat-label">In progress</span>
+        <span class="stat-value text-2xl text-foreground">{{ k.inProgress }}</span>
+      </div>
+      <div class="page-section p-4">
+        <span class="stat-label">On hold</span>
+        <span class="stat-value text-2xl text-foreground">{{ k.onHold }}</span>
+      </div>
+      <div class="page-section p-4">
+        <span class="stat-label">Median turnaround</span>
+        <span class="stat-value text-2xl text-foreground">{{ formatDuration(k.medianTurnaround) }}</span>
+      </div>
+      <div class="page-section p-4">
+        <span class="stat-label">Average turnaround</span>
+        <span class="stat-value text-2xl text-foreground">{{ formatDuration(k.avgTurnaround) }}</span>
+      </div>
+    </div>
+
+    <!-- Average time per stage -->
+    <div class="page-section p-5 sm:p-6">
+      <h3 class="text-lg text-foreground">Average time in each stage</h3>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Across the reports above that passed through the stage. Turnaround runs from
+        pipe received to approval or completion.
+      </p>
+      @if (stageAverages().length > 0) {
+        <ul class="mt-5 space-y-3" role="list" data-testid="metrics-stage-averages">
+          @for (s of stageAverages(); track s.status) {
+            <li class="grid grid-cols-[8rem_minmax(0,1fr)_9rem] items-center gap-4 text-sm">
+              <span class="text-foreground">{{ stageLabel(s.status) }}</span>
+              <span class="h-2.5 bg-primary/10" aria-hidden="true">
+                <span class="block h-full bg-primary/60" [style.width.%]="s.share * 100"></span>
+              </span>
+              <span class="text-right font-mono text-xs tabular-nums text-foreground">
+                {{ formatDuration(s.avg) }}
+                <span class="text-muted-foreground">· {{ s.reports }} {{ s.reports === 1 ? 'report' : 'reports' }}</span>
+              </span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="mt-4 text-sm text-muted-foreground">No completed stages in this selection.</p>
+      }
+    </div>
+
+    <!-- Reports + the selected report's timeline -->
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div class="page-section overflow-hidden">
+        <div class="flex items-center justify-between border-b border-border px-5 py-4">
+          <h3 class="text-lg text-foreground">By report</h3>
+          <span class="text-xs text-muted-foreground">{{ filtered().length }} reports</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm tabular-nums" data-testid="metrics-table">
+            <thead class="bg-muted/60 text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th scope="col" class="px-4 py-3 font-semibold">Report</th>
+                <th scope="col" class="px-4 py-3 font-semibold">Customer</th>
+                <th scope="col" class="px-4 py-3 font-semibold">Status</th>
+                <th scope="col" class="px-4 py-3 font-semibold text-right">Turnaround</th>
+                <th scope="col" class="px-4 py-3 font-semibold">Longest stage</th>
+                <th scope="col" class="px-4 py-3 font-semibold text-right">Serials</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of filtered(); track r.id) {
+                <tr
+                  tabindex="0"
+                  class="cursor-pointer border-t border-border hover:bg-primary/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                  [class.bg-primary/[0.06]]="r.id === selectedId()"
+                  [attr.aria-selected]="r.id === selectedId()"
+                  (click)="select(r.id)"
+                  (keydown.enter)="select(r.id)"
+                  (keydown.space)="$event.preventDefault(); select(r.id)"
+                >
+                  <td class="px-4 py-3">
+                    <span class="font-medium text-foreground">{{ r.label }}</span>
+                    <span class="block text-xs text-muted-foreground">PO {{ r.poNumber }}</span>
+                  </td>
+                  <td class="px-4 py-3 text-foreground">{{ r.customerName || '—' }}</td>
+                  <td class="px-4 py-3">
+                    <span class="data-chip">{{ r.status.split('_').join(' ') }}</span>
+                  </td>
+                  <td class="px-4 py-3 text-right font-mono text-xs">
+                    @if (r.timeline.turnaround !== null) {
+                      {{ formatDuration(r.timeline.turnaround) }}
+                    } @else if (r.timeline.elapsed !== null) {
+                      <span class="text-muted-foreground">{{ formatDuration(r.timeline.elapsed) }} so far</span>
+                    } @else {
+                      —
+                    }
+                  </td>
+                  <td class="px-4 py-3 text-xs">
+                    @if (r.slowest; as s) {
+                      {{ stageLabel(s.status) }}
+                      <span class="font-mono text-muted-foreground">{{ formatDuration(s.duration) }}</span>
+                    } @else {
+                      —
+                    }
+                  </td>
+                  <td class="px-4 py-3 text-right">{{ r.serialCount }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="px-4 py-10 text-center text-muted-foreground">
+                    No reports match these filters.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page-section p-5 sm:p-6 xl:sticky xl:top-4 xl:self-start" data-testid="metrics-detail">
+        @if (selected(); as r) {
+          <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="text-xs uppercase tracking-wider text-muted-foreground">Report timeline</p>
+              <h3 class="text-lg text-foreground">{{ r.label }}</h3>
+              <p class="text-xs text-muted-foreground">
+                {{ r.customerName || 'No customer' }} · PO {{ r.poNumber }}
+              </p>
+            </div>
+            <a [routerLink]="['/admin', 'reports', r.id]" class="btn btn-secondary btn-sm">Open report</a>
+          </div>
+          <app-report-timeline [events]="r.events" />
+        } @else {
+          <p class="py-10 text-center text-sm text-muted-foreground">
+            Select a report to see its timeline.
+          </p>
+        }
+      </div>
+    </div>
+  }
+</div>

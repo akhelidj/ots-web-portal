@@ -52,12 +52,30 @@ export class DataHydrationService {
         return;
       }
 
+      if (this.hasUnsavedFormEdits()) {
+        return;
+      }
+
       void this.hydrateAll({ includeRemote: true });
     }, AUTO_HYDRATION_INTERVAL_MS);
   }
 
+  /**
+   * True when any form control on the page has unsaved user edits (Angular tags those
+   * with `ng-dirty`). Background refreshes (focus / visibility / interval) re-deliver
+   * data to bound components and can reset a form mid-edit, so they stand down until
+   * the edit is saved or cancelled.
+   */
+  private hasUnsavedFormEdits(): boolean {
+    return document.querySelector('.ng-dirty') !== null;
+  }
+
   private readonly handleWindowFocus = (): void => {
     if (!this.session.isAuthenticated() || !this.connectivity.isOnline()) {
+      return;
+    }
+
+    if (this.hasUnsavedFormEdits()) {
       return;
     }
 
@@ -70,6 +88,10 @@ export class DataHydrationService {
     }
 
     if (!this.session.isAuthenticated() || !this.connectivity.isOnline()) {
+      return;
+    }
+
+    if (this.hasUnsavedFormEdits()) {
       return;
     }
 

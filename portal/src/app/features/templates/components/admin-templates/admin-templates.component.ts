@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import {
   AdminTemplateItem,
   AdminTemplatesService,
+  TemplateDeleteImpact,
   isTemplateDefined,
 } from '@portal/features/templates/services/admin-templates.service';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
@@ -50,7 +51,13 @@ export class AdminTemplatesComponent {
    *  `isTemplateDefined` predicate the Define page's read-only branch uses (single source of
    *  truth), so the label and the recap can't drift. */
   public actionLabel(tmpl: AdminTemplateItem): string {
-    return isTemplateDefined(tmpl.definitionJson) ? 'View' : 'Define';
+    if (!isTemplateDefined(tmpl.definitionJson)) return 'Define';
+    // A rejected version stays definable: re-saving it resubmits it for review.
+    return tmpl.approvalStatus === 'REJECTED' ? 'Edit' : 'View';
+  }
+
+  public isDefined(tmpl: AdminTemplateItem): boolean {
+    return isTemplateDefined(tmpl.definitionJson);
   }
 
   /** The validation badge's word. 'PENDING_APPROVAL' reads as "Pending" in the cell — the
@@ -168,20 +175,81 @@ export class AdminTemplatesComponent {
     return e?.error?.message || e?.message || fallback;
   }
 
-  /** Remove a template that has not been defined yet — the undo for a wrong upload. */
+  /** Delete a template version. A supervisor can only undo a wrong upload (never defined);
+   *  an admin can delete any version, which also deletes every report bound to it and
+   *  their files — so the dialog states the blast radius and requires a reason. */
   public async deleteTemplate(tmpl: AdminTemplateItem) {
-    const ok = await this.confirmService.confirm({
-      title: `Delete ${tmpl.templateKey} v${tmpl.templateVersion}?`,
-      message:
-        'This permanently removes the uploaded file and cannot be undone.',
-      confirmLabel: 'Delete',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
     this.formError = '';
+    const label = `${tmpl.templateKey} v${tmpl.templateVersion}`;
+
+    if (!this.isAdmin()) {
+      const ok = await this.confirmService.confirm({
+        title: `Delete ${label}?`,
+        message:
+          'This permanently removes the uploaded file and cannot be undone.',
+        confirmLabel: 'Delete',
+        tone: 'danger',
+      });
+      if (!ok) return;
+      try {
+        await this.templatesService.deleteTemplate(tmpl.id);
+      } catch (error: unknown) {
+        this.formError = this.errorMessage(error, 'Failed to delete template.');
+      }
+      return;
+    }
+
+    let impact: TemplateDeleteImpact;
     try {
-      await this.templatesService.deleteTemplate(tmpl.id);
+      impact = await this.templatesService.getDeleteImpact(tmpl.id);
+    } catch (error: unknown) {
+      this.formError = this.errorMessage(
+        error,
+        'Could not check what this template is used by.',
+      );
+      return;
+    }
+
+    const removes: string[] = [];
+    if (impact.reports > 0) {
+      removes.push(
+        `${impact.reports} report${impact.reports === 1 ? '' : 's'}`,
+        `${impact.serialNumbers} serial${impact.serialNumbers === 1 ? '' : 's'}`,
+        `${impact.childReports} child report${impact.childReports === 1 ? '' : 's'}`,
+        `${impact.attachments} attachment${impact.attachments === 1 ? '' : 's'}`,
+      );
+    }
+    const consequence = removes.length
+      ? `This permanently deletes the template file AND ${removes.join(', ')}, with their revisions, signatures and uploaded files. It cannot be undone. Audit history is kept.`
+      : 'This permanently removes the template and its uploaded file. No reports use it. It cannot be undone.';
+
+    const needsReason = impact.defined || impact.reports > 0;
+    let reason: string | undefined;
+    if (needsReason) {
+      const entered = await this.confirmService.confirmWithReason({
+        title: `Delete ${label}?`,
+        message: consequence,
+        confirmLabel: 'Delete permanently',
+        tone: 'danger',
+        reason: {
+          label: 'Reason (required, recorded in the audit log)',
+          placeholder: 'Why is this being deleted?',
+        },
+      });
+      if (entered == null) return;
+      reason = entered;
+    } else {
+      const ok = await this.confirmService.confirm({
+        title: `Delete ${label}?`,
+        message: consequence,
+        confirmLabel: 'Delete',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
+
+    try {
+      await this.templatesService.deleteTemplate(tmpl.id, reason);
     } catch (error: unknown) {
       this.formError = this.errorMessage(error, 'Failed to delete template.');
     }

@@ -22,7 +22,16 @@ export interface ReportSignatureStates {
   /** True once the report is approved — the customer's window to sign. */
   signable: boolean;
   fields: ReportSignatureField[];
+  /** The inspector's signature frozen at submission (image key `inspector`), or null. */
+  inspector?: {
+    signed: boolean;
+    signedAt: string | null;
+    signedByName: string | null;
+  } | null;
 }
+
+/** Image key of the inspector's frozen signature (see the API's INSPECTOR_IMAGE_KEY). */
+export const INSPECTOR_IMAGE_KEY = 'inspector';
 
 /** A report waiting on the customer's signature (the "Signature pending" area). */
 export interface PendingSignatureReport {
@@ -49,6 +58,21 @@ export class ReportSignaturesService {
         `${this.base}/inspection-reports/${reportId}/signatures`,
       ),
     );
+  }
+
+  /**
+   * The real signature image for `key` (a field key, or {@link INSPECTOR_IMAGE_KEY}) as an
+   * object URL. The endpoint needs the JWT, so an <img src> cannot call it directly; the
+   * caller owns the URL and must `URL.revokeObjectURL` it.
+   */
+  public async getImageUrl(reportId: string, key: string): Promise<string> {
+    const blob = await firstValueFrom(
+      this.http.get(
+        `${this.base}/inspection-reports/${reportId}/signatures/${encodeURIComponent(key)}/image`,
+        { responseType: 'blob' },
+      ),
+    );
+    return URL.createObjectURL(blob);
   }
 
   public listPending(): Promise<PendingSignatureReport[]> {

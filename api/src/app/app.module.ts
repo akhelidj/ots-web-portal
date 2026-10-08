@@ -23,6 +23,7 @@ import { ChildReportsModule } from './child-reports/child-reports.module';
 import { FilesController } from './files/files.controller';
 import { FilesService } from './files/files.service';
 import { StorageModule } from './storage/storage.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { StorageModule } from './storage/storage.module';
     InspectionReportsModule,
     SerialNumbersModule,
     ChildReportsModule,
+    MetricsModule,
   ],
   controllers: [AppController, HealthController, FilesController],
   providers: [

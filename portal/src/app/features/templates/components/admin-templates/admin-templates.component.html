@@ -326,8 +326,9 @@
                   Reject
                 </button>
               }
-              <!-- Undo for a wrong upload: only until the template has been defined. -->
-              @if (actionLabel(tmpl) === 'Define' && isOnline()) {
+              <!-- Undo for a wrong upload (anyone, until the template is defined). An admin can
+                   delete any version, which also deletes its reports and files. -->
+              @if ((isAdmin() || !isDefined(tmpl)) && isOnline()) {
                 <button
                   (click)="deleteTemplate(tmpl)"
                   class="text-error hover:underline font-bold transition-colors focus:outline-none mr-4"

@@ -16,11 +16,10 @@ export type allowedTransitionMap = {
 // ----------------------------------------------------------------------
 // 1. Authoritative InspectionReport Matrix
 // ----------------------------------------------------------------------
-export const INSPECTION_REPORT_TRANSITIONS: Record<
-  UserRole,
-  Partial<Record<InspectionReportStatus, InspectionReportStatus[]>>
+// SUPERVISOR shares ADMIN's matrix on a report (intake, force-close and reopen included).
+const ADMIN_INSPECTION_TRANSITIONS: Partial<
+  Record<InspectionReportStatus, InspectionReportStatus[]>
 > = {
-  [UserRole.ADMIN]: {
     [InspectionReportStatus.DRAFT]: [
       InspectionReportStatus.RECEIVED,
       InspectionReportStatus.ON_HOLD,
@@ -62,7 +61,13 @@ export const INSPECTION_REPORT_TRANSITIONS: Record<
       InspectionReportStatus.APPROVED,
       InspectionReportStatus.IN_INSPECTION,
     ],
-  },
+};
+
+export const INSPECTION_REPORT_TRANSITIONS: Record<
+  UserRole,
+  Partial<Record<InspectionReportStatus, InspectionReportStatus[]>>
+> = {
+  [UserRole.ADMIN]: ADMIN_INSPECTION_TRANSITIONS,
   [UserRole.RECEIVER]: {
     [InspectionReportStatus.DRAFT]: [InspectionReportStatus.RECEIVED],
     [InspectionReportStatus.RECEIVED]: [
@@ -72,35 +77,7 @@ export const INSPECTION_REPORT_TRANSITIONS: Record<
       InspectionReportStatus.READY_FOR_INSPECTION,
     ],
   },
-  // Supervisor is "almost an admin" on a report: everything ADMIN can do except the
-  // intake step (Draft -> Received), force-Close before review, and reopening.
-  [UserRole.SUPERVISOR]: {
-    [InspectionReportStatus.DRAFT]: [InspectionReportStatus.ON_HOLD],
-    [InspectionReportStatus.RECEIVED]: [
-      InspectionReportStatus.READY_FOR_CLEANING,
-      InspectionReportStatus.ON_HOLD,
-    ],
-    [InspectionReportStatus.READY_FOR_CLEANING]: [
-      InspectionReportStatus.READY_FOR_INSPECTION,
-      InspectionReportStatus.ON_HOLD,
-    ],
-    [InspectionReportStatus.READY_FOR_INSPECTION]: [
-      InspectionReportStatus.IN_INSPECTION,
-      InspectionReportStatus.ON_HOLD,
-    ],
-    [InspectionReportStatus.IN_INSPECTION]: [InspectionReportStatus.ON_HOLD],
-    [InspectionReportStatus.PENDING_APPROVAL]: [
-      InspectionReportStatus.IN_INSPECTION,
-      InspectionReportStatus.APPROVED,
-      InspectionReportStatus.ON_HOLD,
-      InspectionReportStatus.CLOSED,
-    ],
-    [InspectionReportStatus.APPROVED]: [
-      InspectionReportStatus.ON_HOLD,
-      InspectionReportStatus.CLOSED,
-    ],
-    [InspectionReportStatus.ON_HOLD]: [InspectionReportStatus.CLOSED], // Logic for "Previous Active State" handled in service
-  },
+  [UserRole.SUPERVISOR]: ADMIN_INSPECTION_TRANSITIONS,
   [UserRole.INSPECTOR]: {
     [InspectionReportStatus.READY_FOR_INSPECTION]: [
       InspectionReportStatus.IN_INSPECTION,
@@ -116,23 +93,25 @@ export const INSPECTION_REPORT_TRANSITIONS: Record<
 // ----------------------------------------------------------------------
 // 2. Authoritative ChildReport Matrix
 // ----------------------------------------------------------------------
+// SUPERVISOR shares ADMIN's matrix on a child report too.
+const ADMIN_CHILD_TRANSITIONS: Partial<
+  Record<ChildReportStatus, ChildReportStatus[]>
+> = {
+  [ChildReportStatus.DRAFT]: [ChildReportStatus.IN_INSPECTION],
+  [ChildReportStatus.IN_INSPECTION]: [ChildReportStatus.PENDING_APPROVAL],
+  [ChildReportStatus.PENDING_APPROVAL]: [ChildReportStatus.APPROVED],
+  [ChildReportStatus.APPROVED]: [
+    ChildReportStatus.CLOSED,
+    ChildReportStatus.IN_INSPECTION,
+  ],
+};
+
 export const CHILD_REPORT_TRANSITIONS: Record<
   UserRole,
   Partial<Record<ChildReportStatus, ChildReportStatus[]>>
 > = {
-  [UserRole.ADMIN]: {
-    [ChildReportStatus.DRAFT]: [ChildReportStatus.IN_INSPECTION],
-    [ChildReportStatus.IN_INSPECTION]: [ChildReportStatus.PENDING_APPROVAL],
-    [ChildReportStatus.PENDING_APPROVAL]: [ChildReportStatus.APPROVED],
-    [ChildReportStatus.APPROVED]: [
-      ChildReportStatus.CLOSED,
-      ChildReportStatus.IN_INSPECTION,
-    ],
-  },
-  [UserRole.SUPERVISOR]: {
-    [ChildReportStatus.PENDING_APPROVAL]: [ChildReportStatus.APPROVED],
-    [ChildReportStatus.APPROVED]: [ChildReportStatus.CLOSED],
-  },
+  [UserRole.ADMIN]: ADMIN_CHILD_TRANSITIONS,
+  [UserRole.SUPERVISOR]: ADMIN_CHILD_TRANSITIONS,
   [UserRole.INSPECTOR]: {
     [ChildReportStatus.DRAFT]: [ChildReportStatus.IN_INSPECTION],
     [ChildReportStatus.IN_INSPECTION]: [ChildReportStatus.PENDING_APPROVAL],

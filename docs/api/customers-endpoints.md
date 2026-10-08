@@ -5,7 +5,7 @@ All endpoints are tenant-scoped and require authentication.
 ## Security
 
 - **Authentication:** Required (Bearer Token)
-- **Authorization:** `ADMIN` role required for all customer mutations and queries.
+- **Authorization:** `ADMIN` role required for all customer mutations; `SUPERVISOR` may read the list and logos; `INSPECTOR` and `RECEIVER` may read the list (so reports show customer names). `CUSTOMER` reads only its own branding via `/me/branding`.
 - **Tenant Isolation:** All operations are strictly bound to the authenticated user's `tenantId`.
 
 ## Endpoints
@@ -148,3 +148,16 @@ Returns the updated customer object with the incremented `version` and deactivat
 ### 5. Delete Customer
 
 `DELETE /customers/:id` (ADMIN) — hard-deletes the customer; related rows are set to NULL (`onDelete: SetNull`). An audit row is written. Returns `{ "success": true }`; `404` if not in the tenant. The portal does not expose this: it deactivates instead (see 4).
+
+### 6. Branding (logo + brand colour)
+
+Optional per-customer branding for the customer portal. Online-only (no outbox). Code: `api/src/app/customers/customer-branding.service.ts`, portal palette `portal/src/app/core/theme/brand-palette.ts`.
+
+- **Brand colour:** `brandColor` on `PATCH /customers/:id` (section 3): `"#rrggbb"` to set, `null` to clear. Anything else is a `400`.
+- `PUT /customers/:id/logo` (ADMIN), multipart: `file` (PNG, JPEG or WebP, ≤ 1 MB; the type is sniffed from the bytes, so SVG is refused) and `version`. The logo is stored through `AttachmentStorage` under a fresh key (`<tenant>/<customer>/<uuid>`, S3 prefix `S3_BRANDING_PREFIX`, default `branding/`), and the previous object is deleted. Returns the customer with `version + 1`. `409` on a stale version.
+- `DELETE /customers/:id/logo?version=N` (ADMIN): clears the logo and deletes the object. Returns the customer with `version + 1`.
+- `GET /customers/:id/logo` (ADMIN, SUPERVISOR): the image bytes.
+- `GET /me/branding` (CUSTOMER): `{ customerId, name, brandColor, logoId }`, always the caller's own customer (no `:id`). `logoId` changes on every upload and is `null` without a logo.
+- `GET /me/branding/logo` (CUSTOMER): the caller's own logo bytes.
+
+The list (section 1) also returns `brandColor`, `logoKey` and `logoMimeType`.

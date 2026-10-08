@@ -68,6 +68,17 @@ export interface SignatureObjectRef {
   objectId: string;
 }
 
+/**
+ * Everything needed to mint the storage key of one customer logo. `objectId` is a
+ * fresh uuid per upload, so a replaced logo gets a new key (old one deleted) and the
+ * key itself doubles as a cache-buster for clients.
+ */
+export interface LogoObjectRef {
+  tenantId: string;
+  customerId: string;
+  objectId: string;
+}
+
 export interface AttachmentStorage {
   /** Persist `buffer` at the location for `ref`, overwriting any existing object. */
   put(ref: StorageObjectRef, buffer: Buffer): Promise<void>;
@@ -133,4 +144,21 @@ export interface AttachmentStorage {
 
   /** Remove the signature object at `storageKey`; a no-op when it is already gone. */
   deleteSignature(storageKey: string): Promise<void>;
+
+  // -- Customer logos (branding) --------------------------------------------
+  //
+  // Same model as signatures: key built once at upload, persisted on
+  // `Customer.logoKey`, reads take that stored string.
+
+  /** Build the backend-agnostic key `<tenantId>/<customerId>/<objectId>` for a logo. */
+  buildLogoKey(ref: LogoObjectRef): string;
+
+  /** Persist a logo image's `buffer` at `storageKey`. */
+  putLogo(storageKey: string, buffer: Buffer, contentType: string): Promise<void>;
+
+  /** Read a logo image by `storageKey`, or `null` when it does not exist. */
+  getLogo(storageKey: string): Promise<Buffer | null>;
+
+  /** Remove the logo object at `storageKey`; a no-op when it is already gone. */
+  deleteLogo(storageKey: string): Promise<void>;
 }

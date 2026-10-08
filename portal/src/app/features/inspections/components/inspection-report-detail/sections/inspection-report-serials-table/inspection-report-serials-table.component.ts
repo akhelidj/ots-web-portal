@@ -91,15 +91,13 @@ export class InspectionReportSerialsTableComponent {
     return this.cachedColumnGroups;
   }
 
-  /** Total rendered columns — identity columns + (unless compact) every matrix column.
-   *  Drives the empty-state colspan so it always spans the real table width. */
+  /** Total rendered columns — identity columns + every definition column (compact mode only
+   *  tightens padding; it never hides the definition's columns). Drives the empty-state
+   *  colspan so it always spans the real table width. */
   protected get totalColumnCount(): number {
-    const identity = 2; // serial + disposition/actions
-    const sync =
-      this.userRole !== APP_ROLES.CUSTOMER && !this.isCompactMode ? 1 : 0;
-    const matrix = this.isCompactMode
-      ? 0
-      : this.columnGroups.reduce((sum, g) => sum + g.columns.length, 0);
+    const identity = 2; // serial + result/actions
+    const sync = this.userRole !== APP_ROLES.CUSTOMER ? 1 : 0;
+    const matrix = this.columnGroups.reduce((sum, g) => sum + g.columns.length, 0);
     return identity + sync + matrix;
   }
 

@@ -31,7 +31,9 @@
           }
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6">
             @for (field of section.fields; track field.key) {
-              @if (field.role) {
+              @if (field.role === 'inspectorSignature' && isCustomer()) {
+                <!-- Shown with the other signatures on the lifecycle rail instead. -->
+              } @else if (field.role) {
                 <!-- System-owned field: derived, read-only, badged. Never user-entered. -->
                 <app-system-field-row
                   [fieldKey]="field.key"

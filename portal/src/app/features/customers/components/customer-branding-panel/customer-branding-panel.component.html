@@ -1,0 +1,127 @@
+@let c = current();
+<div class="page-section p-6" data-testid="branding-panel">
+  <div class="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-3">
+    <div>
+      <h3 class="text-base font-semibold text-foreground">
+        Portal branding: <span>{{ c?.name }}</span>
+      </h3>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Optional. With a logo, the customer's header shows their logo and name instead of
+        Trackline. With a colour, their whole portal (light and dark) is tinted with it.
+        Without one, the accent stays a neutral white.
+      </p>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="closed.emit()">Close</button>
+  </div>
+
+  <div class="mt-5 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+    <div class="space-y-6">
+      <!-- Logo -->
+      <section aria-labelledby="brand-logo-h">
+        <h4 id="brand-logo-h" class="form-label">Logo</h4>
+        <div class="mt-2 flex items-center gap-4">
+          <div class="grid h-16 w-40 place-items-center border border-border bg-white p-2">
+            @if (logoUrl(); as url) {
+              <img [src]="url" alt="Current logo" class="max-h-full max-w-full object-contain" />
+            } @else {
+              <span class="text-xs text-muted-foreground">No logo</span>
+            }
+          </div>
+          <div class="flex flex-col gap-2">
+            <label class="btn btn-secondary btn-sm cursor-pointer" [class.opacity-50]="busy()">
+              {{ c?.logoKey ? 'Replace logo' : 'Upload logo' }}
+              <input
+                type="file"
+                class="sr-only"
+                accept="image/png,image/jpeg,image/webp"
+                [disabled]="busy()"
+                (change)="onLogoSelected($event)"
+                data-testid="branding-logo-input"
+              />
+            </label>
+            @if (c?.logoKey) {
+              <button type="button" class="action-link-accent text-left text-sm" [disabled]="busy()" (click)="removeLogo()">
+                Remove logo
+              </button>
+            }
+          </div>
+        </div>
+        <p class="mt-2 text-xs text-muted-foreground">PNG, JPEG or WebP, up to 1 MB. A wide logo on a transparent background works best.</p>
+      </section>
+
+      <!-- Colour -->
+      <section aria-labelledby="brand-color-h">
+        <h4 id="brand-color-h" class="form-label">Brand colour</h4>
+        <label class="mt-2 flex items-center gap-2 text-sm text-foreground">
+          <input type="checkbox" [ngModel]="useColor()" (ngModelChange)="useColor.set($event)" data-testid="branding-use-color" />
+          Use a brand colour
+        </label>
+        <div class="mt-3 flex items-center gap-3" [class.opacity-40]="!useColor()">
+          <input
+            type="color"
+            aria-label="Pick brand colour"
+            class="h-10 w-14 cursor-pointer border border-border bg-transparent p-0.5"
+            [disabled]="!useColor()"
+            [ngModel]="color()"
+            (ngModelChange)="color.set($event)"
+          />
+          <input
+            type="text"
+            aria-label="Brand colour hex"
+            class="field-control w-32 font-mono"
+            maxlength="7"
+            [disabled]="!useColor()"
+            [ngModel]="color()"
+            (ngModelChange)="onHexInput($event)"
+            data-testid="branding-hex"
+          />
+        </div>
+        <div class="mt-4">
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            [disabled]="busy() || !colorDirty()"
+            (click)="saveColor()"
+            data-testid="branding-save-color"
+          >
+            Save colour
+          </button>
+        </div>
+      </section>
+
+      @if (error()) {
+        <div role="alert" class="alert-error py-2">{{ error() }}</div>
+      }
+      @if (notice()) {
+        <p role="status" class="text-sm text-success">{{ notice() }}</p>
+      }
+    </div>
+
+    <!-- Live preview: the exact palette the customer's portal will use -->
+    <section aria-label="Preview" class="space-y-3">
+      <h4 class="form-label">Preview</h4>
+      @for (p of [{ label: 'Light', vars: lightPreview(), mode: 'light' }, { label: 'Dark', vars: darkPreview(), mode: 'dark' }]; track p.label) {
+        <div class="brand-preview" [attr.data-mode]="p.mode" [style]="p.vars" [attr.data-testid]="'branding-preview-' + p.mode">
+          <div class="brand-preview__nav">
+            @if (logoUrl(); as url) {
+              <img [src]="url" alt="" class="brand-preview__logo" />
+              <span class="brand-preview__name">{{ c?.name }}</span>
+            } @else {
+              <img src="/assets/ots-mark.png" alt="" class="brand-preview__logo" />
+              <span class="brand-preview__name">Trackline</span>
+            }
+            <span class="brand-preview__avatar">JS</span>
+          </div>
+          <div class="brand-preview__body">
+            <p class="brand-preview__eyebrow">{{ p.label }} · Inspection reports</p>
+            <div class="brand-preview__card">
+              <div class="brand-preview__row is-selected">IR-2041 · Approved</div>
+              <div class="brand-preview__row">IR-2042 · Under review</div>
+              <button type="button" tabindex="-1" class="brand-preview__btn">Export</button>
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+  </div>
+</div>

@@ -65,7 +65,15 @@ export function buildSerialColumnGroups(
       if (leaf.endsWith('Min')) {
         const base = leaf.slice(0, -3);
         const next = fields[i + 1];
-        if (next && leafOf(next.key) === `${base}Max`) {
+        // Both the keys AND the labels must read as a Min/Max pair, so an author's
+        // coincidentally-named fields (e.g. `lengthMin` labelled "Shortest") keep their own
+        // columns exactly as defined.
+        if (
+          next &&
+          leafOf(next.key) === `${base}Max` &&
+          /\bMin$/i.test(field.label.trim()) &&
+          /\bMax$/i.test(next.label.trim())
+        ) {
           columns.push({
             id: `${field.key}|${next.key}`,
             label: field.label.replace(/\s*Min$/i, ''),

@@ -10,6 +10,7 @@
  *   - an OLDER revision is never blocked, even though the current one is.
  */
 import { ConflictException } from '@nestjs/common';
+import JSZip from 'jszip';
 import { InspectionReportStatus as S, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExportService } from './export.service';
@@ -240,5 +241,110 @@ describe('export gate for signature fields [integration]', () => {
     await expect(
       exportService.exportInspectionReport(exporter(tenant.id), reportId),
     ).rejects.toMatchObject({ response: { code: 'SIGNATURE_PENDING' } });
+  });
+
+  describe('supervisor signature', () => {
+    /** APPROVED by a real supervisor who had NO account signature; optional SUPERVISOR field. */
+    async function approvedByUnsignedSupervisor() {
+      const tenant = await seedTenant(prisma);
+      const customer = await seedCustomer(prisma, tenant.id);
+      const template = await seedRealDrillPipeTemplate(prisma, tenant.id);
+      const created = await reports.createReport(tenant.id, 'user-admin', {
+        customerId: customer.id,
+        poNumber: 'PO-SUP',
+        templateKey: 'DRILL_PIPE_REPORT',
+      });
+      const admin = { id: 'user-admin', tenantId: tenant.id, role: UserRole.ADMIN };
+      const supervisor = await prisma.user.create({
+        data: {
+          tenantId: tenant.id,
+          email: `sup-${Date.now()}@example.test`,
+          role: UserRole.SUPERVISOR,
+          passwordHash: 'x',
+        },
+      });
+
+      let r = await workflow.transition(admin, created.id, S.RECEIVED, created.version);
+      r = await workflow.transition(admin, created.id, S.READY_FOR_CLEANING, r.version);
+      r = await workflow.transition(admin, created.id, S.READY_FOR_INSPECTION, r.version);
+      r = await workflow.transition(admin, created.id, S.IN_INSPECTION, r.version);
+      await seedApprovableSerial(prisma, tenant.id, created.id, 'SN-001');
+      const pending = await workflow.transition(admin, created.id, S.PENDING_APPROVAL, r.version);
+      await workflow.transition(
+        { id: supervisor.id, tenantId: tenant.id, role: UserRole.SUPERVISOR },
+        created.id,
+        S.APPROVED,
+        pending.version,
+      );
+
+      const def = template.definitionJson as unknown as {
+        fields: unknown[];
+        export?: { global?: unknown[] };
+      };
+      await prisma.template.update({
+        where: { id: template.id },
+        data: {
+          definitionJson: {
+            ...def,
+            fields: [
+              ...def.fields,
+              {
+                key: 'supSig',
+                label: 'Supervisor',
+                type: 'signature',
+                scope: 'header',
+                required: false,
+                signer: 'SUPERVISOR',
+              },
+            ],
+            export: {
+              ...def.export,
+              global: [
+                ...(def.export?.global ?? []),
+                { token: '{{supSig}}', signature: 'field:supSig' },
+              ],
+            },
+          } as never,
+        },
+      });
+      return { tenant, reportId: created.id, supervisor };
+    }
+
+    it('adopts the approver signature when they registered it after approving, and keeps it', async () => {
+      const { tenant, reportId, supervisor } = await approvedByUnsignedSupervisor();
+
+      // No signature yet: exports fine, nothing frozen.
+      await exportService.exportInspectionReport(exporter(tenant.id), reportId);
+      expect(
+        await prisma.reportSignature.count({
+          where: { inspectionReportId: reportId, slot: 'field:supSig' },
+        }),
+      ).toBe(0);
+
+      await signatures.saveForUser(
+        { id: supervisor.id, tenantId: tenant.id },
+        makePng(),
+      );
+      const res = await exportService.exportInspectionReport(exporter(tenant.id), reportId);
+      const zip = await JSZip.loadAsync(res.buffer);
+      expect(Object.keys(zip.files).some((n) => n.startsWith('xl/media/'))).toBe(true);
+
+      const frozen = await prisma.reportSignature.findFirstOrThrow({
+        where: { inspectionReportId: reportId, slot: 'field:supSig' },
+      });
+      expect(frozen.signedById).toBe(supervisor.id);
+
+      // A later replacement does not change what this revision exports.
+      await signatures.saveForUser(
+        { id: supervisor.id, tenantId: tenant.id },
+        makePng(),
+      );
+      await exportService.exportInspectionReport(exporter(tenant.id), reportId);
+      expect(
+        await prisma.reportSignature.count({
+          where: { inspectionReportId: reportId, slot: 'field:supSig' },
+        }),
+      ).toBe(1);
+    });
   });
 });

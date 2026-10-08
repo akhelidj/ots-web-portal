@@ -210,6 +210,10 @@
     </div>
   }
 
+  @if (brandingCustomer(); as bc) {
+    <app-customer-branding-panel [customer]="bc" (closed)="brandingCustomer.set(null)" />
+  }
+
   <!-- Deactivation Form -->
   @if (selectedCustomer) {
     <div class="bg-error-light border border-error/20 p-6 rounded-xl mb-8">
@@ -338,6 +342,21 @@
                 class="action-link-primary"
               >
                 Edit
+              </button>
+              <button
+                (click)="openBranding(cust)"
+                [disabled]="
+                  cust.syncState !== 'SYNCED' || deletingIds.has(cust.id)
+                "
+                [title]="
+                  cust.syncState !== 'SYNCED'
+                    ? 'Branding is available once the customer is synced'
+                    : 'Logo and brand colour'
+                "
+                class="action-link-primary"
+                [attr.data-testid]="'branding-' + cust.id"
+              >
+                Branding
               </button>
               <button
                 (click)="onToggleActive(cust)"

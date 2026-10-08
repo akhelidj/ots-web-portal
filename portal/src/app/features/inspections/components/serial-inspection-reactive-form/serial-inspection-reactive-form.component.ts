@@ -3,12 +3,16 @@ import {
   Input,
   Output,
   EventEmitter,
+  HostListener,
   OnInit,
   SimpleChanges,
   OnChanges,
+  OnDestroy,
   inject,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subscription } from 'rxjs';
 import {
   FormBuilder,
   FormGroup,
@@ -21,6 +25,7 @@ import {
   definitionToFormSchema,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { toObjectListRow } from '@portal/features/templates/schemas/object-list-field';
+import { sameContent } from '@portal/shared/utils/same-content';
 import { DefinitionFieldInputComponent } from '@portal/features/inspections/components/definition-field-input/definition-field-input.component';
 
 /**
@@ -35,6 +40,12 @@ const EMPTY_SCHEMA: FormSchema = {
   sections: [],
 };
 
+/**
+ * Safety-net pause while typing in a text/number field. The normal triggers are faster:
+ * a select/date/boolean change and leaving a field both save immediately (`commitField`).
+ */
+const AUTOSAVE_DEBOUNCE_MS = 700;
+
 @Component({
   selector: 'app-serial-inspection-reactive-form',
   standalone: true,
@@ -42,7 +53,7 @@ const EMPTY_SCHEMA: FormSchema = {
   templateUrl: './serial-inspection-reactive-form.component.html',
 })
 export class SerialInspectionReactiveFormComponent
-  implements OnInit, OnChanges
+  implements OnInit, OnChanges, OnDestroy
 {
   @Input() initialData: Record<string, unknown> = {};
   @Input() schemaKey = 'DRILL_PIPE_REPORT';
@@ -55,6 +66,17 @@ export class SerialInspectionReactiveFormComponent
   @Input() isSaving = false;
   /** Host-driven save error → rendered in-drawer, next to the Save button. */
   @Input() saveError = '';
+  /** The record (serial) being edited — autosave writes go to THIS id, never "the current one". */
+  @Input() recordId: string | null = null;
+  /**
+   * Autosave sink. When set (and the form is editable) the form saves its draft after a
+   * short pause in typing, on switching record, and on destroy. The host owns persistence
+   * and serialises calls; the form never closes or validates for an autosave, so partial
+   * (draft) data is saved as-is.
+   */
+  @Input() autosaveFn:
+    | ((recordId: string, data: Record<string, unknown>) => Promise<void>)
+    | null = null;
 
   @Output() saveData = new EventEmitter<Record<string, unknown>>();
   @Output() formCancel = new EventEmitter<void>();
@@ -65,6 +87,12 @@ export class SerialInspectionReactiveFormComponent
   public formGroup!: FormGroup;
 
   private fb = inject(FormBuilder);
+
+  public autosaveStatus = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  private autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+  private autosavePending = false;
+  private lastSavedKey = '';
+  private valueSub: Subscription | null = null;
 
   ngOnInit() {
     // Phase D step 2b fallback switch: a present, well-formed definition → the
@@ -102,11 +130,25 @@ export class SerialInspectionReactiveFormComponent
     // signal and so are already reactive; this @Input-driven form was the outlier. Rebuild
     // FIRST, before the initialData branch, so a data change in the same pass patches the
     // freshly-built form rather than the stale one.
-    if (changes['definition'] && !changes['definition'].firstChange) {
+    // Content-identical re-deliveries (window-focus hydration re-reads the report from
+    // IndexedDB → a fresh `definitionJson` object) must NOT rebuild, or typed values vanish.
+    const definitionChange = changes['definition'];
+    if (
+      definitionChange &&
+      !definitionChange.firstChange &&
+      !sameContent(definitionChange.previousValue, definitionChange.currentValue)
+    ) {
+      this.flushAutosave(this.recordId);
       this.schema = this.resolveSchema();
       this.initForm();
     }
     if (changes['initialData'] && !changes['initialData'].firstChange) {
+      // Switching record: persist the OUTGOING record's pending edits (to its own id)
+      // before the form is re-seeded with the next one.
+      const previousId = changes['recordId']
+        ? (changes['recordId'].previousValue as string | null)
+        : this.recordId;
+      this.flushAutosave(previousId);
       this.updateFormValues();
     }
     if (changes['isReadOnly'] && this.formGroup) {
@@ -153,6 +195,95 @@ export class SerialInspectionReactiveFormComponent
     if (this.isReadOnly) {
       this.formGroup.disable();
     }
+    this.armAutosave();
+  }
+
+  /** (Re)baseline the autosave watcher on the current form. */
+  private armAutosave() {
+    this.valueSub?.unsubscribe();
+    this.cancelAutosaveTimer();
+    this.autosavePending = false;
+    this.lastSavedKey = JSON.stringify(this.buildPayload());
+    this.autosaveStatus.set('idle');
+    this.valueSub = this.formGroup.valueChanges.subscribe(() => {
+      if (!this.autosaveFn || this.isReadOnly) return;
+      this.autosavePending = true;
+      this.cancelAutosaveTimer();
+      this.autosaveTimer = setTimeout(() => {
+        this.autosaveTimer = null;
+        void this.runAutosave(this.recordId);
+      }, AUTOSAVE_DEBOUNCE_MS);
+    });
+  }
+
+  private cancelAutosaveTimer() {
+    if (this.autosaveTimer !== null) {
+      clearTimeout(this.autosaveTimer);
+      this.autosaveTimer = null;
+    }
+  }
+
+  /**
+   * A field was committed (select/date/boolean `change`, or focus left a field): save the
+   * draft now instead of waiting out the typing pause. Moving focus to the Save button is
+   * skipped — the explicit save that follows persists everything itself.
+   */
+  public commitField(event?: Event) {
+    const next = (event as FocusEvent | undefined)?.relatedTarget as
+      | HTMLElement
+      | null
+      | undefined;
+    if (next instanceof HTMLButtonElement && next.type === 'submit') return;
+    this.flushAutosave(this.recordId);
+  }
+
+  /** Tab hidden / page closing: the user may not come back, so save what is pending. */
+  @HostListener('document:visibilitychange')
+  @HostListener('window:pagehide')
+  public onPageHide() {
+    if (typeof document === 'undefined' || document.visibilityState !== 'visible') {
+      this.flushAutosave(this.recordId);
+    }
+  }
+
+  /** Save any pending edits now, to `targetId` (the record they were typed against). */
+  private flushAutosave(targetId: string | null) {
+    this.cancelAutosaveTimer();
+    if (this.autosavePending) void this.runAutosave(targetId);
+  }
+
+  private async runAutosave(targetId: string | null) {
+    const save = this.autosaveFn;
+    if (!save || !targetId || this.isReadOnly || !this.autosavePending) return;
+    this.autosavePending = false;
+    const payload = this.buildPayload();
+    const key = JSON.stringify(payload);
+    if (key === this.lastSavedKey) return;
+    this.autosaveStatus.set('saving');
+    try {
+      await save(targetId, payload);
+      this.lastSavedKey = key;
+      this.autosaveStatus.set('saved');
+    } catch {
+      // Keep the draft marked unsaved so the next edit (or flush) retries.
+      this.autosavePending = true;
+      this.autosaveStatus.set('error');
+    }
+  }
+
+  ngOnDestroy() {
+    this.valueSub?.unsubscribe();
+    this.flushAutosave(this.recordId);
+  }
+
+  /** The nested, definition-keyed inspection payload built from the current form. */
+  private buildPayload(): Record<string, unknown> {
+    const rawValues = this.formGroup.getRawValue();
+    const finalResult: Record<string, unknown> = {};
+    for (const key of Object.keys(rawValues)) {
+      this.setNestedValue(finalResult, this.toDataKey(key), rawValues[key]);
+    }
+    return finalResult;
   }
 
   private updateFormValues() {
@@ -166,7 +297,8 @@ export class SerialInspectionReactiveFormComponent
           this.getNestedValue(this.initialData, field.key) ?? '';
       }
     }
-    this.formGroup.patchValue(patchValues);
+    this.formGroup.patchValue(patchValues, { emitEvent: false });
+    this.armAutosave();
   }
 
   private toInternalKey(key: string): string {
@@ -239,17 +371,17 @@ export class SerialInspectionReactiveFormComponent
       return;
     }
 
-    const rawValues = this.formGroup.getRawValue();
-    const finalResult: Record<string, unknown> = {};
-
-    for (const key of Object.keys(rawValues)) {
-      this.setNestedValue(finalResult, this.toDataKey(key), rawValues[key]);
-    }
+    // The explicit save persists everything; drop any queued autosave of the same edits.
+    this.cancelAutosaveTimer();
+    this.autosavePending = false;
+    const finalResult = this.buildPayload();
+    this.lastSavedKey = JSON.stringify(finalResult);
 
     this.saveData.emit(finalResult);
   }
 
   public onCancel() {
+    this.flushAutosave(this.recordId);
     this.formCancel.emit();
   }
 

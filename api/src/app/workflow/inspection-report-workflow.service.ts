@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import {
   InspectionReportStatus,
+  SerialApprovalStatus,
   UserRole,
   InspectionReport,
   Prisma,
@@ -474,6 +475,25 @@ export class InspectionReportWorkflowService {
           user.id,
           user.tenantId,
         );
+
+        // A reopen back into inspection starts a new revision, so its serials must be
+        // inspectable again: approved serials return to INSPECTED_DRAFT (resubmitted and
+        // re-approved through batches like any other). Done AFTER the snapshot so the
+        // approved revision it just froze is untouched. Version bump so clients holding
+        // the old row pick up the change.
+        if (toStatus === InspectionReportStatus.IN_INSPECTION) {
+          await tx.serialNumber.updateMany({
+            where: {
+              inspectionReportId: reportId,
+              tenantId: user.tenantId,
+              approvalStatus: SerialApprovalStatus.APPROVED,
+            },
+            data: {
+              approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT,
+              version: { increment: 1 },
+            },
+          });
+        }
       }
 
       // Approval: apply the approver's account signature to every SUPERVISOR signature

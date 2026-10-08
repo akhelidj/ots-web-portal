@@ -29,6 +29,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { InspectionReportStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { InspectionReportWorkflowService } from './inspection-report-workflow.service';
+import { findLastInspectorUserId } from '../inspection-reports/last-inspector';
 import { RevisionService } from '../revision/revision.service';
 import { InspectionReportsService } from '../inspection-reports/inspection-reports.service';
 import {
@@ -153,6 +154,112 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
 
       expect(reopened.status).toBe(InspectionReportStatus.IN_INSPECTION);
       expect(reopened.version).toBe(approved.version + 1);
+    });
+
+    it('reopening to IN_INSPECTION returns APPROVED serials to INSPECTED_DRAFT so they can be inspected again', async () => {
+      const { tenant, report } = await newDraftReport();
+      const approved = await prisma.inspectionReport.update({
+        where: { id: report.id },
+        data: { status: InspectionReportStatus.APPROVED, revisionNumber: 1 },
+      });
+      const mk = (serial: string, approvalStatus: 'APPROVED' | 'NOT_INSPECTED') =>
+        prisma.serialNumber.create({
+          data: {
+            serial,
+            tenantId: tenant.id,
+            inspectionReportId: report.id,
+            approvalStatus,
+          },
+        });
+      const done = await mk('SN-DONE', 'APPROVED');
+      const untouched = await mk('SN-NEW', 'NOT_INSPECTED');
+
+      await workflow.transition(
+        admin(tenant.id),
+        report.id,
+        InspectionReportStatus.IN_INSPECTION,
+        approved.version,
+        'revision needed',
+      );
+
+      const after = await prisma.serialNumber.findMany({
+        where: { inspectionReportId: report.id },
+        orderBy: { serial: 'asc' },
+      });
+      const byId = new Map(after.map((s) => [s.id, s]));
+      expect(byId.get(done.id)?.approvalStatus).toBe('INSPECTED_DRAFT');
+      expect(byId.get(done.id)?.version).toBe(done.version + 1);
+      expect(byId.get(untouched.id)?.approvalStatus).toBe('NOT_INSPECTED');
+      expect(byId.get(untouched.id)?.version).toBe(untouched.version);
+    });
+
+    it('the inspector is the last person who acted on the report during IN_INSPECTION; a reopen alone does not change it', async () => {
+      const { tenant, report } = await newDraftReport();
+      const at = (hhmm: string) => new Date(`2026-01-01T${hhmm}:00Z`);
+      const act = (
+        userId: string,
+        when: string,
+        entity: string,
+        action: string,
+      ) =>
+        prisma.auditLog.create({
+          data: {
+            action,
+            entity,
+            entityId: 'x',
+            tenantId: tenant.id,
+            userId,
+            inspectionReportId: report.id,
+            reason: 'r',
+            timestamp: at(when),
+          },
+        });
+      const move = (from: InspectionReportStatus, to: InspectionReportStatus, when: string) =>
+        prisma.inspectionReportTransitionLog.create({
+          data: {
+            inspectionReportId: report.id,
+            fromStatus: from,
+            toStatus: to,
+            userId: 'mover',
+            timestamp: at(when),
+          },
+        });
+      const S = InspectionReportStatus;
+
+      // Actions with no IN_INSPECTION phase yet count for nothing.
+      await act('before-phase', '09:00', 'SerialNumber', 'UPDATE');
+      expect(await findLastInspectorUserId(prisma, tenant.id, report.id)).toBeNull();
+
+      await move(S.RECEIVED, S.IN_INSPECTION, '10:00');
+      await act('serial-worker', '10:30', 'SerialNumber', 'UPDATE');
+      await act('header-worker', '11:00', 'InspectionReport', 'UPDATE'); // report level
+      await act('attachment-worker', '11:30', 'Attachment', 'CREATE'); // report level
+      await move(S.IN_INSPECTION, S.PENDING_APPROVAL, '12:00');
+      await act('approver-edit', '12:30', 'InspectionReport', 'UPDATE'); // outside the phase
+      await move(S.PENDING_APPROVAL, S.APPROVED, '13:00');
+      expect(await findLastInspectorUserId(prisma, tenant.id, report.id)).toBe(
+        'attachment-worker',
+      );
+
+      // Reopened with nothing new done: still the inspector from before the revision.
+      await move(S.APPROVED, S.IN_INSPECTION, '14:00');
+      expect(await findLastInspectorUserId(prisma, tenant.id, report.id)).toBe(
+        'attachment-worker',
+      );
+
+      // New work in the revision takes over.
+      await act('revision-worker', '15:00', 'SerialNumber', 'UPDATE');
+      expect(await findLastInspectorUserId(prisma, tenant.id, report.id)).toBe(
+        'revision-worker',
+      );
+
+      // A revision exported "as of" its own time sees the inspector as it stood then.
+      expect(
+        await findLastInspectorUserId(prisma, tenant.id, report.id, at('10:45')),
+      ).toBe('serial-worker');
+      expect(
+        await findLastInspectorUserId(prisma, tenant.id, report.id, at('14:30')),
+      ).toBe('attachment-worker');
     });
   });
 

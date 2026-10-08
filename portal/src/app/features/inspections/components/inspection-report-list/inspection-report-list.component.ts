@@ -1,3 +1,5 @@
+import { RevealDirective } from '@portal/shared/directives/reveal.directive';
+import { ReportLifecycleRailComponent } from '@portal/shared/components/report-lifecycle-rail/report-lifecycle-rail.component';
 import {
   Component,
   inject,
@@ -14,6 +16,8 @@ import { RouterModule } from '@angular/router';
 import { Subscription, combineLatest, startWith } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
+import { ReportDeleteFlowService } from '@portal/features/inspections/services/report-delete-flow.service';
+import { ToastService } from '@portal/shared/toast/toast.service';
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
 import { SyncOrchestratorService } from '@portal/core/offline/services/sync-orchestrator.service';
 import { FormsModule } from '@angular/forms';
@@ -37,13 +41,13 @@ import {
 } from '@portal/core/constants/app.constants';
 import {
   BadgeSeverity,
-  StatusBadgeComponent,
 } from '@portal/shared/components/status-badge/status-badge.component';
 
 @Component({
   selector: 'app-inspection-report-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, StatusBadgeComponent],
+  imports: [
+    ReportLifecycleRailComponent, RevealDirective, CommonModule, RouterModule, FormsModule],
   templateUrl: './inspection-report-list.component.html',
 })
 export class InspectionReportListComponent implements OnInit, OnDestroy {
@@ -57,6 +61,8 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   public prefs = inject(UserPreferencesService);
   private cdr = inject(ChangeDetectorRef);
   private injector = inject(Injector);
+  private deleteFlow = inject(ReportDeleteFlowService);
+  private toast = inject(ToastService);
 
   public reports = this.irService.reports;
   public customers = signal<LocalCustomer[]>([]);
@@ -70,8 +76,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   public isCustomer = false;
   public isReceiver = false;
   public isAdmin = false;
-  /** Customer's organization name, for the quiet document header (customer view only). */
-  public customerOrgName = '';
+  public isSupervisor = false;
   private customerScopeId: string | null = null;
 
   public kpiTotalReports = 0;
@@ -113,9 +118,9 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
       this.isCustomer = p.role === APP_ROLES.CUSTOMER;
       this.isReceiver = p.role === APP_ROLES.RECEIVER;
       this.isAdmin = p.role === APP_ROLES.ADMIN;
+      this.isSupervisor = p.role === APP_ROLES.SUPERVISOR;
       this.customerScopeId =
         p.role === APP_ROLES.CUSTOMER && p.customerId ? p.customerId : null;
-      this.customerOrgName = p.customer?.name || p.tenant?.name || '';
     }
 
     this.subs.add(
@@ -302,7 +307,13 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
   getCustomerName(id: string | null): string {
     if (!id) return 'Unknown';
     const customer = this.customers().find((c) => c.id === id);
-    return customer ? customer.name : id;
+    if (customer) return customer.name;
+    // A CUSTOMER-role user has no customer list; their own name comes from the profile.
+    const profile = this.sessionService.profile();
+    if (profile?.customerId === id && profile.customer) {
+      return profile.customer.name;
+    }
+    return 'Unknown customer';
   }
 
   /**
@@ -329,6 +340,32 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
    * search). Drives the empty state: "nothing matches your filter" vs. the
    * first-run "no reports yet". Sort is not a narrowing control, so it's excluded.
    */
+  // ---- Permanent report delete (ADMIN only; the API refuses every other role) ----
+
+  /** Report id currently being deleted, so its button shows progress. */
+  public deletingId = signal<string | null>(null);
+
+  deleteBlockedReason(report: LocalInspectionReport): string | null {
+    return this.deleteFlow.blockedReason(report);
+  }
+
+  async deleteReport(report: LocalInspectionReport, event: Event): Promise<void> {
+    // The row itself is a link to the report; the button must not open it.
+    event.stopPropagation();
+    event.preventDefault();
+    if (this.deletingId()) return;
+    this.deletingId.set(report.id);
+    try {
+      // Serials are checked too: unsynced serial work would be lost with the report.
+      const serials = await this.snRepo.listByReportId(report.id);
+      await this.deleteFlow.run(report, serials);
+    } catch (error) {
+      this.toast.showError((error as Error).message, 'Report not deleted');
+    } finally {
+      this.deletingId.set(null);
+    }
+  }
+
   hasActiveCustomerFilter(): boolean {
     const q = this.qFilter.trim();
     const sn = this.snFilter.trim();

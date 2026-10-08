@@ -1,5 +1,5 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { CommonModule, formatDate } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
@@ -30,15 +30,10 @@ import {
 import { environment } from '@app-env/environment';
 import { SerialInspectionReactiveFormComponent } from '@portal/features/inspections/components/serial-inspection-reactive-form/serial-inspection-reactive-form.component';
 import {
-  SystemRoleValues,
   TemplateFormDefinition,
   definitionToFormSchema,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { SectionSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
-import {
-  BadgeSeverity,
-  StatusBadgeComponent,
-} from '@portal/shared/components/status-badge/status-badge.component';
 import {
   HeaderReportView,
   InspectionReportHeaderComponent,
@@ -46,8 +41,6 @@ import {
 import { InspectionReportBannersComponent } from '@portal/features/inspections/components/inspection-report-detail/sections/inspection-report-banners/inspection-report-banners.component';
 import { InspectionReportSerialsTableComponent } from '@portal/features/inspections/components/inspection-report-detail/sections/inspection-report-serials-table/inspection-report-serials-table.component';
 import { InspectionReportApprovalBatchesComponent } from '@portal/features/inspections/components/inspection-report-detail/sections/inspection-report-approval-batches/inspection-report-approval-batches.component';
-import { CustomerSerialsTableComponent } from '@portal/features/inspections/components/inspection-report-detail/sections/customer-serials-table/customer-serials-table.component';
-import { InspectionReportHeaderFieldsComponent } from '@portal/features/inspections/components/inspection-report-detail/sections/inspection-report-header-fields/inspection-report-header-fields.component';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
 
 @Component({
@@ -58,9 +51,6 @@ import { ConnectivityService } from '@portal/core/offline/services/connectivity.
     FormsModule,
     RouterModule,
     SerialInspectionReactiveFormComponent,
-    StatusBadgeComponent,
-    CustomerSerialsTableComponent,
-    InspectionReportHeaderFieldsComponent,
     InspectionReportHeaderComponent,
     InspectionReportBannersComponent,
     InspectionReportSerialsTableComponent,
@@ -121,45 +111,24 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     () => this.userRole().toUpperCase() === APP_ROLES.CUSTOMER,
   );
 
-  /** Customer organisation name for the identity band (same source as the parent view). */
-  public customerDisplayName = computed<string>(() => {
-    const p = this.session.profile();
-    return p?.customer?.name || p?.tenant?.name || 'N/A';
-  });
-
   public childTypeLabel(type: string): string {
     return type.charAt(0) + type.slice(1).toLowerCase();
   }
 
-  public childStatusLabel(status: string): string {
-    return status.replace(/_/g, ' ');
-  }
-
-  public statusSeverity = computed<BadgeSeverity>(() => {
-    switch (this.cr()?.status) {
-      case CHILD_REPORT_STATUSES.APPROVED:
-      case CHILD_REPORT_STATUSES.CLOSED:
-        return 'success';
-      case CHILD_REPORT_STATUSES.PENDING_APPROVAL:
-        return 'info';
-      default:
-        return 'neutral';
-    }
+  /**
+   * The child's own report number: the parent's number plus the rework rule's suffix. A child
+   * whose stored number is missing or equals the parent's bare number (a rule saved without a
+   * suffix) still reads distinctly, as `<parent>_<type>` — matching what the export carries.
+   */
+  public childNumber = computed<string>(() => {
+    const cr = this.cr();
+    if (!cr) return '';
+    const parentNumber = this.parentReport()?.reportNumber?.trim() ?? '';
+    const own = cr.reportNumber?.trim() ?? '';
+    if (own && own !== parentNumber) return own;
+    if (parentNumber) return `${parentNumber}_${String(cr.type).toLowerCase()}`;
+    return cr.id.substring(0, 8).toUpperCase();
   });
-
-  /** The parent's header view — the child shares its specifications. */
-  public parentHeaderView = computed<Record<string, unknown>>(() => {
-    const r = this.parentReport();
-    if (!r) return {};
-    const generic =
-      r.headerData && typeof r.headerData === 'object'
-        ? (r.headerData as Record<string, unknown>)
-        : {};
-    return { ...(r as unknown as Record<string, unknown>), ...generic };
-  });
-
-  /** Derived values for the parent's roled header fields (inspector, approver, …). */
-  public parentSystemValues = signal<SystemRoleValues>({});
 
   /** Item-scope sections of the parent's template — drives the customer serials matrix. */
   public itemFormSections = computed<SectionSchema[]>(() => {
@@ -198,10 +167,16 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     return q ? rows.filter((r) => r.value.toLowerCase().includes(q)) : rows;
   });
 
-  /** Inspectors and admins submit for approval; the table shows checkboxes only for them. */
+  /** Inspectors and admins submit for approval, and only while the child is IN_INSPECTION
+   *  (a DRAFT child must be started first); the table shows checkboxes only for them. */
   public canSubmitBatch = computed(() => {
     const role = this.userRole().toUpperCase();
-    return role === APP_ROLES.INSPECTOR || role === APP_ROLES.ADMIN;
+    return (
+      (role === APP_ROLES.INSPECTOR ||
+        role === APP_ROLES.ADMIN ||
+        role === APP_ROLES.SUPERVISOR) &&
+      this.cr()?.status === CHILD_REPORT_STATUSES.IN_INSPECTION
+    );
   });
 
   public canAccessBatchApprovals = computed(() => {
@@ -250,7 +225,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   public headerView = computed<HeaderReportView>(() => {
     const cr = this.cr();
     return {
-      reportNumber: cr?.reportNumber || (cr ? cr.id.substring(0, 8).toUpperCase() : ''),
+      reportNumber: this.childNumber(),
       status: cr?.status ?? '',
       poNumber: this.parentReport()?.poNumber,
       updatedAt: cr?.updatedAt,
@@ -350,86 +325,6 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
 
   public openCustomerSerial(sn: LocalSerialNumber): void {
     this.openInspectionForm(sn.id);
-  }
-
-  private async loadParentSystemValues(
-    parent: LocalInspectionReport,
-    customerName: string,
-  ): Promise<void> {
-    if (this.isOnline) {
-      await this.irService.refreshTransitionLogs(parent.id);
-    }
-    const logs = [
-      ...(await this.irService.getTransitionLogsLocally(parent.id)),
-    ].sort(
-      (a, b) =>
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-    );
-    const nameOf = async (userId?: string | null): Promise<string> => {
-      if (!userId) return 'N/A';
-      const u = await this.userRepo.getById(userId);
-      return u?.name || u?.email || 'N/A';
-    };
-    const inspectLog = [...logs]
-      .reverse()
-      .find(
-        (l) =>
-          l.toStatus === 'IN_INSPECTION' || l.toStatus === 'PENDING_APPROVAL',
-      );
-    const approveLog = [...logs]
-      .reverse()
-      .find((l) => l.toStatus === 'APPROVED' || l.toStatus === 'CLOSED');
-    const inspector = await nameOf(inspectLog?.userId);
-    const supervisor = await nameOf(approveLog?.userId);
-    const date = parent.updatedAt
-      ? formatDate(parent.updatedAt, 'mediumDate', 'en-US')
-      : '';
-    const reportNumber = parent.reportNumber?.trim() || '';
-    const poNumber = parent.poNumber?.trim() || '';
-    this.parentSystemValues.set({
-      customer: {
-        value: customerName,
-        pending: customerName === 'N/A',
-        pendingLabel: 'Awaiting customer',
-        source: 'Set at creation',
-      },
-      reportNumber: {
-        value: reportNumber,
-        pending: !reportNumber,
-        pendingLabel: 'Assigned on first sync',
-        source: 'Set at creation',
-      },
-      poNumber: {
-        value: poNumber,
-        pending: !poNumber,
-        pendingLabel: 'Awaiting PO number',
-        source: 'Set at creation',
-      },
-      inspector: {
-        value: inspector,
-        pending: inspector === 'N/A',
-        pendingLabel: 'Awaiting inspection',
-        source: 'Set at inspection',
-      },
-      supervisor: {
-        value: supervisor,
-        pending: supervisor === 'N/A',
-        pendingLabel: 'Awaiting approval',
-        source: 'Set at approval',
-      },
-      inspectionDate: {
-        value: date,
-        pending: !date,
-        pendingLabel: 'Set on first save',
-        source: 'Set automatically',
-      },
-      inspectorSignature: {
-        value: '',
-        pending: true,
-        pendingLabel: 'Applied at export',
-        source: "From the inspector's account signature",
-      },
-    });
   }
 
   public activeHistorySn = signal<{ id: string; serial: string } | null>(null);
@@ -622,6 +517,16 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       const cr = (await this.crService['crRepo'].getById(
         this.reportId,
       )) as LocalChildReport | null;
+
+      // Customers read child reports inside the parent report's app frame; an old
+      // /customer/reports/:id/child link lands there on the child's detail.
+      if (cr && this.isCustomer()) {
+        void this.router.navigate(['/customer', 'reports', cr.inspectionReportId], {
+          queryParams: { view: 'children', child: cr.id },
+          replaceUrl: true,
+        });
+        return;
+      }
       this.cr.set(cr);
 
       if (cr) {
@@ -650,9 +555,6 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
           }
         }
         this.parentReport.set(parent);
-        if (parent && this.isCustomer()) {
-          await this.loadParentSystemValues(parent, this.customerDisplayName());
-        }
 
         this.serials.set(
           (cr.serialNumbers || []).sort((a, b) =>
@@ -745,11 +647,10 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       return sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT;
     }
 
-    if (this.userRole() === APP_ROLES.SUPERVISOR) {
-      return sn.approvalStatus === SERIAL_STATUSES.SUBMITTED_FOR_APPROVAL;
-    }
-
-    if (this.userRole() === APP_ROLES.ADMIN) {
+    if (
+      this.userRole() === APP_ROLES.ADMIN ||
+      this.userRole() === APP_ROLES.SUPERVISOR
+    ) {
       return sn.approvalStatus === SERIAL_STATUSES.INSPECTED_DRAFT;
     }
 
@@ -916,6 +817,11 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   }
 
   public closeInspectionForm() {
+    if (this.hasUnrefreshedAutosave) {
+      // Drafts were autosaved while the drawer was open: refresh once they've landed.
+      this.hasUnrefreshedAutosave = false;
+      void this.autosaveChain.then(() => this.refreshData());
+    }
     this.inspectingSnId.set(null);
     this.inspectingSnValue.set('');
     this.inspectingSnApprovalStatus.set('');
@@ -923,9 +829,32 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     this.inspectionSaveError.set('');
   }
 
+  /** Serialises autosaves (and the explicit save) so no two writes read the same version. */
+  private autosaveChain: Promise<unknown> = Promise.resolve();
+  private hasUnrefreshedAutosave = false;
+
+  /** Draft autosave for the serial form: writes `data` for exactly `snId`, no close/validation. */
+  public autosaveInspection = (
+    snId: string,
+    data: Record<string, unknown>,
+  ): Promise<void> => {
+    const run = this.autosaveChain.then(() =>
+      this.crService.updateSerialNumberInspection(this.reportId, snId, data),
+    );
+    this.autosaveChain = run.catch(() => undefined);
+    return run.then(() => {
+      if (this.inspectingSnId()) {
+        this.hasUnrefreshedAutosave = true;
+      } else {
+        void this.refreshData();
+      }
+    });
+  };
+
   public async saveInspectionForm(data: Record<string, unknown>) {
     const snId = this.inspectingSnId();
     if (!snId) return;
+    await this.autosaveChain;
     const cr = this.cr();
     if (!cr) return;
 
@@ -937,6 +866,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     this.isSavingInspection.set(true);
     try {
       await this.crService.updateSerialNumberInspection(this.reportId, snId, data);
+      this.hasUnrefreshedAutosave = false;
       this.closeInspectionForm();
       await this.refreshData();
     } catch (e) {

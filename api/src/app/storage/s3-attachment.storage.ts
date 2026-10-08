@@ -8,6 +8,7 @@ import {
 } from '@aws-sdk/client-s3';
 import {
   AttachmentStorage,
+  LogoObjectRef,
   ReconcileItem,
   SignatureObjectRef,
   StorageObjectRef,
@@ -30,6 +31,8 @@ export interface S3StorageOptions {
    * `/`; omitted is treated as empty (the storage module supplies `signatures/`).
    */
   signaturePrefix?: string;
+  /** Optional customer-logo key prefix (the storage module supplies `branding/`). */
+  brandingPrefix?: string;
 }
 
 /**
@@ -48,6 +51,7 @@ export class S3AttachmentStorage implements AttachmentStorage {
   private readonly prefix: string;
   private readonly templatePrefix: string;
   private readonly signaturePrefix: string;
+  private readonly brandingPrefix: string;
 
   constructor(
     private readonly client: S3Client,
@@ -61,6 +65,9 @@ export class S3AttachmentStorage implements AttachmentStorage {
     );
     this.signaturePrefix = S3AttachmentStorage.normalizePrefix(
       options.signaturePrefix ?? '',
+    );
+    this.brandingPrefix = S3AttachmentStorage.normalizePrefix(
+      options.brandingPrefix ?? '',
     );
   }
 
@@ -277,6 +284,68 @@ export class S3AttachmentStorage implements AttachmentStorage {
 
   private signatureKeyFor(storageKey: string): string {
     return `${this.signaturePrefix}${storageKey}`;
+  }
+
+  // -- Customer logos -----------------------------------------------------------
+
+  public buildLogoKey(ref: LogoObjectRef): string {
+    return `${ref.tenantId}/${ref.customerId}/${ref.objectId}`;
+  }
+
+  public async putLogo(
+    storageKey: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<void> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: this.logoKeyFor(storageKey),
+        Body: buffer,
+        ContentType: contentType,
+      }),
+    );
+  }
+
+  public async getLogo(storageKey: string): Promise<Buffer | null> {
+    try {
+      const response = await this.client.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: this.logoKeyFor(storageKey),
+        }),
+      );
+      if (!response.Body) {
+        return null;
+      }
+      const bytes = await response.Body.transformToByteArray();
+      return Buffer.from(bytes);
+    } catch (error) {
+      if (this.isNotFound(error)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  public async deleteLogo(storageKey: string): Promise<void> {
+    try {
+      await this.client.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucket,
+          Key: this.logoKeyFor(storageKey),
+        }),
+      );
+    } catch (error) {
+      if (this.isNotFound(error)) {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private logoKeyFor(storageKey: string): string {
+    return `${this.brandingPrefix}${storageKey}`;
   }
 
   private isNotFound(error: unknown): boolean {

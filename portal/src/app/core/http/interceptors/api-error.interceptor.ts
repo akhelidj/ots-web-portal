@@ -41,6 +41,7 @@ export const apiErrorInterceptor: HttpInterceptorFn = (req, next) => {
             'SIGNATURE_REQUIRED'
         ) {
           session.setHasSignature(false);
+          session.demandSignature();
         }
 
         return throwError(() => withNormalizedHttpErrorMessage(error));

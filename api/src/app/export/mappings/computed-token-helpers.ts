@@ -25,9 +25,11 @@ export function deriveReportDate(h: Snapshot['header']): string {
 
 /**
  * `{{inspectedBy}}` / `{{approvedBy}}` — seeded from the injected header names,
- * then overridden from the transition log: earliest IN_INSPECTION/PENDING_APPROVAL
- * actor for inspected-by; latest APPROVED/CLOSED actor for approved-by, resolved
- * against snapshot.users.
+ * then (approved-by) overridden from the transition log: latest APPROVED/CLOSED
+ * actor, resolved against snapshot.users. Inspected-by is taken from the injected
+ * header name when the export service resolved one (last actor during IN_INSPECTION);
+ * only when none was resolved does it fall back to the earliest
+ * IN_INSPECTION/PENDING_APPROVAL actor from the transition log.
  */
 export function deriveActors(snapshot: Snapshot): {
   inspectedBy: string;
@@ -47,7 +49,8 @@ export function deriveActors(snapshot: Snapshot): {
       (l) =>
         l.toStatus === 'IN_INSPECTION' || l.toStatus === 'PENDING_APPROVAL',
     );
-    if (inspectLog?.userId) {
+    const inspectorResolved = !!h.inspectedByName && h.inspectedByName !== 'N/A';
+    if (!inspectorResolved && inspectLog?.userId) {
       const u = (snapshot.users || []).find((u) => u.id === inspectLog.userId);
       if (u) inspectedByName = u.name || u.email;
     }

@@ -30,6 +30,8 @@ export class ReportSignaturesPanelComponent {
   public readonly reportId = input.required<string>();
   public readonly status = input<string>('');
   public readonly isCustomer = input<boolean>(false);
+  /** Hide the list (the page shows the signatures itself) but keep loading state + the signing dialog. */
+  public readonly hideList = input<boolean>(false);
 
   /** Emits whenever the loaded state changes, so the page can gate Export on it. */
   public readonly statesChange = output<ReportSignatureStates | null>();

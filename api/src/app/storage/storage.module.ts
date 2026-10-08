@@ -20,6 +20,7 @@ import { S3AttachmentStorage } from './s3-attachment.storage';
  *   S3_PREFIX               optional attachment key prefix   (e.g. attachments/)
  *   S3_TEMPLATE_PREFIX      optional template key prefix     (default: templates/)
  *   S3_SIGNATURE_PREFIX     optional signature key prefix    (default: signatures/)
+ *   S3_BRANDING_PREFIX      optional customer-logo prefix    (default: branding/)
  *   AWS_ACCESS_KEY_ID       standard AWS creds — read by the SDK's default
  *   AWS_SECRET_ACCESS_KEY   credential provider chain, never by this code.
  */
@@ -54,6 +55,9 @@ export function createAttachmentStorage(
     const signaturePrefix =
       config.get<string>('S3_SIGNATURE_PREFIX')?.trim() ?? 'signatures/';
 
+    const brandingPrefix =
+      config.get<string>('S3_BRANDING_PREFIX')?.trim() ?? 'branding/';
+
     // Credentials are resolved by the AWS SDK's default provider chain
     // (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / instance role) — never handled
     // here, so no secret ever passes through application code.
@@ -61,13 +65,14 @@ export function createAttachmentStorage(
     new Logger('StorageModule').log(
       `Storage driver: s3 (bucket=${bucket}, region=${region}` +
         `${prefix ? `, prefix=${prefix}` : ''}, templatePrefix=${templatePrefix}, ` +
-        `signaturePrefix=${signaturePrefix}).`,
+        `signaturePrefix=${signaturePrefix}, brandingPrefix=${brandingPrefix}).`,
     );
     return new S3AttachmentStorage(client, {
       bucket,
       prefix,
       templatePrefix,
       signaturePrefix,
+      brandingPrefix,
     });
   }
 

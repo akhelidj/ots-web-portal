@@ -1,367 +1,460 @@
 @if (report(); as reportData) {
   @if (isCustomer()) {
     <!--
-      CUSTOMER DOCUMENT VIEW
-      One scrolling document — no tabs, no bottom tab bar. Six sections read
-      top-to-bottom: identity → specifications → findings → serials → documents
-      → history. Marketing visual language: full-bleed paper / deep-paper bands
-      alternating, 1px seams over the line color, editorial container width,
-      Manrope headings + values, IBM Plex uppercase labels + body, tabular
-      numerals on every measurement. Orange stays reserved for focus, selection,
-      and the single export action. Interaction follows the marketing site at app
-      scale (motion tokens): the export action sweeps its fill in, the back link
-      and its icon nudge, focus settles, and the shared serial drawer opens with
-      a medium-duration slide (customer-only; ops keeps its instant appear).
+      CUSTOMER APP FRAME
+      The report renders as a desktop-app window, not a scrolling page: the shell
+      hands this route the whole remaining viewport (`data: { appFrame: true }`)
+      and nothing here scrolls the window. Toolbar (identity + export) → sidebar
+      of views (one shown at a time, `?view=` in the URL) → a pane that scrolls on
+      its own → an optional docked inspector for the selected serial → status bar.
+      Same TrackLine language as before: theme tokens, Manrope headings, Plex mono
+      labels, 1px seams with registration marks, orange reserved for focus,
+      selection and the export action. Shortcuts: ← / → switch views; in the
+      inspector ↑/↓ (or k/j) walk serials and Esc closes. Below 1024px the sidebar
+      becomes a segmented bar and the inspector a full-screen sheet.
     -->
-    <article class="w-full bg-background text-foreground">
-      <!-- ============================ SECTION 1 · IDENTITY ============================ -->
-      <section class="animate-in fade-in duration-500 bg-background">
-        <div
-          class="mx-auto w-full max-w-5xl px-6 sm:px-8 pt-8 sm:pt-12 pb-12 sm:pb-16"
-        >
-          <a
-            routerLink=".."
-            class="group inline-flex items-center gap-2 font-sans uppercase tracking-[0.12em] text-[12px] text-primary/55 transition-colors duration-fast ease-standard hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
-          >
-            <svg
-              class="h-3.5 w-3.5 cust-nudge group-hover:-translate-x-0.5 group-focus-visible:-translate-x-0.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-            All reports
-          </a>
+    <div class="cxa-app" data-testid="customer-app-frame">
+      <!-- ============================ TOOLBAR ============================ -->
+      <header class="cxa-toolbar">
+        <a routerLink=".." class="cx-back cxa-toolbar-back" aria-label="All reports">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 12H5M11 18l-6-6 6-6" />
+          </svg>
+          <span class="cxa-hide-sm">Reports</span>
+        </a>
+        <span class="cxa-sep" aria-hidden="true"></span>
 
-          <div
-            class="mt-8 flex flex-col gap-8 md:flex-row md:items-end md:justify-between"
-          >
-            <div class="min-w-0">
-              <p
-                class="font-sans uppercase tracking-[0.16em] text-[12px] text-primary/45"
-              >
-                Inspection Report
-              </p>
-              <h1
-                class="mt-2 font-heading text-4xl sm:text-5xl font-semibold tracking-tight text-primary tabular-nums break-words"
-              >
-                {{ reportData.reportNumber || (reportData.id.substring(0, 8) | uppercase) }}
-              </h1>
-              <div class="mt-4">
-                <app-status-badge
-                  [label]="reportData.status"
-                  [severity]="reportStatusSeverity()"
-                  font="sans"
-                />
-              </div>
-            </div>
-
-            @if (
-              uiState?.actions?.['CUSTOMER_EXPORT']?.visible ||
-              uiState?.actions?.['ADMIN_EXPORT']?.visible
-            ) {
-              <div class="shrink-0 md:text-right">
-                <app-export-split-button
-                  variant="customer"
-                  [blocked]="!exportAllowed"
-                  [reason]="exportBlockedReason"
-                  [isExporting]="isExporting"
-                  [isOnline]="isOnline"
-                  (exportRequested)="exportReport($event)"
-                />
-                @if (exportBlockedReason) {
-                  <p
-                    id="export-blocked-reason"
-                    class="mt-2 max-w-xs font-sans text-[12px] text-primary/60 md:ml-auto"
-                    data-testid="export-blocked-reason"
-                  >
-                    {{ exportBlockedReason }}
-                  </p>
-                } @else if (formError) {
-                  <p
-                    role="alert"
-                    class="mt-2 max-w-xs font-sans text-[12px] text-error md:ml-auto"
-                  >
-                    {{ formError }}
-                  </p>
-                }
-              </div>
+        <div class="cxa-ident">
+          <p class="cxa-ident-eyebrow">
+            <b>Inspection report</b>
+            @if (reportData.poNumber) {
+              <span>PO {{ reportData.poNumber }}</span>
             }
+          </p>
+          <h1 class="cxa-ident-title">
+            {{ reportData.reportNumber || (reportData.id.substring(0, 8) | uppercase) }}
+          </h1>
+        </div>
+
+        @if (
+          uiState?.actions?.['CUSTOMER_EXPORT']?.visible ||
+          uiState?.actions?.['ADMIN_EXPORT']?.visible
+        ) {
+          <div class="cxa-toolbar-actions">
+            <app-export-split-button
+              variant="customer"
+              [blocked]="!exportAllowed"
+              [reason]="exportBlockedReason"
+              [isExporting]="isExporting"
+              [isOnline]="isOnline"
+              (exportRequested)="exportReport($event)"
+            />
+          </div>
+        }
+      </header>
+
+      @if (exportBlockedReason) {
+        <p id="export-blocked-reason" class="cxa-notice" data-testid="export-blocked-reason">
+          {{ exportBlockedReason }}
+        </p>
+      } @else if (formError) {
+        <p role="alert" class="cxa-notice cxa-notice--error">{{ formError }}</p>
+      }
+
+      <div class="cxa-body">
+        <!-- ============================ SIDEBAR ============================ -->
+        <nav class="cxa-sidebar" aria-label="Report sections">
+          <p class="cxa-sidebar-label">Report</p>
+          <ul class="cxa-nav" role="list">
+            @for (item of customerNav(); track item.view) {
+              <li>
+                <button
+                  type="button"
+                  class="cxa-nav-item"
+                  [class.is-active]="item.view === activeCustomerView()"
+                  [attr.aria-current]="item.view === activeCustomerView() ? 'page' : null"
+                  [attr.data-testid]="'cxa-nav-' + item.view"
+                  (click)="setCustomerView(item.view)"
+                >
+                  <span>{{ item.label }}</span>
+                  @if (item.count) {
+                    <span class="cxa-count">{{ item.count }}</span>
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+          <p class="cxa-shortcuts" aria-hidden="true"><kbd>←</kbd><kbd>→</kbd> switch view</p>
+        </nav>
+
+        <!-- ============================ PANE ============================ -->
+        <section
+          #cxaPane
+          class="cxa-pane custom-scrollbar"
+          [class.cxa-pane--fill]="activeCustomerView() === 'serials'"
+          aria-labelledby="cxa-view-title"
+        >
+          <header class="cxa-pane-head">
+            <h2 id="cxa-view-title" class="cxa-h2">{{ activeCustomerNavItem().label }}</h2>
+            @if (activeCustomerNavItem().count; as count) {
+              <span class="cxa-pane-meta">
+                {{ count }} {{ activeCustomerNavItem().unit }}{{ count === 1 ? '' : 's' }}
+              </span>
+            }
+          </header>
+
+          <!--
+            Views that report back to the frame stay mounted and are toggled with
+            [hidden]: the signatures panel (hosts the signing dialog, feeds the
+            lifecycle rail), header-fields (emits hasContent → Specifications entry)
+            and attachments (emits countChange → Documents entry). The rest mount on
+            demand. `.cxa-view` settles in with a keyframe animation, which replays
+            both on mount and when [hidden] lifts (display: none → block).
+          -->
+
+          <!-- ---------------------------- OVERVIEW ---------------------------- -->
+          <div class="cxa-view" [hidden]="activeCustomerView() !== 'overview'" data-testid="report-lifecycle">
+            <dl class="cx-facts cxa-facts">
+              <div class="cx-fact">
+                <dt>Customer</dt>
+                <dd>{{ customerDisplayName() }}</dd>
+              </div>
+              <div class="cx-fact">
+                <dt>PO number</dt>
+                <dd>{{ reportData.poNumber || 'N/A' }}</dd>
+              </div>
+              <div class="cx-fact">
+                <dt>Received</dt>
+                <dd>
+                  {{
+                    customerKeyDates().received
+                      ? (customerKeyDates().received | date: 'd MMM y')
+                      : '—'
+                  }}
+                </dd>
+              </div>
+              <div class="cx-fact">
+                <dt>Completed</dt>
+                <dd>
+                  @if (customerKeyDates().completed) {
+                    {{ customerKeyDates().completed | date: 'd MMM y' }}
+                  } @else {
+                    In progress
+                  }
+                </dd>
+              </div>
+            </dl>
+
+            <h3 class="cxa-subhead">Lifecycle</h3>
+            <app-report-lifecycle-rail
+              [status]="reportData.status"
+              [logs]="enrichedTransitionLogs()"
+              [signatures]="signatureStates()"
+              [reportId]="reportData.id"
+              [serialCount]="filteredSerials().length"
+              (signRequested)="signaturesPanel.openSigning($event)"
+            />
+            <!-- Loads the signature state and hosts the signing dialog; the rail above shows the signatures. -->
+            <app-report-signatures-panel
+              #signaturesPanel
+              [reportId]="reportData.id"
+              [status]="reportData.status"
+              [isCustomer]="true"
+              [hideList]="true"
+              (statesChange)="signatureStates.set($event)"
+            />
           </div>
 
-          <!-- Identity facts — 1px seams over the line color, paper cells. -->
-          <dl
-            class="mt-10 grid grid-cols-1 gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4"
-          >
-            <div class="bg-background px-5 py-4">
-              <dt
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
-              >
-                Customer
-              </dt>
-              <dd class="mt-1.5 font-heading text-base text-primary break-words">
-                {{ customerDisplayName() }}
-              </dd>
-            </div>
-            <div class="bg-background px-5 py-4">
-              <dt
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
-              >
-                PO Number
-              </dt>
-              <dd
-                class="mt-1.5 font-heading text-base text-primary tabular-nums break-words"
-              >
-                {{ reportData.poNumber || 'N/A' }}
-              </dd>
-            </div>
-            <div class="bg-background px-5 py-4">
-              <dt
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
-              >
-                Received
-              </dt>
-              <dd class="mt-1.5 font-heading text-base text-primary tabular-nums">
-                {{
-                  customerKeyDates().received
-                    ? (customerKeyDates().received | date: 'mediumDate')
-                    : '—'
-                }}
-              </dd>
-            </div>
-            <div class="bg-background px-5 py-4">
-              <dt
-                class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50"
-              >
-                Completed
-              </dt>
-              @if (customerKeyDates().completed) {
-                <dd
-                  class="mt-1.5 font-heading text-base text-primary tabular-nums"
-                >
-                  {{ customerKeyDates().completed | date: 'mediumDate' }}
-                </dd>
-              } @else {
-                <dd class="mt-1.5 font-heading text-base text-primary/50">
-                  In progress
-                </dd>
-              }
-            </div>
-          </dl>
-        </div>
-      </section>
-
-      <!-- ========================= SECTION 2 · SPECIFICATIONS ========================= -->
-      <section class="animate-in fade-in duration-500 border-t border-border bg-muted">
-        <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
-          <header class="max-w-2xl">
-            <h2
-              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-            >
-              Specifications
-            </h2>
-          </header>
-          <div class="mt-8">
+          <!-- ------------------------- SPECIFICATIONS ------------------------- -->
+          <div class="cxa-view" [hidden]="activeCustomerView() !== 'specs'">
             <app-inspection-report-header-fields
               [definition]="reportDefinition"
               [data]="reportHeaderView()"
               [systemValues]="systemRoleValues"
               [isCustomer]="true"
+              (hasContent)="hasSpecs.set($event)"
             />
           </div>
-        </div>
-      </section>
 
-      <!-- ============================ SECTION 3 · FINDINGS ============================ -->
-      @if (statistics().length > 0) {
-      <section
-        class="animate-in fade-in duration-500 border-t border-border bg-background"
-      >
-        <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
-          <header class="max-w-2xl">
-            <h2
-              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-            >
-              Findings
-            </h2>
-          </header>
-
-          <!-- Free-entry statistics, typed by the inspector. A statistic that lists
-               serials is a button opening the shared serials modal. -->
-          <app-report-statistics
-            variant="customer"
-            [statistics]="statistics()"
-            (statisticOpen)="openStatisticModal($event)"
-          />
-        </div>
-      </section>
-      }
-
-      <!-- ============================= SECTION 4 · SERIALS ============================= -->
-      <section class="animate-in fade-in duration-500 border-t border-border bg-muted">
-        <div class="mx-auto w-full max-w-6xl px-6 sm:px-8 py-12 sm:py-16">
-          <header class="max-w-2xl">
-            <h2
-              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-            >
-              Serials
-            </h2>
-          </header>
-          <div class="mt-8">
-            <app-customer-serials-table
-              [serials]="filteredSerials()"
-              [sections]="itemFormSections()"
-              [definition]="reportDefinition"
-              (openInspection)="openInspectionForm($event)"
-            />
-          </div>
-        </div>
-      </section>
-
-      <!-- ======================== CHILD REPORTS (rework / scrap / hold) ======================== -->
-      @if (customerChildReports().length > 0) {
-        <section
-          class="animate-in fade-in duration-500 border-t border-border bg-background"
-        >
-          <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
-            <header class="max-w-2xl">
-              <h2
-                class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-              >
-                Child Reports
-              </h2>
-              <p class="mt-2 font-sans text-sm text-primary/60">
-                Follow-up reports for serials that need further action.
-              </p>
-            </header>
-            <div class="mt-8 border-y border-border divide-y divide-border">
-              @for (c of customerChildReports(); track c.id) {
-                <a
-                  [routerLink]="['/customer', 'reports', c.id, 'child']"
-                  class="cust-interactive group flex flex-wrap items-center justify-between gap-4 px-5 py-5 hover:bg-primary/[0.10] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset sm:px-6"
-                >
-                  <div class="min-w-0">
-                    <p
-                      class="font-sans uppercase tracking-[0.1em] text-[11px] text-primary/45"
+          <!-- ---------------------------- FINDINGS ---------------------------- -->
+          <!-- Master-detail: a row of statistic tiles, then the selected one's serials, full width. -->
+          @if (activeCustomerView() === 'findings') {
+            <div class="cxa-view" data-testid="cxa-findings">
+              <ul class="cxa-finding-list" role="list" aria-label="Findings">
+                @for (stat of statistics(); track stat.id) {
+                  <li>
+                    <button
+                      type="button"
+                      class="cxa-finding"
+                      [class.is-active]="stat.id === activeFinding()?.id"
+                      [attr.aria-current]="stat.id === activeFinding()?.id ? 'true' : null"
+                      [attr.data-testid]="'cxa-finding-' + stat.id"
+                      (click)="selectFinding(stat.id)"
                     >
-                      {{ childTypeLabel(c.type) }}
-                    </p>
-                    <p
-                      class="mt-1 font-heading text-lg font-semibold text-primary tabular-nums break-words"
-                    >
-                      {{ c.reportNumber || (c.id.substring(0, 8) | uppercase) }}
-                    </p>
-                  </div>
-                  <div
-                    class="flex items-center gap-6 font-sans text-sm text-primary/85"
-                  >
-                    <span class="tabular-nums">
-                      {{ c.serialNumbers.length }}
-                      {{ c.serialNumbers.length === 1 ? 'serial' : 'serials' }}
+                      <span class="cxa-finding-label">{{ stat.label }}</span>
+                      <span class="cxa-finding-value">{{ stat.value }}</span>
+                      @if (stat.serials.length > 0) {
+                        <span class="cxa-finding-meter" aria-hidden="true">
+                          <span [style.width.%]="findingCoverage(stat) * 100"></span>
+                        </span>
+                        <span class="cxa-finding-meta">
+                          {{ stat.serials.length }} {{ stat.serials.length === 1 ? 'serial' : 'serials' }}
+                          · {{ findingCoverage(stat) | percent: '1.0-0' }} of report
+                        </span>
+                      } @else {
+                        <span class="cxa-finding-meta">No serials linked</span>
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+
+              <div class="cxa-finding-detail">
+                @if (activeFinding(); as finding) {
+                  <div class="cxa-finding-detail-head">
+                    <h3 class="cxa-subhead">Serials · {{ finding.label }}</h3>
+                    <span class="cxa-pane-meta">
+                      {{ findingSerials().length }}
+                      {{ findingSerials().length === 1 ? 'serial' : 'serials' }}
                     </span>
-                    <span
-                      class="border border-border px-2 py-0.5 font-sans uppercase tracking-[0.08em] text-[11px]"
-                      >{{ childStatusLabel(c.status) }}</span
-                    >
                   </div>
-                </a>
-              }
+                  @if (findingSerials().length > 0) {
+                    <app-customer-serials-table
+                      [serials]="findingSerials()"
+                      [sections]="itemFormSections()"
+                      [definition]="reportDefinition"
+                      [selectedId]="inspectingSn()?.id ?? null"
+                      (openInspection)="openInspectionForm($event)"
+                    />
+                  } @else {
+                    <p class="cxa-empty">No serials are linked to this finding.</p>
+                  }
+                }
+              </div>
             </div>
-          </div>
-        </section>
-      }
+          }
 
-      <!-- ===================== TEMPLATE SIGNATURES (renders nothing without signature fields) ===================== -->
-      <section
-        class="animate-in fade-in duration-500 border-t border-border bg-muted"
-        [class.hidden]="!signatureStates()?.fields?.length"
-      >
-        <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
-          <app-report-signatures-panel
-            [reportId]="reportData.id"
-            [status]="reportData.status"
-            [isCustomer]="true"
-            (statesChange)="signatureStates.set($event)"
-          />
-        </div>
-      </section>
+          <!-- ---------------------------- SERIALS ----------------------------- -->
+          @if (activeCustomerView() === 'serials') {
+            <div class="cxa-view cxa-view--fill">
+              <app-customer-serials-table
+                [serials]="filteredSerials()"
+                [sections]="itemFormSections()"
+                [definition]="reportDefinition"
+                [selectedId]="inspectingSn()?.id ?? null"
+                (openInspection)="openInspectionForm($event)"
+              />
+            </div>
+          }
 
-      <!-- ============================ SECTION 5 · DOCUMENTS ============================ -->
-      <section
-        class="animate-in fade-in duration-500 border-t border-border bg-background"
-      >
-        <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
-          <header class="max-w-2xl">
-            <h2
-              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-            >
-              Documents
-            </h2>
-          </header>
-          <div class="mt-8">
+          <!-- ------------------------- CHILD REPORTS -------------------------- -->
+          <!--
+            One child → its detail straight away. Several → the list first; choosing
+            one drills into its detail (`?child=`), with a way back to the list.
+          -->
+          @if (activeCustomerView() === 'children') {
+            @if (activeChild(); as child) {
+              <div class="cxa-view" data-testid="cxa-child-detail">
+                @if (customerChildReports().length > 1) {
+                  <button type="button" class="cx-back cxa-child-back" (click)="closeChild()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M19 12H5M11 18l-6-6 6-6" />
+                    </svg>
+                    All child reports
+                  </button>
+                }
+
+                <div class="cxa-child-card">
+                  <div class="cxa-child-ident">
+                    <p class="cxa-ident-eyebrow"><b>{{ childTypeLabel(child.type) }} report</b></p>
+                    <p class="cxa-child-title">{{ childDisplayNumber(child) }}</p>
+                  </div>
+                  <span class="cx-tag">{{ childStatusLabel(child.status) }}</span>
+                </div>
+
+                <dl class="cx-facts cxa-facts cxa-child-facts">
+                  <div class="cx-fact">
+                    <dt>Serials</dt>
+                    <dd>{{ child.serialNumbers.length }}</dd>
+                  </div>
+                  <div class="cx-fact">
+                    <dt>Parent report</dt>
+                    <dd>{{ reportData.reportNumber || '—' }}</dd>
+                  </div>
+                  <div class="cx-fact">
+                    <dt>Last updated</dt>
+                    <dd>{{ child.updatedAt ? (child.updatedAt | date: 'd MMM y') : '—' }}</dd>
+                  </div>
+                </dl>
+
+                @if (child.notes) {
+                  <h3 class="cxa-subhead">Notes</h3>
+                  <p class="cxa-child-notes">{{ child.notes }}</p>
+                }
+
+                <h3 class="cxa-subhead">Serials</h3>
+                <app-customer-serials-table
+                  [serials]="activeChildSerials()"
+                  [sections]="itemFormSections()"
+                  [definition]="reportDefinition"
+                  [selectedId]="inspectingSn()?.id ?? null"
+                  (openInspection)="openInspectionForm($event)"
+                />
+              </div>
+            } @else {
+              <div class="cxa-view">
+                <div class="cx-stagger border-y border-border divide-y divide-border">
+                  @for (c of customerChildReports(); track c.id) {
+                    <button
+                      type="button"
+                      class="cx-row group flex w-full flex-wrap items-center justify-between gap-4 px-1 py-5 text-left"
+                      [attr.data-testid]="'cxa-child-' + c.id"
+                      (click)="openChild(c.id)"
+                    >
+                      <div class="min-w-0">
+                        <p class="cx-eyebrow !mb-1">{{ childTypeLabel(c.type) }}</p>
+                        <p class="text-xl tracking-tight text-foreground tabular-nums break-words">
+                          {{ childDisplayNumber(c) }}
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-6 text-sm text-foreground">
+                        <span class="font-mono text-xs tabular-nums">
+                          {{ c.serialNumbers.length }}
+                          {{ c.serialNumbers.length === 1 ? 'serial' : 'serials' }}
+                        </span>
+                        <span class="cx-tag">{{ childStatusLabel(c.status) }}</span>
+                      </div>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          }
+
+          <!-- ---------------------------- DOCUMENTS --------------------------- -->
+          <div class="cxa-view" [hidden]="activeCustomerView() !== 'documents'">
             <app-report-attachments
               [reportId]="reportId"
               [disabled]="true"
               [viewerOnly]="true"
+              (countChange)="attachmentCount.set($event)"
             />
           </div>
-        </div>
-      </section>
 
-      <!-- ============================= SECTION 6 · HISTORY ============================= -->
-      <section class="animate-in fade-in duration-500 border-t border-border bg-muted">
-        <div class="mx-auto w-full max-w-5xl px-6 sm:px-8 py-12 sm:py-16">
-          <header class="max-w-2xl">
-            <h2
-              class="font-heading text-2xl sm:text-3xl font-semibold tracking-tight text-primary"
-            >
-              History
-            </h2>
-          </header>
-
-          @if (enrichedTransitionLogs().length > 0) {
-            <ol class="mt-8 border-l border-border">
-              @for (log of enrichedTransitionLogs(); track log.id) {
-                <li class="relative pb-8 pl-6 last:pb-0">
-                  <span
-                    class="absolute -left-[5px] top-1.5 h-2.5 w-2.5 bg-primary/30"
-                    aria-hidden="true"
-                  ></span>
-                  <p class="font-heading text-base text-primary">
-                    @switch (log.toStatus) {
-                      @case ('DRAFT') { Report created }
-                      @case ('RECEIVED') { Pipe received }
-                      @case ('READY_FOR_CLEANING') { Cleaning }
-                      @case ('READY_FOR_INSPECTION') { Ready for inspection }
-                      @case ('IN_INSPECTION') { Inspection in progress }
-                      @case ('PENDING_APPROVAL') { Under review }
-                      @case ('APPROVED') { Approved }
-                      @case ('ON_HOLD') { On hold }
-                      @case ('CLOSED') { Completed }
-                      @default { {{ log.toStatus }} }
+          <!-- ----------------------------- HISTORY ---------------------------- -->
+          <!--
+            A plain event log, newest first: what happened and when, never who.
+            Timing analytics (turnaround, time per stage) live in the admin Metrics tab.
+          -->
+          @if (activeCustomerView() === 'history') {
+            <div class="cxa-view" data-testid="cxa-history">
+              <div class="cxa-table-wrap">
+                <table class="cxa-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Date</th>
+                      <th scope="col">Time</th>
+                      <th scope="col">Event</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (log of enrichedTransitionLogs(); track log.id; let first = $first) {
+                      <tr [class.is-latest]="first">
+                        <td>{{ log.timestamp | date: 'd MMM y' }}</td>
+                        <td>{{ log.timestamp | date: 'HH:mm' }}</td>
+                        <td class="cxa-table-event">
+                          <span class="cxa-dot-sq" aria-hidden="true"></span>
+                          {{ historyEventLabel(log.toStatus) }}
+                        </td>
+                      </tr>
                     }
-                  </p>
-                  <p
-                    class="mt-1 font-sans uppercase tracking-[0.1em] text-[11px] text-primary/50 tabular-nums"
-                  >
-                    {{ log.timestamp | date: 'medium' }}
-                  </p>
-                </li>
-              }
-            </ol>
-          } @else {
-            <p class="mt-8 font-sans text-sm text-primary/50">
-              No history recorded yet.
-            </p>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           }
-        </div>
-      </section>
-    </article>
+        </section>
+
+        <!-- ======================= DOCKED INSPECTOR ======================= -->
+        @if (
+          activeCustomerView() === 'serials' ||
+          activeCustomerView() === 'findings' ||
+          (activeCustomerView() === 'children' && activeChild())
+        ) {
+          @if (inspectingSn(); as inspectingSnVal) {
+            <aside
+              class="cxa-inspector"
+              [style.--cxa-inspector-w.px]="inspectorWidth()"
+              aria-label="Serial inspection details"
+              data-testid="cxa-inspector"
+            >
+              <div
+                class="cxa-resize"
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize inspector"
+                tabindex="0"
+                [attr.aria-valuenow]="inspectorWidth()"
+                (pointerdown)="startInspectorResize($event)"
+                (pointermove)="onInspectorResize($event)"
+                (pointerup)="endInspectorResize($event)"
+                (pointercancel)="endInspectorResize($event)"
+                (keydown)="nudgeInspector($event)"
+              ></div>
+              <header class="cxa-inspector-head">
+                <div class="min-w-0">
+                  <p class="cxa-ident-eyebrow"><b>Serial</b></p>
+                  <p class="cxa-inspector-title">{{ inspectingSnVal.value }}</p>
+                </div>
+                <div class="cxa-inspector-tools">
+                  <button type="button" class="cxa-icon-btn" (click)="goToPrevSn()" [disabled]="!hasPrevSn" title="Previous serial (↑)" aria-label="Previous serial">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6" /></svg>
+                  </button>
+                  <button type="button" class="cxa-icon-btn" (click)="goToNextSn()" [disabled]="!hasNextSn" title="Next serial (↓)" aria-label="Next serial">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                  </button>
+                  <span class="cxa-sep" aria-hidden="true"></span>
+                  <button type="button" class="cxa-icon-btn" (click)="closeInspectionForm()" title="Close (Esc)" aria-label="Close inspector">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </header>
+              <div class="cxa-inspector-body custom-scrollbar">
+                <ng-container
+                  *ngTemplateOutlet="serialInspectionForm; context: { $implicit: inspectingSnVal, report: reportData }"
+                />
+              </div>
+            </aside>
+          }
+        }
+      </div>
+
+      <!-- ============================ STATUS BAR ============================ -->
+      <footer class="cxa-statusbar" aria-label="Report status">
+        <span><i>Customer</i> {{ customerDisplayName() }}</span>
+        <span class="cxa-hide-md"><i>Status</i> {{ reportData.status.split('_').join(' ') }}</span>
+        <span class="cxa-hide-md">
+          <i>Received</i>
+          {{
+            customerKeyDates().received
+              ? (customerKeyDates().received | date: 'd MMM y')
+              : '—'
+          }}
+        </span>
+        <span class="cxa-hide-md">
+          <i>Completed</i>
+          {{
+            customerKeyDates().completed
+              ? (customerKeyDates().completed | date: 'd MMM y')
+              : 'In progress'
+          }}
+        </span>
+        <span class="cxa-statusbar-end" [class.is-offline]="!isOnline">
+          <span class="cxa-dot" aria-hidden="true"></span>
+          {{ isOnline ? 'Online' : 'Offline' }}
+        </span>
+      </footer>
+    </div>
   } @else {
   <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
     <!-- HEADER -->
@@ -801,7 +894,7 @@
                     <h3 class="text-sm text-gray-900">
                       Overall Inspector Comments
                     </h3>
-                    @if (isInspectorCapable() && !isSupervisor() && !isLocked()) {
+                    @if (isInspectorCapable() && !isLocked()) {
                       @if (!isEditingGlobalComment()) {
                         <button
                           type="button"
@@ -1035,25 +1128,82 @@
         </div>
       }
     </div>
+
+    <!-- DANGER ZONE (ADMIN): permanent report delete. Online-only, and only once
+         everything local for the report is synced, so no device-side work is lost. -->
+    @if (isStrictAdmin()) {
+      <section
+        class="page-section border-error/30 p-5 sm:p-6"
+        aria-labelledby="danger-zone-h"
+        data-testid="report-danger-zone"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 id="danger-zone-h" class="text-base font-semibold text-foreground">
+              Delete this report
+            </h2>
+            <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Permanently removes the report with its serials, child reports, approval
+              batches, signatures and uploaded files. Audit history is kept. This cannot
+              be undone.
+            </p>
+            @if (deleteBlockedReason(); as blocked) {
+              <p class="mt-2 text-sm text-warning-dark">{{ blocked }}</p>
+            }
+            @if (deleteError()) {
+              <p role="alert" class="mt-2 text-sm text-error">{{ deleteError() }}</p>
+            }
+          </div>
+          <button
+            type="button"
+            class="btn btn-danger"
+            [disabled]="!!deleteBlockedReason() || isDeletingReport()"
+            (click)="deleteReport()"
+            data-testid="delete-report"
+          >
+            {{ isDeletingReport() ? 'Deleting…' : 'Delete report' }}
+          </button>
+        </div>
+      </section>
+    }
   </div>
   }
 
   <!-- GLOBAL MODALS -->
 
-    <!-- SN Inspection Side Drawer (Sheet) -->
+    <!-- The serial inspection form — one definition, rendered by the ops overlay drawer
+         below and by the customer frame's docked inspector. -->
+    <ng-template #serialInspectionForm let-sn let-r="report">
+      <app-serial-inspection-reactive-form
+        [initialData]="inspectionFormData"
+        [schemaKey]="r.templateKey"
+        [definition]="reportDefinition"
+        [isSaving]="isSavingInspection()"
+        [saveError]="inspectionSaveError()"
+        [isReadOnly]="
+          (uiState?.fieldModes?.['inspectionData'] !== 'editable' &&
+            uiState?.fieldModes?.['disposition'] !== 'editable') ||
+          sn.approvalStatus === 'SUBMITTED_FOR_APPROVAL' ||
+          sn.approvalStatus === 'APPROVED'
+        "
+        [recordId]="sn.id"
+        [autosaveFn]="autosaveInspection"
+        (saveData)="saveInspectionForm($event)"
+        (formCancel)="closeInspectionForm()"
+      />
+    </ng-template>
+
+    <!-- SN Inspection Side Drawer (Sheet) — ops only; customers get the docked inspector. -->
     @if (inspectingSn(); as inspectingSnVal) {
+    @if (!isCustomer()) {
       <div
         class="fixed inset-0 !h-[100dvh] w-screen z-[100] flex justify-end bg-black/40 backdrop-blur-sm p-0 animate-in fade-in duration-300"
-        [class.cust-drawer-backdrop]="isCustomer()"
-        (click)="closeInspectionForm()"
-        (keydown.escape)="closeInspectionForm()"
-        tabindex="0"
-        role="button"
-        aria-label="Close inspection form"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Serial inspection"
       >
         <div
           class="bg-card w-full max-w-2xl !h-[100dvh] flex flex-col shadow-2xl border-l border-border animate-in slide-in-from-right duration-500 overflow-hidden"
-          [class.cust-drawer-panel]="isCustomer()"
           (click)="$event.stopPropagation()"
           (keydown)="$event.stopPropagation()"
           tabindex="-1"
@@ -1159,33 +1309,30 @@
           <div
             class="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar bg-background"
           >
-            <app-serial-inspection-reactive-form
-              [initialData]="inspectionFormData"
-              [schemaKey]="reportData.templateKey"
-              [definition]="reportDefinition"
-              [isSaving]="isSavingInspection()"
-              [saveError]="inspectionSaveError()"
-              [isReadOnly]="
-                (uiState?.fieldModes?.['inspectionData'] !== 'editable' &&
-                  uiState?.fieldModes?.['disposition'] !== 'editable') ||
-                inspectingSnVal.approvalStatus === 'SUBMITTED_FOR_APPROVAL' ||
-                inspectingSnVal.approvalStatus === 'APPROVED'
-              "
-              (saveData)="saveInspectionForm($event)"
-              (formCancel)="closeInspectionForm()"
+            <ng-container
+              *ngTemplateOutlet="serialInspectionForm; context: { $implicit: inspectingSnVal, report: reportData }"
             />
           </div>
         </div>
       </div>
     }
+    }
 
     <!-- Statistic serials modal -->
     @if (activeStatistic()) {
+      <!-- Closes on a click outside the dialog and on Esc. -->
       <div
         class="fixed inset-0 !h-[100dvh] w-screen z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300"
+        (click)="closeStatisticModal()"
+        role="presentation"
       >
         <div
           class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-300"
+          role="dialog"
+          aria-modal="true"
+          [attr.aria-label]="'Serials: ' + activeStatistic()?.label"
+          (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()"
         >
           <div
             class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50"

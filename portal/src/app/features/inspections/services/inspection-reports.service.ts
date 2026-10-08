@@ -31,6 +31,7 @@ import {
   SERIAL_STATUSES,
 } from '@portal/core/constants/app.constants';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
+import { staleSyncedIds } from '@portal/core/offline/services/stale-synced';
 import { OutboxLocalRepo } from '@portal/core/offline/repos/outbox-local.repo';
 import {
   DataHydrationContext,
@@ -44,6 +45,18 @@ export interface AvailableTemplate {
   templateKey: string;
   templateVersion: number;
   displayName: string;
+}
+
+/** `GET /inspection-reports/:id/delete-impact` (ADMIN). */
+export interface ReportDeleteImpact {
+  reportNumber: string | null;
+  poNumber: string;
+  status: string;
+  version: number;
+  serialNumbers: number;
+  childReports: number;
+  attachments: number;
+  signatures: number;
 }
 
 /**
@@ -310,6 +323,37 @@ export class InspectionReportsService implements DataHydrationSource {
     }
   }
 
+  /**
+   * The server's report list is the truth: a cached, synced report it no longer returns
+   * was deleted there, so it goes — with its serials, child reports, batches and history.
+   * A report that still carries unsynced local work (itself or any serial / child) is
+   * kept: that work is not ours to discard silently.
+   */
+  private async pruneVanishedReports(
+    localReports: LocalInspectionReport[],
+    serverIds: string[],
+  ): Promise<void> {
+    for (const id of staleSyncedIds(localReports, serverIds)) {
+      const serials = await this.snRepo.listByReportId(id);
+      const children = await this.crRepo.listByReportId(id);
+      const hasUnsyncedWork =
+        staleSyncedIds(serials, []).length !== serials.length ||
+        staleSyncedIds(children, []).length !== children.length;
+      if (hasUnsyncedWork) continue;
+
+      for (const sn of serials) await this.snRepo.delete(sn.id);
+      for (const child of children) await this.crRepo.delete(child.id);
+      for (const log of await this.tlRepo.listByReportId(id)) {
+        await this.tlRepo.delete(log.id);
+      }
+      for (const batch of await this.approvalBatchRepo.listByReportId(id)) {
+        await this.batchSnRepo.deleteByBatchId(batch.id);
+        await this.approvalBatchRepo.delete(batch.id);
+      }
+      await this.irRepo.delete(id);
+    }
+  }
+
   public async pullAllAndCache(): Promise<void> {
     if (!this.canUseNetwork) {
       await this.refreshLocalCache();
@@ -340,6 +384,11 @@ export class InspectionReportsService implements DataHydrationSource {
       if (toUpsert.length > 0) {
         await this.irRepo.bulkUpsert(toUpsert);
       }
+
+      await this.pruneVanishedReports(
+        localReports,
+        reports.map((r) => r.id),
+      );
 
       for (const rep of reports) {
         try {
@@ -410,6 +459,13 @@ export class InspectionReportsService implements DataHydrationSource {
           if (toUpsertSn.length > 0) {
             await this.snRepo.bulkUpsert(toUpsertSn);
           }
+
+          for (const id of staleSyncedIds(
+            localSnList,
+            serials.map((s) => s.id),
+          )) {
+            await this.snRepo.delete(id);
+          }
         } catch (snErr) {
           console.error(`Failed to pull SNs for report ${rep.id}`, snErr);
         }
@@ -435,6 +491,10 @@ export class InspectionReportsService implements DataHydrationSource {
               ...localRep,
               attachments: detail.attachments ?? localRep.attachments,
               definitionJson: detail.definitionJson ?? localRep.definitionJson,
+              inspectorName:
+                detail.inspectorName !== undefined
+                  ? detail.inspectorName
+                  : localRep.inspectorName,
             });
           }
         } catch (attErr) {
@@ -560,6 +620,7 @@ export class InspectionReportsService implements DataHydrationSource {
         this.connectivity.markApiReachable();
         await this.irRepo.upsert({ ...updatedReport, syncState: 'SYNCED' });
         await this.refreshLocalCache();
+        await this.markActingInspector(id);
         return;
       } catch (error) {
         if (!this.isOfflineError(error)) {
@@ -577,6 +638,7 @@ export class InspectionReportsService implements DataHydrationSource {
     };
 
     await this.irRepo.upsert(updatedRep);
+    await this.markActingInspector(id);
 
     await this.outbox.enqueue({
       id: crypto.randomUUID(),
@@ -830,6 +892,7 @@ export class InspectionReportsService implements DataHydrationSource {
         this.connectivity.markApiReachable();
         await this.snRepo.upsert(this.mapServerSerialUpdate(sn, updateRes));
         await this.enqueueChildSync(sn.inspectionReportId);
+        await this.markActingInspector(sn.inspectionReportId);
         return;
       } catch (error) {
         if (!this.isOfflineError(error)) {
@@ -863,6 +926,44 @@ export class InspectionReportsService implements DataHydrationSource {
     });
 
     await this.enqueueChildSync(sn.inspectionReportId);
+    await this.markActingInspector(sn.inspectionReportId);
+  }
+
+  /**
+   * The current user just acted on a report that is IN_INSPECTION, so they are its
+   * inspector now. Reflect that in the local cache at once (online or offline); the next
+   * detail pull confirms it from the server. Other users see it on their next pull.
+   */
+  private async markActingInspector(reportId: string): Promise<void> {
+    const profile = this.session.profile();
+    const name = profile?.name || profile?.email;
+    if (!name) return;
+    const rep = await this.irRepo.getById(reportId);
+    if (rep && rep.status === 'IN_INSPECTION' && rep.inspectorName !== name) {
+      await this.irRepo.upsert({ ...rep, inspectorName: name });
+    }
+  }
+
+  /** ADMIN, online-only, read-only: what deleting this report would take with it. */
+  public async getDeleteImpact(id: string): Promise<ReportDeleteImpact> {
+    return firstValueFrom(
+      this.http.get<ReportDeleteImpact>(
+        `${environment.apiUrl}/inspection-reports/${id}/delete-impact`,
+      ),
+    );
+  }
+
+  /**
+   * ADMIN, online-only: permanently delete a report and everything under it. The local
+   * copy goes through the normal pull, whose prune drops reports the server no longer has.
+   */
+  public async deleteReport(id: string, version: number, reason: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`${environment.apiUrl}/inspection-reports/${id}`, {
+        body: { version, reason },
+      }),
+    );
+    await this.pullAllAndCache();
   }
 
   public async deleteSerialNumber(id: string): Promise<void> {

@@ -124,6 +124,11 @@ model Customer {
   email              String?
   isActive           Boolean            @default(true)
   phone              String?
+  /// Optional brand colour (`#rrggbb`) that re-themes the customer's portal.
+  brandColor         String?
+  /// Storage key of the optional logo (see AttachmentStorage.buildLogoKey).
+  logoKey            String?
+  logoMimeType       String?
   version            Int                @default(1)
   tenant             Tenant             @relation(fields: [tenantId], references: [id])
   inspectionReports  InspectionReport[]

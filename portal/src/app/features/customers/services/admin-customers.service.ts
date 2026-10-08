@@ -5,6 +5,7 @@ import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.rep
 import { LocalCustomer } from '@portal/core/offline/models/types';
 import { environment } from '@app-env/environment';
 import { ConnectivityService } from '@portal/core/offline/services/connectivity.service';
+import { staleSyncedIds } from '@portal/core/offline/services/stale-synced';
 import { OutboxService } from '@portal/core/offline/services/outbox.service';
 import { APP_ROLES, ENTITY_TYPES } from '@portal/core/constants/app.constants';
 import {
@@ -23,7 +24,13 @@ export class AdminCustomersService implements DataHydrationSource {
   public readonly resourceKey = 'admin-customers';
 
   public canHydrate(context: DataHydrationContext): boolean {
-    return context.profile?.role === APP_ROLES.ADMIN;
+    // SUPERVISOR, INSPECTOR and RECEIVER only read the list (customer picker / names).
+    return (
+      context.profile?.role === APP_ROLES.ADMIN ||
+      context.profile?.role === APP_ROLES.SUPERVISOR ||
+      context.profile?.role === APP_ROLES.INSPECTOR ||
+      context.profile?.role === APP_ROLES.RECEIVER
+    );
   }
 
   async pullAllAndCache(): Promise<void> {
@@ -49,6 +56,14 @@ export class AdminCustomersService implements DataHydrationSource {
 
       if (toUpsert.length > 0) {
         await this.localRepo.bulkUpsert(toUpsert);
+      }
+
+      // The server's list is the truth: drop synced customers it no longer has.
+      for (const id of staleSyncedIds(
+        localList,
+        customers.map((c) => c.id),
+      )) {
+        await this.localRepo.delete(id);
       }
     } catch (error) {
       if (this.isOfflineError(error)) {
@@ -298,6 +313,49 @@ export class AdminCustomersService implements DataHydrationSource {
     });
 
     await this.localRepo.delete(customer.id);
+  }
+
+  // ---- Branding (online-only, like signatures: no outbox) ----
+
+  /** Set (`#rrggbb`) or clear (null) the brand colour. */
+  async setBrandColor(customer: LocalCustomer, brandColor: string | null): Promise<LocalCustomer> {
+    const updated = await this.patchOnServer(customer.id, {
+      brandColor,
+      version: customer.version,
+    });
+    await this.localRepo.upsert({ ...updated, syncState: 'SYNCED' });
+    return updated;
+  }
+
+  async uploadLogo(customer: LocalCustomer, file: File): Promise<LocalCustomer> {
+    const body = new FormData();
+    body.append('file', file);
+    body.append('version', String(customer.version));
+    const updated = await firstValueFrom(
+      this.http.put<LocalCustomer>(`${environment.apiUrl}/customers/${customer.id}/logo`, body),
+    );
+    await this.localRepo.upsert({ ...updated, syncState: 'SYNCED' });
+    return updated;
+  }
+
+  async removeLogo(customer: LocalCustomer): Promise<LocalCustomer> {
+    const updated = await firstValueFrom(
+      this.http.delete<LocalCustomer>(`${environment.apiUrl}/customers/${customer.id}/logo`, {
+        params: { version: customer.version },
+      }),
+    );
+    await this.localRepo.upsert({ ...updated, syncState: 'SYNCED' });
+    return updated;
+  }
+
+  /** Object URL of the customer's current logo (caller revokes it). */
+  async fetchLogoUrl(customer: LocalCustomer): Promise<string> {
+    const blob = await firstValueFrom(
+      this.http.get(`${environment.apiUrl}/customers/${customer.id}/logo`, {
+        responseType: 'blob',
+      }),
+    );
+    return URL.createObjectURL(blob);
   }
 
   private isOfflineError(error: unknown): boolean {

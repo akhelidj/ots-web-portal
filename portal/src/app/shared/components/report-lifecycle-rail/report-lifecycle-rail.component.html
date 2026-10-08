@@ -1,0 +1,164 @@
+@if (compact()) {
+  <div
+    class="rail-compact"
+    [attr.aria-label]="'Stage: ' + stages[current()]?.title"
+    role="img"
+  >
+    <span class="rail-compact__pips" aria-hidden="true">
+      @for (stage of stages; track stage.status; let i = $index) {
+        <span
+          class="rail-compact__pip"
+          [class.is-done]="i < current()"
+          [class.is-active]="i === current()"
+          [style.--i]="i"
+        ></span>
+      }
+    </span>
+    <span class="rail-compact__label">
+      {{ stages[current()]?.title }}
+      @if (onHold()) {
+        <span class="rail-hold">· On hold</span>
+      }
+    </span>
+  </div>
+} @else {
+  <div class="rail" role="group" aria-label="Report lifecycle">
+    <div class="rail__track" aria-hidden="true">
+      <span class="rail__line"></span>
+      <span class="rail__fill" [style.width.%]="fillPercent()"></span>
+    </div>
+    <ol class="rail__list">
+      @for (stage of stages; track stage.status; let i = $index) {
+        <li>
+          <button
+            type="button"
+            class="node"
+            [class.is-done]="stageState(i) === 'done'"
+            [class.is-active]="stageState(i) === 'active'"
+            [class.is-selected]="selected() === i"
+            [class.is-unreached]="!isReached(i)"
+            [attr.aria-current]="i === current() ? 'step' : null"
+            [attr.aria-pressed]="selected() === i"
+            [attr.aria-label]="'Stage ' + (i + 1) + ': ' + stage.title"
+            (click)="select(i)"
+          >
+            <span class="node__box" aria-hidden="true"></span>
+            <span class="node__label">{{ stage.label }}</span>
+            @if (reachedAt()[i]; as at) {
+              <span class="node__date">{{ at | date: 'd MMM' }}</span>
+            }
+          </button>
+        </li>
+      }
+    </ol>
+
+    <div class="stage" aria-live="polite">
+      @for (s of [selectedStage()]; track s.status) {
+        <article class="stage__panel">
+          <div class="stage__copy">
+            <p class="stage__index">
+              {{ selected() + 1 < 10 ? '0' : '' }}{{ selected() + 1
+              }}<span> / 08</span>
+              @if (onHold() && selected() === current()) {
+                <em class="rail-hold">On hold</em>
+              }
+            </p>
+            <h3 class="stage__title">{{ s.title }}</h3>
+            <p class="stage__body">{{ s.body }}</p>
+          </div>
+
+          <div class="stage__side">
+            <dl class="ledger">
+              <div class="ledger__row">
+                <dt>Status</dt>
+                <dd>
+                  @if (selected() === current()) {
+                    {{
+                      onHold()
+                        ? 'Paused here'
+                        : selected() === last
+                          ? 'Complete'
+                          : 'Current stage'
+                    }}
+                  } @else if (isReached(selected())) {
+                    Completed
+                  } @else {
+                    Not reached yet
+                  }
+                </dd>
+              </div>
+              <div class="ledger__row">
+                <dt>{{ isReached(selected()) ? 'Reached' : 'Reached on' }}</dt>
+                <dd>
+                  @if (reachedAt()[selected()]; as at) {
+                    {{ at | date: 'd MMM y · HH:mm' }}
+                  } @else {
+                    —
+                  }
+                </dd>
+              </div>
+              @if (selected() === 4 && serialCount() !== null) {
+                <div class="ledger__row">
+                  <dt>Serials</dt>
+                  <dd>{{ serialCount() }}</dd>
+                </div>
+              }
+              @if (!isReached(selected())) {
+                <div class="ledger__row is-ghost" aria-hidden="true">
+                  <dt></dt>
+                  <dd></dd>
+                </div>
+              }
+            </dl>
+
+            @if (signaturesFor(selected()); as sigs) {
+              @if (sigs.length > 0) {
+                <ul class="signs" aria-label="Signatures">
+                  @for (f of sigs; track f.key) {
+                    <li class="sign" [class.is-signed]="f.signed">
+                      <span class="sign__pad">
+                        @if (f.signed && images()[f.key]; as src) {
+                          <img
+                            class="sign__img"
+                            [src]="src"
+                            [alt]="'Signature: ' + f.label"
+                          />
+                        } @else if (f.signed && failed()[f.key]) {
+                          <span class="sign__wait">Signature on file</span>
+                        } @else if (f.signed) {
+                          <span class="sign__wait">Loading signature…</span>
+                        } @else if (f.field; as field) {
+                          <button
+                            type="button"
+                            class="sign__cta"
+                            (click)="signRequested.emit(field)"
+                          >
+                            Sign now
+                          </button>
+                        } @else {
+                          <span class="sign__wait">Awaiting signature</span>
+                        }
+                      </span>
+                      <span class="sign__meta">
+                        <strong>{{ f.label }}</strong>
+                        <span class="sign__role">{{ f.role }}</span>
+                        @if (f.signed) {
+                          <span>
+                            {{ f.signedByName || 'Signed' }}
+                            @if (f.signedAt) {
+                              · {{ f.signedAt | date: 'd MMM y' }}
+                            }
+                          </span>
+                        }
+                      </span>
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+}

@@ -16,7 +16,7 @@ import {
   SignatureFieldSpec,
   signatureFieldsOf,
 } from './signature-fields';
-import { SignatureSigner } from './signature-slots';
+import { INSPECTOR_SIGNATURE_SLOT, SignatureSigner } from './signature-slots';
 import {
   ATTACHMENT_STORAGE,
   AttachmentStorage,
@@ -86,7 +86,20 @@ export interface ReportSignatureStates {
     signedAt: Date | null;
     signedByName: string | null;
   }[];
+  /**
+   * The inspector's signature frozen at submission for review, or null when none was frozen.
+   * Not a template field (it has no `key` among `fields`); its image is served under the
+   * fixed key {@link INSPECTOR_IMAGE_KEY}.
+   */
+  inspector: {
+    signed: boolean;
+    signedAt: Date | null;
+    signedByName: string | null;
+  } | null;
 }
+
+/** Image key of the inspector's frozen signature (template field keys cannot collide: they are `{token}`s). */
+export const INSPECTOR_IMAGE_KEY = 'inspector';
 
 export interface PendingSignatureReport {
   reportId: string;
@@ -253,7 +266,15 @@ export class SignaturesService {
       })
     ).get(report.id);
 
-    const signerIds = [...(current?.values() ?? [])].map((r) => r.signedById);
+    const inspectorRow = await this.getFrozenForReport(
+      user.tenantId,
+      report.id,
+      INSPECTOR_SIGNATURE_SLOT,
+    );
+    const signerIds = [
+      ...[...(current?.values() ?? [])].map((r) => r.signedById),
+      ...(inspectorRow ? [inspectorRow.signedById] : []),
+    ];
     const signers = signerIds.length
       ? await this.prisma.user.findMany({
           where: { id: { in: signerIds } },
@@ -278,7 +299,58 @@ export class SignaturesService {
           signedByName: row ? (nameOf.get(row.signedById) ?? null) : null,
         };
       }),
+      inspector: inspectorRow
+        ? {
+            signed: true,
+            signedAt: inspectorRow.signedAt,
+            signedByName: nameOf.get(inspectorRow.signedById) ?? null,
+          }
+        : null,
     };
+  }
+
+  /**
+   * The PNG behind one signature on a report, for the customer / ops report views. `key` is a
+   * template signature field key (the CURRENT revision's signature) or {@link INSPECTOR_IMAGE_KEY}
+   * (the signature frozen at submission). Same visibility as {@link getFieldStates}: any user who
+   * can see the report, a CUSTOMER only for their own customer's.
+   */
+  public async getSignatureImage(
+    user: SignatureActor,
+    reportId: string,
+    key: string,
+  ): Promise<Buffer> {
+    const report = await this.loadReportFor(user, reportId);
+    let storageKey: string | null = null;
+    if (key === INSPECTOR_IMAGE_KEY) {
+      storageKey =
+        (
+          await this.getFrozenForReport(
+            user.tenantId,
+            report.id,
+            INSPECTOR_SIGNATURE_SLOT,
+          )
+        )?.storageKey ?? null;
+    } else {
+      const spec = (await this.specsFor(user.tenantId, report)).find(
+        (s) => s.key === key,
+      );
+      if (spec) {
+        const current = (
+          await currentFieldSignatures(this.prisma, {
+            tenantId: user.tenantId,
+            reports: [report],
+          })
+        ).get(report.id);
+        storageKey = current?.get(spec.slot)?.storageKey ?? null;
+      }
+    }
+    if (!storageKey) throw new NotFoundException('Signature not found.');
+    const bytes = await this.storage.getSignature(storageKey);
+    if (!bytes) {
+      throw new NotFoundException('Signature image is missing from storage.');
+    }
+    return bytes;
   }
 
   /**

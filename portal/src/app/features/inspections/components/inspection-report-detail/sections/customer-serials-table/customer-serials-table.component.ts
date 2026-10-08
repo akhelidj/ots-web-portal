@@ -1,5 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnChanges,
+  Output,
+  SimpleChanges,
+  inject,
+} from '@angular/core';
 import { LocalSerialNumber } from '@portal/core/offline/models/types';
 import { SectionSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import { TemplateFormDefinition } from '@portal/features/templates/schemas/definition-to-form-schema';
@@ -29,8 +38,12 @@ import {
     class: 'block w-full min-w-0',
   },
 })
-export class CustomerSerialsTableComponent {
+export class CustomerSerialsTableComponent implements OnChanges {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
   @Input() serials: LocalSerialNumber[] = [];
+  /** The serial open in the docked inspector — its row reads as selected and is kept in view. */
+  @Input() selectedId: string | null = null;
   /**
    * The report's item-scope form sections (`definitionToFormSchema`) — the SAME
    * adapter the drawer form and ops table consume. Drives every group band,
@@ -46,6 +59,18 @@ export class CustomerSerialsTableComponent {
   @Input() definition: TemplateFormDefinition | null = null;
 
   @Output() openInspection = new EventEmitter<LocalSerialNumber>();
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Keyboard ↑/↓ in the inspector walks the serials; keep the selected row on screen.
+    if (changes['selectedId'] && this.selectedId) {
+      const id = this.selectedId;
+      setTimeout(() => {
+        this.host.nativeElement
+          .querySelector(`[data-sn-id="${CSS.escape(id)}"]`)
+          ?.scrollIntoView({ block: 'nearest' });
+      });
+    }
+  }
 
   // Column groups are derived once per distinct `sections` reference and cached,
   // so the template can read `columnGroups` freely across header + every row

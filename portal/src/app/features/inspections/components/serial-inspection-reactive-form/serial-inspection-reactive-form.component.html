@@ -43,7 +43,13 @@
   }
 </div>
 } @else {
-<form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="space-y-6">
+<form
+  [formGroup]="formGroup"
+  (ngSubmit)="onSubmit()"
+  (change)="commitField($event)"
+  (focusout)="commitField($event)"
+  class="space-y-6"
+>
   <!-- One field per row, sections stacked top-to-bottom: a single column reads as a
        clean scannable sequence in the narrow drawer (two columns cramped it). -->
   <div class="flex flex-col gap-5">
@@ -87,6 +93,23 @@
   <div
     class="flex items-center justify-end gap-3 pt-4 border-t border-border mt-2"
   >
+    @if (autosaveFn && !isReadOnly) {
+      <span
+        class="mr-auto text-xs"
+        [class.text-error]="autosaveStatus() === 'error'"
+        [class.text-muted-foreground]="autosaveStatus() !== 'error'"
+        data-testid="autosave-status"
+        role="status"
+        aria-live="polite"
+      >
+        @switch (autosaveStatus()) {
+          @case ('saving') { Saving draft… }
+          @case ('saved') { Draft saved }
+          @case ('error') { Autosave failed — will retry }
+          @default { Changes save automatically }
+        }
+      </span>
+    }
     <button
       type="button"
       (click)="onCancel()"

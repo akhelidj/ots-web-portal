@@ -1,28 +1,41 @@
 import { Route } from '@angular/router';
 import { APP_ROLES } from '@portal/core/constants/app.constants';
 import { ShellComponent } from '@portal/shared/shell/shell.component';
-import { AdminUsersComponent } from '@portal/features/users/components/admin-users/admin-users.component';
-import { AdminCustomersComponent } from '@portal/features/customers/components/admin-customers/admin-customers.component';
-import { AdminTemplatesComponent } from '@portal/features/templates/components/admin-templates/admin-templates.component';
-import { TemplateDefineComponent } from '@portal/features/templates/components/template-define/template-define.component';
-import { SupervisorWorkspaceComponent } from '@portal/features/workspaces/supervisor/supervisor-workspace.component';
-import { InspectionReportListComponent } from '@portal/features/inspections/components/inspection-report-list/inspection-report-list.component';
-import { CreateInspectionReportComponent } from '@portal/features/inspections/components/create-inspection-report/create-inspection-report.component';
-import { InspectionReportDetailComponent } from '@portal/features/inspections/components/inspection-report-detail/inspection-report-detail.component';
-import { ChildReportDetailComponent } from '@portal/features/inspections/components/child-report-detail/child-report-detail.component';
-
-import { CustomerWorkspaceComponent } from '@portal/features/workspaces/customer/customer-workspace.component';
 import { roleGuard } from '@portal/core/auth/guards/role.guard';
 import { authGuard } from '@portal/core/auth/guards/auth.guard';
 import { mustChangePasswordGuard } from '@portal/core/auth/guards/must-change-password.guard';
 import { LoginComponent } from '@portal/features/auth/components/login/login.component';
-import { SettingsComponent } from '@portal/features/auth/components/settings/settings.component';
-import { ChangePasswordComponent } from '@portal/features/auth/components/change-password/change-password.component';
-import { LandingComponent } from '@portal/features/landing/components/landing/landing.component';
 import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
-import { AccessDeniedComponent } from '@portal/features/errors/components/access-denied/access-denied.component';
-import { ReceiverWorkspaceComponent } from '@portal/features/workspaces/receiver/receiver-workspace.component';
-import { HelpComponent } from '@portal/features/help/components/help/help.component';
+
+/*
+ * Only the login page and the shell are in the initial bundle; every feature screen is a
+ * lazy chunk. Offline still works: the service worker (ngsw-config.json, `/*.js` prefetch)
+ * downloads every chunk at install, so an unvisited screen opens without a connection.
+ */
+const reportList = () =>
+  import('@portal/features/inspections/components/inspection-report-list/inspection-report-list.component').then(
+    (m) => m.InspectionReportListComponent,
+  );
+const createReport = () =>
+  import('@portal/features/inspections/components/create-inspection-report/create-inspection-report.component').then(
+    (m) => m.CreateInspectionReportComponent,
+  );
+const reportDetail = () =>
+  import('@portal/features/inspections/components/inspection-report-detail/inspection-report-detail.component').then(
+    (m) => m.InspectionReportDetailComponent,
+  );
+const childReportDetail = () =>
+  import('@portal/features/inspections/components/child-report-detail/child-report-detail.component').then(
+    (m) => m.ChildReportDetailComponent,
+  );
+const adminTemplates = () =>
+  import('@portal/features/templates/components/admin-templates/admin-templates.component').then(
+    (m) => m.AdminTemplatesComponent,
+  );
+const templateDefine = () =>
+  import('@portal/features/templates/components/template-define/template-define.component').then(
+    (m) => m.TemplateDefineComponent,
+  );
 
 export const appRoutes: Route[] = [
   {
@@ -32,27 +45,46 @@ export const appRoutes: Route[] = [
   },
   {
     path: AppRoutes.CHANGE_PASSWORD,
-    component: ChangePasswordComponent,
+    loadComponent: () =>
+      import('@portal/features/auth/components/change-password/change-password.component').then(
+        (m) => m.ChangePasswordComponent,
+      ),
     canActivate: [authGuard, mustChangePasswordGuard],
   },
   {
     path: AppRoutes.ACCESS_DENIED,
-    component: AccessDeniedComponent,
+    loadComponent: () =>
+      import('@portal/features/errors/components/access-denied/access-denied.component').then(
+        (m) => m.AccessDeniedComponent,
+      ),
   },
   {
     path: '',
     component: ShellComponent,
     canActivate: [authGuard, mustChangePasswordGuard],
     children: [
-      { path: '', component: LandingComponent, pathMatch: 'full' },
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('@portal/features/landing/components/landing/landing.component').then(
+            (m) => m.LandingComponent,
+          ),
+      },
       {
         path: AppRoutes.SETTINGS,
-        component: SettingsComponent,
+        loadComponent: () =>
+          import('@portal/features/auth/components/settings/settings.component').then(
+            (m) => m.SettingsComponent,
+          ),
         canActivate: [authGuard, mustChangePasswordGuard],
       },
       {
         path: AppRoutes.HELP,
-        component: HelpComponent,
+        loadComponent: () =>
+          import('@portal/features/help/components/help/help.component').then(
+            (m) => m.HelpComponent,
+          ),
         canActivate: [authGuard, mustChangePasswordGuard],
       },
       {
@@ -61,20 +93,33 @@ export const appRoutes: Route[] = [
         data: { roles: [APP_ROLES.ADMIN] },
         children: [
           { path: '', redirectTo: 'users', pathMatch: 'full' },
-          { path: 'reports', component: InspectionReportListComponent },
+          { path: 'reports', loadComponent: reportList },
+          { path: 'reports/create', loadComponent: createReport },
+          { path: 'reports/:id', loadComponent: reportDetail },
+          { path: 'reports/:id/child', loadComponent: childReportDetail },
           {
-            path: 'reports/create',
-            component: CreateInspectionReportComponent,
+            path: 'users',
+            loadComponent: () =>
+              import('@portal/features/users/components/admin-users/admin-users.component').then(
+                (m) => m.AdminUsersComponent,
+              ),
           },
-          { path: 'reports/:id', component: InspectionReportDetailComponent },
-          { path: 'reports/:id/child', component: ChildReportDetailComponent },
-          { path: 'users', component: AdminUsersComponent },
-          { path: 'customers', component: AdminCustomersComponent },
-          { path: 'templates', component: AdminTemplatesComponent },
           {
-            path: 'templates/:id/define',
-            component: TemplateDefineComponent,
+            path: 'customers',
+            loadComponent: () =>
+              import('@portal/features/customers/components/admin-customers/admin-customers.component').then(
+                (m) => m.AdminCustomersComponent,
+              ),
           },
+          {
+            path: 'metrics',
+            loadComponent: () =>
+              import('@portal/features/metrics/admin-metrics.component').then(
+                (m) => m.AdminMetricsComponent,
+              ),
+          },
+          { path: 'templates', loadComponent: adminTemplates },
+          { path: 'templates/:id/define', loadComponent: templateDefine },
         ],
       },
       {
@@ -83,13 +128,16 @@ export const appRoutes: Route[] = [
         data: { roles: [APP_ROLES.RECEIVER] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
-          { path: 'reports', component: ReceiverWorkspaceComponent },
           {
-            path: 'reports/create',
-            component: CreateInspectionReportComponent,
+            path: 'reports',
+            loadComponent: () =>
+              import('@portal/features/workspaces/receiver/receiver-workspace.component').then(
+                (m) => m.ReceiverWorkspaceComponent,
+              ),
           },
-          { path: 'reports/:id', component: InspectionReportDetailComponent },
-          { path: 'reports/:id/child', component: ChildReportDetailComponent },
+          { path: 'reports/create', loadComponent: createReport },
+          { path: 'reports/:id', loadComponent: reportDetail },
+          { path: 'reports/:id/child', loadComponent: childReportDetail },
         ],
       },
       {
@@ -98,13 +146,10 @@ export const appRoutes: Route[] = [
         data: { roles: [APP_ROLES.INSPECTOR] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
-          { path: 'reports', component: InspectionReportListComponent },
-          {
-            path: 'reports/create',
-            component: CreateInspectionReportComponent,
-          },
-          { path: 'reports/:id', component: InspectionReportDetailComponent },
-          { path: 'reports/:id/child', component: ChildReportDetailComponent },
+          { path: 'reports', loadComponent: reportList },
+          { path: 'reports/create', loadComponent: createReport },
+          { path: 'reports/:id', loadComponent: reportDetail },
+          { path: 'reports/:id/child', loadComponent: childReportDetail },
         ],
       },
       {
@@ -113,18 +158,18 @@ export const appRoutes: Route[] = [
         data: { roles: [APP_ROLES.SUPERVISOR] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
-          { path: 'reports', component: SupervisorWorkspaceComponent },
           {
-            path: 'reports/create',
-            component: CreateInspectionReportComponent,
+            path: 'reports',
+            loadComponent: () =>
+              import('@portal/features/workspaces/supervisor/supervisor-workspace.component').then(
+                (m) => m.SupervisorWorkspaceComponent,
+              ),
           },
-          { path: 'reports/:id', component: InspectionReportDetailComponent },
-          { path: 'reports/:id/child', component: ChildReportDetailComponent },
-          { path: 'templates', component: AdminTemplatesComponent },
-          {
-            path: 'templates/:id/define',
-            component: TemplateDefineComponent,
-          },
+          { path: 'reports/create', loadComponent: createReport },
+          { path: 'reports/:id', loadComponent: reportDetail },
+          { path: 'reports/:id/child', loadComponent: childReportDetail },
+          { path: 'templates', loadComponent: adminTemplates },
+          { path: 'templates/:id/define', loadComponent: templateDefine },
         ],
       },
       {
@@ -133,9 +178,21 @@ export const appRoutes: Route[] = [
         data: { roles: [APP_ROLES.CUSTOMER] },
         children: [
           { path: '', redirectTo: 'reports', pathMatch: 'full' },
-          { path: 'reports', component: CustomerWorkspaceComponent },
-          { path: 'reports/:id', component: InspectionReportDetailComponent },
-          { path: 'reports/:id/child', component: ChildReportDetailComponent },
+          {
+            path: 'reports',
+            loadComponent: () =>
+              import('@portal/features/workspaces/customer/customer-workspace.component').then(
+                (m) => m.CustomerWorkspaceComponent,
+              ),
+          },
+          // `appFrame`: the shell hands this screen the full remaining viewport (no page
+          // padding, no page scroll) — the report renders as a desktop-app window.
+          {
+            path: 'reports/:id',
+            loadComponent: reportDetail,
+            data: { appFrame: true },
+          },
+          { path: 'reports/:id/child', loadComponent: childReportDetail },
         ],
       },
     ],

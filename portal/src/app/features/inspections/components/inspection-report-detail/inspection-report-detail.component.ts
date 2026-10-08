@@ -1,3 +1,4 @@
+import { ReportLifecycleRailComponent } from '@portal/shared/components/report-lifecycle-rail/report-lifecycle-rail.component';
 import {
   Component,
   inject,
@@ -7,6 +8,7 @@ import {
   ChangeDetectorRef,
   signal,
   computed,
+  effect,
   Injector,
   ViewChild,
   ElementRef,
@@ -15,7 +17,7 @@ import {
 import { toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
 import {
   HttpClient,
@@ -24,6 +26,8 @@ import {
 } from '@angular/common/http';
 import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
+import { ReportDeleteFlowService } from '@portal/features/inspections/services/report-delete-flow.service';
+import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
 import { ExportSplitButtonComponent, ExportFormat } from '@portal/shared/components/export-split-button/export-split-button.component';
 import { ConfirmService } from '@portal/shared/confirm/confirm.service';
 import {
@@ -80,6 +84,7 @@ import {
   SystemRoleValues,
 } from '@portal/features/templates/schemas/definition-to-form-schema';
 import { SectionSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
+import { eventLabel } from '@portal/features/metrics/report-timeline';
 import { InspectionReportHeaderComponent } from './sections/inspection-report-header/inspection-report-header.component';
 import { InspectionReportHeaderFieldsComponent } from './sections/inspection-report-header-fields/inspection-report-header-fields.component';
 import { InspectionReportHeaderEditComponent } from './sections/inspection-report-header-fields/inspection-report-header-edit.component';
@@ -95,14 +100,46 @@ import { InspectionReportSerialsTableComponent } from './sections/inspection-rep
 import { CustomerSerialsTableComponent } from './sections/customer-serials-table/customer-serials-table.component';
 import {
   BadgeSeverity,
-  StatusBadgeComponent,
 } from '@portal/shared/components/status-badge/status-badge.component';
+
+/** The customer app frame's views — one per sidebar entry, one shown at a time. */
+export type CustomerView =
+  | 'overview'
+  | 'specs'
+  | 'findings'
+  | 'serials'
+  | 'children'
+  | 'documents'
+  | 'history';
+
+export interface CustomerNavItem {
+  view: CustomerView;
+  label: string;
+  count?: number;
+  /** Singular noun for the pane's count line ("3 serials"). */
+  unit?: string;
+}
+
+const CUSTOMER_VIEWS: readonly CustomerView[] = [
+  'overview',
+  'specs',
+  'findings',
+  'serials',
+  'children',
+  'documents',
+  'history',
+];
+
+const INSPECTOR_WIDTH_KEY = 'ots_cx_inspector_width';
+const INSPECTOR_MIN_WIDTH = 352;
+const INSPECTOR_DEFAULT_WIDTH = 440;
 
 @Component({
   selector: 'app-inspection-report-detail',
   standalone: true,
   imports: [
     ExportSplitButtonComponent,
+    ReportLifecycleRailComponent,
     CommonModule,
     FormsModule,
     RouterModule,
@@ -118,7 +155,6 @@ import {
     InspectionReportTransitionHistoryComponent,
     InspectionReportSerialsTableComponent,
     CustomerSerialsTableComponent,
-    StatusBadgeComponent,
     InspectionReportHeaderFieldsComponent,
     InspectionReportHeaderEditComponent,
     ReportSignaturesPanelComponent,
@@ -129,8 +165,10 @@ export class InspectionReportDetailComponent
   implements OnInit, AfterViewInit, OnDestroy
 {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private irService = inject(InspectionReportsService);
   private confirmService = inject(ConfirmService);
+  private deleteFlow = inject(ReportDeleteFlowService);
   private crService = inject(ChildReportsService);
   private http = inject(HttpClient);
   private session = inject(SessionService);
@@ -286,6 +324,19 @@ export class InspectionReportDetailComponent
 
   public childTypeLabel(type: string): string {
     return type.charAt(0) + type.slice(1).toLowerCase();
+  }
+
+  /** A child's number always carries its suffix (`<parent>_<type>` when none was stored). */
+  public childDisplayNumber(c: {
+    id: string;
+    type: string;
+    reportNumber?: string | null;
+  }): string {
+    const parentNumber = this.report()?.reportNumber?.trim() ?? '';
+    const own = c.reportNumber?.trim() ?? '';
+    if (own && own !== parentNumber) return own;
+    if (parentNumber) return `${parentNumber}_${c.type.toLowerCase()}`;
+    return c.id.substring(0, 8).toUpperCase();
   }
 
   public childStatusLabel(status: string): string {
@@ -465,7 +516,11 @@ export class InspectionReportDetailComponent
 
   public canSubmitBatch = computed(() => {
     const role = this.userRole().toUpperCase();
-    return role === APP_ROLES.INSPECTOR || role === APP_ROLES.ADMIN;
+    return (
+      role === APP_ROLES.INSPECTOR ||
+      role === APP_ROLES.ADMIN ||
+      role === APP_ROLES.SUPERVISOR
+    );
   });
 
   public inspectionProgress = computed(() => {
@@ -522,6 +577,9 @@ export class InspectionReportDetailComponent
 
   /** Latest template-signature state, reported by the signatures panel (null = unknown). */
   public signatureStates = signal<ReportSignatureStates | null>(null);
+  /** Customer view: sections render only when there is something to show. */
+  public hasSpecs = signal(false);
+  public attachmentCount = signal(0);
 
   /** Required signature fields still unsigned on a report that is approved/closed. */
   private get pendingRequiredSignatures(): ReportSignatureField[] {
@@ -604,6 +662,301 @@ export class InspectionReportDetailComponent
     const p = this.session.profile();
     return p?.customer?.name || p?.tenant?.name || 'N/A';
   });
+
+  // ---- Customer app frame (sidebar views + docked serial inspector) ----
+
+  @ViewChild('cxaPane') cxaPaneRef?: ElementRef<HTMLElement>;
+
+  /** The view the customer asked for (`?view=`); see `activeCustomerView` for what renders. */
+  public customerView = signal<CustomerView>('overview');
+
+  /**
+   * Sidebar entries — a section appears only when it has something to show, from the
+   * same signals that used to hide the document bands. Overview is always present.
+   */
+  public customerNav = computed<CustomerNavItem[]>(() => {
+    const items: CustomerNavItem[] = [{ view: 'overview', label: 'Overview' }];
+    if (this.hasSpecs()) items.push({ view: 'specs', label: 'Specifications' });
+    if (this.statistics().length > 0) {
+      items.push({ view: 'findings', label: 'Findings' });
+    }
+    const serialCount = this.filteredSerials().length;
+    if (serialCount > 0) {
+      items.push({ view: 'serials', label: 'Serials', count: serialCount, unit: 'serial' });
+    }
+    const childCount = this.customerChildReports().length;
+    if (childCount > 0) {
+      items.push({
+        view: 'children',
+        label: 'Child reports',
+        count: childCount,
+        unit: 'report',
+      });
+    }
+    const docCount = this.attachmentCount();
+    if (docCount > 0) {
+      items.push({ view: 'documents', label: 'Documents', count: docCount, unit: 'file' });
+    }
+    if (this.enrichedTransitionLogs().length > 0) {
+      items.push({ view: 'history', label: 'History' });
+    }
+    return items;
+  });
+
+  /**
+   * What actually renders: the requested view while it has content, else Overview.
+   * Sections measured after first render (specs, documents) fall back briefly and then
+   * resolve to the requested view once their content is known — the request is kept.
+   */
+  public activeCustomerView = computed<CustomerView>(() => {
+    const wanted = this.customerView();
+    return this.customerNav().some((i) => i.view === wanted) ? wanted : 'overview';
+  });
+
+  public activeCustomerNavItem = computed<CustomerNavItem>(
+    () =>
+      this.customerNav().find((i) => i.view === this.activeCustomerView()) ?? {
+        view: 'overview',
+        label: 'Overview',
+      },
+  );
+
+  /** Below 1024px the sidebar is a horizontal segmented bar: keep the active segment visible. */
+  private readonly keepActiveSegmentInView = effect(() => {
+    this.activeCustomerView();
+    setTimeout(() => {
+      const item = document.querySelector<HTMLElement>('.cxa-nav-item.is-active');
+      const bar = item?.closest<HTMLElement>('.cxa-sidebar');
+      if (!item || !bar || bar.scrollWidth <= bar.clientWidth) return;
+      bar.scrollTo({
+        left: item.offsetLeft - (bar.clientWidth - item.offsetWidth) / 2,
+        behavior: 'smooth',
+      });
+    });
+  });
+
+  public setCustomerView(view: CustomerView): void {
+    if (view === this.activeCustomerView()) return;
+    // The inspector belongs to one list (report serials or a child's) — never carry it over.
+    this.closeInspectionForm();
+    this.customerView.set(view);
+    this.selectedChildId.set(null);
+    this.selectedFindingId.set(null);
+    this.cxaPaneRef?.nativeElement.scrollTo({ top: 0 });
+    this.syncCustomerQuery();
+  }
+
+  private syncCustomerQuery(): void {
+    const view = this.customerView();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        view: view === 'overview' ? null : view,
+        child: view === 'children' ? this.selectedChildId() : null,
+        finding: view === 'findings' ? this.selectedFindingId() : null,
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  /** Child report picked from the list (`?child=`); ignored when there is only one. */
+  public selectedChildId = signal<string | null>(null);
+
+  /** The child shown in detail: the only one, or the one picked from the list. */
+  public activeChild = computed<LocalChildReport | null>(() => {
+    const children = this.customerChildReports();
+    if (children.length === 1) return children[0] ?? null;
+    const id = this.selectedChildId();
+    return children.find((c) => c.id === id) ?? null;
+  });
+
+  /** The active child's serials, in the shape the shared customer table and inspector read. */
+  public activeChildSerials = computed<LocalSerialNumber[]>(() => {
+    const child = this.activeChild();
+    if (!child) return [];
+    return [...child.serialNumbers]
+      .sort((a, b) =>
+        a.serial.localeCompare(b.serial, undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        }),
+      )
+      .map(
+        (s) =>
+          ({
+            id: s.id,
+            inspectionReportId: child.inspectionReportId,
+            value: s.serial,
+            version: 0,
+            inspectionJson: s.inspectionData,
+            approvalStatus: s.approvalStatus,
+          }) as LocalSerialNumber,
+      );
+  });
+
+  // ---- Findings (master-detail: statistic list → its serials) ----
+
+  /** Statistic picked in the Findings list (`?finding=`); defaults to the first one. */
+  public selectedFindingId = signal<string | null>(null);
+
+  public activeFinding = computed<ReportStatistic | null>(() => {
+    const stats = this.statistics();
+    const id = this.selectedFindingId();
+    return stats.find((s) => s.id === id) ?? stats[0] ?? null;
+  });
+
+  /** The report serials a statistic links to, in the table's (natural-sorted) order. */
+  public findingSerials = computed<LocalSerialNumber[]>(() => {
+    const finding = this.activeFinding();
+    if (!finding) return [];
+    const wanted = new Set(finding.serials);
+    return this.filteredSerials().filter((sn) => wanted.has(sn.value));
+  });
+
+  /** Share of the report's serials a statistic links to (0–1). */
+  public findingCoverage(stat: ReportStatistic): number {
+    const total = this.serials().length;
+    return total > 0 ? Math.min(1, stat.serials.length / total) : 0;
+  }
+
+  public selectFinding(id: string): void {
+    if (id === this.activeFinding()?.id) return;
+    this.closeInspectionForm();
+    this.selectedFindingId.set(id);
+    this.syncCustomerQuery();
+  }
+
+  // ---- History (plain event log; timing analytics are admin-only, see features/metrics) ----
+
+  public readonly historyEventLabel = eventLabel;
+
+  public openChild(id: string): void {
+    this.closeInspectionForm();
+    this.selectedChildId.set(id);
+    this.cxaPaneRef?.nativeElement.scrollTo({ top: 0 });
+    this.syncCustomerQuery();
+  }
+
+  public closeChild(): void {
+    this.closeInspectionForm();
+    this.selectedChildId.set(null);
+    this.syncCustomerQuery();
+  }
+
+  /** Step to the previous/next visible sidebar view (`←` / `→`). */
+  public stepCustomerView(delta: number): void {
+    const nav = this.customerNav();
+    const index = nav.findIndex((i) => i.view === this.activeCustomerView());
+    const next = nav[index + delta];
+    if (next) this.setCustomerView(next.view);
+  }
+
+  /** Docked inspector width (px) — resizable, remembered per browser. */
+  public inspectorWidth = signal<number>(this.readInspectorWidth());
+  private resizePointerId: number | null = null;
+
+  private readInspectorWidth(): number {
+    try {
+      const stored = Number(localStorage.getItem(INSPECTOR_WIDTH_KEY));
+      if (Number.isFinite(stored) && stored >= INSPECTOR_MIN_WIDTH) return stored;
+    } catch {
+      /* storage unavailable — default width */
+    }
+    return INSPECTOR_DEFAULT_WIDTH;
+  }
+
+  private setInspectorWidth(px: number): void {
+    const max = Math.max(INSPECTOR_MIN_WIDTH, window.innerWidth * 0.5);
+    this.inspectorWidth.set(Math.round(Math.min(max, Math.max(INSPECTOR_MIN_WIDTH, px))));
+  }
+
+  private persistInspectorWidth(): void {
+    try {
+      localStorage.setItem(INSPECTOR_WIDTH_KEY, String(this.inspectorWidth()));
+    } catch {
+      /* storage unavailable — the width just won't persist */
+    }
+  }
+
+  public startInspectorResize(event: PointerEvent): void {
+    const handle = event.currentTarget as HTMLElement;
+    handle.setPointerCapture(event.pointerId);
+    this.resizePointerId = event.pointerId;
+    event.preventDefault();
+  }
+
+  public onInspectorResize(event: PointerEvent): void {
+    if (this.resizePointerId !== event.pointerId) return;
+    const inspector = (event.currentTarget as HTMLElement).parentElement;
+    if (!inspector) return;
+    this.setInspectorWidth(inspector.getBoundingClientRect().right - event.clientX);
+  }
+
+  public endInspectorResize(event: PointerEvent): void {
+    if (this.resizePointerId !== event.pointerId) return;
+    this.resizePointerId = null;
+    this.persistInspectorWidth();
+  }
+
+  /** Keyboard resize on the focused handle: ←/→ widen/narrow by 24px. */
+  public nudgeInspector(event: KeyboardEvent): void {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.setInspectorWidth(this.inspectorWidth() + (event.key === 'ArrowLeft' ? 24 : -24));
+    this.persistInspectorWidth();
+  }
+
+  /** Esc closes the statistic serials modal wherever focus is. */
+  @HostListener('document:keydown.escape')
+  public onEscapeStatisticModal(): void {
+    if (this.activeStatistic()) this.closeStatisticModal();
+  }
+
+  /** App-style shortcuts for the customer frame. Ignored while typing or under a modal. */
+  @HostListener('document:keydown', ['$event'])
+  public onCustomerShortcut(event: KeyboardEvent): void {
+    if (!this.isCustomer() || event.defaultPrevented || this.activeStatistic()) return;
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')
+    ) {
+      return;
+    }
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+    if (event.key === 'Escape' && this.inspectingSn()) {
+      event.preventDefault();
+      this.closeInspectionForm();
+    } else if ((event.key === 'ArrowDown' || event.key === 'j') && this.inspectingSn()) {
+      event.preventDefault();
+      this.goToNextSn();
+    } else if ((event.key === 'ArrowUp' || event.key === 'k') && this.inspectingSn()) {
+      event.preventDefault();
+      this.goToPrevSn();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      this.stepCustomerView(1);
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      this.stepCustomerView(-1);
+    }
+  }
+
+  /** The list prev/next walks: customers step through the rows they see. */
+  private navSerials(): LocalSerialNumber[] {
+    if (!this.isCustomer()) return this.serials();
+    switch (this.activeCustomerView()) {
+      case 'children':
+        return this.activeChildSerials();
+      case 'findings':
+        return this.findingSerials();
+      default:
+        return this.filteredSerials();
+    }
+  }
   /**
    * Badge severity for the report status shown in the customer identity band —
    * a settled/approved report reads success, a held one warning, one under
@@ -636,9 +989,11 @@ export class InspectionReportDetailComponent
       role === APP_ROLES.ADMIN
     );
   });
-  public isAdmin = computed(
-    () => this.userRole().toUpperCase() === APP_ROLES.ADMIN,
-  );
+  /** SUPERVISOR has the same powers as ADMIN on a report, so both count here. */
+  public isAdmin = computed(() => {
+    const role = this.userRole().toUpperCase();
+    return role === APP_ROLES.ADMIN || role === APP_ROLES.SUPERVISOR;
+  });
   public isLocked = computed(() => {
     const report = this.report();
     if (!report) return false;
@@ -717,6 +1072,12 @@ export class InspectionReportDetailComponent
 
   async ngOnInit() {
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
+    const requestedView = this.route.snapshot.queryParamMap.get('view');
+    if (CUSTOMER_VIEWS.includes(requestedView as CustomerView)) {
+      this.customerView.set(requestedView as CustomerView);
+    }
+    this.selectedChildId.set(this.route.snapshot.queryParamMap.get('child'));
+    this.selectedFindingId.set(this.route.snapshot.queryParamMap.get('finding'));
     if (this.reportId && this.reportId !== 'reports') {
       this.refreshData();
 
@@ -827,6 +1188,9 @@ export class InspectionReportDetailComponent
 
     if (r) {
       vResult = this.validationService.validate(r, snList);
+      if (this.isReceiver()) {
+        vResult = this.validationService.scopeToReceiver(vResult);
+      }
 
       const pending = await this.outboxRepo.getPendingItems();
       const conflicts = await this.outboxRepo.getConflictItems();
@@ -893,17 +1257,20 @@ export class InspectionReportDetailComponent
           (a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
         );
-        // Inspected By: Last user who transitioning to IN_INSPECTION or PENDING_APPROVAL
-        const inspectLog = [...sortedAsc]
-          .reverse()
-          .find(
-            (l) =>
-              l.toStatus === REPORT_STATUSES.IN_INSPECTION ||
-              l.toStatus === REPORT_STATUSES.PENDING_APPROVAL,
-          );
-        if (inspectLog && inspectLog.userId) {
-          const u = await this.userRepo.getById(inspectLog.userId);
-          newInspectedByName = u?.name || u?.email || 'N/A';
+        // Inspected By: whoever last acted on the inspection (server-derived and
+        // name-resolved, so a reopen with nothing new done keeps the earlier inspector
+        // and every role sees it). Reports not yet pulled with detail fall back to who
+        // first started the inspection, via the local user cache.
+        if (r.inspectorName) {
+          newInspectedByName = r.inspectorName;
+        } else {
+          const starter = sortedAsc.find(
+            (l) => l.toStatus === REPORT_STATUSES.IN_INSPECTION,
+          )?.userId;
+          if (starter) {
+            const u = await this.userRepo.getById(starter);
+            newInspectedByName = u?.name || u?.email || 'N/A';
+          }
         }
 
         // Approved By: Last user who transitioned to APPROVED
@@ -1159,6 +1526,39 @@ export class InspectionReportDetailComponent
     }
   }
 
+  // ---- Permanent report delete (ADMIN only; the API refuses every other role) ----
+
+  public isStrictAdmin = computed(
+    () => this.userRole().toUpperCase() === APP_ROLES.ADMIN,
+  );
+  public isDeletingReport = signal(false);
+  public deleteError = signal('');
+
+  /** Why the delete button is disabled, or null when it can be used. */
+  public deleteBlockedReason = computed<string | null>(() => {
+    const report = this.report();
+    if (!report) return 'Report not loaded.';
+    // Read here so the computed re-evaluates on connectivity changes.
+    this.connectivity.isOnline();
+    return this.deleteFlow.blockedReason(report, this.serials());
+  });
+
+  public async deleteReport(): Promise<void> {
+    const report = this.report();
+    if (!report || this.deleteBlockedReason()) return;
+    this.deleteError.set('');
+    this.isDeletingReport.set(true);
+    try {
+      if (await this.deleteFlow.run(report, this.serials())) {
+        await this.router.navigate(['/', AppRoutes.ADMIN, 'reports']);
+      }
+    } catch (error) {
+      this.deleteError.set((error as Error).message);
+    } finally {
+      this.isDeletingReport.set(false);
+    }
+  }
+
   public async onDeleteSn(sn: LocalSerialNumber): Promise<void> {
     const ok = await this.confirmService.confirm({
       title: `Delete ${sn.value}?`,
@@ -1179,6 +1579,17 @@ export class InspectionReportDetailComponent
   }
 
   public openInspectionForm(sn: LocalSerialNumber): void {
+    // Customer frame: the inspector docks beside a serials list — the report's, a child
+    // report's, or a finding's. Opened from anywhere else, bring Serials forward.
+    const view = this.activeCustomerView();
+    if (
+      this.isCustomer() &&
+      view !== 'serials' &&
+      view !== 'children' &&
+      view !== 'findings'
+    ) {
+      this.setCustomerView('serials');
+    }
     this.inspectingSn.set(sn);
     this.inspectionSaveError.set('');
     this.inspectionFormData = sn.inspectionJson
@@ -1190,6 +1601,11 @@ export class InspectionReportDetailComponent
   }
 
   public closeInspectionForm(): void {
+    if (this.hasUnrefreshedAutosave) {
+      // Drafts were autosaved while the drawer was open: refresh once they've landed.
+      this.hasUnrefreshedAutosave = false;
+      void this.autosaveChain.then(() => this.refreshData());
+    }
     this.inspectingSn.set(null);
     this.inspectionFormData = {};
     this.inspectionSaveError.set('');
@@ -1197,7 +1613,7 @@ export class InspectionReportDetailComponent
   }
 
   public goToNextSn(): void {
-    const snList = this.serials();
+    const snList = this.navSerials();
     const currentSn = this.inspectingSn();
     if (!currentSn || snList.length === 0) return;
     const index = snList.findIndex((s) => s.id === currentSn.id);
@@ -1208,7 +1624,7 @@ export class InspectionReportDetailComponent
   }
 
   public goToPrevSn(): void {
-    const snList = this.serials();
+    const snList = this.navSerials();
     const currentSn = this.inspectingSn();
     if (!currentSn || snList.length === 0) return;
     const index = snList.findIndex((s) => s.id === currentSn.id);
@@ -1219,7 +1635,7 @@ export class InspectionReportDetailComponent
   }
 
   public get hasNextSn(): boolean {
-    const snList = this.serials();
+    const snList = this.navSerials();
     const currentSn = this.inspectingSn();
     if (!currentSn) return false;
     const index = snList.findIndex((s) => s.id === currentSn.id);
@@ -1227,18 +1643,45 @@ export class InspectionReportDetailComponent
   }
 
   public get hasPrevSn(): boolean {
-    const snList = this.serials();
+    const snList = this.navSerials();
     const currentSn = this.inspectingSn();
     if (!currentSn) return false;
     const index = snList.findIndex((s) => s.id === currentSn.id);
     return index > 0;
   }
 
+  /** Serialises autosaves (and the explicit save) so no two writes read the same version. */
+  private autosaveChain: Promise<unknown> = Promise.resolve();
+  private hasUnrefreshedAutosave = false;
+
+  /**
+   * Draft autosave for the serial form: writes `inspectionData` for exactly `snId` through
+   * the normal save path (same online PATCH / offline outbox), without validation, closing
+   * the drawer or touching the rework child. Arrow property so the form can hold it.
+   */
+  public autosaveInspection = (
+    snId: string,
+    data: Record<string, unknown>,
+  ): Promise<void> => {
+    const run = this.autosaveChain.then(() =>
+      this.irService.saveSerialNumberInspection(snId, data),
+    );
+    this.autosaveChain = run.catch(() => undefined);
+    return run.then(() => {
+      if (this.inspectingSn()) {
+        this.hasUnrefreshedAutosave = true;
+      } else {
+        void this.refreshData();
+      }
+    });
+  };
+
   public async saveInspectionForm(
     inspectionData: Record<string, unknown>,
   ): Promise<void> {
     const currentSn = this.inspectingSn();
     if (!currentSn) return;
+    await this.autosaveChain;
 
     this.inspectionSaveError.set('');
     this.isSavingInspection.set(true);
@@ -1267,6 +1710,7 @@ export class InspectionReportDetailComponent
         }
       }
 
+      this.hasUnrefreshedAutosave = false;
       await this.refreshData();
       this.closeInspectionForm();
     } catch (error) {
@@ -1358,9 +1802,7 @@ export class InspectionReportDetailComponent
 
     try {
       const observer = this.http.get(
-        format === 'template'
-          ? `${environment.apiUrl}/inspection-reports/${this.reportId}/export/template`
-          : `${environment.apiUrl}/inspection-reports/${this.reportId}/export?format=${format}`,
+        `${environment.apiUrl}/inspection-reports/${this.reportId}/export?format=${format}`,
         {
           responseType: 'blob',
           observe: 'response',

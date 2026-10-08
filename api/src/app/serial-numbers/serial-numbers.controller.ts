@@ -38,7 +38,7 @@ export class SerialNumbersController {
     return this.serialNumbersService.getSerialNumbers(req.user, reportId);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.RECEIVER)
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR)
   @Post('inspection-reports/:id/serial-numbers')
   async createSerialNumber(
     @Req() req: AuthenticatedRequest,
@@ -53,7 +53,12 @@ export class SerialNumbersController {
     );
   }
 
-  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.INSPECTOR)
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.RECEIVER,
+    UserRole.INSPECTOR,
+    UserRole.SUPERVISOR,
+  )
   @Patch('serial-numbers/:id')
   async updateSerialNumber(
     @Req() req: AuthenticatedRequest,
@@ -86,7 +91,7 @@ export class SerialNumbersController {
     );
   }
 
-  @Roles(UserRole.ADMIN, UserRole.RECEIVER)
+  @Roles(UserRole.ADMIN, UserRole.RECEIVER, UserRole.SUPERVISOR)
   @Delete('serial-numbers/:id')
   async deleteSerialNumber(
     @Req() req: AuthenticatedRequest,

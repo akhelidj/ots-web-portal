@@ -1,18 +1,18 @@
 @if (pending().length > 0) {
   <section
-    class="page-section mb-6 p-5 sm:p-6"
+    class="cx-pending"
     aria-labelledby="signature-pending-title"
     data-testid="signature-pending"
   >
     <div class="flex items-baseline justify-between gap-4">
-      <h2 id="signature-pending-title" class="text-lg text-neutral-900">
+      <h2 id="signature-pending-title" class="font-heading text-xl tracking-tight text-foreground">
         Signature pending
       </h2>
-      <span class="text-xs text-gray-500" data-testid="signature-pending-count">{{
+      <span class="font-mono text-xs text-accent-hover" data-testid="signature-pending-count">{{
         pending().length
       }}</span>
     </div>
-    <p class="mt-1 text-sm text-gray-600">
+    <p class="mt-1 text-sm text-muted-foreground">
       These approved reports are waiting for your signature.
     </p>
 
@@ -22,11 +22,11 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <a
               [routerLink]="[report.reportId]"
-              class="code-text text-sm font-medium text-neutral-900 hover:underline"
+              class="code-text text-sm font-medium text-foreground hover:underline"
               >{{ report.reportNumber || report.reportId.substring(0, 8) }}</a
             >
             @if (report.poNumber) {
-              <span class="text-xs text-gray-500">PO {{ report.poNumber }}</span>
+              <span class="font-mono text-xs text-accent-hover">PO {{ report.poNumber }}</span>
             }
           </div>
           <div class="mt-2 flex flex-wrap gap-2">

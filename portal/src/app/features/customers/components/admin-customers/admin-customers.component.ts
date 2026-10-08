@@ -14,11 +14,12 @@ import { LocalCustomer } from '@portal/core/offline/models/types';
 import { AdminCustomersService } from '@portal/features/customers/services/admin-customers.service';
 import { UserPreferencesService } from '@portal/core/services/user-preferences.service';
 import { ToastService } from '@portal/shared/toast/toast.service';
+import { CustomerBrandingPanelComponent } from '@portal/features/customers/components/customer-branding-panel/customer-branding-panel.component';
 
 @Component({
   selector: 'app-admin-customers',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CustomerBrandingPanelComponent],
   templateUrl: './admin-customers.component.html',
 })
 export class AdminCustomersComponent implements OnInit, OnDestroy {
@@ -47,6 +48,16 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
   public editEmail = '';
   public editPhone = '';
   public editError = '';
+
+  // Branding panel (online-only)
+  public brandingCustomer = signal<LocalCustomer | null>(null);
+
+  public openBranding(customer: LocalCustomer) {
+    this.editingCustomer = null;
+    this.brandingCustomer.set(null);
+    // Re-create the panel so it starts from this customer's latest version.
+    queueMicrotask(() => this.brandingCustomer.set(customer));
+  }
 
   // Deactivate Form
   public selectedCustomer: LocalCustomer | null = null;
