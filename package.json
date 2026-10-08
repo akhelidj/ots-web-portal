@@ -26,7 +26,8 @@
     "db:seed": "npx -y tsx api/scripts/seed.ts",
     "db:seed:build": "npx esbuild api/scripts/seed.ts --bundle --platform=node --packages=external --outfile=dist/api/scripts/seed.js",
     "db:seed:run": "node dist/api/scripts/seed.js",
-    "build:deploy": "npm run db:seed:build && nx build api"
+    "build:deploy": "npm run db:seed:build && nx build api",
+    "prepare": "node scripts/install-git-hooks.mjs"
   },
   "private": true,
   "devDependencies": {
@@ -36,6 +37,8 @@
     "@angular/cli": "21.2.26",
     "@angular/compiler-cli": "21.2.25",
     "@angular/language-service": "21.2.25",
+    "@commitlint/cli": "20.5.3",
+    "@commitlint/config-conventional": "20.5.3",
     "@eslint/js": "^9.39.5",
     "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^11.2.7",
@@ -70,10 +73,12 @@
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
     "jest-preset-angular": "17.0.2",
+    "lint-staged": "16.4.0",
     "nx": "22.7.12",
     "postcss": "^8.4.5",
     "prettier": "3.9.9",
     "prisma": "5.22.0",
+    "simple-git-hooks": "2.14.0",
     "tailwindcss": "^3.0.2",
     "ts-node": "^10.9.2",
     "tslib": "^2.3.0",
@@ -114,5 +119,21 @@
     "rxjs": "~7.8.0",
     "signature_pad": "^5.1.4",
     "xlsx": "^0.18.5"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged",
+    "commit-msg": "npx --no -- commitlint --edit $1",
+    "pre-push": "npx nx affected -t typecheck lint test --base=origin/master",
+    "preserveUnused": [
+      "post-commit",
+      "post-checkout"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,js,mjs,cjs,html,scss,css,json,md,yml,yaml}": "prettier --write"
+  },
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=10"
   }
 }
