@@ -4,7 +4,6 @@
     "rootDir": ".",
     "sourceMap": true,
     "declaration": false,
-    "moduleResolution": "node",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
@@ -15,10 +14,9 @@
     "lib": ["es2020", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "baseUrl": ".",
     "paths": {
-      "@portal/*": ["portal/src/app/*"],
-      "@app-env/*": ["portal/src/environments/*"]
+      "@portal/*": ["./portal/src/app/*"],
+      "@app-env/*": ["./portal/src/environments/*"]
     }
   },
   "exclude": ["node_modules", "tmp"]
