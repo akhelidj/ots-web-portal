@@ -1,0 +1,158 @@
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { UserRole } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+@Injectable()
+export class UsersService {
+  constructor(private prisma: PrismaService) {}
+
+  async listUsers(tenantId: string) {
+    return this.prisma.user.findMany({
+      where: { tenantId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        customerId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createUser(tenantId: string, data: { email: string; name?: string; role: UserRole; password: string; isActive?: boolean; customerId?: string }) {
+    const email = data.email.toLowerCase().trim();
+    const existing = await this.prisma.user.findUnique({
+      where: { tenantId_email: { tenantId, email } },
+    });
+
+    if (existing) {
+      throw new ConflictException('User with this email already exists in the tenant');
+    }
+
+    if (data.role === UserRole.CUSTOMER && !data.customerId) {
+      throw new ConflictException('Customer ID is required for Customer role');
+    }
+    if (data.role !== UserRole.CUSTOMER && data.customerId) {
+      throw new ConflictException('Customer ID is only allowed for Customer role');
+    }
+
+    // Use provided password
+    const passwordHash = await bcrypt.hash(data.password, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        tenantId,
+        email,
+        name: data.name,
+        role: data.role,
+        isActive: data.isActive ?? true,
+        mustChangePassword: true,
+        passwordHash,
+        customerId: data.customerId,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        customerId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    const sampleEmail = `
+=========================================
+[SAMPLE EMAIL]
+To: ${email}
+Subject: Welcome to OTS
+
+Hello ${data.name || 'User'},
+
+Welcome to the OTS Portal! Your account has been successfully created.
+
+Here are your access details:
+- Login Email: ${email}
+- Role: ${data.role}
+- Temporary Password: ${data.password}
+${data.role === UserRole.CUSTOMER ? '\\nNote: As a customer user, you will be prompted to update your password at your first connection.\\n' : ''}
+Please log in to the portal to get started.
+=========================================
+`;
+    console.log(sampleEmail);
+
+    return {
+      ...user,
+      temporaryPassword: data.password,
+    };
+  }
+
+  async updateActiveStatus(tenantId: string, id: string, isActive: boolean) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: { isActive },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        customerId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async updateUser(tenantId: string, id: string, data: { name?: string; password?: string }) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updateData: import('@prisma/client').Prisma.UserUpdateInput = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    
+    if (data.password) {
+      updateData.passwordHash = await bcrypt.hash(data.password, 10);
+      updateData.mustChangePassword = true; // force the user to rotate it again for security
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        customerId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+}

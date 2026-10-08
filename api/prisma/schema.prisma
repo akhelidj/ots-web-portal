@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id                String             @id @default(uuid())
+  name              String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  auditLogs         AuditLog[]
+  ChildReport       ChildReport[]
+  customers         Customer[]
+  inspectionReports InspectionReport[]
+  SerialNumber      SerialNumber[]
+  users             User[]
+}
+
+model RefreshToken {
+  id                String    @id @default(uuid())
+  userId            String
+  tokenHash         String
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  rotatedAt         DateTime?
+  replacedByTokenId String?
+  userAgent         String?
+  ip                String?
+  user              User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model User {
+  id                 String         @id @default(uuid())
+  email              String
+  name               String?
+  role               UserRole
+  tenantId           String
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  passwordHash       String
+  isActive           Boolean        @default(true)
+  mustChangePassword Boolean        @default(true)
+  customerId         String?
+  refreshTokens      RefreshToken[]
+  customer           Customer?      @relation(fields: [customerId], references: [id])
+  tenant             Tenant         @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, email])
+}
+
+model Customer {
+  id                 String             @id @default(uuid())
+  name               String
+  tenantId           String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  addressLine1       String?
+  addressLine2       String?
+  city               String?
+  code               String?
+  country            String?
+  deactivatedAt      DateTime?
+  deactivatedBy      String?
+  deactivationReason String?
+  email              String?
+  isActive           Boolean            @default(true)
+  phone              String?
+  version            Int                @default(1)
+  tenant             Tenant             @relation(fields: [tenantId], references: [id])
+  inspectionReports  InspectionReport[]
+  users              User[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model TemplateVersion {
+  id                String             @id @default(uuid())
+  templateKey       String
+  templateVersion   String
+  mappingJson       Json
+  fileRef           String?
+  status            String
+  hash              String?
+  createdAt         DateTime           @default(now())
+  inspectionReports InspectionReport[]
+
+  @@unique([templateKey, templateVersion])
+}
+
+model Template {
+  id              String         @id @default(uuid())
+  tenantId        String
+  templateKey     String
+  templateVersion Int
+  status          TemplateStatus
+  fileBlob        Bytes
+  hash            String
+  changeNote      String
+  createdAt       DateTime       @default(now())
+  createdById     String
+
+  @@unique([tenantId, templateKey, templateVersion])
+  @@index([tenantId, templateKey])
+}
+
+model InspectionReport {
+  id                    String                          @id @default(uuid())
+  poNumber              String
+  reportNumber          String?
+  revisionNumber        Int                             @default(0)
+  status                InspectionReportStatus          @default(DRAFT)
+  tenantId              String
+  customerId            String?
+  templateVersionId     String?
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+  templateHash          String
+  templateKey           String
+  templateVersion       Int
+  version               Int                             @default(1)
+  inspectorComment      String?
+  inspectionAddress     String?
+  standardUsed          String?
+  equipmentUsed         Json?
+  inspectionMethod      Json?
+  grade                 String?
+  range                 String?
+  weight                String?
+  nomWT                 String?
+  nomOD                 String?
+  nomID                 String?
+  connection            String?
+  auditLogs             AuditLog[]
+  childReports          ChildReport[]
+  customer              Customer?                       @relation(fields: [customerId], references: [id])
+  legacyTemplateVersion TemplateVersion?                @relation(fields: [templateVersionId], references: [id])
+  tenant                Tenant                          @relation(fields: [tenantId], references: [id])
+  revisions             InspectionReportRevision[]
+  transitionLogs        InspectionReportTransitionLog[]
+  serialNumbers         SerialNumber[]
+}
+
+model SerialNumber {
+  id                       String                    @id @default(uuid())
+  serial                   String
+  inspectionData           Json?
+  disposition              SerialDisposition?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  inspectionReportId       String
+  version                  Int                       @default(1)
+  tenantId                 String
+  childReports             ChildReport[]
+  childReportSerialNumbers ChildReportSerialNumber[]
+  inspectionReport         InspectionReport          @relation(fields: [inspectionReportId], references: [id])
+  tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, inspectionReportId, serial])
+  @@index([tenantId, inspectionReportId])
+}
+
+model ChildReport {
+  id                 String                     @id @default(uuid())
+  reportNumber       String?
+  status             ChildReportStatus          @default(DRAFT)
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  inspectionReportId String
+  revisionNumber     Int                        @default(0)
+  notes              String?
+  serialNumberId     String
+  tenantId           String
+  type               ChildReportType            @default(REWORK)
+  version            Int                        @default(1)
+  attachments        Attachment[]
+  inspectionReport   InspectionReport           @relation(fields: [inspectionReportId], references: [id])
+  serialNumber       SerialNumber               @relation(fields: [serialNumberId], references: [id])
+  tenant             Tenant                     @relation(fields: [tenantId], references: [id])
+  revisions          ChildReportRevision[]
+  serialNumbers      ChildReportSerialNumber[]
+  transitionLogs     ChildReportTransitionLog[]
+
+  @@index([tenantId])
+}
+
+model ChildReportSerialNumber {
+  id             String       @id @default(uuid())
+  childReportId  String
+  serialNumberId String
+  childReport    ChildReport  @relation(fields: [childReportId], references: [id])
+  serialNumber   SerialNumber @relation(fields: [serialNumberId], references: [id])
+
+  @@unique([childReportId, serialNumberId])
+}
+
+model Attachment {
+  id            String      @id @default(uuid())
+  filename      String
+  url           String
+  childReportId String
+  createdAt     DateTime    @default(now())
+  childReport   ChildReport @relation(fields: [childReportId], references: [id])
+}
+
+model InspectionReportTransitionLog {
+  id                   String                  @id @default(uuid())
+  fromStatus           InspectionReportStatus
+  toStatus             InspectionReportStatus
+  previousActiveStatus InspectionReportStatus?
+  timestamp            DateTime                @default(now())
+  inspectionReportId   String
+  userId               String?
+  inspectionReport     InspectionReport        @relation(fields: [inspectionReportId], references: [id])
+}
+
+model ChildReportTransitionLog {
+  id            String            @id @default(uuid())
+  fromStatus    ChildReportStatus
+  toStatus      ChildReportStatus
+  timestamp     DateTime          @default(now())
+  childReportId String
+  userId        String?
+  childReport   ChildReport       @relation(fields: [childReportId], references: [id])
+}
+
+model AuditLog {
+  id                 String            @id @default(uuid())
+  action             String
+  entity             String
+  entityId           String
+  reason             String?
+  timestamp          DateTime          @default(now())
+  tenantId           String
+  userId             String?
+  inspectionReportId String?
+  inspectionReport   InspectionReport? @relation(fields: [inspectionReportId], references: [id])
+  tenant             Tenant            @relation(fields: [tenantId], references: [id])
+}
+
+model InspectionReportRevision {
+  id                 String           @id @default(uuid())
+  revisionNumber     Int
+  snapshotJson       Json
+  inspectionReportId String
+  revisedAt          DateTime         @default(now())
+  revisedById        String
+  revisionReason     String
+  tenantId           String
+  inspectionReport   InspectionReport @relation(fields: [inspectionReportId], references: [id])
+
+  @@unique([inspectionReportId, revisionNumber])
+  @@index([tenantId, inspectionReportId])
+}
+
+model ChildReportRevision {
+  id             String      @id @default(uuid())
+  revisionNumber Int
+  snapshotJson   Json
+  childReportId  String
+  revisedAt      DateTime    @default(now())
+  revisedById    String
+  revisionReason String
+  tenantId       String
+  childReport    ChildReport @relation(fields: [childReportId], references: [id])
+
+  @@unique([childReportId, revisionNumber])
+  @@index([tenantId, childReportId])
+}
+
+enum UserRole {
+  ADMIN
+  RECEIVER
+  INSPECTOR
+  SUPERVISOR
+  CUSTOMER
+}
+
+enum InspectionReportStatus {
+  DRAFT
+  RECEIVED
+  READY_FOR_CLEANING
+  READY_FOR_INSPECTION
+  IN_INSPECTION
+  PENDING_APPROVAL
+  APPROVED
+  ON_HOLD
+  CLOSED
+}
+
+enum ChildReportStatus {
+  DRAFT
+  IN_INSPECTION
+  PENDING_APPROVAL
+  APPROVED
+  CLOSED
+}
+
+enum SerialDisposition {
+  PASS
+  REWORK
+  SCRAP
+  HOLD
+}
+
+enum ChildReportType {
+  REWORK
+  SCRAP
+  HOLD
+}
+
+enum TemplateStatus {
+  ACTIVE
+  DEPRECATED
+}
