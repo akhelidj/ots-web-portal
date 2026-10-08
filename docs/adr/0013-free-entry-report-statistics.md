@@ -4,7 +4,7 @@
 
 ## Context
 
-Reports used to show outcome statistics (KPI strip, list pass rate, per-outcome counts) **computed** from a template-authored *outcome mapping* that classified serial dispositions. Inspectors need to state figures that do not follow mechanically from dispositions (accepted/rejected counts after re-inspection, partial lots, custom categories), and the mapping added authoring and classifier machinery to every template.
+Reports used to show outcome statistics (KPI strip, list pass rate, per-outcome counts) **computed** from a template-authored _outcome mapping_ that classified serial dispositions. Inspectors need to state figures that do not follow mechanically from dispositions (accepted/rejected counts after re-inspection, partial lots, custom categories), and the mapping added authoring and classifier machinery to every template.
 
 ## Decision
 

@@ -15,7 +15,7 @@ owns its own models (`LocalInspectionReport`, `LocalSerialNumber`, … in
 `offline/models/types.ts`); the API owns its own DTOs. Anchors: contract note in
 `CLAUDE.md`; `portal/src/app/core/offline/models/types.ts`; `api/**/dto`.
 
-*Why not the alternatives:* a shared `@ots/dto` lib couples the two build graphs and
+_Why not the alternatives:_ a shared `@ots/dto` lib couples the two build graphs and
 forces lockstep versioning, yet the portal types diverge anyway because of their
 offline-only fields — duplication keeps each side honest to its own concerns.
 

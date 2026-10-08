@@ -416,8 +416,7 @@ export class InspectionReportsService implements DataHydrationSource {
               >;
               if (local?.inspectionJson && inspectionData) {
                 const localFinal = local.inspectionJson['final'] as
-                  | Record<string, unknown>
-                  | undefined;
+                  Record<string, unknown> | undefined;
                 const localDisp =
                   local.inspectionJson['disposition'] ||
                   localFinal?.['disposition'];
@@ -427,8 +426,7 @@ export class InspectionReportsService implements DataHydrationSource {
                   ] as string) ||
                   ((
                     (inspectionData as Record<string, unknown>)['final'] as
-                      | Record<string, unknown>
-                      | undefined
+                      Record<string, unknown> | undefined
                   )?.['disposition'] as string | undefined);
 
                 if (localDisp && !serverDisp) {
@@ -957,7 +955,11 @@ export class InspectionReportsService implements DataHydrationSource {
    * ADMIN, online-only: permanently delete a report and everything under it. The local
    * copy goes through the normal pull, whose prune drops reports the server no longer has.
    */
-  public async deleteReport(id: string, version: number, reason: string): Promise<void> {
+  public async deleteReport(
+    id: string,
+    version: number,
+    reason: string,
+  ): Promise<void> {
     await firstValueFrom(
       this.http.delete(`${environment.apiUrl}/inspection-reports/${id}`, {
         body: { version, reason },
@@ -1396,8 +1398,7 @@ export class InspectionReportsService implements DataHydrationSource {
     batch: LocalInspectionApprovalBatch,
     serialNumberIds: string[],
     targetStatus:
-      | typeof SERIAL_STATUSES.APPROVED
-      | typeof SERIAL_STATUSES.INSPECTED_DRAFT,
+      typeof SERIAL_STATUSES.APPROVED | typeof SERIAL_STATUSES.INSPECTED_DRAFT,
   ): Promise<void> {
     if (batch.childReportId) {
       const childReport = await this.crRepo.getById(batch.childReportId);

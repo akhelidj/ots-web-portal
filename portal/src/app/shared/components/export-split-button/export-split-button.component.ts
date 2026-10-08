@@ -59,17 +59,24 @@ export class ExportSplitButtonComponent {
     effect((onCleanup) => {
       const el = this.menu()?.nativeElement;
       if (!el) return;
-      if (typeof el.showPopover === 'function' && !el.matches(':popover-open')) {
+      if (
+        typeof el.showPopover === 'function' &&
+        !el.matches(':popover-open')
+      ) {
         el.showPopover();
       }
       this.fitVertically(el);
 
       // A viewport-fixed menu would drift from its button on scroll/resize: close instead.
       const close = (event: Event) => {
-        if (event.type === 'scroll' && el.contains(event.target as Node)) return;
+        if (event.type === 'scroll' && el.contains(event.target as Node))
+          return;
         this.open.set(false);
       };
-      window.addEventListener('scroll', close, { capture: true, passive: true });
+      window.addEventListener('scroll', close, {
+        capture: true,
+        passive: true,
+      });
       window.addEventListener('resize', close);
       onCleanup(() => {
         window.removeEventListener('scroll', close, { capture: true });
@@ -140,14 +147,20 @@ export class ExportSplitButtonComponent {
     const below = rect.bottom + GAP;
     const above = rect.top - GAP - height;
     const fitsBelow = below + height <= viewportH - MARGIN;
-    const preferAbove = this.variant() === 'bar' || (!fitsBelow && above >= MARGIN);
+    const preferAbove =
+      this.variant() === 'bar' || (!fitsBelow && above >= MARGIN);
     const top = preferAbove ? above : below;
-    this.menuTop.set(Math.max(MARGIN, Math.min(top, viewportH - height - MARGIN)));
+    this.menuTop.set(
+      Math.max(MARGIN, Math.min(top, viewportH - height - MARGIN)),
+    );
   }
 
   @HostListener('document:click', ['$event'])
   protected onDocumentClick(event: MouseEvent): void {
-    if (this.open() && !this.host.nativeElement.contains(event.target as Node)) {
+    if (
+      this.open() &&
+      !this.host.nativeElement.contains(event.target as Node)
+    ) {
       this.open.set(false);
     }
   }

@@ -232,10 +232,7 @@ describe('ReportAttachmentsComponent', () => {
     const fixture = await render();
     uploadAttachment.mockRejectedValueOnce(new AttachmentUploadOfflineError());
 
-    await pickFile(
-      fixture,
-      new File(['x'], 'doc.txt', { type: 'text/plain' }),
-    );
+    await pickFile(fixture, new File(['x'], 'doc.txt', { type: 'text/plain' }));
 
     const alert = el(fixture).querySelector('[role="alert"]');
     expect(alert?.textContent?.toLowerCase()).toContain('offline');

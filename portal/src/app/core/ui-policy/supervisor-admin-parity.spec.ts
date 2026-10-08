@@ -10,9 +10,16 @@ const statuses = Object.values(REPORT_STATUSES);
 
 describe('supervisor / admin UI-policy parity', () => {
   it.each(statuses)('inspection report in %s', (reportStatus) => {
-    const ctx = { reportStatus, isOffline: false, previousStatus: 'IN_INSPECTION' };
+    const ctx = {
+      reportStatus,
+      isOffline: false,
+      previousStatus: 'IN_INSPECTION',
+    };
     const admin = getInspectionReportUiState({ ...ctx, role: APP_ROLES.ADMIN });
-    const sup = getInspectionReportUiState({ ...ctx, role: APP_ROLES.SUPERVISOR });
+    const sup = getInspectionReportUiState({
+      ...ctx,
+      role: APP_ROLES.SUPERVISOR,
+    });
     expect(sup.transitionChoices).toEqual(admin.transitionChoices);
     expect(sup.actions).toEqual(admin.actions);
     expect(sup.fieldModes).toEqual(admin.fieldModes);

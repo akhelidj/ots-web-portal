@@ -94,7 +94,8 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
    * | null` here rather than widening the input. Null (pre-cutover) → legacy schema.
    */
   public get parentDefinition(): TemplateFormDefinition | null {
-    return (this.parentReport()?.definitionJson ?? null) as TemplateFormDefinition | null;
+    return (this.parentReport()?.definitionJson ??
+      null) as TemplateFormDefinition | null;
   }
 
   public serials = signal<
@@ -283,7 +284,9 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   private batchSelection(batchId: string): string[] | undefined {
     const batch = this.approvalBatchViews().find((b) => b.batch.id === batchId);
     const inBatch = new Set(batch?.serials.map((s) => s.id) ?? []);
-    const ids = Array.from(this.selectedInBatch()).filter((id) => inBatch.has(id));
+    const ids = Array.from(this.selectedInBatch()).filter((id) =>
+      inBatch.has(id),
+    );
     return ids.length > 0 ? ids : undefined;
   }
 
@@ -521,10 +524,13 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       // Customers read child reports inside the parent report's app frame; an old
       // /customer/reports/:id/child link lands there on the child's detail.
       if (cr && this.isCustomer()) {
-        void this.router.navigate(['/customer', 'reports', cr.inspectionReportId], {
-          queryParams: { view: 'children', child: cr.id },
-          replaceUrl: true,
-        });
+        void this.router.navigate(
+          ['/customer', 'reports', cr.inspectionReportId],
+          {
+            queryParams: { view: 'children', child: cr.id },
+            replaceUrl: true,
+          },
+        );
         return;
       }
       this.cr.set(cr);
@@ -604,7 +610,10 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
               ...b,
               serialIds: bsnList.map((sn) => sn.serialNumberId),
               serialStatus: Object.fromEntries(
-                bsnList.map((sn) => [sn.serialNumberId, sn.status || 'PENDING']),
+                bsnList.map((sn) => [
+                  sn.serialNumberId,
+                  sn.status || 'PENDING',
+                ]),
               ),
               submittedByName,
             };
@@ -865,7 +874,11 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     this.inspectionSaveError.set('');
     this.isSavingInspection.set(true);
     try {
-      await this.crService.updateSerialNumberInspection(this.reportId, snId, data);
+      await this.crService.updateSerialNumberInspection(
+        this.reportId,
+        snId,
+        data,
+      );
       this.hasUnrefreshedAutosave = false;
       this.closeInspectionForm();
       await this.refreshData();

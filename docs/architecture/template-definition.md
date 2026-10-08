@@ -6,15 +6,15 @@ Versioning, storage and the admin validation gate are in [Template Versioning](t
 
 ## Who reads the definition
 
-| Consumer                         | Reads                                                                                           |
-| -------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Portal inspection form           | item-scope `fields` + `sections` → reactive form (`definition-to-form-schema.ts`)               |
-| Portal header/specs, customer doc | header-scope `fields`                                                                           |
-| `PENDING_APPROVAL` gate          | `disposition` + `required` flags (`engineGate`, `approval-gate.ts`)                             |
-| Disposition column / snapshots / export sort | `disposition.source` through the one `resolveDisposition`                           |
-| Export                           | `export`, `transforms`, `regions` (`export-engine.ts` + `xlsx-token-engine.ts`)                  |
-| Rework child reports             | `rules` (`ReworkRulesInterpreter`)                                                              |
-| Signatures                       | `signature` fields (who signs), the `inspectorSignature` header role                            |
+| Consumer                                     | Reads                                                                             |
+| -------------------------------------------- | --------------------------------------------------------------------------------- |
+| Portal inspection form                       | item-scope `fields` + `sections` → reactive form (`definition-to-form-schema.ts`) |
+| Portal header/specs, customer doc            | header-scope `fields`                                                             |
+| `PENDING_APPROVAL` gate                      | `disposition` + `required` flags (`engineGate`, `approval-gate.ts`)               |
+| Disposition column / snapshots / export sort | `disposition.source` through the one `resolveDisposition`                         |
+| Export                                       | `export`, `transforms`, `regions` (`export-engine.ts` + `xlsx-token-engine.ts`)   |
+| Rework child reports                         | `rules` (`ReworkRulesInterpreter`)                                                |
+| Signatures                                   | `signature` fields (who signs), the `inspectorSignature` header role              |
 
 "Usable" for a new report = `status == ACTIVE && definitionJson != null && approvalStatus == APPROVED`.
 

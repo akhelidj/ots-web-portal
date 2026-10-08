@@ -78,7 +78,9 @@ export type HeaderFieldRole =
 export type FieldRole = HeaderFieldRole | 'serialNumber';
 
 /** Roles that must sit on an ITEM-scope field. `serialNumber` is the only one today. */
-export const ITEM_ROLES: ReadonlySet<string> = new Set<FieldRole>(['serialNumber']);
+export const ITEM_ROLES: ReadonlySet<string> = new Set<FieldRole>([
+  'serialNumber',
+]);
 
 /**
  * Maps a HEADER field role onto the engine's EXISTING computed token name (no new computed

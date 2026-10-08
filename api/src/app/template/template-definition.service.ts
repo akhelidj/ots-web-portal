@@ -263,7 +263,9 @@ export class TemplateDefinitionService {
       // append a revision holding the prior, with a token-set signature + whether THIS
       // edit changed the token set (structural) vs left it intact (cosmetic).
       if (prior != null) {
-        const priorTokens = tokenSignature(prior as unknown as CandidateDefinition);
+        const priorTokens = tokenSignature(
+          prior as unknown as CandidateDefinition,
+        );
         const tokensChanged = priorTokens.hash !== newTokens.hash;
         const last = await tx.templateDefinitionRevision.findFirst({
           where: { templateId: template.id },

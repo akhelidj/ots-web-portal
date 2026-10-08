@@ -140,10 +140,7 @@ export class LocalAttachmentStorage implements AttachmentStorage {
     return `${ref.tenantId}/${ref.userId}/${ref.objectId}`;
   }
 
-  public async putSignature(
-    storageKey: string,
-    buffer: Buffer,
-  ): Promise<void> {
+  public async putSignature(storageKey: string, buffer: Buffer): Promise<void> {
     const target = this.signaturePathFor(storageKey);
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(target, buffer);

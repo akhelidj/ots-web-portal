@@ -231,10 +231,7 @@ export class S3AttachmentStorage implements AttachmentStorage {
     return `${ref.tenantId}/${ref.userId}/${ref.objectId}`;
   }
 
-  public async putSignature(
-    storageKey: string,
-    buffer: Buffer,
-  ): Promise<void> {
+  public async putSignature(storageKey: string, buffer: Buffer): Promise<void> {
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
@@ -353,9 +350,8 @@ export class S3AttachmentStorage implements AttachmentStorage {
       return false;
     }
     const name = (error as { name?: string }).name;
-    const httpStatus = (
-      error as { $metadata?: { httpStatusCode?: number } }
-    ).$metadata?.httpStatusCode;
+    const httpStatus = (error as { $metadata?: { httpStatusCode?: number } })
+      .$metadata?.httpStatusCode;
     return (
       name === 'NoSuchKey' ||
       name === 'NotFound' ||

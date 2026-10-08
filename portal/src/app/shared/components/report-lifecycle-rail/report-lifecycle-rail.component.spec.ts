@@ -23,8 +23,9 @@ describe('ReportLifecycleRailComponent', () => {
       imports: [ReportLifecycleRailComponent],
     }).compileComponents();
     // jsdom has no IntersectionObserver: the component then skips the intro and shows the end state.
-    (window as unknown as { IntersectionObserver?: unknown }).IntersectionObserver =
-      undefined;
+    (
+      window as unknown as { IntersectionObserver?: unknown }
+    ).IntersectionObserver = undefined;
   });
 
   it('places the report at the stage matching its status', () => {
@@ -60,15 +61,17 @@ describe('ReportLifecycleRailComponent', () => {
     fixture.detectChanges();
     expect(component.selected()).toBe(1);
     expect(component.current()).toBe(5);
-    const current = fixture.nativeElement.querySelector('[aria-current="step"]');
+    const current = fixture.nativeElement.querySelector(
+      '[aria-current="step"]',
+    );
     expect(current?.getAttribute('aria-label')).toContain('Under review');
   });
 
   it('renders eight stage buttons and no horizontal-scroll wrapper', () => {
     create('DRAFT');
-    expect(
-      fixture.nativeElement.querySelectorAll('button.node').length,
-    ).toBe(8);
+    expect(fixture.nativeElement.querySelectorAll('button.node').length).toBe(
+      8,
+    );
   });
 
   it('renders pips only in compact mode', () => {

@@ -32,7 +32,9 @@ function loadRealDefinition(): TemplateFormDefinition {
   for (const p of candidates) {
     if (existsSync(p)) return JSON.parse(readFileSync(p, 'utf8'));
   }
-  throw new Error(`Could not locate committed definition at: ${candidates.join(', ')}`);
+  throw new Error(
+    `Could not locate committed definition at: ${candidates.join(', ')}`,
+  );
 }
 
 const DEF = loadRealDefinition();

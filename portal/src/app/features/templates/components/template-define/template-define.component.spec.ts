@@ -12,7 +12,10 @@
  */
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TemplateDefineComponent, DescribeRow } from './template-define.component';
+import {
+  TemplateDefineComponent,
+  DescribeRow,
+} from './template-define.component';
 import {
   AdminTemplatesService,
   DefineTemplateDto,
@@ -49,15 +52,78 @@ const FIXTURE_TOKENS: ExtractedToken[] = [
 const EXPECTED_DTO: DefineTemplateDto = {
   displayName: 'Casing Report',
   fields: [
-    { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
-    { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
-    { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
-    { token: '{{inspectedBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
-    { token: '{{approvedBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
-    { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
-    { token: '{{inspectorSignature}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
-    { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
-    { token: '{{b_od}}', label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' },
+    {
+      token: '{{customer}}',
+      label: 'Customer',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'customer',
+    },
+    {
+      token: '{{reportNumber}}',
+      label: 'Report Number',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'reportNumber',
+    },
+    {
+      token: '{{poNumber}}',
+      label: 'PO Number',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'poNumber',
+    },
+    {
+      token: '{{inspectedBy}}',
+      label: 'Inspector',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'inspector',
+    },
+    {
+      token: '{{approvedBy}}',
+      label: 'Supervisor',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'supervisor',
+    },
+    {
+      token: '{{reportDate}}',
+      label: 'Report Date',
+      type: 'date',
+      required: false,
+      scope: 'header',
+      role: 'inspectionDate',
+    },
+    {
+      token: '{{inspectorSignature}}',
+      label: 'Inspector Signature',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'inspectorSignature',
+    },
+    {
+      token: '{{sn}}',
+      label: 'Serial Number',
+      type: 'text',
+      required: false,
+      scope: 'item',
+      role: 'serialNumber',
+    },
+    {
+      token: '{{b_od}}',
+      label: 'Box Min OD',
+      type: 'text',
+      required: true,
+      scope: 'item',
+      section: 'Box',
+    },
     {
       token: '{{emi}}',
       label: 'EMI Result',
@@ -90,7 +156,13 @@ describe('TemplateDefineComponent — assembly + submit', () => {
           provide: AdminTemplatesService,
           useValue: { getTokens, getDefinition, defineTemplate },
         },
-        { provide: Router, useValue: { navigate: jest.fn(), url: '/supervisor/templates/t1/define' } },
+        {
+          provide: Router,
+          useValue: {
+            navigate: jest.fn(),
+            url: '/supervisor/templates/t1/define',
+          },
+        },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => 't1' } } },
@@ -104,7 +176,11 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     c: TemplateDefineComponent,
     token: string,
     patch: Partial<DescribeRow>,
-  ) => Object.assign(c.rows().find((r) => r.token === token)!, patch);
+  ) =>
+    Object.assign(
+      c.rows().find((r) => r.token === token)!,
+      patch,
+    );
 
   /** Drive the wizard state to the valid EXPECTED_DTO. */
   async function describeValid(c: TemplateDefineComponent): Promise<void> {
@@ -114,13 +190,55 @@ describe('TemplateDefineComponent — assembly + submit', () => {
 
     // Header claims the seven mandatory-role tokens (scope derived from inclusion); every one
     // of the seven system header roles is mapped, so the mandatory gate is satisfied.
-    set(c, '{{customer}}', { header: true, serial: false, label: 'Customer', type: 'text', role: 'customer' });
-    set(c, '{{reportNumber}}', { header: true, serial: false, label: 'Report Number', type: 'text', role: 'reportNumber' });
-    set(c, '{{poNumber}}', { header: true, serial: false, label: 'PO Number', type: 'text', role: 'poNumber' });
-    set(c, '{{inspectedBy}}', { header: true, serial: false, label: 'Inspector', type: 'text', role: 'inspector' });
-    set(c, '{{approvedBy}}', { header: true, serial: false, label: 'Supervisor', type: 'text', role: 'supervisor' });
-    set(c, '{{reportDate}}', { header: true, serial: false, label: 'Report Date', type: 'date', role: 'inspectionDate' });
-    set(c, '{{inspectorSignature}}', { header: true, serial: false, label: 'Inspector Signature', type: 'text', role: 'inspectorSignature' });
+    set(c, '{{customer}}', {
+      header: true,
+      serial: false,
+      label: 'Customer',
+      type: 'text',
+      role: 'customer',
+    });
+    set(c, '{{reportNumber}}', {
+      header: true,
+      serial: false,
+      label: 'Report Number',
+      type: 'text',
+      role: 'reportNumber',
+    });
+    set(c, '{{poNumber}}', {
+      header: true,
+      serial: false,
+      label: 'PO Number',
+      type: 'text',
+      role: 'poNumber',
+    });
+    set(c, '{{inspectedBy}}', {
+      header: true,
+      serial: false,
+      label: 'Inspector',
+      type: 'text',
+      role: 'inspector',
+    });
+    set(c, '{{approvedBy}}', {
+      header: true,
+      serial: false,
+      label: 'Supervisor',
+      type: 'text',
+      role: 'supervisor',
+    });
+    set(c, '{{reportDate}}', {
+      header: true,
+      serial: false,
+      label: 'Report Date',
+      type: 'date',
+      role: 'inspectionDate',
+    });
+    set(c, '{{inspectorSignature}}', {
+      header: true,
+      serial: false,
+      label: 'Inspector Signature',
+      type: 'text',
+      role: 'inspectorSignature',
+    });
 
     // Serial fields — {{sn}} is the default serialNumber marker (rows[0]); the rest describe.
     set(c, '{{sn}}', { label: 'Serial Number' });
@@ -143,9 +261,13 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     c.templateId = 't1';
     await c.load();
     expect(getTokens).toHaveBeenCalledWith('t1');
-    expect(c.rows().map((r) => r.token)).toEqual(FIXTURE_TOKENS.map((t) => t.token));
+    expect(c.rows().map((r) => r.token)).toEqual(
+      FIXTURE_TOKENS.map((t) => t.token),
+    );
     // The detected workbook row is KEPT in state (was dropped before), not rendered.
-    expect(c.rows().map((r) => r.row)).toEqual(FIXTURE_TOKENS.map((t) => t.row));
+    expect(c.rows().map((r) => r.row)).toEqual(
+      FIXTURE_TOKENS.map((t) => t.row),
+    );
   });
 
   it('pre-checks every token as a serial candidate and defaults the first as serialNumber', async () => {
@@ -242,7 +364,11 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     // Two header fields both aiming for `inspector` — the UI keeps only the latest.
     set(c, '{{poNumber}}', { header: true, serial: false, role: 'inspector' });
     c.onRoleChange(c.rows().find((r) => r.token === '{{poNumber}}')!);
-    set(c, '{{reportDate}}', { header: true, serial: false, role: 'inspector' });
+    set(c, '{{reportDate}}', {
+      header: true,
+      serial: false,
+      role: 'inspector',
+    });
     c.onRoleChange(c.rows().find((r) => r.token === '{{reportDate}}')!);
 
     const roled = c.rows().filter((r) => r.role === 'inspector');
@@ -255,7 +381,13 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     c.templateId = 't1';
     await c.load();
     const row = c.rows().find((r) => r.token === '{{poNumber}}')!;
-    Object.assign(row, { header: true, serial: false, required: true, type: 'text', role: 'inspectionDate' });
+    Object.assign(row, {
+      header: true,
+      serial: false,
+      required: true,
+      type: 'text',
+      role: 'inspectionDate',
+    });
     c.onRoleChange(row);
     expect(row.type).toBe('date');
     expect(row.required).toBe(false);

@@ -516,8 +516,7 @@ export class SyncDispatcherService {
           const serialNumberIds = item.payload['serialNumberIds'] as string[];
           const reportVersion = item.payload['reportVersion'] as number;
           const childReportId = item.payload['childReportId'] as
-            | string
-            | undefined;
+            string | undefined;
 
           const createRes = await firstValueFrom(
             this.http.post<{
@@ -637,8 +636,7 @@ export class SyncDispatcherService {
           }
 
           const targetSnIds = item.payload['serialNumberIds'] as
-            | string[]
-            | undefined;
+            string[] | undefined;
           const batchSns = await this.batchSnRepo.listByBatchId(item.entityId);
           const finalSnIds =
             targetSnIds || batchSns.map((b) => b.serialNumberId);
@@ -710,8 +708,7 @@ export class SyncDispatcherService {
           }
 
           const targetSnIds = item.payload['serialNumberIds'] as
-            | string[]
-            | undefined;
+            string[] | undefined;
           const batchSns = await this.batchSnRepo.listByBatchId(item.entityId);
           const finalSnIds =
             targetSnIds || batchSns.map((b) => b.serialNumberId);

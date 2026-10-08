@@ -19,7 +19,7 @@ validates the report's template binding. Anchors:
 `api/src/app/revision/revision.service.ts:13,:20`; snapshot shape
 `api/src/app/common/inspection-data.types.ts:128`.
 
-*Why not the alternatives:* reconstruct-on-demand from live rows can't reproduce
+_Why not the alternatives:_ reconstruct-on-demand from live rows can't reproduce
 historical state (rows mutate); an audit-log alone doesn't capture the full computed
 shape.
 

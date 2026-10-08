@@ -91,12 +91,14 @@ export function stageLabel(status: string): string {
 
 /** "2 d 4 h" / "6 h 02 m" / "14 m" / "< 1 m" / "—". */
 export function formatDuration(ms: number | null | undefined): string {
-  if (ms === null || ms === undefined || !Number.isFinite(ms) || ms < 0) return '—';
+  if (ms === null || ms === undefined || !Number.isFinite(ms) || ms < 0)
+    return '—';
   const minutes = Math.floor(ms / 60_000);
   if (minutes < 1) return '< 1 m';
   if (minutes < 60) return `${minutes} m`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} h ${String(minutes % 60).padStart(2, '0')} m`;
+  if (hours < 24)
+    return `${hours} h ${String(minutes % 60).padStart(2, '0')} m`;
   return `${Math.floor(hours / 24)} d ${hours % 24} h`;
 }
 
@@ -130,21 +132,34 @@ export function buildTimeline(
 
   const rows: TimelineRow[] = events.map((e, i) => {
     const prev = events[i - 1];
-    return { id: e.id, status: e.status, at: e.at, took: prev ? e.t - prev.t : null };
+    return {
+      id: e.id,
+      status: e.status,
+      at: e.at,
+      took: prev ? e.t - prev.t : null,
+    };
   });
 
   const closed = events.slice(0, -1).map((e, i) => {
     const next = events[i + 1];
-    return { id: e.id, status: e.status, duration: next ? Math.max(0, next.t - e.t) : 0 };
+    return {
+      id: e.id,
+      status: e.status,
+      duration: next ? Math.max(0, next.t - e.t) : 0,
+    };
   });
   const total = closed.reduce((sum, s) => sum + s.duration, 0);
 
   const received = events.find((e) => e.status === 'RECEIVED') ?? null;
-  const completed = [...events].reverse().find((e) => COMPLETED.has(e.status)) ?? null;
+  const completed =
+    [...events].reverse().find((e) => COMPLETED.has(e.status)) ?? null;
 
   return {
     rows: rows.reverse(),
-    stages: closed.map((s) => ({ ...s, share: total > 0 ? s.duration / total : 0 })),
+    stages: closed.map((s) => ({
+      ...s,
+      share: total > 0 ? s.duration / total : 0,
+    })),
     receivedAt: received?.at ?? null,
     completedAt: completed?.at ?? null,
     turnaround: received && completed ? completed.t - received.t : null,

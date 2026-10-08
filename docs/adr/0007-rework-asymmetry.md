@@ -19,7 +19,7 @@ rejected with `BadRequestException`, including when smuggled through
 `serial-numbers.service.ts:268-270`; child rejects `child-reports.service.ts:264-266`
 (direct payload) and `:304-308` (post-resolution emiResult re-check).
 
-*Why not the alternatives:* symmetric-reject breaks the parent trigger; symmetric-accept
+_Why not the alternatives:_ symmetric-reject breaks the parent trigger; symmetric-accept
 corrupts the workflow by allowing REWORK children.
 
 ## Consequences

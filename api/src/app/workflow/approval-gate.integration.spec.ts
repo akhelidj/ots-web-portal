@@ -133,7 +133,11 @@ describe('approval gate wiring: engine path + retired-null precondition [integra
   }
 
   /** Drive one report IN_INSPECTION → PENDING_APPROVAL; capture ok + enforced body. */
-  async function runOne(report: { id: string; tenantId: string; version: number }) {
+  async function runOne(report: {
+    id: string;
+    tenantId: string;
+    version: number;
+  }) {
     try {
       await workflow.transition(
         admin(report.tenantId),

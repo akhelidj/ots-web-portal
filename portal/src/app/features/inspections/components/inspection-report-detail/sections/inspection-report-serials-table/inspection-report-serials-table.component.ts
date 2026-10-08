@@ -97,7 +97,10 @@ export class InspectionReportSerialsTableComponent {
   protected get totalColumnCount(): number {
     const identity = 2; // serial + result/actions
     const sync = this.userRole !== APP_ROLES.CUSTOMER ? 1 : 0;
-    const matrix = this.columnGroups.reduce((sum, g) => sum + g.columns.length, 0);
+    const matrix = this.columnGroups.reduce(
+      (sum, g) => sum + g.columns.length,
+      0,
+    );
     return identity + sync + matrix;
   }
 

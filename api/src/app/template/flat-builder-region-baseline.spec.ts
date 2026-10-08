@@ -35,9 +35,28 @@ function regionDto(): DefineTemplateDto {
     },
     disposition: { field: 'emi', requiredForApproval: true },
     fields: [
-      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header' },
-      { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header' },
-      { token: '{{b_od}}', label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' },
+      {
+        token: '{{poNumber}}',
+        label: 'PO Number',
+        type: 'text',
+        required: false,
+        scope: 'header',
+      },
+      {
+        token: '{{reportDate}}',
+        label: 'Report Date',
+        type: 'date',
+        required: false,
+        scope: 'header',
+      },
+      {
+        token: '{{b_od}}',
+        label: 'Box Min OD',
+        type: 'text',
+        required: true,
+        scope: 'item',
+        section: 'Box',
+      },
       {
         token: '{{emi}}',
         label: 'EMI Result',
@@ -60,7 +79,9 @@ describe('Region builder output — frozen structural baseline', () => {
       mkdirSync(dirname(BASELINE_PATH), { recursive: true });
       writeFileSync(BASELINE_PATH, JSON.stringify(built, null, 2) + '\n');
       // eslint-disable-next-line no-console
-      console.warn(`[baseline] wrote frozen region builder output → ${BASELINE_PATH}`);
+      console.warn(
+        `[baseline] wrote frozen region builder output → ${BASELINE_PATH}`,
+      );
       return;
     }
 

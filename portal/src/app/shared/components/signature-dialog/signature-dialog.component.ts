@@ -51,7 +51,8 @@ export class SignatureDialogComponent implements AfterViewInit, OnDestroy {
   public saved = output<void>();
   public cancelled = output<void>();
 
-  private canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+  private canvasRef =
+    viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private pad: SignaturePad | null = null;
 
   public isEmpty = signal(true);
@@ -66,7 +67,9 @@ export class SignatureDialogComponent implements AfterViewInit, OnDestroy {
       maxWidth: 2.4,
       backgroundColor: 'rgba(0,0,0,0)',
     });
-    this.pad.addEventListener('endStroke', () => this.isEmpty.set(this.pad?.isEmpty() ?? true));
+    this.pad.addEventListener('endStroke', () =>
+      this.isEmpty.set(this.pad?.isEmpty() ?? true),
+    );
     this.resizeCanvas();
   }
 
@@ -111,7 +114,9 @@ export class SignatureDialogComponent implements AfterViewInit, OnDestroy {
       return;
     }
     if (!this.connectivity.isOnline()) {
-      this.error.set('A network connection is required to save your signature.');
+      this.error.set(
+        'A network connection is required to save your signature.',
+      );
       return;
     }
 
@@ -139,11 +144,15 @@ export class SignatureDialogComponent implements AfterViewInit, OnDestroy {
     const out = document.createElement('canvas');
     out.width = SIGNATURE_WIDTH;
     out.height = SIGNATURE_HEIGHT;
-    out.getContext('2d')?.drawImage(source, 0, 0, SIGNATURE_WIDTH, SIGNATURE_HEIGHT);
+    out
+      .getContext('2d')
+      ?.drawImage(source, 0, 0, SIGNATURE_WIDTH, SIGNATURE_HEIGHT);
     return new Promise((resolve, reject) =>
       out.toBlob(
         (blob) =>
-          blob ? resolve(blob) : reject(new Error('Could not encode the signature.')),
+          blob
+            ? resolve(blob)
+            : reject(new Error('Could not encode the signature.')),
         'image/png',
       ),
     );

@@ -191,9 +191,7 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
   // 1. GATE — the engine gate passes a valid fixture (independent {status:'pass'} oracle).
   // ============================================================================
 
-  type GateResult =
-    | { status: 'pass' }
-    | { status: 'fail'; body: unknown };
+  type GateResult = { status: 'pass' } | { status: 'fail'; body: unknown };
 
   /** Drive the REAL gate: seed a report to IN_INSPECTION, add the given serials, set the
    *  definition (the real one or a mutant), then attempt IN_INSPECTION → PENDING_APPROVAL
@@ -364,9 +362,7 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
     }));
     const engine = await approveAndExportCanon(eleven);
     expect((engine as { mimetype: string }).mimetype).toBe('application/zip');
-    expect(
-      Object.keys((engine as { parts: object }).parts),
-    ).toHaveLength(2);
+    expect(Object.keys((engine as { parts: object }).parts)).toHaveLength(2);
   });
 
   // ============================================================================
@@ -391,63 +387,229 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
         key: 'box',
         title: 'Box Connection',
         fields: [
-          { key: 'box.minTongSpace', label: 'Min Tong Space', inputType: 'text', required: true },
-          { key: 'box.minOD', label: 'Min OD', inputType: 'text', required: true },
-          { key: 'box.minBoxThreads', label: 'Min Box Threads', inputType: 'text', required: true },
-          { key: 'box.minEccShoulder', label: 'Min Ecc Shoulder', inputType: 'text', required: true },
-          { key: 'box.maxCounterBoreDiameter', label: 'Max Counter Bore Diameter', inputType: 'text', required: true },
-          { key: 'box.maxCounterBoreLength', label: 'Max Counter Bore Length', inputType: 'text', required: true },
-          { key: 'box.bevelDiameterMin', label: 'Bevel Diameter Min', inputType: 'text', required: true },
-          { key: 'box.bevelDiameterMax', label: 'Bevel Diameter Max', inputType: 'text', required: true },
-          { key: 'box.condition', label: 'Condition', inputType: 'text', required: true },
-          { key: 'box.hardBanding', label: 'Hard Banding', inputType: 'text', required: true },
+          {
+            key: 'box.minTongSpace',
+            label: 'Min Tong Space',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'box.minOD',
+            label: 'Min OD',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'box.minBoxThreads',
+            label: 'Min Box Threads',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'box.minEccShoulder',
+            label: 'Min Ecc Shoulder',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'box.maxCounterBoreDiameter',
+            label: 'Max Counter Bore Diameter',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'box.maxCounterBoreLength',
+            label: 'Max Counter Bore Length',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'box.bevelDiameterMin',
+            label: 'Bevel Diameter Min',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'box.bevelDiameterMax',
+            label: 'Bevel Diameter Max',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'box.condition',
+            label: 'Condition',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'box.hardBanding',
+            label: 'Hard Banding',
+            inputType: 'text',
+            required: true,
+          },
         ],
       },
       {
         key: 'pin',
         title: 'Pin Connection',
         fields: [
-          { key: 'pin.minTongSpace', label: 'Min Tong Space', inputType: 'text', required: true },
-          { key: 'pin.minOD', label: 'Min OD', inputType: 'text', required: true },
-          { key: 'pin.maxID', label: 'Max ID', inputType: 'text', required: true },
-          { key: 'pin.minEccShoulder', label: 'Min Ecc Shoulder', inputType: 'text', required: true },
-          { key: 'pin.lengthPinConnMin', label: 'Length Pin Conn Min', inputType: 'text', required: true },
-          { key: 'pin.lengthPinConnMax', label: 'Length Pin Conn Max', inputType: 'text', required: true },
-          { key: 'pin.maxLengthPinBase', label: 'Max Length Pin Base', inputType: 'text', required: true },
-          { key: 'pin.bevelDiameterMin', label: 'Bevel Diameter Min', inputType: 'text', required: true },
-          { key: 'pin.bevelDiameterMax', label: 'Bevel Diameter Max', inputType: 'text', required: true },
-          { key: 'pin.condition', label: 'Condition', inputType: 'text', required: true },
+          {
+            key: 'pin.minTongSpace',
+            label: 'Min Tong Space',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'pin.minOD',
+            label: 'Min OD',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'pin.maxID',
+            label: 'Max ID',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'pin.minEccShoulder',
+            label: 'Min Ecc Shoulder',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'pin.lengthPinConnMin',
+            label: 'Length Pin Conn Min',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'pin.lengthPinConnMax',
+            label: 'Length Pin Conn Max',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'pin.maxLengthPinBase',
+            label: 'Max Length Pin Base',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'pin.bevelDiameterMin',
+            label: 'Bevel Diameter Min',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'pin.bevelDiameterMax',
+            label: 'Bevel Diameter Max',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'pin.condition',
+            label: 'Condition',
+            inputType: 'text',
+            required: true,
+          },
         ],
       },
       {
         key: 'body',
         title: 'Body',
         fields: [
-          { key: 'body.wallRemaining', label: 'Wall Remaining', inputType: 'text', required: true },
-          { key: 'body.odDecrease', label: 'OD Decrease', inputType: 'text', required: true },
-          { key: 'body.emiResult', label: 'EMI Result', inputType: 'select', required: true, options: ['PASS', 'REWORK', 'SCRAP', 'HOLD'] },
-          { key: 'body.slipArea', label: 'Slip Area', inputType: 'text', required: true },
-          { key: 'body.corrosionIn', label: 'Corrosion Inside', inputType: 'boolean', required: true },
-          { key: 'body.corrosionOut', label: 'Corrosion Outside', inputType: 'boolean', required: true },
-          { key: 'body.ipc', label: 'IPC', inputType: 'boolean', required: true },
-          { key: 'body.bentJoints', label: 'Bent Joints', inputType: 'boolean', required: true },
+          {
+            key: 'body.wallRemaining',
+            label: 'Wall Remaining',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'body.odDecrease',
+            label: 'OD Decrease',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'body.emiResult',
+            label: 'EMI Result',
+            inputType: 'select',
+            required: true,
+            options: ['PASS', 'REWORK', 'SCRAP', 'HOLD'],
+          },
+          {
+            key: 'body.slipArea',
+            label: 'Slip Area',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            key: 'body.corrosionIn',
+            label: 'Corrosion Inside',
+            inputType: 'boolean',
+            required: true,
+          },
+          {
+            key: 'body.corrosionOut',
+            label: 'Corrosion Outside',
+            inputType: 'boolean',
+            required: true,
+          },
+          {
+            key: 'body.ipc',
+            label: 'IPC',
+            inputType: 'boolean',
+            required: true,
+          },
+          {
+            key: 'body.bentJoints',
+            label: 'Bent Joints',
+            inputType: 'boolean',
+            required: true,
+          },
         ],
       },
       {
         key: 'final',
         title: 'Final Disposition',
         fields: [
-          { key: 'final.isNew', label: 'Is New', inputType: 'boolean', required: true },
-          { key: 'final.isPremium', label: 'Is Premium', inputType: 'boolean', required: true },
-          { key: 'final.isC2', label: 'Is C2', inputType: 'boolean', required: true },
-          { key: 'final.isScrap', label: 'Is Scrap', inputType: 'boolean', required: true },
+          {
+            key: 'final.isNew',
+            label: 'Is New',
+            inputType: 'boolean',
+            required: true,
+          },
+          {
+            key: 'final.isPremium',
+            label: 'Is Premium',
+            inputType: 'boolean',
+            required: true,
+          },
+          {
+            key: 'final.isC2',
+            label: 'Is C2',
+            inputType: 'boolean',
+            required: true,
+          },
+          {
+            key: 'final.isScrap',
+            label: 'Is Scrap',
+            inputType: 'boolean',
+            required: true,
+          },
         ],
       },
       {
         key: 'remarksSection',
         title: 'Additional Information',
         fields: [
-          { key: 'remarks', label: 'Remarks', inputType: 'text', required: false },
+          {
+            key: 'remarks',
+            label: 'Remarks',
+            inputType: 'text',
+            required: false,
+          },
         ],
       },
     ],
@@ -506,7 +668,10 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
     });
     if (def !== null) await setDefinition(tenant.id, def);
 
-    const child = await childReports.syncReworkChildReport(tenant.id, report.id);
+    const child = await childReports.syncReworkChildReport(
+      tenant.id,
+      report.id,
+    );
     if (!child) return null;
     // Strip identity/volatile fields; keep only what REWORK semantics produce.
     return {

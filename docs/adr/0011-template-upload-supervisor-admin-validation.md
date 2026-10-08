@@ -62,14 +62,14 @@ admin-uploaded, so nothing becomes retroactively unusable on migration.
 ## Consequences
 
 Template authoring moves to the people who own the content, without giving up review.
-Reviewing a *finished, defined* version is a better review than approving a bare workbook.
+Reviewing a _finished, defined_ version is a better review than approving a bare workbook.
 The gate is orthogonal to `status` (lifecycle) and `definitionJson` (form shape), so it
 composes with both rather than overloading either.
 
 Costs and things to know:
 
 - **A third axis on `Template`.** "Usable" is now `ACTIVE && definitionJson != null &&
-  approvalStatus == APPROVED`. Any new consumption path must AND in all three; miss the
+approvalStatus == APPROVED`. Any new consumption path must AND in all three; miss the
   third and you have a bypass. The two live paths and the unwired seam are done.
 - **A pending version and the live version coexist as ACTIVE.** The deferred handover is
   what makes that safe, but it means `status: ACTIVE` alone no longer implies "in service."

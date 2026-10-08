@@ -84,13 +84,17 @@ function resolvePath(obj: unknown, path: string): unknown {
  */
 function parseUpsertRule(raw: unknown): ParsedUpsertRule {
   if (raw == null || typeof raw !== 'object') {
-    throw new BadRequestException('rework rules: malformed rule (not an object)');
+    throw new BadRequestException(
+      'rework rules: malformed rule (not an object)',
+    );
   }
   const rule = raw as Record<string, unknown>;
 
   const then = rule.then;
   if (then == null || typeof then !== 'object') {
-    throw new BadRequestException('rework rules: malformed rule (missing "then")');
+    throw new BadRequestException(
+      'rework rules: malformed rule (missing "then")',
+    );
   }
   const thenObj = then as Record<string, unknown>;
 
@@ -103,7 +107,9 @@ function parseUpsertRule(raw: unknown): ParsedUpsertRule {
 
   const when = rule.when;
   if (when == null || typeof when !== 'object') {
-    throw new BadRequestException('rework rules: malformed rule (missing "when")');
+    throw new BadRequestException(
+      'rework rules: malformed rule (missing "when")',
+    );
   }
   const whenObj = when as Record<string, unknown>;
 
@@ -120,7 +126,9 @@ function parseUpsertRule(raw: unknown): ParsedUpsertRule {
   // A rule must state a value to compare against; a missing value would make absent-field
   // serials match under `undefined === undefined`, which is never intended.
   if (whenObj.value === undefined) {
-    throw new BadRequestException('rework rules: malformed rule (missing when.value)');
+    throw new BadRequestException(
+      'rework rules: malformed rule (missing when.value)',
+    );
   }
 
   const childTypeRaw = thenObj.childType;

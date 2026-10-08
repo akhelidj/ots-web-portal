@@ -136,7 +136,8 @@ export function serialReworkLabel(
       when?: { field?: string; value?: unknown };
       then?: { action?: string; childType?: string };
     };
-    if (rule?.then?.action !== 'upsertChildReport' || !rule.when?.field) continue;
+    if (rule?.then?.action !== 'upsertChildReport' || !rule.when?.field)
+      continue;
     if (walkPath(data, rule.when.field) !== rule.when.value) continue;
     const t = rule.then.childType ?? 'REWORK';
     return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();

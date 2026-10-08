@@ -37,7 +37,9 @@ describe('InspectionReportTransitionHistoryComponent — squared static marker (
   }
 
   /** The colored inner marker div for the single rendered timeline row. */
-  const marker = (f: ComponentFixture<InspectionReportTransitionHistoryComponent>) =>
+  const marker = (
+    f: ComponentFixture<InspectionReportTransitionHistoryComponent>,
+  ) =>
     (f.nativeElement as HTMLElement).querySelector(
       '.h-2.w-2',
     ) as HTMLElement | null;

@@ -162,9 +162,11 @@ describe('SignaturesService', () => {
             .mockResolvedValue({ storageKey: 't1/u1/cur', hash: 'h1' }),
         },
         reportSignature: {
-          create: jest.fn().mockImplementation(({ data }) =>
-            Promise.resolve({ ...data, signedAt: new Date(5) }),
-          ),
+          create: jest
+            .fn()
+            .mockImplementation(({ data }) =>
+              Promise.resolve({ ...data, signedAt: new Date(5) }),
+            ),
         },
       };
 

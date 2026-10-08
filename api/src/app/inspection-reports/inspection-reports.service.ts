@@ -153,7 +153,10 @@ export class InspectionReportsService {
     });
 
     // Newest version per key (ordered templateVersion desc within key → first wins).
-    const newestByKey = new Map<string, { templateKey: string; templateVersion: number }>();
+    const newestByKey = new Map<
+      string,
+      { templateKey: string; templateVersion: number }
+    >();
     for (const t of templates) {
       if (!newestByKey.has(t.templateKey)) {
         newestByKey.set(t.templateKey, t);
@@ -567,9 +570,7 @@ export class InspectionReportsService {
       select: { definitionJson: true },
     });
     const def = template?.definitionJson as
-      | { fields?: { key?: string; role?: string }[] }
-      | null
-      | undefined;
+      { fields?: { key?: string; role?: string }[] } | null | undefined;
     const keys = new Set<string>();
     for (const f of def?.fields ?? []) {
       if (f && typeof f.key === 'string' && f.role) keys.add(f.key);

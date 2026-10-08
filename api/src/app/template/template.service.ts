@@ -445,7 +445,9 @@ export class TemplateService {
           await deleteReportGraph(tx, reportIds);
         }
 
-        await tx.templateDefinitionRevision.deleteMany({ where: { templateId } });
+        await tx.templateDefinitionRevision.deleteMany({
+          where: { templateId },
+        });
         await tx.template.delete({ where: { id: templateId } });
 
         // Hand the key back to the version this upload displaced, if it did displace one.
@@ -510,7 +512,9 @@ export class TemplateService {
     // deliberately kept: the same objects back users' registered signatures.
     await this.storage.deleteTemplate(fileKey).catch(() => undefined);
     await Promise.all(
-      attachmentRefs.map((ref) => this.storage.delete(ref).catch(() => undefined)),
+      attachmentRefs.map((ref) =>
+        this.storage.delete(ref).catch(() => undefined),
+      ),
     );
 
     return { deleted: true, reportsDeleted };
@@ -520,7 +524,11 @@ export class TemplateService {
    * What an admin delete would remove, for the confirmation dialog. Read-only.
    */
   async getDeleteImpact(tenantId: string, templateId: string) {
-    const template = await this.loadForApproval(this.prisma, tenantId, templateId);
+    const template = await this.loadForApproval(
+      this.prisma,
+      tenantId,
+      templateId,
+    );
     const reportIds = (
       await this.prisma.inspectionReport.findMany({
         where: { tenantId, ...this.reportWhere(template) },
@@ -547,7 +555,10 @@ export class TemplateService {
     };
   }
 
-  private reportWhere(template: { templateKey: string; templateVersion: number }) {
+  private reportWhere(template: {
+    templateKey: string;
+    templateVersion: number;
+  }) {
     return {
       templateKey: template.templateKey,
       templateVersion: template.templateVersion,

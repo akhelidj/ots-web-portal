@@ -27,7 +27,10 @@ import {
 } from './flat-proof.testutil';
 import * as ExcelJS from 'exceljs';
 
-const TEMPLATE_PATH = resolve(__dirname, '../../../scripts/valid-template.xlsx');
+const TEMPLATE_PATH = resolve(
+  __dirname,
+  '../../../scripts/valid-template.xlsx',
+);
 const DEF_PATH = resolve(
   __dirname,
   '../template/definitions/drill-pipe-v1.definition.json',
@@ -95,7 +98,10 @@ async function exportRegionCanon(def: ExportDefinition): Promise<SheetCanon[]> {
     readFileSync(TEMPLATE_PATH) as unknown as ArrayBuffer,
   );
   const snapshot = frozenSnapshot();
-  const chunk = [makeSerial('SN-001', row('a')), makeSerial('SN-002', row('b'))];
+  const chunk = [
+    makeSerial('SN-001', row('a')),
+    makeSerial('SN-002', row('b')),
+  ];
   await engineMap(def, workbook, snapshot, chunk);
   const buffer = (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
   return canon(Buffer.from(buffer));
@@ -114,7 +120,9 @@ describe('Region export — frozen structural baseline (engine, no DB)', () => {
       return;
     }
 
-    const frozen = JSON.parse(readFileSync(BASELINE_PATH, 'utf8')) as SheetCanon[];
+    const frozen = JSON.parse(
+      readFileSync(BASELINE_PATH, 'utf8'),
+    ) as SheetCanon[];
     expect(current).toEqual(frozen);
   });
 
@@ -123,7 +131,9 @@ describe('Region export — frozen structural baseline (engine, no DB)', () => {
     // the canon no longer equals the frozen baseline. If this passed, the baseline
     // would be too coarse to detect a real region regression.
     if (!existsSync(BASELINE_PATH)) return; // nothing to compare against on the freeze run
-    const frozen = JSON.parse(readFileSync(BASELINE_PATH, 'utf8')) as SheetCanon[];
+    const frozen = JSON.parse(
+      readFileSync(BASELINE_PATH, 'utf8'),
+    ) as SheetCanon[];
 
     const mutant = clone();
     const entry = mutant.export.regions['serials'].find(

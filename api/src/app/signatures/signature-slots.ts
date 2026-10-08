@@ -9,7 +9,10 @@ export const INSPECTOR_SIGNATURE_SLOT = 'inspectorSignature';
 /** Who signs a "Signature" field: the customer (drawn per report) or the supervisor (account signature). */
 export type SignatureSigner = 'CUSTOMER' | 'SUPERVISOR';
 
-export const SIGNATURE_SIGNERS: readonly SignatureSigner[] = ['CUSTOMER', 'SUPERVISOR'];
+export const SIGNATURE_SIGNERS: readonly SignatureSigner[] = [
+  'CUSTOMER',
+  'SUPERVISOR',
+];
 
 const FIELD_SLOT_PREFIX = 'field:';
 

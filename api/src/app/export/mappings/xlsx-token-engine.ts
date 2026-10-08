@@ -179,10 +179,9 @@ export interface RegionSubstitution {
   /** Resolved global (header) token → value map, applied once workbook-wide. */
   globalTokens: Record<string, string>;
   /** Resolve the per-row token → value map for one repeated item. */
-  rowTokensFor: (serial: Snapshot['serialNumbers'][number]) => Record<
-    string,
-    string
-  >;
+  rowTokensFor: (
+    serial: Snapshot['serialNumbers'][number],
+  ) => Record<string, string>;
 }
 
 /**
@@ -235,7 +234,10 @@ export async function expandRegionAndSubstitute(
   const rowRegex = /(<row\b[^>]*\br="(\d+)"[^>]*>[\s\S]*?<\/row>)/g;
   let templateRowXml = '';
   let templateRowNumber = -1;
-  const rowsWithTokens = new Map<number, { xml: string; tokens: Set<string> }>();
+  const rowsWithTokens = new Map<
+    number,
+    { xml: string; tokens: Set<string> }
+  >();
 
   let rowMatch: RegExpExecArray | null;
   while ((rowMatch = rowRegex.exec(sheetXml)) !== null) {

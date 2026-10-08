@@ -22,7 +22,10 @@
  */
 import * as ExcelJS from 'exceljs';
 import { engineMap, ExportDefinition } from './export-engine';
-import { assembleSnapshotHeader, HeaderSourceRow } from '../common/snapshot-header';
+import {
+  assembleSnapshotHeader,
+  HeaderSourceRow,
+} from '../common/snapshot-header';
 import { Snapshot } from '../common/inspection-data.types';
 import { canon, frozenSnapshot } from './flat-proof.testutil';
 import { InspectionReportStatus } from '@prisma/client';
@@ -41,7 +44,9 @@ const HEADER_DEF: ExportDefinition = {
 };
 
 /** A report row carrying ONLY metadata + the generic headerData map (no named columns). */
-function rowWith(headerData: Record<string, unknown> | undefined): HeaderSourceRow {
+function rowWith(
+  headerData: Record<string, unknown> | undefined,
+): HeaderSourceRow {
   return {
     id: 'r1',
     poNumber: 'PO',

@@ -76,55 +76,57 @@
       <div class="border-b border-border pb-3 mb-5">
         <h2 class="text-lg text-foreground">Findings &amp; Notes</h2>
       </div>
-        <div class="flex-grow flex flex-col">
-          <div class="flex justify-between items-center mb-2">
-            <label for="operatorNotes" class="form-label text-foreground mb-0"
-              >Operator Notes / Findings</label
+      <div class="flex-grow flex flex-col">
+        <div class="flex justify-between items-center mb-2">
+          <label for="operatorNotes" class="form-label text-foreground mb-0"
+            >Operator Notes / Findings</label
+          >
+          @if (
+            !isEditingNotes() &&
+            uiState()?.fieldModes?.['inspectionData'] === 'editable'
+          ) {
+            <button
+              (click)="isEditingNotes.set(true)"
+              class="text-xs text-primary hover:underline font-medium"
             >
-            @if (
-              !isEditingNotes() &&
-              uiState()?.fieldModes?.['inspectionData'] === 'editable'
-            ) {
-              <button
-                (click)="isEditingNotes.set(true)"
-                class="text-xs text-primary hover:underline font-medium"
-              >
-                Edit Notes
-              </button>
-            }
-          </div>
-          @if (isEditingNotes()) {
-            <textarea
-              id="operatorNotes"
-              [ngModel]="notes()"
-              (ngModelChange)="notes.set($event)"
-              rows="4"
-              class="field-control mb-3"
-            ></textarea>
-            <div class="flex gap-2 justify-end">
-              <button
-                (click)="isEditingNotes.set(false); notes.set(cr.notes || '')"
-                class="btn btn-secondary btn-sm"
-              >
-                Cancel
-              </button>
-              <button (click)="saveNotes()" class="btn btn-primary btn-sm">
-                Save Notes
-              </button>
-            </div>
-          } @else {
-            <div
-              class="p-4 border border-border bg-card rounded-lg min-h-[100px] text-sm text-foreground whitespace-pre-wrap flex-grow shadow-inner"
-            >
-              @if (cr.notes) {
-                {{ cr.notes }}
-              } @else {
-                <span class="text-muted-foreground italic">No notes provided.</span>
-              }
-            </div>
+              Edit Notes
+            </button>
           }
         </div>
+        @if (isEditingNotes()) {
+          <textarea
+            id="operatorNotes"
+            [ngModel]="notes()"
+            (ngModelChange)="notes.set($event)"
+            rows="4"
+            class="field-control mb-3"
+          ></textarea>
+          <div class="flex gap-2 justify-end">
+            <button
+              (click)="isEditingNotes.set(false); notes.set(cr.notes || '')"
+              class="btn btn-secondary btn-sm"
+            >
+              Cancel
+            </button>
+            <button (click)="saveNotes()" class="btn btn-primary btn-sm">
+              Save Notes
+            </button>
+          </div>
+        } @else {
+          <div
+            class="p-4 border border-border bg-card rounded-lg min-h-[100px] text-sm text-foreground whitespace-pre-wrap flex-grow shadow-inner"
+          >
+            @if (cr.notes) {
+              {{ cr.notes }}
+            } @else {
+              <span class="text-muted-foreground italic"
+                >No notes provided.</span
+              >
+            }
+          </div>
+        }
       </div>
+    </div>
     <!-- Footer spacer for sticky navigation -->
     <div class="h-24 px-4 overflow-hidden pointer-events-none"></div>
   </div>
@@ -343,7 +345,9 @@
         <div
           class="p-6 bg-error-light/10 border-b border-error/10 flex justify-between items-center"
         >
-          <h3 class="text-lg font-bold text-error-dark">Return for Correction</h3>
+          <h3 class="text-lg font-bold text-error-dark">
+            Return for Correction
+          </h3>
           <button
             type="button"
             (click)="closeReturnBatchModal()"
@@ -364,7 +368,9 @@
           <p class="text-gray-600 text-sm leading-relaxed">
             You are returning
             <span class="font-bold text-gray-900">{{
-              selectedInBatch().size > 0 ? selectedInBatch().size : 'all remaining'
+              selectedInBatch().size > 0
+                ? selectedInBatch().size
+                : 'all remaining'
             }}</span>
             item(s). Please specify why further attention is required.
           </p>
@@ -383,8 +389,14 @@
             ></textarea>
           </div>
         </div>
-        <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-          <button type="button" (click)="closeReturnBatchModal()" class="btn btn-secondary">
+        <div
+          class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3"
+        >
+          <button
+            type="button"
+            (click)="closeReturnBatchModal()"
+            class="btn btn-secondary"
+          >
             Cancel
           </button>
           <button
@@ -614,7 +626,9 @@
                     }}</span>
                   </div>
                   <div class="p-4 bg-muted border border-border rounded-xl">
-                    <p class="text-sm text-muted-foreground leading-relaxed italic">
+                    <p
+                      class="text-sm text-muted-foreground leading-relaxed italic"
+                    >
                       "{{ entry.notes }}"
                     </p>
                   </div>

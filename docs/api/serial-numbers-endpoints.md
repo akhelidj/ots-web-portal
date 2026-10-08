@@ -4,12 +4,12 @@ Manage Serial Numbers (the pipes) attached to Inspection Reports. All operations
 
 ## Security
 
-| Endpoint                                         | Roles                                            |
-| ------------------------------------------------ | ------------------------------------------------ |
-| `GET /inspection-reports/:id/serial-numbers`     | ADMIN, RECEIVER, SUPERVISOR, INSPECTOR, CUSTOMER |
-| `POST /inspection-reports/:id/serial-numbers`    | ADMIN, RECEIVER                                  |
-| `PATCH /serial-numbers/:id`                      | ADMIN, RECEIVER, INSPECTOR                       |
-| `DELETE /serial-numbers/:id`                     | ADMIN, RECEIVER                                  |
+| Endpoint                                      | Roles                                            |
+| --------------------------------------------- | ------------------------------------------------ |
+| `GET /inspection-reports/:id/serial-numbers`  | ADMIN, RECEIVER, SUPERVISOR, INSPECTOR, CUSTOMER |
+| `POST /inspection-reports/:id/serial-numbers` | ADMIN, RECEIVER                                  |
+| `PATCH /serial-numbers/:id`                   | ADMIN, RECEIVER, INSPECTOR                       |
+| `DELETE /serial-numbers/:id`                  | ADMIN, RECEIVER                                  |
 
 A `RECEIVER` may rename a serial but is refused (`403`) if the body carries `inspectionData`. A `CUSTOMER` can only read serials of their own customer's reports. Cross-tenant ids return `404`.
 
@@ -33,7 +33,16 @@ Values are trimmed; a blank value is `400`; an empty `items` array is `400`. Dup
 Response `201` echoes `clientRef` so the offline client can remap temporary ids (each serial created at `version: 1`):
 
 ```json
-{ "items": [{ "clientRef": "temp-uuid-1", "id": "uuid", "serialNumber": "SN-001", "version": 1 }] }
+{
+  "items": [
+    {
+      "clientRef": "temp-uuid-1",
+      "id": "uuid",
+      "serialNumber": "SN-001",
+      "version": 1
+    }
+  ]
+}
 ```
 
 ## 3. Update — `PATCH /serial-numbers/:id`

@@ -39,7 +39,9 @@ describe('jwtInterceptor token refresh', () => {
     navigate = jest.fn().mockResolvedValue(true);
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(withInterceptors([jwtInterceptor, apiErrorInterceptor])),
+        provideHttpClient(
+          withInterceptors([jwtInterceptor, apiErrorInterceptor]),
+        ),
         provideHttpClientTesting(),
         { provide: Router, useValue: { navigate } },
         {
@@ -73,7 +75,9 @@ describe('jwtInterceptor token refresh', () => {
       .subscribe((r) => (result = r));
 
     const first = http.expectOne(`${api}/templates/t1/definition`);
-    expect(first.request.headers.get('Authorization')).toBe('Bearer old-access');
+    expect(first.request.headers.get('Authorization')).toBe(
+      'Bearer old-access',
+    );
     first.flush({ message: 'Unauthorized' }, unauthorized);
 
     const refresh = http.expectOne(`${api}/auth/refresh`);
@@ -81,7 +85,9 @@ describe('jwtInterceptor token refresh', () => {
     refresh.flush({ accessToken: 'new-access', refreshToken: 'new-refresh' });
 
     const retry = http.expectOne(`${api}/templates/t1/definition`);
-    expect(retry.request.headers.get('Authorization')).toBe('Bearer new-access');
+    expect(retry.request.headers.get('Authorization')).toBe(
+      'Bearer new-access',
+    );
     expect(retry.request.body).toEqual({ a: 1 });
     retry.flush({ ok: true });
 
@@ -103,7 +109,9 @@ describe('jwtInterceptor token refresh', () => {
 
     for (const url of [`${api}/a`, `${api}/b`]) {
       const retry = http.expectOne(url);
-      expect(retry.request.headers.get('Authorization')).toBe('Bearer new-access');
+      expect(retry.request.headers.get('Authorization')).toBe(
+        'Bearer new-access',
+      );
       retry.flush({});
     }
   });

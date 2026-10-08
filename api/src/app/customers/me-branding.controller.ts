@@ -40,7 +40,10 @@ export class MeBrandingController {
       req.user.tenantId,
       this.customerId(req),
     );
-    res.set({ 'Content-Type': mimeType, 'Cache-Control': 'private, max-age=86400' });
+    res.set({
+      'Content-Type': mimeType,
+      'Cache-Control': 'private, max-age=86400',
+    });
     return new StreamableFile(buffer);
   }
 

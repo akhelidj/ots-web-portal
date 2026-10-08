@@ -199,7 +199,9 @@ const DEF = JSON.parse(
 const clone = (): ExportDefinition =>
   JSON.parse(JSON.stringify(DEF)) as ExportDefinition;
 
-function makeHeader(over: Partial<Snapshot['header']> = {}): Snapshot['header'] {
+function makeHeader(
+  over: Partial<Snapshot['header']> = {},
+): Snapshot['header'] {
   return {
     id: 'r1',
     poNumber: 'PO-1',
@@ -231,7 +233,12 @@ function makeSnapshot(
 ): Snapshot {
   return {
     header,
-    template: { key: 'DRILL_PIPE_REPORT', version: 1, hash: 'h', versionId: null },
+    template: {
+      key: 'DRILL_PIPE_REPORT',
+      version: 1,
+      hash: 'h',
+      versionId: null,
+    },
     serialNumbers: [],
     childReports: [],
     transitionLogs: [],
@@ -307,7 +314,10 @@ const SNAP = makeSnapshot(makeHeader());
 describe('Layer A — global (header) token equivalence: engine == frozen golden', () => {
   const g = (h: Snapshot['header'], extras?: Partial<Snapshot>) => {
     const s = makeSnapshot(h, extras);
-    return { engine: engineGlobalTokens(DEF, s), golden: goldenGlobalTokens(s) };
+    return {
+      engine: engineGlobalTokens(DEF, s),
+      golden: goldenGlobalTokens(s),
+    };
   };
 
   it('G1 all header fields populated', () => {
@@ -467,21 +477,25 @@ describe('Layer A — per-row token equivalence: engine == frozen golden', () =>
     expect(r(makeSerial('a', only2)).engine).toEqual(
       r(makeSerial('a', only2)).golden,
     );
-    expect(engineRowTokens(DEF, SNAP, makeSerial('a', only2))['{{remarks}}']).toBe(
-      'final-remarks',
-    );
+    expect(
+      engineRowTokens(DEF, SNAP, makeSerial('a', only2))['{{remarks}}'],
+    ).toBe('final-remarks');
 
     const only3 = fullRow();
     delete only3.final!.condition_notes;
-    expect(engineRowTokens(DEF, SNAP, makeSerial('a', only3))['{{remarks}}']).toBe(
-      'top-remarks',
-    );
+    expect(
+      engineRowTokens(DEF, SNAP, makeSerial('a', only3))['{{remarks}}'],
+    ).toBe('top-remarks');
 
     const none = fullRow();
     delete none.final!.condition_notes;
     delete none.remarks;
-    expect(r(makeSerial('a', none)).engine).toEqual(r(makeSerial('a', none)).golden);
-    expect(engineRowTokens(DEF, SNAP, makeSerial('a', none))['{{remarks}}']).toBe('');
+    expect(r(makeSerial('a', none)).engine).toEqual(
+      r(makeSerial('a', none)).golden,
+    );
+    expect(
+      engineRowTokens(DEF, SNAP, makeSerial('a', none))['{{remarks}}'],
+    ).toBe('');
   });
 
   it("R6 '0' and whitespace scalars are kept (truthy ||), not blanked", () => {
@@ -500,7 +514,9 @@ describe('Layer A — per-row token equivalence: engine == frozen golden', () =>
 describe('Layer A — mutation guard (token-map comparison is not vacuous)', () => {
   it('a transform change makes the engine token map diverge', () => {
     const mutant = clone();
-    (mutant.transforms.boolCheckbox as unknown as { whenTrue: string }).whenTrue = 'Y';
+    (
+      mutant.transforms.boolCheckbox as unknown as { whenTrue: string }
+    ).whenTrue = 'Y';
     const s = makeSerial('SN-1', fullRow());
     expect(engineRowTokens(mutant, SNAP, s)).not.toEqual(goldenRowTokens(s));
   });

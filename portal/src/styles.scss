@@ -75,8 +75,8 @@
 
   /* Radius / shadow / focus. */
   --radius: 0;
-  --shadow-card: 0 1px 3px rgba(23, 27, 29, 0.08),
-    0 1px 2px rgba(23, 27, 29, 0.06);
+  --shadow-card:
+    0 1px 3px rgba(23, 27, 29, 0.08), 0 1px 2px rgba(23, 27, 29, 0.06);
   --focus-ring: 0 0 0 3px rgb(237 129 45 / 0.55); /* visible orange focus outline */
 
   /* Motion — easing curves + duration tokens at the app scale. Defined only; not
@@ -120,7 +120,8 @@ html[data-theme='light'] {
   --light-slate: #627184;
   --border: rgba(15, 39, 65, 0.16);
   --on-accent: #0f2741;
-  --shadow-card: 0 1px 3px rgba(15, 39, 65, 0.08), 0 1px 2px rgba(15, 39, 65, 0.06);
+  --shadow-card:
+    0 1px 3px rgba(15, 39, 65, 0.08), 0 1px 2px rgba(15, 39, 65, 0.06);
   --accent-text: #a85319;
   --tl-surface: #ffffff;
   --tl-line: rgba(15, 39, 65, 0.16);
@@ -777,7 +778,6 @@ html[data-theme] h4 {
     transition: transform var(--duration-fast) var(--ease-standard);
   }
 
-
   /* Fade-before-reflow — the marketing site's signature rule. When the
      customer report list changes while its container resizes (a
      discrete status/sort change), the body fades + lifts OUT on the
@@ -978,12 +978,24 @@ html[data-theme] h4 {
     opacity: 0;
     transform: translateY(18px);
   }
-  .cx-stagger > :nth-child(2) { transition-delay: 70ms; }
-  .cx-stagger > :nth-child(3) { transition-delay: 140ms; }
-  .cx-stagger > :nth-child(4) { transition-delay: 210ms; }
-  .cx-stagger > :nth-child(5) { transition-delay: 280ms; }
-  .cx-stagger > :nth-child(6) { transition-delay: 350ms; }
-  .cx-stagger > :nth-child(n + 7) { transition-delay: 420ms; }
+  .cx-stagger > :nth-child(2) {
+    transition-delay: 70ms;
+  }
+  .cx-stagger > :nth-child(3) {
+    transition-delay: 140ms;
+  }
+  .cx-stagger > :nth-child(4) {
+    transition-delay: 210ms;
+  }
+  .cx-stagger > :nth-child(5) {
+    transition-delay: 280ms;
+  }
+  .cx-stagger > :nth-child(6) {
+    transition-delay: 350ms;
+  }
+  .cx-stagger > :nth-child(n + 7) {
+    transition-delay: 420ms;
+  }
 
   /* Primary action: orange, ink label, brighter orange sweeps in on hover. */
   .cx-btn {
@@ -1121,7 +1133,8 @@ html[data-theme] h4 {
     border-bottom: 1px solid var(--border);
     color: var(--foreground);
     isolation: isolate;
-    animation: cx-row-in 0.8s calc(var(--i, 0) * 60ms) var(--ease-decelerate) both;
+    animation: cx-row-in 0.8s calc(var(--i, 0) * 60ms) var(--ease-decelerate)
+      both;
   }
   .cx-report:last-child {
     border-bottom: 0;
@@ -1990,7 +2003,8 @@ html[data-theme] h4 {
     min-width: 22rem;
     border-left: 1px solid var(--border);
     background: var(--card);
-    animation: cxa-inspector-in var(--duration-medium) var(--ease-decelerate) both;
+    animation: cxa-inspector-in var(--duration-medium) var(--ease-decelerate)
+      both;
   }
   @keyframes cxa-inspector-in {
     from {
@@ -2233,17 +2247,26 @@ html[data-theme] h4 {
     }
   }
   /* Header links: an orange underline draws in from the left. */
-  html[data-theme] .shell-header-sticky a[href]:not(:has(img)):not(.btn):not(.hdr-icon-btn):not(.hdr-menu-item) {
-    background: linear-gradient(var(--accent), var(--accent)) left bottom / 0 1px no-repeat;
+  html[data-theme]
+    .shell-header-sticky
+    a[href]:not(:has(img)):not(.btn):not(.hdr-icon-btn):not(.hdr-menu-item) {
+    background: linear-gradient(var(--accent), var(--accent)) left bottom / 0
+      1px no-repeat;
     padding-bottom: 2px;
     transition:
       background-size 0.5s var(--ease-decelerate),
       color 0.4s var(--ease-standard);
   }
-  html[data-theme] .shell-header-sticky a[href]:not(:has(img)):not(.btn):not(.hdr-icon-btn):not(.hdr-menu-item):hover {
+  html[data-theme]
+    .shell-header-sticky
+    a[href]:not(:has(img)):not(.btn):not(.hdr-icon-btn):not(
+      .hdr-menu-item
+    ):hover {
     background-size: 100% 1px;
   }
-  html[data-theme] .shell-header-sticky button:not(.theme-switch):not(.hdr-menu-item):hover {
+  html[data-theme]
+    .shell-header-sticky
+    button:not(.theme-switch):not(.hdr-menu-item):hover {
     color: var(--accent-hover);
   }
 
@@ -2254,7 +2277,12 @@ html[data-theme] h4 {
     max-width: 9rem;
     padding: 0.25rem;
     border-radius: var(--radius);
-    background: rgba(255, 255, 255, 0.96); /* a plate, so dark logos stay visible on the bar */
+    background: rgba(
+      255,
+      255,
+      255,
+      0.96
+    ); /* a plate, so dark logos stay visible on the bar */
     object-fit: contain;
   }
   .hdr-brand-name {

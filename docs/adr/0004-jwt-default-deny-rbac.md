@@ -27,7 +27,7 @@ that route.
 
 A second global guard, `SignatureRequiredGuard` (registered after `DefaultDenyGuard`), further refuses state-changing requests from an INSPECTOR with no registered signature (see [ADR-0012](0012-signatures.md)).
 
-*Why not the alternatives:* opt-in per-controller guards make a forgotten decorator an
+_Why not the alternatives:_ opt-in per-controller guards make a forgotten decorator an
 open endpoint; default-deny inverts that risk.
 
 ## Consequences

@@ -154,7 +154,11 @@ export interface AttachmentStorage {
   buildLogoKey(ref: LogoObjectRef): string;
 
   /** Persist a logo image's `buffer` at `storageKey`. */
-  putLogo(storageKey: string, buffer: Buffer, contentType: string): Promise<void>;
+  putLogo(
+    storageKey: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<void>;
 
   /** Read a logo image by `storageKey`, or `null` when it does not exist. */
   getLogo(storageKey: string): Promise<Buffer | null>;

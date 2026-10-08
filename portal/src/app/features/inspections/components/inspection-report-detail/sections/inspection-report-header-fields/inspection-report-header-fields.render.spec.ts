@@ -28,9 +28,27 @@ const DEFINITION: TemplateFormDefinition = {
   sections: [{ key: 'body', title: 'Body' }],
   regions: [{ id: 'r1', marker: '{{sn}}' }],
   fields: [
-    { key: 'grade', label: 'Grade', type: 'text', required: false, scope: 'header' },
-    { key: 'nomWT', label: 'Nominal WT', type: 'text', required: false, scope: 'header' },
-    { key: 'nomOD', label: 'Nominal OD', type: 'text', required: false, scope: 'header' },
+    {
+      key: 'grade',
+      label: 'Grade',
+      type: 'text',
+      required: false,
+      scope: 'header',
+    },
+    {
+      key: 'nomWT',
+      label: 'Nominal WT',
+      type: 'text',
+      required: false,
+      scope: 'header',
+    },
+    {
+      key: 'nomOD',
+      label: 'Nominal OD',
+      type: 'text',
+      required: false,
+      scope: 'header',
+    },
     {
       key: 'equipmentUsed',
       label: 'Equipment Used',
@@ -80,7 +98,9 @@ describe('InspectionReportHeaderFieldsComponent — definition-driven header ren
     await fixture.whenStable();
 
     // Not the empty-state.
-    expect(html().querySelector('[data-testid="header-fields-unavailable"]')).toBeNull();
+    expect(
+      html().querySelector('[data-testid="header-fields-unavailable"]'),
+    ).toBeNull();
 
     // DECISIVE: the definition label reached the DOM; the old hardcoded label never could.
     expect(html().textContent).toContain('Nominal WT');
@@ -90,14 +110,19 @@ describe('InspectionReportHeaderFieldsComponent — definition-driven header ren
 
     // Values render by field key, incl. the generic object-list coercion for equipment.
     expect(
-      html().querySelector('[data-testid="header-value-nomWT"]')?.textContent?.trim(),
+      html()
+        .querySelector('[data-testid="header-value-nomWT"]')
+        ?.textContent?.trim(),
     ).toBe('0.362');
     expect(
-      html().querySelector('[data-testid="header-value-equipmentUsed"]')?.textContent,
+      html().querySelector('[data-testid="header-value-equipmentUsed"]')
+        ?.textContent,
     ).toContain('UT Gauge #UT-9');
 
     // Item-scope fields must NOT appear in the header view (scope filter is load-bearing).
-    expect(html().querySelector('[data-testid="header-field-emiResult"]')).toBeNull();
+    expect(
+      html().querySelector('[data-testid="header-field-emiResult"]'),
+    ).toBeNull();
     expect(html().textContent).not.toContain('EMI Result');
   });
 
@@ -129,7 +154,9 @@ describe('InspectionReportHeaderFieldsComponent — definition-driven header ren
     // …and no header field labels/rows render either (the scope filter is load-bearing).
     expect(html().textContent).not.toContain('Nominal WT');
     expect(html().textContent).not.toContain('Nominal OD');
-    expect(html().querySelector('[data-testid="header-field-nomWT"]')).toBeNull();
+    expect(
+      html().querySelector('[data-testid="header-field-nomWT"]'),
+    ).toBeNull();
   });
 
   it('is definition-driven, not drill-pipe-shaped: a synthetic template renders labels found nowhere in drill pipe', async () => {
@@ -168,11 +195,15 @@ describe('InspectionReportHeaderFieldsComponent — definition-driven header ren
     fixture.autoDetectChanges();
     await fixture.whenStable();
 
-    expect(html().querySelector('[data-testid="header-fields-unavailable"]')).toBeNull();
+    expect(
+      html().querySelector('[data-testid="header-fields-unavailable"]'),
+    ).toBeNull();
     expect(html().textContent).toContain('Calibration Due');
     expect(html().textContent).toContain('Cert Number');
     expect(
-      html().querySelector('[data-testid="header-value-certNumber"]')?.textContent?.trim(),
+      html()
+        .querySelector('[data-testid="header-value-certNumber"]')
+        ?.textContent?.trim(),
     ).toBe('CERT-7788');
     // And no drill-pipe field bled in from anywhere.
     expect(html().textContent).not.toContain('Nominal WT');
@@ -190,8 +221,21 @@ describe('InspectionReportHeaderFieldsComponent — definition-driven header ren
       sections: [],
       regions: [{ id: 'r1', marker: '{{sn}}' }],
       fields: [
-        { key: 'grade', label: 'Grade', type: 'text', required: false, scope: 'header' },
-        { key: 'inspBy', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+        {
+          key: 'grade',
+          label: 'Grade',
+          type: 'text',
+          required: false,
+          scope: 'header',
+        },
+        {
+          key: 'inspBy',
+          label: 'Inspector',
+          type: 'text',
+          required: false,
+          scope: 'header',
+          role: 'inspector',
+        },
       ],
     };
 
@@ -211,14 +255,26 @@ describe('InspectionReportHeaderFieldsComponent — definition-driven header ren
     await fixture.whenStable();
 
     // The roled field renders the System row (not the plain header-value row) with the badge.
-    expect(html().querySelector('[data-testid="system-field-inspBy"]')).not.toBeNull();
-    expect(html().querySelector('[data-testid="header-value-inspBy"]')).toBeNull();
-    expect(html().querySelector('[data-testid="system-badge-inspBy"]')?.textContent).toContain('System');
+    expect(
+      html().querySelector('[data-testid="system-field-inspBy"]'),
+    ).not.toBeNull();
+    expect(
+      html().querySelector('[data-testid="header-value-inspBy"]'),
+    ).toBeNull();
+    expect(
+      html().querySelector('[data-testid="system-badge-inspBy"]')?.textContent,
+    ).toContain('System');
     // The DERIVED value shows; the stale headerData value never reaches the DOM.
-    expect(html().querySelector('[data-testid="system-value-inspBy"]')?.textContent).toContain('Ivy Inspector');
+    expect(
+      html().querySelector('[data-testid="system-value-inspBy"]')?.textContent,
+    ).toContain('Ivy Inspector');
     expect(html().textContent).not.toContain('STALE');
     // A role-less field still renders as a normal value row.
-    expect(html().querySelector('[data-testid="header-value-grade"]')?.textContent?.trim()).toBe('S-135');
+    expect(
+      html()
+        .querySelector('[data-testid="header-value-grade"]')
+        ?.textContent?.trim(),
+    ).toBe('S-135');
   });
 
   it('re-renders reactively when the definition input is re-pointed (driven change)', async () => {
@@ -234,13 +290,19 @@ describe('InspectionReportHeaderFieldsComponent — definition-driven header ren
     expect(
       html().querySelector('[data-testid="header-fields-unavailable"]'),
     ).not.toBeNull();
-    expect(html().querySelector('[data-testid="header-field-grade"]')).toBeNull();
+    expect(
+      html().querySelector('[data-testid="header-field-grade"]'),
+    ).toBeNull();
 
     // ARM 2: re-point to a real definition → the scheduler must flush the new render.
     c.definition = DEFINITION;
     await fixture.whenStable();
-    expect(html().querySelector('[data-testid="header-fields-unavailable"]')).toBeNull();
-    expect(html().querySelector('[data-testid="header-field-grade"]')).not.toBeNull();
+    expect(
+      html().querySelector('[data-testid="header-fields-unavailable"]'),
+    ).toBeNull();
+    expect(
+      html().querySelector('[data-testid="header-field-grade"]'),
+    ).not.toBeNull();
     expect(html().textContent).toContain('Nominal WT');
   });
 });

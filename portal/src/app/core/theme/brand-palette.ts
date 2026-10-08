@@ -36,7 +36,10 @@ export function hexToRgb(hex: string): Rgb {
 }
 
 export function rgbToHex({ r, g, b }: Rgb): string {
-  const part = (v: number) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0');
+  const part = (v: number) =>
+    Math.round(Math.min(255, Math.max(0, v)))
+      .toString(16)
+      .padStart(2, '0');
   return `#${part(r)}${part(g)}${part(b)}`;
 }
 
@@ -60,11 +63,22 @@ function hslToRgb({ h, s, l }: Hsl): Rgb {
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = l - c / 2;
   const [r, g, b] =
-    h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+    h < 60
+      ? [c, x, 0]
+      : h < 120
+        ? [x, c, 0]
+        : h < 180
+          ? [0, c, x]
+          : h < 240
+            ? [0, x, c]
+            : h < 300
+              ? [x, 0, c]
+              : [c, 0, x];
   return { r: (r + m) * 255, g: (g + m) * 255, b: (b + m) * 255 };
 }
 
-const hsl = (h: number, s: number, l: number) => rgbToHex(hslToRgb({ h, s, l }));
+const hsl = (h: number, s: number, l: number) =>
+  rgbToHex(hslToRgb({ h, s, l }));
 
 function luminance(hex: string): number {
   const { r, g, b } = hexToRgb(hex);
@@ -76,7 +90,10 @@ function luminance(hex: string): number {
 }
 
 export function contrast(a: string, b: string): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [
+    number,
+    number,
+  ];
   return (hi + 0.05) / (lo + 0.05);
 }
 
@@ -84,12 +101,19 @@ export function contrast(a: string, b: string): number {
  * Move `color` lighter (on a dark `bg`) or darker (on a light one), keeping its hue,
  * until it reaches `ratio` against `bg`. Falls back to white/black at the extreme.
  */
-export function ensureContrast(color: string, bg: string, ratio: number): string {
+export function ensureContrast(
+  color: string,
+  bg: string,
+  ratio: number,
+): string {
   if (contrast(color, bg) >= ratio) return color;
   const lighten = luminance(bg) < 0.18;
   const base = rgbToHsl(hexToRgb(color));
   for (let step = 1; step <= 50; step++) {
-    const l = Math.min(1, Math.max(0, base.l + (lighten ? 0.02 : -0.02) * step));
+    const l = Math.min(
+      1,
+      Math.max(0, base.l + (lighten ? 0.02 : -0.02) * step),
+    );
     const candidate = hsl(base.h, base.s, l);
     if (contrast(candidate, bg) >= ratio) return candidate;
   }
@@ -112,7 +136,12 @@ const rgbTriple = (hex: string) => {
   return `${r} ${g} ${b}`;
 };
 
-function accentVars(accent: string, hover: string, onAccent: string, text: string): PaletteVars {
+function accentVars(
+  accent: string,
+  hover: string,
+  onAccent: string,
+  text: string,
+): PaletteVars {
   return {
     '--accent': accent,
     '--accent-hover': hover,
@@ -125,7 +154,11 @@ function accentVars(accent: string, hover: string, onAccent: string, text: strin
 }
 
 /** Accent shown on the nav bar (always a dark surface), scoped by CSS to the header. */
-function navAccentVars(accent: string, hover: string, onAccent: string): PaletteVars {
+function navAccentVars(
+  accent: string,
+  hover: string,
+  onAccent: string,
+): PaletteVars {
   return {
     '--nav-accent': accent,
     '--nav-accent-hover': hover,
@@ -146,7 +179,10 @@ function defaultPalette(mode: ThemeMode): PaletteVars {
  * The full set of custom properties for a customer's theme. `brandColor` null/invalid
  * returns the default monochrome accent (surfaces stay as the stylesheet defines them).
  */
-export function brandPalette(brandColor: string | null | undefined, mode: ThemeMode): PaletteVars {
+export function brandPalette(
+  brandColor: string | null | undefined,
+  mode: ThemeMode,
+): PaletteVars {
   if (!isBrandColor(brandColor)) return defaultPalette(mode);
 
   const brand = brandColor.toLowerCase();
@@ -183,7 +219,11 @@ export function brandPalette(brandColor: string | null | undefined, mode: ThemeM
         onColor(accent, card),
         ensureContrast(brand, background, 4.5),
       ),
-      ...navAccentVars(navAccent, shift(navAccent, 0.08), onColor(navAccent, nav)),
+      ...navAccentVars(
+        navAccent,
+        shift(navAccent, 0.08),
+        onColor(navAccent, nav),
+      ),
     };
   }
 
@@ -218,6 +258,10 @@ export function brandPalette(brandColor: string | null | undefined, mode: ThemeM
       onColor(accent, ink),
       ensureContrast(brand, background, 4.5),
     ),
-    ...navAccentVars(navAccent, shift(navAccent, 0.08), onColor(navAccent, nav)),
+    ...navAccentVars(
+      navAccent,
+      shift(navAccent, 0.08),
+      onColor(navAccent, nav),
+    ),
   };
 }

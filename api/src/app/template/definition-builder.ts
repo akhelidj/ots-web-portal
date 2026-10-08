@@ -61,7 +61,9 @@ export function buildDefinition(
   }
 
   const strip = (t: string): string =>
-    String(t).replace(/^\{\{\s*/, '').replace(/\s*\}\}$/, '');
+    String(t)
+      .replace(/^\{\{\s*/, '')
+      .replace(/\s*\}\}$/, '');
 
   // Reject duplicate token descriptions up front — an ambiguous mapping is a
   // structural error, not a semantic one.
@@ -92,7 +94,8 @@ export function buildDefinition(
     label: f.label,
     type: f.type,
     // A customer signature is always required: the customer signs every report.
-    required: f.type === 'signature' && f.signer === 'CUSTOMER' ? true : f.required,
+    required:
+      f.type === 'signature' && f.signer === 'CUSTOMER' ? true : f.required,
     scope: f.scope,
     ...(f.role ? { role: f.role } : {}),
     ...(f.section ? { section: f.section } : {}),
@@ -124,12 +127,18 @@ export function buildDefinition(
   // a user `field`, so its exported value is the transition-log derivation — never a
   // stored/entered value. A role-less header field maps to a plain `field` entry as before.
   const globalExport: CandidateExportEntry[] = [
-    ...(dto.computed ?? []).map((c) => ({ token: c.token, computed: c.computed })),
+    ...(dto.computed ?? []).map((c) => ({
+      token: c.token,
+      computed: c.computed,
+    })),
     ...headerFields.map((f) => {
       // A signature field is never a data value: its token marks where the signer's
       // picture lands, so it binds to the field's signature slot instead of a `field`.
       if (f.type === 'signature') {
-        return { token: f.token, signature: fieldSignatureSlot(strip(f.token)) };
+        return {
+          token: f.token,
+          signature: fieldSignatureSlot(strip(f.token)),
+        };
       }
       // Only the HEADER roles map to a computed token. `ROLE_TO_COMPUTED` is keyed by
       // HeaderFieldRole, so an item role (serialNumber) mistakenly on a header field

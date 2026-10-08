@@ -23,8 +23,7 @@ import {
   SignatureSigner,
   StoredDefinition,
 } from '@portal/features/templates/services/admin-templates.service';
-import {
-} from '@portal/features/templates/schemas/definition-to-form-schema';
+import {} from '@portal/features/templates/schemas/definition-to-form-schema';
 import { ToastService } from '@portal/shared/toast/toast.service';
 
 /**
@@ -55,7 +54,13 @@ import { ToastService } from '@portal/shared/toast/toast.service';
 /** The repeating region's id — an internal constant (the API ignores `region.id`). */
 const REGION_ID = 'serials';
 
-const FIELD_TYPES: OpsFieldType[] = ['text', 'number', 'boolean', 'select', 'date'];
+const FIELD_TYPES: OpsFieldType[] = [
+  'text',
+  'number',
+  'boolean',
+  'select',
+  'date',
+];
 
 /** A HEADER field may also be a `signature` (a per-report signer's picture); a serial field
  *  may not — a signature is per report, never per serial (server check `signature-header-scope`). */
@@ -226,10 +231,15 @@ export class TemplateDefineComponent implements OnInit {
       // authoring flow, unchanged.
       const detail = await this.templatesService.getDefinition(this.templateId);
       this.rejectionReason.set(
-        detail.approvalStatus === 'REJECTED' ? (detail.rejectionReason ?? '') : null,
+        detail.approvalStatus === 'REJECTED'
+          ? (detail.rejectionReason ?? '')
+          : null,
       );
       this.prefilledFromVersion.set(null);
-      if (this.isDefined(detail.definitionJson) && detail.approvalStatus !== 'REJECTED') {
+      if (
+        this.isDefined(detail.definitionJson) &&
+        detail.approvalStatus !== 'REJECTED'
+      ) {
         this.hydrateFromDefinition(detail.definitionJson);
         // Signal write LAST — flips the view to the recap and schedules the CD pass that
         // renders it (also flushing the scalar fields hydrateFromDefinition set).
@@ -244,7 +254,9 @@ export class TemplateDefineComponent implements OnInit {
           this.prefillRows(rows, detail.definitionJson);
         } else if (detail.previousDefinition) {
           this.prefillRows(rows, detail.previousDefinition.definitionJson);
-          this.prefilledFromVersion.set(detail.previousDefinition.templateVersion);
+          this.prefilledFromVersion.set(
+            detail.previousDefinition.templateVersion,
+          );
         }
         this.rows.set(rows);
         this.ensureSerialMarkerDefault();
@@ -311,7 +323,8 @@ export class TemplateDefineComponent implements OnInit {
   private prefillRows(rows: DescribeRow[], def: StoredDefinition): void {
     const markerToken = this.markerTokenFromExport(def);
     const byKey = new Map((def.fields ?? []).map((f) => [f.key, f]));
-    const strip = (t: string) => t.replace(/^\{\{\s*/, '').replace(/\s*\}\}$/, '');
+    const strip = (t: string) =>
+      t.replace(/^\{\{\s*/, '').replace(/\s*\}\}$/, '');
     let matched = 0;
     for (const row of rows) {
       const field =
@@ -327,7 +340,9 @@ export class TemplateDefineComponent implements OnInit {
       row.type = field.type ?? 'text';
       row.required = !!field.required;
       row.section = field.section ?? '';
-      row.optionsText = Array.isArray(field.options) ? field.options.join(', ') : '';
+      row.optionsText = Array.isArray(field.options)
+        ? field.options.join(', ')
+        : '';
       row.role = field.role ?? '';
       row.signer = field.signer ?? '';
       if (field.role === 'serialNumber') this.markerTouched = true;
@@ -335,7 +350,10 @@ export class TemplateDefineComponent implements OnInit {
     if (matched === 0) return;
     this.displayName = def.displayName ?? '';
     this.hydrateRework(def);
-    if (this.reworkEnabled && !rows.some((r) => strip(r.token) === this.reworkField)) {
+    if (
+      this.reworkEnabled &&
+      !rows.some((r) => strip(r.token) === this.reworkField)
+    ) {
       this.reworkEnabled = false;
       this.reworkField = '';
     }
@@ -347,7 +365,8 @@ export class TemplateDefineComponent implements OnInit {
   private markerTokenFromExport(def: StoredDefinition): string | undefined {
     const regionId = def.regions?.[0]?.id ?? REGION_ID;
     const byRegion = def.export?.regions?.[regionId];
-    const entry = byRegion?.find((e) => e.source === 'rowSerial') ?? byRegion?.[0];
+    const entry =
+      byRegion?.find((e) => e.source === 'rowSerial') ?? byRegion?.[0];
     return entry?.token;
   }
 
@@ -850,7 +869,10 @@ export class TemplateDefineComponent implements OnInit {
   private async persist(): Promise<void> {
     this.isSubmitting.set(true);
     try {
-      await this.templatesService.defineTemplate(this.templateId, this.buildDto());
+      await this.templatesService.defineTemplate(
+        this.templateId,
+        this.buildDto(),
+      );
       this.success.set(true);
       // Save landed — leave the wizard for the templates list and carry the confirmation
       // there as a toast (app-level, survives the navigation), rather than stranding the
@@ -861,9 +883,12 @@ export class TemplateDefineComponent implements OnInit {
       );
       await this.navigateToList();
     } catch (e: unknown) {
-      const body = (e as { error?: { check?: string; message?: string } })?.error;
+      const body = (e as { error?: { check?: string; message?: string } })
+        ?.error;
       this.failedCheck.set(body?.check ?? '');
-      this.submitError.set(this.errorMessage(e, 'Failed to save the definition.'));
+      this.submitError.set(
+        this.errorMessage(e, 'Failed to save the definition.'),
+      );
       this.scrollWizardToTop();
     } finally {
       this.isSubmitting.set(false);

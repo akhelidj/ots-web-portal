@@ -3,9 +3,7 @@
     class="page-section p-5 sm:p-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4"
   >
     <div>
-      <h1
-        class="text-2xl sm:text-3xl tracking-tight text-foreground"
-      >
+      <h1 class="text-2xl sm:text-3xl tracking-tight text-foreground">
         Inspection Templates
       </h1>
       <p class="mt-2 text-sm text-muted-foreground">
@@ -16,8 +14,8 @@
         <!-- A supervisor uploads and defines freely, but the version waits on an admin
              before any report can be created against it. Say so up front. -->
         <p class="mt-1 text-sm text-warning-dark">
-          Versions you upload need admin approval before they can be used for new
-          reports.
+          Versions you upload need admin approval before they can be used for
+          new reports.
         </p>
       }
     </div>
@@ -95,9 +93,7 @@
       <div
         class="px-6 py-4 border-b border-border bg-muted flex justify-between items-center"
       >
-        <h2 class="text-lg text-foreground">
-          Upload Template Version
-        </h2>
+        <h2 class="text-lg text-foreground">Upload Template Version</h2>
         <button
           (click)="showUploadForm = false"
           class="text-muted-foreground hover:text-foreground transition-colors"
@@ -311,7 +307,9 @@
               <!-- Admin-only validation actions on a pending upload. A supervisor sees the
                    PENDING badge but no Approve/Reject — they cannot clear their own gate. -->
               @if (
-                isAdmin() && tmpl.approvalStatus === 'PENDING_APPROVAL' && isOnline()
+                isAdmin() &&
+                tmpl.approvalStatus === 'PENDING_APPROVAL' &&
+                isOnline()
               ) {
                 <button
                   (click)="approveTemplate(tmpl)"
@@ -344,13 +342,19 @@
                   Deprecate
                 </button>
               } @else if (tmpl.status === 'ACTIVE' && isOnline() === false) {
-                <span class="text-xs text-muted-foreground italic">Offline</span>
-              } @else if (tmpl.approvalStatus === 'PENDING_APPROVAL' && !isAdmin()) {
+                <span class="text-xs text-muted-foreground italic"
+                  >Offline</span
+                >
+              } @else if (
+                tmpl.approvalStatus === 'PENDING_APPROVAL' && !isAdmin()
+              ) {
                 <span class="text-xs text-muted-foreground italic"
                   >Awaiting admin</span
                 >
               } @else {
-                <span class="text-xs text-muted-foreground italic">No Actions</span>
+                <span class="text-xs text-muted-foreground italic"
+                  >No Actions</span
+                >
               }
             </td>
           </tr>

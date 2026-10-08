@@ -7,8 +7,7 @@ import {
 export type allowedTransitionMap = {
   [key in UserRole]?: {
     [key in InspectionReportStatus | ChildReportStatus]?: (
-      | InspectionReportStatus
-      | ChildReportStatus
+      InspectionReportStatus | ChildReportStatus
     )[];
   };
 };
@@ -20,47 +19,47 @@ export type allowedTransitionMap = {
 const ADMIN_INSPECTION_TRANSITIONS: Partial<
   Record<InspectionReportStatus, InspectionReportStatus[]>
 > = {
-    [InspectionReportStatus.DRAFT]: [
-      InspectionReportStatus.RECEIVED,
-      InspectionReportStatus.ON_HOLD,
-      InspectionReportStatus.CLOSED,
-    ],
-    [InspectionReportStatus.RECEIVED]: [
-      InspectionReportStatus.READY_FOR_CLEANING,
-      InspectionReportStatus.ON_HOLD,
-      InspectionReportStatus.CLOSED,
-    ],
-    [InspectionReportStatus.READY_FOR_CLEANING]: [
-      InspectionReportStatus.READY_FOR_INSPECTION,
-      InspectionReportStatus.ON_HOLD,
-      InspectionReportStatus.CLOSED,
-    ],
-    [InspectionReportStatus.READY_FOR_INSPECTION]: [
-      InspectionReportStatus.IN_INSPECTION,
-      InspectionReportStatus.ON_HOLD,
-      InspectionReportStatus.CLOSED,
-    ],
-    [InspectionReportStatus.IN_INSPECTION]: [
-      InspectionReportStatus.PENDING_APPROVAL,
-      InspectionReportStatus.ON_HOLD,
-      InspectionReportStatus.CLOSED,
-    ],
-    [InspectionReportStatus.PENDING_APPROVAL]: [
-      InspectionReportStatus.IN_INSPECTION,
-      InspectionReportStatus.APPROVED,
-      InspectionReportStatus.ON_HOLD,
-      InspectionReportStatus.CLOSED,
-    ],
-    [InspectionReportStatus.APPROVED]: [
-      InspectionReportStatus.ON_HOLD,
-      InspectionReportStatus.CLOSED,
-      InspectionReportStatus.IN_INSPECTION,
-    ],
-    [InspectionReportStatus.ON_HOLD]: [InspectionReportStatus.CLOSED], // Logic for "Previous Active State" handled in service
-    [InspectionReportStatus.CLOSED]: [
-      InspectionReportStatus.APPROVED,
-      InspectionReportStatus.IN_INSPECTION,
-    ],
+  [InspectionReportStatus.DRAFT]: [
+    InspectionReportStatus.RECEIVED,
+    InspectionReportStatus.ON_HOLD,
+    InspectionReportStatus.CLOSED,
+  ],
+  [InspectionReportStatus.RECEIVED]: [
+    InspectionReportStatus.READY_FOR_CLEANING,
+    InspectionReportStatus.ON_HOLD,
+    InspectionReportStatus.CLOSED,
+  ],
+  [InspectionReportStatus.READY_FOR_CLEANING]: [
+    InspectionReportStatus.READY_FOR_INSPECTION,
+    InspectionReportStatus.ON_HOLD,
+    InspectionReportStatus.CLOSED,
+  ],
+  [InspectionReportStatus.READY_FOR_INSPECTION]: [
+    InspectionReportStatus.IN_INSPECTION,
+    InspectionReportStatus.ON_HOLD,
+    InspectionReportStatus.CLOSED,
+  ],
+  [InspectionReportStatus.IN_INSPECTION]: [
+    InspectionReportStatus.PENDING_APPROVAL,
+    InspectionReportStatus.ON_HOLD,
+    InspectionReportStatus.CLOSED,
+  ],
+  [InspectionReportStatus.PENDING_APPROVAL]: [
+    InspectionReportStatus.IN_INSPECTION,
+    InspectionReportStatus.APPROVED,
+    InspectionReportStatus.ON_HOLD,
+    InspectionReportStatus.CLOSED,
+  ],
+  [InspectionReportStatus.APPROVED]: [
+    InspectionReportStatus.ON_HOLD,
+    InspectionReportStatus.CLOSED,
+    InspectionReportStatus.IN_INSPECTION,
+  ],
+  [InspectionReportStatus.ON_HOLD]: [InspectionReportStatus.CLOSED], // Logic for "Previous Active State" handled in service
+  [InspectionReportStatus.CLOSED]: [
+    InspectionReportStatus.APPROVED,
+    InspectionReportStatus.IN_INSPECTION,
+  ],
 };
 
 export const INSPECTION_REPORT_TRANSITIONS: Record<

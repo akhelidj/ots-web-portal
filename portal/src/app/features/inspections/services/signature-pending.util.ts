@@ -52,7 +52,8 @@ export async function readSignaturePending(
 export function describeSignaturePending(pending: PendingSigner[]): string {
   if (pending.length === 0) return 'A required signature is still missing.';
   const parts = pending.map(
-    (p) => `${p.label} (${p.signer === 'CUSTOMER' ? 'customer' : 'supervisor'})`,
+    (p) =>
+      `${p.label} (${p.signer === 'CUSTOMER' ? 'customer' : 'supervisor'})`,
   );
   return `Export blocked — waiting for signature: ${parts.join(', ')}.`;
 }

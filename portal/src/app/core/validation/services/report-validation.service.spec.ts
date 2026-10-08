@@ -1,4 +1,7 @@
-import { ReportValidationService, ValidationResult } from './report-validation.service';
+import {
+  ReportValidationService,
+  ValidationResult,
+} from './report-validation.service';
 import { DRILL_PIPE_V1_SCHEMA } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
   LocalInspectionReport,
@@ -71,14 +74,20 @@ function fullyInspectedLegacy(): Record<string, unknown> {
   for (const section of DRILL_PIPE_V1_SCHEMA.sections) {
     for (const field of section.fields) {
       if (field.required) {
-        setNested(data, field.key, field.key === 'body.emiResult' ? 'PASS' : 'x');
+        setNested(
+          data,
+          field.key,
+          field.key === 'body.emiResult' ? 'PASS' : 'x',
+        );
       }
     }
   }
   return data;
 }
 
-function makeSerial(inspectionJson: Record<string, unknown>): LocalSerialNumber {
+function makeSerial(
+  inspectionJson: Record<string, unknown>,
+): LocalSerialNumber {
   return {
     id: 's1',
     inspectionReportId: 'r1',
@@ -212,9 +221,24 @@ describe('ReportValidationService.scopeToReceiver', () => {
   it('keeps only the missing-serials issue for a receiver', () => {
     const scoped = service.scopeToReceiver(
       result([
-        { code: 'NO_SERIALS', level: 'BLOCKER', message: 'none', scope: 'REPORT' },
-        { code: 'MISSING_FIELDS', level: 'BLOCKER', message: 'x', scope: 'SERIAL' },
-        { code: 'MISSING_DISPOSITION', level: 'BLOCKER', message: 'y', scope: 'SERIAL' },
+        {
+          code: 'NO_SERIALS',
+          level: 'BLOCKER',
+          message: 'none',
+          scope: 'REPORT',
+        },
+        {
+          code: 'MISSING_FIELDS',
+          level: 'BLOCKER',
+          message: 'x',
+          scope: 'SERIAL',
+        },
+        {
+          code: 'MISSING_DISPOSITION',
+          level: 'BLOCKER',
+          message: 'y',
+          scope: 'SERIAL',
+        },
       ]),
     );
     expect(scoped.issues.map((i) => i.code)).toEqual(['NO_SERIALS']);
@@ -224,7 +248,12 @@ describe('ReportValidationService.scopeToReceiver', () => {
   it('is ready when only inspection-side issues remain', () => {
     const scoped = service.scopeToReceiver(
       result([
-        { code: 'MISSING_FIELDS', level: 'BLOCKER', message: 'x', scope: 'SERIAL' },
+        {
+          code: 'MISSING_FIELDS',
+          level: 'BLOCKER',
+          message: 'x',
+          scope: 'SERIAL',
+        },
       ]),
     );
     expect(scoped.issues).toEqual([]);

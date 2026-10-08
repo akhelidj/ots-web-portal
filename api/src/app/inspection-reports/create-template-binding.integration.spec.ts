@@ -45,7 +45,10 @@ describe('Create / template-binding path (multi-template seam) [integration]', (
     prisma = new PrismaService();
     await prisma.onModuleInit();
 
-    reportsService = new InspectionReportsService(prisma, makeFilesServiceStub());
+    reportsService = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+    );
     // workflow.create does not use RevisionService, so an inert stub is fine.
     workflowService = new InspectionReportWorkflowService(
       prisma,
@@ -124,7 +127,9 @@ describe('Create / template-binding path (multi-template seam) [integration]', (
           poNumber: 'PO-UNKNOWN',
           templateKey: 'NO_SUCH_TEMPLATE',
         }),
-      ).rejects.toThrow(/No active, approved template found for NO_SUCH_TEMPLATE/);
+      ).rejects.toThrow(
+        /No active, approved template found for NO_SUCH_TEMPLATE/,
+      );
 
       const count = await prisma.inspectionReport.count({
         where: { tenantId: tenant.id },

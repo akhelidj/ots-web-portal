@@ -10,6 +10,7 @@ facts are recorded here — not cleanup sequencing or counts.
 Three confirmed defects in the sync engine. Full flow: `docs/architecture/report-lifecycle.md`.
 
 ### 1. A conflicted entity row never returns to SYNCED
+
 When the server 409s a stale offline write, the dispatcher marks the local row
 `syncState: 'CONFLICT'` (`sync-dispatcher.service.ts:751`). No code path ever resets
 it to `'SYNCED'`: `pullAllAndCache` overwrites a row only when it is absent or already
@@ -21,6 +22,7 @@ CONFLICT indefinitely.
 runtime/device confirmation.
 
 ### 2. `clearConflicts` over-deletes and discards the local edit
+
 The only resolution primitive — `OutboxService.clearConflicts()` (`outbox.service.ts:59`;
 UI trigger `shell.component.ts:86`) — runs a cursor over the whole outbox store and
 hard-deletes every item where
@@ -32,6 +34,7 @@ transient error. Entity stores are left untouched.
 thrown away, while the entity row remains CONFLICT (see #1).
 
 ### 3. `idempotencyKey` is generated but never transmitted
+
 Every enqueue mints a `crypto.randomUUID()` idempotency key and stores it on the
 `OutboxItem` (`inspection-reports.service.ts:116` and the other enqueue sites), but the
 dispatcher never attaches it to any request — no header, not in the body
@@ -46,6 +49,7 @@ needs an integration/device scenario.
 ## API-side data / validation
 
 ### 4. Disposition source — RESOLVED (0de2e3f)
+
 Resolved. Disposition is now resolved everywhere through one
 shared `resolveDisposition(data, definition)` (`approval-gate.ts`), a first-truthy
 coalesce over the template's declared `disposition.source`. The drill-pipe definition
@@ -61,6 +65,7 @@ re-derives disposition at read time — no backfill. See #18 for the disposition
 required-field coupling this surfaced.
 
 ### 5. Global exception filter flattens structured HttpException bodies
+
 `AllExceptionsFilter` (`api/src/main.ts:18`) is a global catch-all that builds its
 response from `.message`/`.stack`/`.getStatus()` and never reads `.getResponse()`
 (`main.ts:25–31, :38`). NestJS collapses a structured response to its `message` string,
@@ -71,6 +76,7 @@ harness, so it never registers this filter and the structured body survives in t
 only. Fix: read `.getResponse()` to preserve structured bodies.
 
 ### 6. Environment variables are not validated at boot
+
 `ConfigModule.forRoot({ ... })` (`api/src/app/app.module.ts:26`) is configured without a
 `validationSchema`, so environment variables (e.g. `DATABASE_URL`, JWT secret, CORS
 origins) are not checked at application startup. A missing or malformed value surfaces
@@ -78,8 +84,9 @@ only when first used at runtime, not as a fail-fast error at boot.
 **Note:** observation from code — not tied to any particular validation library.
 
 ### 18. On drill-pipe the disposition source is also a required field — a missing disposition always reports as two failures
+
 The drill-pipe definition maps disposition from `body.emiResult`
-(`disposition.source: ["body.emiResult"]`), and `body.emiResult` is *also* a
+(`disposition.source: ["body.emiResult"]`), and `body.emiResult` is _also_ a
 `required: true` item field (the EMI-result `select`). So a drill-pipe serial with no
 `body.emiResult` is, by construction, both (a) missing its disposition and (b) missing a
 required field. `engineGate` (`approval-gate.ts`) runs those two checks independently, so
@@ -93,7 +100,7 @@ Confirmed live: a blank-EMI serial surfaces in both arrays of the `VALIDATION_FA
 catches it.** The disposition check is gated solely on
 `disposition.requiredForApproval` and reads the declared source through
 `resolveDisposition` — it does **not** depend on the source path also being a required
-field. So if a future template maps disposition to a field that is *not* `required`,
+field. So if a future template maps disposition to a field that is _not_ `required`,
 a serial with no disposition still fails approval via `missingDispositionSerials`
 whenever `requiredForApproval: true`, even though required-field validation passes. The
 only way a disposition-less serial clears the gate is when `requiredForApproval` is
@@ -111,6 +118,7 @@ which `export-engine.equivalence.spec.ts` pins. Correcting them changes export o
 it must be a separate, deliberate change.
 
 ### 13. `{{equipment}}` renders the literal `"undefined"` for a name-less entry
+
 The `objectListJoin` transform (`export-engine.ts`) joins `${e.name}` plus an optional
 ` #number` suffix. When an `equipmentUsed[]` entry has no
 `name`, `${e.name}` coerces `undefined` to the string `"undefined"`, so the cell reads
@@ -119,6 +127,7 @@ e.g. `"undefined #3"` instead of omitting the name.
 Fix post-migration by guarding the name (`e.name ?? ''`).
 
 ### 14. `{{methods}}` renders `"[object Object]"` for a name-less object entry
+
 The `stringListJoin` transform (`export-engine.ts`) maps `typeof m === 'string' ? m : m.name || m`. An object entry lacking `name` falls
 through `m.name || m` to the object itself, which `join` coerces to `"[object Object]"`.
 **Impact:** cosmetic — a malformed method entry surfaces `"[object Object]"`.
@@ -127,6 +136,7 @@ Fix post-migration by coercing the fallback to a string (`m.name ?? ''`).
 ## Type system / upstream friction
 
 ### 7. ExcelJS / JSZip buffer loads require `as unknown as` casts
+
 Newer `@types/node` makes `Buffer` generic (`Buffer<ArrayBufferLike>`), while ExcelJS's
 `load(buffer: Buffer)` and JSZip's `loadAsync` type defs have not caught up
 ([exceljs #2877](https://github.com/exceljs/exceljs/issues/2877)). Buffer loads are cast
@@ -135,6 +145,7 @@ as `as unknown as …` rather than plain-annotated. Sites: the `workbook.xlsx.lo
 code smell — the casts are the honest form until the defs update.
 
 ### 9. Prisma `JsonValue` is not directly indexable
+
 `snapshotJson` and `inspectionData` are typed by Prisma as the recursive `JsonValue`
 union, which cannot be indexed. Reads go through the authored `Snapshot` /
 `InspectionData` interfaces (`api/src/app/common/inspection-data.types.ts`), not direct
@@ -143,6 +154,7 @@ property access.
 ## Build / test tooling
 
 ### 10. Portal spec tsconfig cannot type-check (phantom errors)
+
 `portal/tsconfig.spec.json` uses `moduleResolution: node`, under which Angular's
 package-`exports` entrypoints (`@angular/common/http`, `@angular/core/testing`, …) fail
 to resolve (9× `TS2307`). That cascades into ~110 phantom errors (e.g. 81 in
@@ -152,12 +164,14 @@ are a spec-tsconfig misconfiguration, not real type violations. Fix: align spec
 resolution with the app so the spec suite becomes type-checkable.
 
 ### 11. Two latent type errors invisible to Jest (swc transpile, not tsc)
+
 Jest transpiles with swc, so neither fails tests today:
 (a) `api/src/app/export/export.integration.spec.ts` — `TS2352` `cell.value` cast;
 (b) `portal/src/test-setup.ts` — `TS2307` `node:v8` unresolved under app config
 `types: []`.
 
 ### 12. JWT secret and revision number reach strict-null-check sites as possibly-undefined
+
 `jwt.strategy` passes `secretOrKey: string | undefined`; `export.controller` parses a
 possibly-`NaN`/`undefined` `revisionNumber`. Genuine `strictNullChecks` cases — read
 the intended runtime contract before "fixing" either.
@@ -165,6 +179,7 @@ the intended runtime contract before "fixing" either.
 ## Portal UI
 
 ### 16. Child-report route renders a blank page when no child exists
+
 The child-report route — `reports/:id/child` (all roles;
 `app.routes.ts:70, :92, :107, :122, :133`) → `ChildReportDetailComponent` — pulls
 the child via `GET /child-reports/:id` (`child-report-detail.component.ts`). When the
@@ -177,6 +192,7 @@ sees a blank page rather than an explanatory empty state. Fix: render a not-foun
 "no child report" state on the 404.
 
 ### 17. Serials-table column labels/group titles are only as good as the template definition
+
 Both serials tables — the ops table and the customer document table — derive their
 column headers and group bands entirely from the template's item-scope form sections
 via the shared `buildSerialColumnGroups` (`sections/serial-matrix.ts`): a group band is
@@ -194,7 +210,7 @@ raw-key header is not later mistaken for a rendering bug. Fix belongs in the tem
 definition (author section titles / field labels), not in the table components.
 
 **Cross-template confirmation (customer document view).** Verified the customer
-document surface against a *second* seeded template (`NCO-260901-101413`), whose
+document surface against a _second_ seeded template (`NCO-260901-101413`), whose
 definition is authored independently of the NOBLECORP one. The shared derivation
 renders that template's own group bands ("Box", "Pin") and its own column labels
 ("OD", "CONDITION", "TONGUE SPACE", "THREAD TYPE", …) with no code change — the six
@@ -203,7 +219,7 @@ the definition-driven serial columns are generic across templates. Its Specifica
 block additionally renders the authored empty state ("This report's template has no
 usable field definition yet…") when the definition declares no metadata fields — again
 an authoring condition surfaced faithfully, not a rendering fault. Separately, that same
-template's *export* fails at the API with a `400` ("Repeating-row tokens span multiple
+template's _export_ fails at the API with a `400` ("Repeating-row tokens span multiple
 worksheet rows: row 41 … row 45"): its uploaded Excel template blob spreads row-scope
 tokens across rows 41–45 instead of one repeating row (`export.service.ts:430`). That is
 a template-blob authoring fault in the export mapper — a different subsystem from the
@@ -212,6 +228,7 @@ label derivation above, and likewise not a view/rendering fault.
 ## Revisions / export
 
 ### 19. Approval-batch auto-approval writes no revision snapshot
+
 `InspectionReportsService.approveBatch` flips the parent to `APPROVED` once every serial and
 batch is approved, but — unlike the direct `APPROVED` transition in
 `InspectionReportWorkflowService.transition` — it never calls

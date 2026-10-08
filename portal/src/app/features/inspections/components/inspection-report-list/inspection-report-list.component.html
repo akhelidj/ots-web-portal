@@ -11,7 +11,9 @@
         <!-- The company already reads in the header; no oversized name here. -->
         <h1 class="cx-eyebrow"><b>Inspection reports</b></h1>
         <p class="cx-lede">
-          Every inspection report for your organization, from the moment tubulars arrive to the signed result. Select a report to follow it step by step.
+          Every inspection report for your organization, from the moment
+          tubulars arrive to the signed result. Select a report to follow it
+          step by step.
         </p>
 
         <!-- Summary + status filter: three large numerals that are also the filter controls. -->
@@ -58,7 +60,9 @@
           <h2 class="cx-h2">Reports</h2>
         </header>
 
-        <div class="mb-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+        <div
+          class="mb-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between"
+        >
           <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div>
               <label for="custPoSearch" class="cx-field-label">Search PO</label>
@@ -71,7 +75,9 @@
               />
             </div>
             <div>
-              <label for="custSnSearch" class="cx-field-label">Search serial</label>
+              <label for="custSnSearch" class="cx-field-label"
+                >Search serial</label
+              >
               <input
                 id="custSnSearch"
                 type="text"
@@ -121,7 +127,9 @@
                   </div>
                   <div>
                     <dt>Updated</dt>
-                    <dd>{{ r.updatedAt ? (r.updatedAt | date: 'd MMM y') : '—' }}</dd>
+                    <dd>
+                      {{ r.updatedAt ? (r.updatedAt | date: 'd MMM y') : '—' }}
+                    </dd>
                   </div>
                   @if (getChildReports(r.id); as children) {
                     @if (children.length > 0) {
@@ -130,7 +138,9 @@
                         <dd class="flex flex-wrap gap-x-4">
                           @for (c of children; track c.id) {
                             <span class="font-mono text-xs">
-                              {{ childTypeLabel(c.type) }} · {{ c.serialNumbers.length }} · {{ childStatusLabel(c.status) }}
+                              {{ childTypeLabel(c.type) }} ·
+                              {{ c.serialNumbers.length }} ·
+                              {{ childStatusLabel(c.status) }}
                             </span>
                           }
                         </dd>
@@ -139,10 +149,20 @@
                   }
                 </dl>
                 <div class="cx-report__rail">
-                  <app-report-lifecycle-rail [compact]="true" [status]="r.status" />
+                  <app-report-lifecycle-rail
+                    [compact]="true"
+                    [status]="r.status"
+                  />
                 </div>
                 <span class="cx-report__arrow" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M7 17 17 7M9 7h8v8" />
                   </svg>
                 </span>
@@ -151,14 +171,20 @@
             @if (getFilteredReports(reps).length === 0) {
               <div class="px-2 py-20 text-center">
                 @if (hasActiveCustomerFilter()) {
-                  <p class="text-2xl tracking-tight text-foreground">No reports match your search.</p>
+                  <p class="text-2xl tracking-tight text-foreground">
+                    No reports match your search.
+                  </p>
                   <p class="mx-auto mt-3 max-w-md text-sm text-primary/70">
-                    Try a different status, PO, or serial number — or clear the filters to see all your reports.
+                    Try a different status, PO, or serial number — or clear the
+                    filters to see all your reports.
                   </p>
                 } @else {
-                  <p class="text-2xl tracking-tight text-foreground">No reports yet.</p>
+                  <p class="text-2xl tracking-tight text-foreground">
+                    No reports yet.
+                  </p>
                   <p class="mx-auto mt-3 max-w-md text-sm text-primary/70">
-                    When inspections are completed for your organization, the reports will appear here.
+                    When inspections are completed for your organization, the
+                    reports will appear here.
                   </p>
                 }
               </div>
@@ -227,7 +253,9 @@
                 : 'border-border bg-card hover:border-muted-foreground'
             "
           >
-            <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+            <p
+              class="text-xs uppercase tracking-[0.08em] text-muted-foreground"
+            >
               Total Reports
             </p>
             <p class="text-2xl font-semibold text-foreground mt-2">
@@ -244,7 +272,9 @@
                 : 'border-border bg-card hover:border-muted-foreground'
             "
           >
-            <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+            <p
+              class="text-xs uppercase tracking-[0.08em] text-muted-foreground"
+            >
               Open Reports
             </p>
             <p class="text-2xl font-semibold text-foreground mt-2">
@@ -261,7 +291,9 @@
                 : 'border-border bg-card hover:border-muted-foreground'
             "
           >
-            <p class="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+            <p
+              class="text-xs uppercase tracking-[0.08em] text-muted-foreground"
+            >
               Closed Reports
             </p>
             <p class="text-2xl font-semibold text-foreground mt-2">
@@ -273,7 +305,9 @@
     </div>
 
     <div class="page-section p-4 sm:p-5">
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end"
+      >
         <div>
           <label for="qFilter" class="field-label">Search PO</label>
           <input
@@ -415,20 +449,51 @@
                       <button
                         type="button"
                         class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-error/10 hover:text-error focus:outline-none focus-visible:ring-2 focus-visible:ring-error disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                        [disabled]="!!deleteBlockedReason(r) || deletingId() !== null"
+                        [disabled]="
+                          !!deleteBlockedReason(r) || deletingId() !== null
+                        "
                         [title]="deleteBlockedReason(r) || 'Delete report'"
-                        [attr.aria-label]="'Delete report ' + (r.reportNumber || r.poNumber)"
+                        [attr.aria-label]="
+                          'Delete report ' + (r.reportNumber || r.poNumber)
+                        "
                         data-testid="list-delete-report"
                         (click)="deleteReport(r, $event)"
                       >
                         @if (deletingId() === r.id) {
-                          <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                          <svg
+                            class="h-4 w-4 animate-spin"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                          >
+                            <circle
+                              class="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              stroke-width="4"
+                            ></circle>
+                            <path
+                              class="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                            ></path>
                           </svg>
                         } @else {
-                          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                          <svg
+                            class="h-4 w-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+                            />
                             <path d="M10 11v6M14 11v6" />
                           </svg>
                         }

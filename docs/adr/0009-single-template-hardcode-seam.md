@@ -18,7 +18,7 @@ multi-template expansion. Anchors: `inspection-reports.service.ts:125`;
 `inspection-report-workflow.service.ts:32-83`; flow in
 `docs/architecture/report-lifecycle.md`.
 
-*Why not the alternatives:* building full multi-template now is YAGNI with one template
+_Why not the alternatives:_ building full multi-template now is YAGNI with one template
 shipping to real clients; deleting the `templateKey` plumbing would discard the
 ready-made seam.
 
@@ -56,7 +56,7 @@ ACTIVE templates):
    (delivered via `getReports`); the hardcoded `DRILL_PIPE_V1_SCHEMA` remains only as the
    soft-NULL fallback.
 
-The **fourth** — the REWORK child-report rule — was a different case. It is *authored* in
+The **fourth** — the REWORK child-report rule — was a different case. It is _authored_ in
 the definition's `rules` block (`rework-child-on-emi`: `body.emiResult == 'REWORK'` →
 upsert a `REWORK` child). Originally **no consumer read that block** and
 `child-reports.service.ts` (`syncReworkChildReport`) was the sole authority via its

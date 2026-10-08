@@ -136,7 +136,10 @@ export class SerialInspectionReactiveFormComponent
     if (
       definitionChange &&
       !definitionChange.firstChange &&
-      !sameContent(definitionChange.previousValue, definitionChange.currentValue)
+      !sameContent(
+        definitionChange.previousValue,
+        definitionChange.currentValue,
+      )
     ) {
       this.flushAutosave(this.recordId);
       this.schema = this.resolveSchema();
@@ -230,9 +233,7 @@ export class SerialInspectionReactiveFormComponent
    */
   public commitField(event?: Event) {
     const next = (event as FocusEvent | undefined)?.relatedTarget as
-      | HTMLElement
-      | null
-      | undefined;
+      HTMLElement | null | undefined;
     if (next instanceof HTMLButtonElement && next.type === 'submit') return;
     this.flushAutosave(this.recordId);
   }
@@ -241,7 +242,10 @@ export class SerialInspectionReactiveFormComponent
   @HostListener('document:visibilitychange')
   @HostListener('window:pagehide')
   public onPageHide() {
-    if (typeof document === 'undefined' || document.visibilityState !== 'visible') {
+    if (
+      typeof document === 'undefined' ||
+      document.visibilityState !== 'visible'
+    ) {
       this.flushAutosave(this.recordId);
     }
   }

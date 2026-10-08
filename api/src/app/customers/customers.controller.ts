@@ -100,7 +100,10 @@ export class CustomersController {
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { buffer, mimeType } = await this.branding.getLogo(req.user.tenantId, id);
+    const { buffer, mimeType } = await this.branding.getLogo(
+      req.user.tenantId,
+      id,
+    );
     res.set({ 'Content-Type': mimeType, 'Cache-Control': 'private, no-store' });
     return new StreamableFile(buffer);
   }

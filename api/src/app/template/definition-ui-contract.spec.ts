@@ -36,15 +36,78 @@ function uiDto(): DefineTemplateDto {
   return {
     displayName: 'Casing Report',
     fields: [
-      { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
-      { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
-      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
-      { token: '{{inspectedBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
-      { token: '{{approvedBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
-      { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
-      { token: '{{inspectorSignature}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
-      { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
-      { token: '{{b_od}}', label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' },
+      {
+        token: '{{customer}}',
+        label: 'Customer',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'customer',
+      },
+      {
+        token: '{{reportNumber}}',
+        label: 'Report Number',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'reportNumber',
+      },
+      {
+        token: '{{poNumber}}',
+        label: 'PO Number',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'poNumber',
+      },
+      {
+        token: '{{inspectedBy}}',
+        label: 'Inspector',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'inspector',
+      },
+      {
+        token: '{{approvedBy}}',
+        label: 'Supervisor',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'supervisor',
+      },
+      {
+        token: '{{reportDate}}',
+        label: 'Report Date',
+        type: 'date',
+        required: false,
+        scope: 'header',
+        role: 'inspectionDate',
+      },
+      {
+        token: '{{inspectorSignature}}',
+        label: 'Inspector Signature',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'inspectorSignature',
+      },
+      {
+        token: '{{sn}}',
+        label: 'Serial Number',
+        type: 'text',
+        required: false,
+        scope: 'item',
+        role: 'serialNumber',
+      },
+      {
+        token: '{{b_od}}',
+        label: 'Box Min OD',
+        type: 'text',
+        required: true,
+        scope: 'item',
+        section: 'Box',
+      },
       {
         token: '{{emi}}',
         label: 'EMI Result',
@@ -66,7 +129,9 @@ describe('describe-screen DTO ⇄ 2a gate contract', () => {
     const normalized = new XlsNormalizerService().normalizeToXlsx(
       REAL_TEMPLATE_BYTES,
     );
-    const extracted = await new TokenExtractorService().extractTokens(normalized);
+    const extracted = await new TokenExtractorService().extractTokens(
+      normalized,
+    );
     extractedTokens = new Set(extracted.map((t) => t.token));
   });
 
@@ -89,7 +154,9 @@ describe('describe-screen DTO ⇄ 2a gate contract', () => {
 
   it('ACCEPTS the exact body the describe screen emits', () => {
     const candidate = buildDefinition(META, uiDto());
-    expect(validateDefinition(candidate, extractedTokens)).toEqual({ ok: true });
+    expect(validateDefinition(candidate, extractedTokens)).toEqual({
+      ok: true,
+    });
   });
 
   it('REJECTS a select-without-options variant with the gate’s per-check reason', () => {
@@ -122,6 +189,8 @@ describe('describe-screen DTO ⇄ 2a gate contract', () => {
     ).toHaveLength(1);
     // It is kept in `fields` (with its role) so the validator can enforce item-scope +
     // uniqueness, but the portal form-schema filters it out of the serial form.
-    expect(candidate.fields.find((f) => f.key === 'sn')?.role).toBe('serialNumber');
+    expect(candidate.fields.find((f) => f.key === 'sn')?.role).toBe(
+      'serialNumber',
+    );
   });
 });

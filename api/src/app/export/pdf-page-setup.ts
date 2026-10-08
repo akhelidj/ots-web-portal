@@ -26,7 +26,9 @@ const A4 = 9;
 
 export async function prepareWorkbookForPdf(xlsx: Buffer): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(xlsx as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+  await workbook.xlsx.load(
+    xlsx as unknown as Parameters<typeof workbook.xlsx.load>[0],
+  );
   for (const ws of workbook.worksheets) {
     if (ws.state !== 'visible') continue;
     applyPdfPageSetup(ws);
@@ -49,7 +51,12 @@ export function applyPdfPageSetup(ws: ExcelJS.Worksheet): void {
         lastCol: Math.max(existing.lastCol, extent.lastCol),
         lastRow: Math.max(existing.lastRow, extent.lastRow),
       }
-    : { firstCol: 1, firstRow: 1, lastCol: extent.lastCol, lastRow: extent.lastRow };
+    : {
+        firstCol: 1,
+        firstRow: 1,
+        lastCol: extent.lastCol,
+        lastRow: extent.lastRow,
+      };
   ws.pageSetup.printArea = `${address(area.firstCol, area.firstRow)}:${address(area.lastCol, area.lastRow)}`;
 
   ws.pageSetup.fitToPage = true;
@@ -73,12 +80,15 @@ export function applyPdfPageSetup(ws: ExcelJS.Worksheet): void {
 }
 
 /** Last row/column that carries a value or a merge; null for an empty sheet. */
-function usedExtent(ws: ExcelJS.Worksheet): { lastRow: number; lastCol: number } | null {
+function usedExtent(
+  ws: ExcelJS.Worksheet,
+): { lastRow: number; lastCol: number } | null {
   let lastRow = 0;
   let lastCol = 0;
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
-      if (cell.value === null || cell.value === undefined || cell.value === '') return;
+      if (cell.value === null || cell.value === undefined || cell.value === '')
+        return;
       lastRow = Math.max(lastRow, rowNumber);
       lastCol = Math.max(lastCol, colNumber);
     });
@@ -88,7 +98,12 @@ function usedExtent(ws: ExcelJS.Worksheet): { lastRow: number; lastCol: number }
     if (!r) continue;
     // A merge only counts when its master holds content (a styled empty merge is padding).
     const master = ws.getCell(r.firstRow, r.firstCol);
-    if (master.value === null || master.value === undefined || master.value === '') continue;
+    if (
+      master.value === null ||
+      master.value === undefined ||
+      master.value === ''
+    )
+      continue;
     lastRow = Math.max(lastRow, r.lastRow);
     lastCol = Math.max(lastCol, r.lastCol);
   }
@@ -101,7 +116,10 @@ function usedExtent(ws: ExcelJS.Worksheet): { lastRow: number; lastCol: number }
  * by ExcelJS often end up too short once text wraps over several lines.
  */
 function ensureRowHeights(ws: ExcelJS.Worksheet, lastRow: number): void {
-  const merges = new Map<string, { lastCol: number; firstRow: number; lastRow: number }>();
+  const merges = new Map<
+    string,
+    { lastCol: number; firstRow: number; lastRow: number }
+  >();
   for (const m of ws.model.merges ?? []) {
     const r = parseSingleRange(m);
     if (r) merges.set(address(r.firstCol, r.firstRow), r);
@@ -124,14 +142,23 @@ function ensureRowHeights(ws: ExcelJS.Worksheet, lastRow: number): void {
       const lastCol = merge ? merge.lastCol : colNumber;
 
       let widthChars = 0;
-      for (let c = colNumber; c <= lastCol; c++) widthChars += ws.getColumn(c).width ?? 8.43;
+      for (let c = colNumber; c <= lastCol; c++)
+        widthChars += ws.getColumn(c).width ?? 8.43;
 
       const fontPt = cell.font?.size ?? DEFAULT_FONT_PT;
       // Characters that fit on one line: column width is in default-font chars.
-      const perLine = Math.max(1, Math.floor((widthChars * DEFAULT_FONT_PT) / fontPt / (cell.font?.bold ? 1.1 : 1)));
+      const perLine = Math.max(
+        1,
+        Math.floor(
+          (widthChars * DEFAULT_FONT_PT) / fontPt / (cell.font?.bold ? 1.1 : 1),
+        ),
+      );
       const lines = text
         .split(/\r?\n/)
-        .reduce((n, para) => n + Math.max(1, Math.ceil(para.length / perLine)), 0);
+        .reduce(
+          (n, para) => n + Math.max(1, Math.ceil(para.length / perLine)),
+          0,
+        );
       neededPt = Math.max(neededPt, lines * fontPt * 1.3);
     });
 

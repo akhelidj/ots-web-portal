@@ -459,7 +459,9 @@ export class ExportService {
     // PDF: convert each finished workbook; the file set (single / zip of parts) is unchanged.
     if (format === 'pdf') {
       if (!this.pdfConverter) {
-        throw new InternalServerErrorException('PDF converter is not available');
+        throw new InternalServerErrorException(
+          'PDF converter is not available',
+        );
       }
       for (const f of allFiles) {
         f.buffer = await this.pdfConverter.xlsxToPdf(
@@ -549,9 +551,13 @@ export class ExportService {
       },
       select: { fileKey: true },
     });
-    const buffer = template ? await this.storage.getTemplate(template.fileKey) : null;
+    const buffer = template
+      ? await this.storage.getTemplate(template.fileKey)
+      : null;
     if (!buffer) {
-      throw new InternalServerErrorException('Template file could not be loaded');
+      throw new InternalServerErrorException(
+        'Template file could not be loaded',
+      );
     }
     return {
       buffer,
@@ -647,7 +653,13 @@ export class ExportService {
         templateBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
       );
       try {
-        await this.applyMapping(workbook, snapshot, serialNumbers, definition, signatureImages);
+        await this.applyMapping(
+          workbook,
+          snapshot,
+          serialNumbers,
+          definition,
+          signatureImages,
+        );
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : undefined;
         throw new BadRequestException(
@@ -678,7 +690,13 @@ export class ExportService {
       );
 
       try {
-        await this.applyMapping(workbook, snapshot, serialNumbers, definition, signatureImages);
+        await this.applyMapping(
+          workbook,
+          snapshot,
+          serialNumbers,
+          definition,
+          signatureImages,
+        );
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : undefined;
         throw new BadRequestException(
@@ -704,7 +722,13 @@ export class ExportService {
         );
 
         try {
-          await this.applyMapping(workbook, snapshot, chunkSerials, definition, signatureImages);
+          await this.applyMapping(
+            workbook,
+            snapshot,
+            chunkSerials,
+            definition,
+            signatureImages,
+          );
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : undefined;
           throw new BadRequestException(
@@ -843,7 +867,9 @@ export class ExportService {
             opts.revisionNumber,
           )) ?? undefined;
       }
-      const bytes = row ? await this.storage.getSignature(row.storageKey) : null;
+      const bytes = row
+        ? await this.storage.getSignature(row.storageKey)
+        : null;
       if (bytes) {
         images[spec.slot] = { bytes };
         continue;

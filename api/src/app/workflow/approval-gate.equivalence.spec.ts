@@ -172,7 +172,12 @@ const cases: Case[] = [
   },
   {
     name: '2a. required text field empty-string -> missing',
-    serials: [sn('SN-1', withData((d) => (d.box!.minOD = '')))],
+    serials: [
+      sn(
+        'SN-1',
+        withData((d) => (d.box!.minOD = '')),
+      ),
+    ],
     expected: {
       status: 'failed',
       missingDispositionSerials: [],
@@ -183,7 +188,12 @@ const cases: Case[] = [
   },
   {
     name: '2b. required text field absent (undefined) -> missing',
-    serials: [sn('SN-1', withData((d) => delete d.box!.minOD))],
+    serials: [
+      sn(
+        'SN-1',
+        withData((d) => delete d.box!.minOD),
+      ),
+    ],
     expected: {
       status: 'failed',
       missingDispositionSerials: [],
@@ -192,7 +202,12 @@ const cases: Case[] = [
   },
   {
     name: '2c. whole section object absent -> all its keys missing (order)',
-    serials: [sn('SN-1', withData((d) => delete d.box))],
+    serials: [
+      sn(
+        'SN-1',
+        withData((d) => delete d.box),
+      ),
+    ],
     expected: {
       status: 'failed',
       missingDispositionSerials: [],
@@ -214,7 +229,9 @@ const cases: Case[] = [
       status: 'failed',
       missingDispositionSerials: [],
       // legacy order: pin.minTongSpace (idx 9) BEFORE box.hardBanding (idx 19)
-      missingRequiredFields: { 'SN-1': ['pin.minTongSpace', 'box.hardBanding'] },
+      missingRequiredFields: {
+        'SN-1': ['pin.minTongSpace', 'box.hardBanding'],
+      },
     },
   },
   {
@@ -222,7 +239,12 @@ const cases: Case[] = [
     // it flags BOTH failure modes at once — there is no "missing disposition only" state
     // on drill-pipe. This honestly reflects the single-source reality.
     name: '4a. disposition source absent -> missing disposition AND missing required field',
-    serials: [sn('SN-1', withData((d) => delete d.body!.emiResult))],
+    serials: [
+      sn(
+        'SN-1',
+        withData((d) => delete d.body!.emiResult),
+      ),
+    ],
     expected: {
       status: 'failed',
       missingDispositionSerials: ['SN-1'],
@@ -231,7 +253,12 @@ const cases: Case[] = [
   },
   {
     name: '4b. disposition source empty-string -> missing disposition (truthy coalesce) AND missing field',
-    serials: [sn('SN-1', withData((d) => (d.body!.emiResult = '' as never)))],
+    serials: [
+      sn(
+        'SN-1',
+        withData((d) => (d.body!.emiResult = '' as never)),
+      ),
+    ],
     expected: {
       status: 'failed',
       missingDispositionSerials: ['SN-1'],
@@ -329,7 +356,12 @@ const cases: Case[] = [
   },
   {
     name: '8b. optional remarks filled -> ok (never gated)',
-    serials: [sn('SN-1', withData((d) => (d.remarks = 'a note')))],
+    serials: [
+      sn(
+        'SN-1',
+        withData((d) => (d.remarks = 'a note')),
+      ),
+    ],
     expected: { status: 'ok' },
     expectedBody: null,
   },
@@ -346,8 +378,14 @@ const cases: Case[] = [
     name: '10. multi-serial: valid / missing-field / missing-disposition-source',
     serials: [
       sn('SN-A', fullValid()),
-      sn('SN-B', withData((d) => (d.box!.minOD = ''))),
-      sn('SN-C', withData((d) => delete d.body!.emiResult)),
+      sn(
+        'SN-B',
+        withData((d) => (d.box!.minOD = '')),
+      ),
+      sn(
+        'SN-C',
+        withData((d) => delete d.body!.emiResult),
+      ),
     ],
     expected: {
       status: 'failed',
@@ -420,7 +458,12 @@ describe('mutation guard — the harness FAILS on a broken definition', () => {
     const mutant = clone();
     mutant.fields.find((f) => f.key === 'box.minOD')!.required = false;
 
-    const serials = [sn('SN-1', withData((d) => delete d.box!.minOD))];
+    const serials = [
+      sn(
+        'SN-1',
+        withData((d) => delete d.box!.minOD),
+      ),
+    ];
     const real = engineGate(DEFINITION, serials);
     const engine = engineGate(mutant, serials);
 
@@ -460,7 +503,12 @@ describe('mutation guard — the harness FAILS on a broken definition', () => {
     // requiredForApproval off, reports only the missing field — so the two diverge on the
     // disposition array. (body.emiResult being both source and required field means both
     // outcomes carry the field error; only the disposition error distinguishes them.)
-    const serials = [sn('SN-1', withData((d) => delete d.body!.emiResult))];
+    const serials = [
+      sn(
+        'SN-1',
+        withData((d) => delete d.body!.emiResult),
+      ),
+    ];
     const real = engineGate(DEFINITION, serials);
     const engine = engineGate(mutant, serials);
 

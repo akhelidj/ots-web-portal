@@ -1,4 +1,12 @@
-import { Component, Input, computed, effect, input, output, signal } from '@angular/core';
+import {
+  Component,
+  Input,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FormSchema } from '@portal/features/templates/schemas/drill-pipe-v1.schema';
 import {
   TemplateFormDefinition,

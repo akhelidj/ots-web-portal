@@ -8,7 +8,13 @@ import {
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
-import { catchError, finalize, map, shareReplay, switchMap } from 'rxjs/operators';
+import {
+  catchError,
+  finalize,
+  map,
+  shareReplay,
+  switchMap,
+} from 'rxjs/operators';
 import { environment } from '@app-env/environment';
 import { SessionService } from '@portal/core/auth/services/session.service';
 
@@ -22,7 +28,9 @@ let refreshInFlight$: Observable<string> | null = null;
 
 function withToken(req: HttpRequest<unknown>, token: string | null) {
   return token
-    ? req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) })
+    ? req.clone({
+        headers: req.headers.set('Authorization', `Bearer ${token}`),
+      })
     : req;
 }
 

@@ -59,14 +59,12 @@ export async function seedTemplateWorkbook(
  * are stubbed — keep this in sync with FilesService's public surface.
  */
 export function makeFilesServiceStub(): FilesService {
-  const notWired =
-    (method: string) =>
-    (): never => {
-      throw new Error(
-        `FilesService.${method} was called by a spec that wired a stub — ` +
-          `this path was not expected to touch attachment storage.`,
-      );
-    };
+  const notWired = (method: string) => (): never => {
+    throw new Error(
+      `FilesService.${method} was called by a spec that wired a stub — ` +
+        `this path was not expected to touch attachment storage.`,
+    );
+  };
   return {
     saveAttachmentBinary: notWired('saveAttachmentBinary'),
     removeAttachmentBinary: notWired('removeAttachmentBinary'),
@@ -122,7 +120,10 @@ export function seedCustomer(prisma: PrismaService, tenantId: string) {
  */
 const DRILL_PIPE_DEFINITION: unknown = JSON.parse(
   readFileSync(
-    resolve(__dirname, '../src/app/template/definitions/drill-pipe-v1.definition.json'),
+    resolve(
+      __dirname,
+      '../src/app/template/definitions/drill-pipe-v1.definition.json',
+    ),
     'utf-8',
   ),
 );
@@ -142,7 +143,9 @@ function resolveSeedDefinition(
     // Explicit choice (including null) wins. `null` → column stays NULL.
     return opts.definitionJson ?? undefined;
   }
-  return templateKey === 'DRILL_PIPE_REPORT' ? DRILL_PIPE_DEFINITION : undefined;
+  return templateKey === 'DRILL_PIPE_REPORT'
+    ? DRILL_PIPE_DEFINITION
+    : undefined;
 }
 
 /**

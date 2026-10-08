@@ -29,21 +29,21 @@ npm run start:portal     # Angular → http://localhost:4200
 
 ## Scripts
 
-| Script | Does |
-| --- | --- |
-| `start:api` / `start:portal` | Serve API / portal (`nx serve`) |
-| `build:api` / `build:portal` | Production builds |
-| `db:migrate` / `db:seed` / `db:studio` | Migrate / seed / open Prisma Studio |
-| `db:generate` / `db:reset` | Regenerate Prisma client / force-reset the schema |
-| `db:seed:build` / `db:seed:run` | Bundle / run the compiled seed script (for deployments) |
-| `build:deploy` | Bundle the seed script + build the API for deployment |
-| `sync:portal-version` | Sync `APP_VERSION` from `package.json` (runs automatically before portal serve/build/test, via Nx or npm) |
-| `lint` | Lint all projects (`nx run-many -t lint`) |
-| `format` / `format:check` | Prettier write / check |
-| `test` / `test:api` / `test:portal` | Run tests |
-| `test:api:integration` | API integration tests (needs the test DB up) |
-| `test:db:up` / `test:db:down` | Start / stop the integration Postgres (`docker-compose.test.yml`) |
-| `graph` | Visualize the Nx dependency graph (`nx graph`) |
+| Script                                 | Does                                                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `start:api` / `start:portal`           | Serve API / portal (`nx serve`)                                                                           |
+| `build:api` / `build:portal`           | Production builds                                                                                         |
+| `db:migrate` / `db:seed` / `db:studio` | Migrate / seed / open Prisma Studio                                                                       |
+| `db:generate` / `db:reset`             | Regenerate Prisma client / force-reset the schema                                                         |
+| `db:seed:build` / `db:seed:run`        | Bundle / run the compiled seed script (for deployments)                                                   |
+| `build:deploy`                         | Bundle the seed script + build the API for deployment                                                     |
+| `sync:portal-version`                  | Sync `APP_VERSION` from `package.json` (runs automatically before portal serve/build/test, via Nx or npm) |
+| `lint`                                 | Lint all projects (`nx run-many -t lint`)                                                                 |
+| `format` / `format:check`              | Prettier write / check                                                                                    |
+| `test` / `test:api` / `test:portal`    | Run tests                                                                                                 |
+| `test:api:integration`                 | API integration tests (needs the test DB up)                                                              |
+| `test:db:up` / `test:db:down`          | Start / stop the integration Postgres (`docker-compose.test.yml`)                                         |
+| `graph`                                | Visualize the Nx dependency graph (`nx graph`)                                                            |
 
 Database scripts read `api/.env` — see the `.env.example` files under `api/` for the
 required variables. `STORAGE_DRIVER` (`local` by default, or `s3`) selects where

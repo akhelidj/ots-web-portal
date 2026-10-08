@@ -19,9 +19,9 @@ Every template must map the `inspectorSignature` header role (mandatory to save 
 
 ## Why not the alternatives
 
-- *Store the signature image on each report:* duplicates data and lets a change leak into history; pointers to immutable objects are cheap and auditable.
-- *Always use the live account signature at export time:* re-exporting an old report would silently change it.
-- *Soft-warn instead of gating the inspector:* unsigned submissions would reach approval and fail only at export.
+- _Store the signature image on each report:_ duplicates data and lets a change leak into history; pointers to immutable objects are cheap and auditable.
+- _Always use the live account signature at export time:_ re-exporting an old report would silently change it.
+- _Soft-warn instead of gating the inspector:_ unsigned submissions would reach approval and fail only at export.
 
 ## Consequences
 

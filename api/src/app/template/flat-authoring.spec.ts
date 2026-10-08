@@ -46,16 +46,85 @@ function flatDto(): DefineTemplateDto {
   return {
     displayName: 'Flat Casing Report',
     fields: [
-      { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
-      { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
-      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
-      { token: '{{inspBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
-      { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
-      { token: '{{inspDate}}', label: 'Inspection Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
-      { token: '{{inspSig}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
-      { token: '{{siteName}}', label: 'Site Name', type: 'text', required: false, scope: 'header' },
-      { token: '{{casingWeight}}', label: 'Casing Weight', type: 'text', required: true, scope: 'item', section: 'Body' },
-      { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
+      {
+        token: '{{customer}}',
+        label: 'Customer',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'customer',
+      },
+      {
+        token: '{{reportNumber}}',
+        label: 'Report Number',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'reportNumber',
+      },
+      {
+        token: '{{poNumber}}',
+        label: 'PO Number',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'poNumber',
+      },
+      {
+        token: '{{inspBy}}',
+        label: 'Inspector',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'inspector',
+      },
+      {
+        token: '{{apprBy}}',
+        label: 'Supervisor',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'supervisor',
+      },
+      {
+        token: '{{inspDate}}',
+        label: 'Inspection Date',
+        type: 'date',
+        required: false,
+        scope: 'header',
+        role: 'inspectionDate',
+      },
+      {
+        token: '{{inspSig}}',
+        label: 'Inspector Signature',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'inspectorSignature',
+      },
+      {
+        token: '{{siteName}}',
+        label: 'Site Name',
+        type: 'text',
+        required: false,
+        scope: 'header',
+      },
+      {
+        token: '{{casingWeight}}',
+        label: 'Casing Weight',
+        type: 'text',
+        required: true,
+        scope: 'item',
+        section: 'Body',
+      },
+      {
+        token: '{{sn}}',
+        label: 'Serial Number',
+        type: 'text',
+        required: false,
+        scope: 'item',
+        role: 'serialNumber',
+      },
     ],
   };
 }
@@ -97,10 +166,15 @@ async function runEngine(
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buffer as unknown as ArrayBuffer);
   await engineMap(def, wb, snapshot, chunk);
-  return canon(Buffer.from((await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer));
+  return canon(
+    Buffer.from((await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer),
+  );
 }
 
-function recordSnapshot(inspectionData: InspectionData, headerOver = {}): Snapshot {
+function recordSnapshot(
+  inspectionData: InspectionData,
+  headerOver = {},
+): Snapshot {
   return frozenSnapshot(frozenHeader(headerOver), {
     serialNumbers: [makeSerial('REC-1', inspectionData)],
   } as Partial<Snapshot>);
@@ -173,7 +247,12 @@ describe('Flat authoring — ties into step-1 engine', () => {
       siteName: 'SITE-9',
       casingWeight: '42.7',
     } as InspectionData);
-    const sheets = await runEngine(buffer, def, snapshot, snapshot.serialNumbers);
+    const sheets = await runEngine(
+      buffer,
+      def,
+      snapshot,
+      snapshot.serialNumbers,
+    );
 
     expect(sheets[0].cells['B2']).toBe('SITE-9'); // flat header token from inspectionData (3b)
     expect(sheets[0].cells['D4']).toBe('42.7'); // record token from inspectionData
@@ -193,7 +272,12 @@ describe('Flat authoring — ties into step-1 engine', () => {
     (snapshot.header as unknown as Record<string, unknown>).casingWeight =
       'FROM-HEADER';
 
-    const sheets = await runEngine(buffer, def, snapshot, snapshot.serialNumbers);
+    const sheets = await runEngine(
+      buffer,
+      def,
+      snapshot,
+      snapshot.serialNumbers,
+    );
     expect(sheets[0].cells['D4']).toBe('FROM-RECORD'); // value flows from inspectionData
     expect(sheets[0].cells['D4']).not.toBe('FROM-HEADER');
   });
@@ -201,7 +285,10 @@ describe('Flat authoring — ties into step-1 engine', () => {
 
 describe('Flat authoring — reachability-flip guards intact', () => {
   it('rejects a region WITHOUT a serial token (structural, at build)', () => {
-    const dto = { ...flatDto(), region: { id: 'serials' } } as unknown as DefineTemplateDto;
+    const dto = {
+      ...flatDto(),
+      region: { id: 'serials' },
+    } as unknown as DefineTemplateDto;
     expect(() => buildDefinition(META, dto)).toThrow(/serial token/i);
   });
 
@@ -210,11 +297,21 @@ describe('Flat authoring — reachability-flip guards intact', () => {
     const regionDto: DefineTemplateDto = {
       ...flatDto(),
       region: { id: 'serials', marker: '{{sn}}' },
-      fields: [{ token: '{{poNumber}}', label: 'PO', type: 'text', required: false, scope: 'header' }],
+      fields: [
+        {
+          token: '{{poNumber}}',
+          label: 'PO',
+          type: 'text',
+          required: false,
+          scope: 'header',
+        },
+      ],
     };
     const c = clone(buildDefinition(META, regionDto));
     c.regions.push({ id: 'second', label: 'second', chunkSize: null });
-    expect(validateDefinition(c, new Set(['{{poNumber}}', '{{sn}}']))).toMatchObject({
+    expect(
+      validateDefinition(c, new Set(['{{poNumber}}', '{{sn}}'])),
+    ).toMatchObject({
       ok: false,
       check: 'single-region',
     });
@@ -222,7 +319,9 @@ describe('Flat authoring — reachability-flip guards intact', () => {
 
   it('rejects a malformed body (no fields array)', () => {
     expect(() =>
-      buildDefinition(META, { displayName: 'x' } as unknown as DefineTemplateDto),
+      buildDefinition(META, {
+        displayName: 'x',
+      } as unknown as DefineTemplateDto),
     ).toThrow(/fields/i);
   });
 
@@ -230,14 +329,16 @@ describe('Flat authoring — reachability-flip guards intact', () => {
     // Reference an undefined transform on a flat record entry: shallow-valid, but the
     // engine flat resolver (engineFlatTokens → applyTransform) throws → dry-run rejects.
     const c = clone(buildDefinition(META, flatDto()));
-    c.export.global
-      .find((e) => e.token === '{{casingWeight}}')!.transform = 'noSuchTransform';
+    c.export.global.find((e) => e.token === '{{casingWeight}}')!.transform =
+      'noSuchTransform';
     expect(validateDefinition(c, FLAT_TOKENS)).toMatchObject({
       ok: false,
       check: 'engine-dry-run',
     });
     // And the same candidate WITHOUT the corruption is accepted — the check discriminates.
-    expect(validateDefinition(buildDefinition(META, flatDto()), FLAT_TOKENS)).toEqual({
+    expect(
+      validateDefinition(buildDefinition(META, flatDto()), FLAT_TOKENS),
+    ).toEqual({
       ok: true,
     });
   });

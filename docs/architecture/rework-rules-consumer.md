@@ -16,11 +16,11 @@ Build a rules interpreter that reads `definition.rules` and reproduces
 **exactly**, so the REWORK child-report trigger becomes definition-driven like the other
 three hardcoded locations.
 
-**Key asymmetry vs locations 1–3.** The gate, export, and form cutovers each had *two live
-paths* (legacy + engine) whose outputs could be diffed against each other on real traffic.
+**Key asymmetry vs locations 1–3.** The gate, export, and form cutovers each had _two live
+paths_ (legacy + engine) whose outputs could be diffed against each other on real traffic.
 Location 4 had **no second live path**: `definition.rules` was **dormant JSON** — authored
 but read by no consumer — and `syncReworkChildReport` was the **sole authority**. The proof
-was therefore *"the interpreter reproduces the one method,"* not *"two live paths agree."*
+was therefore _"the interpreter reproduces the one method,"_ not _"two live paths agree."_
 Post-retirement (a031969), the interpreter is the **sole live path**; the imperative logic
 survives only as a **frozen equivalence oracle** in test scope
 (`api/test/rework-imperative-oracle.ts`), which is the comparand the interpreter is proven
@@ -38,13 +38,13 @@ sub-decision 1); the definition declares only the varying fields.
 
 **Branch on (match set, existing REWORK child):**
 
-| Match set | Existing REWORK child | Behavior |
-|-----------|----------------------|----------|
-| empty | none | **no-op**, return `null` |
-| empty | DRAFT | **delete** child + its serial rows, return `null` |
-| empty | non-DRAFT | **wipe serial rows, increment version, return mapped child** — do **not** delete the child |
-| non-empty | none | **create** child: `DRAFT`, `version: 1`, `type: REWORK`; `reportNumber = parent.reportNumber + "_rework"` **only if** the parent has a `reportNumber` (else left undefined) |
-| non-empty | exists | **reuse** the existing child's id |
+| Match set | Existing REWORK child | Behavior                                                                                                                                                                    |
+| --------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| empty     | none                  | **no-op**, return `null`                                                                                                                                                    |
+| empty     | DRAFT                 | **delete** child + its serial rows, return `null`                                                                                                                           |
+| empty     | non-DRAFT             | **wipe serial rows, increment version, return mapped child** — do **not** delete the child                                                                                  |
+| non-empty | none                  | **create** child: `DRAFT`, `version: 1`, `type: REWORK`; `reportNumber = parent.reportNumber + "_rework"` **only if** the parent has a `reportNumber` (else left undefined) |
+| non-empty | exists                | **reuse** the existing child's id                                                                                                                                           |
 
 **Reconciliation (single transaction), for the non-empty branch:**
 

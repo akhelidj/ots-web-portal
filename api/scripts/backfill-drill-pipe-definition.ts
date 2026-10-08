@@ -78,7 +78,8 @@ function git(args: string[]): {
     cwd: path.dirname(DEFINITION_PATH),
     encoding: 'utf8',
   });
-  if (r.error) return { status: null, unavailable: true, stderr: r.error.message };
+  if (r.error)
+    return { status: null, unavailable: true, stderr: r.error.message };
   return { status: r.status, unavailable: false, stderr: r.stderr ?? '' };
 }
 
@@ -131,13 +132,19 @@ function provenanceGuard(allowDirty: boolean): void {
 function shapeGuard(definition: Record<string, unknown>): void {
   const missing = REQUIRED_KEYS.filter((k) => !(k in definition));
   if (missing.length) {
-    throw new Error(`shape guard: definition missing required key(s): ${missing.join(', ')}`);
+    throw new Error(
+      `shape guard: definition missing required key(s): ${missing.join(', ')}`,
+    );
   }
   const exp = definition.export as Record<string, unknown> | undefined;
   if (!Array.isArray(exp?.global)) {
     throw new Error('shape guard: "export.global" must be an array');
   }
-  if (!exp?.regions || typeof exp.regions !== 'object' || Array.isArray(exp.regions)) {
+  if (
+    !exp?.regions ||
+    typeof exp.regions !== 'object' ||
+    Array.isArray(exp.regions)
+  ) {
     throw new Error('shape guard: "export.regions" must be an object');
   }
   if (!Array.isArray(definition.regions) || definition.regions.length === 0) {
@@ -169,7 +176,9 @@ function printBreakdown(definition: Record<string, unknown>): void {
     0,
   );
 
-  console.log('\n--- definition breakdown (verify against known drill-pipe quantities) ---');
+  console.log(
+    '\n--- definition breakdown (verify against known drill-pipe quantities) ---',
+  );
   console.log(
     `fields     : ${fields.length} total ` +
       `(${header.length} header + ${item.length} item; ${itemRequired.length} item required)`,
@@ -177,8 +186,12 @@ function printBreakdown(definition: Record<string, unknown>): void {
   console.log(
     `structure  : ${sections.length} sections, ${Object.keys(transforms).length} transforms, ${regions.length} regions`,
   );
-  console.log(`export     : ${globalTokens} global + ${perRowTokens} per-row tokens`);
-  console.log('-------------------------------------------------------------------------');
+  console.log(
+    `export     : ${globalTokens} global + ${perRowTokens} per-row tokens`,
+  );
+  console.log(
+    '-------------------------------------------------------------------------',
+  );
 }
 
 async function main() {
@@ -193,7 +206,9 @@ async function main() {
     );
   }
 
-  console.log(`\n=== backfill drill-pipe definitionJson [${apply ? 'APPLY' : 'DRY-RUN'}] ===`);
+  console.log(
+    `\n=== backfill drill-pipe definitionJson [${apply ? 'APPLY' : 'DRY-RUN'}] ===`,
+  );
   console.log(`tenant     : ${tenantId}`);
   console.log(`source     : ${DEFINITION_PATH}`);
 
@@ -203,9 +218,14 @@ async function main() {
   // --- parse + shape guard ------------------------------------------------------
   let definition: Record<string, unknown>;
   try {
-    definition = JSON.parse(fs.readFileSync(DEFINITION_PATH, 'utf8')) as Record<string, unknown>;
+    definition = JSON.parse(fs.readFileSync(DEFINITION_PATH, 'utf8')) as Record<
+      string,
+      unknown
+    >;
   } catch (e) {
-    throw new Error(`definition file is not valid JSON: ${(e as Error).message}`);
+    throw new Error(
+      `definition file is not valid JSON: ${(e as Error).message}`,
+    );
   }
   shapeGuard(definition);
   printBreakdown(definition);
@@ -221,25 +241,34 @@ async function main() {
     );
   }
   const target = rows[0];
-  console.log(`\ntarget     : template ${target.id} (v${target.templateVersion})`);
+  console.log(
+    `\ntarget     : template ${target.id} (v${target.templateVersion})`,
+  );
 
   // --- idempotency --------------------------------------------------------------
   const desired = canonical(definition);
-  if (target.definitionJson != null && canonical(target.definitionJson) === desired) {
+  if (
+    target.definitionJson != null &&
+    canonical(target.definitionJson) === desired
+  ) {
     console.log('row already holds the identical definition — nothing to do.');
     return;
   }
 
   // --- write (only under --apply) -----------------------------------------------
   if (!apply) {
-    console.log('\nDRY-RUN: would populate the column above. Re-run with --apply to write.');
+    console.log(
+      '\nDRY-RUN: would populate the column above. Re-run with --apply to write.',
+    );
     return;
   }
   const res = await prisma.template.updateMany({
     where: { id: target.id, status: 'ACTIVE' },
     data: { definitionJson: definition as never },
   });
-  console.log(`\nAPPLY: updated ${res.count} row(s) — definitionJson is now populated.`);
+  console.log(
+    `\nAPPLY: updated ${res.count} row(s) — definitionJson is now populated.`,
+  );
 }
 
 main()

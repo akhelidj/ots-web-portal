@@ -189,7 +189,11 @@
 .ledger__row.is-ghost::before,
 .ledger__row.is-ghost::after {
   height: 7px;
-  background: linear-gradient(90deg, var(--tl-ghost, rgb(var(--primary-rgb) / 0.09)), transparent);
+  background: linear-gradient(
+    90deg,
+    var(--tl-ghost, rgb(var(--primary-rgb) / 0.09)),
+    transparent
+  );
   content: '';
 }
 .ledger__row.is-ghost::before {

@@ -6,28 +6,28 @@
     >
       ← Back to templates
     </button>
-    <h1
-      class="text-2xl sm:text-3xl tracking-tight text-neutral-900"
-    >
+    <h1 class="text-2xl sm:text-3xl tracking-tight text-neutral-900">
       {{ readOnly() ? 'View Template Form' : 'Define Template Form' }}
     </h1>
     @if (readOnly()) {
       <p class="mt-2 text-sm text-neutral-500">
-        This template's form is already defined and is read-only — here is how it
-        was saved. To change the form, upload a new template version.
+        This template's form is already defined and is read-only — here is how
+        it was saved. To change the form, upload a new template version.
       </p>
     } @else {
       <p class="mt-2 text-sm text-neutral-500">
-        Set up this report form in four quick steps. Move through them with Next —
-        what you enter is kept as you go, and you can step back to change anything
-        before saving.
+        Set up this report form in four quick steps. Move through them with Next
+        — what you enter is kept as you go, and you can step back to change
+        anything before saving.
       </p>
       @if (rejectionReason() !== null) {
         <p
           class="mt-3 border-l-4 border-error bg-error-light p-3 text-sm text-error-dark"
           data-testid="rejected-banner"
         >
-          An admin rejected this version{{ rejectionReason() ? ': ' + rejectionReason() : '.' }}
+          An admin rejected this version{{
+            rejectionReason() ? ': ' + rejectionReason() : '.'
+          }}
           Adjust the form and save — it goes back to the admin for review.
         </p>
       }
@@ -36,9 +36,9 @@
           class="mt-3 border-l-4 border-primary bg-primary/5 p-3 text-sm text-neutral-700"
           data-testid="prefilled-banner"
         >
-          Pre-filled from version {{ prefilledFromVersion() }} for every token the two
-          workbooks share. Review each step — tokens that are new in this version still
-          need describing.
+          Pre-filled from version {{ prefilledFromVersion() }} for every token
+          the two workbooks share. Review each step — tokens that are new in
+          this version still need describing.
         </p>
       }
     }
@@ -80,7 +80,10 @@
         Step {{ currentStep() + 1 }} of {{ steps.length }} —
         {{ activeStep().label }}
       </p>
-      <ol class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2" aria-label="Progress">
+      <ol
+        class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2"
+        aria-label="Progress"
+      >
         @for (step of steps; track step.key; let i = $index) {
           <li class="flex items-center gap-2">
             <span
@@ -115,636 +118,709 @@
          (and a submit failure) returns the page to the top via scrollWizardToTop, landing on
          the top-pinned error. space-y-6 spaces the step's own sections. -->
     <div class="space-y-6">
-    <!-- SUBMIT ERROR — pinned to the TOP of the step body (not the bottom): a failed Save
+      <!-- SUBMIT ERROR — pinned to the TOP of the step body (not the bottom): a failed Save
          must be seen without scrolling past the whole Review recap. submit() scrolls the
          step body to top when it sets this, so it's always in view on failure. -->
-    @if (submitError()) {
-      <div
-        data-testid="submit-error"
-        class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
-      >
-        @if (failedCheck()) {
-          <p class="text-xs font-bold uppercase tracking-wider mb-1">
-            Rejected check: {{ failedCheck() }}
-          </p>
-        }
-        <p class="text-sm font-medium">{{ submitError() }}</p>
-      </div>
-    }
+      @if (submitError()) {
+        <div
+          data-testid="submit-error"
+          class="bg-error-light border-l-4 border-error text-error-dark p-4 rounded-md shadow-sm"
+        >
+          @if (failedCheck()) {
+            <p class="text-xs font-bold uppercase tracking-wider mb-1">
+              Rejected check: {{ failedCheck() }}
+            </p>
+          }
+          <p class="text-sm font-medium">{{ submitError() }}</p>
+        </div>
+      }
 
-    <!-- STEP 1: DETECT TOKENS — read-only inventory. No wide table: a header carries the
+      <!-- STEP 1: DETECT TOKENS — read-only inventory. No wide table: a header carries the
          Token / Cell column labels (and the count) above the list, which flows with the page
          — never a nested horizontal scroll. -->
-    @if (activeStep().key === 'detect') {
-      <div class="page-section p-5 sm:p-6">
-        <div class="flex items-baseline justify-between gap-4">
-          <h2 class="text-lg text-neutral-900">Detected Tokens</h2>
-          <span data-testid="detect-count" class="shrink-0 text-sm text-neutral-500">
-            {{ allRows().length }}
-            token{{ allRows().length === 1 ? '' : 's' }}
-          </span>
-        </div>
-        <p class="mt-1 text-sm text-neutral-500">
-          These are the fields we found in the uploaded workbook. There's nothing
-          to do here — just check they look right, then continue.
-        </p>
-        <div
-          class="mt-4 grid grid-cols-[1fr_9rem] gap-x-6 border-b border-neutral-200 pb-2 font-condensed text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500"
-        >
-          <span>Token</span>
-          <span>Cell</span>
-        </div>
-      </div>
-      <div class="page-section divide-y divide-neutral-100">
-        @for (row of allRows(); track row.token) {
-          <div
-            class="grid grid-cols-[1fr_9rem] items-center gap-x-6 px-5 py-3 sm:px-6"
-            [attr.data-testid]="'detect-token-' + row.token"
-          >
-            <span class="code-text break-all text-sm font-medium text-neutral-900">
-              {{ row.token }}
-            </span>
-            <span class="code-text break-all text-sm text-neutral-500">
-              {{ row.cell }}
+      @if (activeStep().key === 'detect') {
+        <div class="page-section p-5 sm:p-6">
+          <div class="flex items-baseline justify-between gap-4">
+            <h2 class="text-lg text-neutral-900">Detected Tokens</h2>
+            <span
+              data-testid="detect-count"
+              class="shrink-0 text-sm text-neutral-500"
+            >
+              {{ allRows().length }}
+              token{{ allRows().length === 1 ? '' : 's' }}
             </span>
           </div>
-        }
-      </div>
-    }
+          <p class="mt-1 text-sm text-neutral-500">
+            These are the fields we found in the uploaded workbook. There's
+            nothing to do here — just check they look right, then continue.
+          </p>
+          <div
+            class="mt-4 grid grid-cols-[1fr_9rem] gap-x-6 border-b border-neutral-200 pb-2 font-condensed text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500"
+          >
+            <span>Token</span>
+            <span>Cell</span>
+          </div>
+        </div>
+        <div class="page-section divide-y divide-neutral-100">
+          @for (row of allRows(); track row.token) {
+            <div
+              class="grid grid-cols-[1fr_9rem] items-center gap-x-6 px-5 py-3 sm:px-6"
+              [attr.data-testid]="'detect-token-' + row.token"
+            >
+              <span
+                class="code-text break-all text-sm font-medium text-neutral-900"
+              >
+                {{ row.token }}
+              </span>
+              <span class="code-text break-all text-sm text-neutral-500">
+                {{ row.cell }}
+              </span>
+            </div>
+          }
+        </div>
+      }
 
-    <!-- STEP 2: METADATA — one CARD per token, no wide table. The step title, count, guidance
+      <!-- STEP 2: METADATA — one CARD per token, no wide table. The step title, count, guidance
          and blocking alerts sit in a header above the cards; the whole step flows with the
          page. Each card's controls wrap in a responsive grid that never needs horizontal
          scroll at any width. A roled token reads as system-owned (badge, its value-owning
          controls hidden), not a bare em dash. -->
-    @if (activeStep().key === 'header') {
-      <div class="page-section p-5 sm:p-6 space-y-3">
-        <div class="flex items-baseline justify-between gap-4">
-          <h2 class="text-lg text-neutral-900">Metadata Fields</h2>
-          <span class="shrink-0 text-sm text-neutral-500">
-            {{ headerRows().length }} of {{ allRows().length }} selected
-          </span>
-        </div>
-        <p class="text-sm text-neutral-500">
-          Tick the fields that describe the whole report — report number, PO
-          number, customer — and give each a clear name. Anything you leave
-          unticked is recorded for each serial in the next step. Every report also
-          needs its seven <span class="font-semibold">system roles</span> assigned
-          here (Customer, Report number, PO number, Inspector, Supervisor,
-          Inspection date, Inspector signature); you can't save until all seven
-          are mapped.
-        </p>
-
-        @if (!headerStepValid()) {
-          <div
-            role="alert"
-            class="rounded-r-md border-l-4 border-error bg-error-light/20 p-3 text-sm text-error-dark"
-          >
-            Every included metadata field needs a label before you can continue.
+      @if (activeStep().key === 'header') {
+        <div class="page-section p-5 sm:p-6 space-y-3">
+          <div class="flex items-baseline justify-between gap-4">
+            <h2 class="text-lg text-neutral-900">Metadata Fields</h2>
+            <span class="shrink-0 text-sm text-neutral-500">
+              {{ headerRows().length }} of {{ allRows().length }} selected
+            </span>
           </div>
-        }
-        @if (missingHeaderRoles().length > 0) {
-          <div
-            role="status"
-            class="rounded-r-md border-l-4 border-warning bg-warning-light/20 p-3 text-sm text-warning-dark"
-          >
-            Assign every system role before this form can be saved. Still
-            unassigned:
-            <span class="font-semibold" data-testid="missing-roles">{{
-              missingHeaderRoleLabels()
-            }}</span
-            >. You can keep setting up the other steps first.
-          </div>
-        }
-      </div>
+          <p class="text-sm text-neutral-500">
+            Tick the fields that describe the whole report — report number, PO
+            number, customer — and give each a clear name. Anything you leave
+            unticked is recorded for each serial in the next step. Every report
+            also needs its seven
+            <span class="font-semibold">system roles</span> assigned here
+            (Customer, Report number, PO number, Inspector, Supervisor,
+            Inspection date, Inspector signature); you can't save until all
+            seven are mapped.
+          </p>
 
-      <div class="space-y-3">
-        @for (row of allRows(); track row.token) {
-          <div
-            class="page-section p-4 sm:p-5"
-            [attr.data-testid]="'header-card-' + row.token"
-          >
-            <div class="flex items-center gap-3">
-              <input
-                type="checkbox"
-                class="h-4 w-4 shrink-0"
-                [ngModel]="row.header"
-                (ngModelChange)="onHeaderToggle(row, $event)"
-                [attr.aria-label]="'Include ' + row.token + ' as a metadata field'"
-                [attr.data-testid]="'header-include-' + row.token"
-              />
-              <span class="code-text break-all text-sm font-medium text-neutral-900">
-                {{ row.token }}
-              </span>
-              @if (row.header && isRoled(row)) {
-                <span
-                  class="ml-auto shrink-0 rounded bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-500"
-                  >System-owned</span
-                >
-              } @else if (!row.header) {
-                <span class="ml-auto shrink-0 text-xs text-gray-400"
-                  >Recorded per serial</span
-                >
-              }
-            </div>
-
-            @if (row.header) {
-              <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <label class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
-                  <span class="text-xs font-semibold text-gray-600">Label</span>
-                  <input
-                    type="text"
-                    [(ngModel)]="row.label"
-                    class="field-control"
-                    [attr.aria-label]="'Label for ' + row.token"
-                    [attr.data-testid]="'header-label-' + row.token"
-                  />
-                </label>
-
-                <label class="flex flex-col gap-1">
-                  <span class="text-xs font-semibold text-gray-600">Role</span>
-                  <select
-                    [(ngModel)]="row.role"
-                    (ngModelChange)="onRoleChange(row)"
-                    class="field-control"
-                    [attr.aria-label]="'Role for ' + row.token"
-                    [attr.data-testid]="'header-role-' + row.token"
-                  >
-                    <option [value]="''">— (none)</option>
-                    @for (opt of availableHeaderRoleOptions(row); track opt.value) {
-                      <option [value]="opt.value">{{ opt.label }}</option>
-                    }
-                  </select>
-                </label>
-
-                @if (isRoled(row)) {
-                  <div class="flex flex-col gap-1">
-                    <span class="text-xs font-semibold text-gray-600">Type</span>
-                    <span
-                      class="flex h-[38px] items-center text-sm text-neutral-500"
-                      [attr.data-testid]="'header-type-forced-' + row.token"
-                      >{{ row.type }} · system</span
-                    >
-                  </div>
-                } @else {
-                  <label class="flex flex-col gap-1">
-                    <span class="text-xs font-semibold text-gray-600">Type</span>
-                    <select
-                      [(ngModel)]="row.type"
-                      (ngModelChange)="onTypeChange(row)"
-                      class="field-control"
-                      [attr.aria-label]="'Type for ' + row.token"
-                      [attr.data-testid]="'header-type-' + row.token"
-                    >
-                      @for (t of headerFieldTypes; track t) {
-                        <option [value]="t">{{ t }}</option>
-                      }
-                    </select>
-                  </label>
-
-                  @if (isSignature(row)) {
-                    <label class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
-                      <span class="text-xs font-semibold text-gray-600">Signed by</span>
-                      <select
-                        [(ngModel)]="row.signer"
-                        (ngModelChange)="onSignerChange(row)"
-                        class="field-control"
-                        [attr.aria-label]="'Signer for ' + row.token"
-                        [attr.data-testid]="'header-signer-' + row.token"
-                      >
-                        <option [value]="''">Choose a signer…</option>
-                        @for (s of signerOptions; track s.value) {
-                          <option [value]="s.value">{{ s.label }}</option>
-                        }
-                      </select>
-                    </label>
-                  }
-
-                  @if (isCustomerSignature(row)) {
-                    <p
-                      class="text-xs font-semibold text-gray-600 sm:pt-6"
-                      [attr.data-testid]="'header-required-forced-' + row.token"
-                    >
-                      Required — the customer must sign before export
-                    </p>
-                  } @else {
-                    <label class="flex items-center gap-2 sm:pt-6">
-                      <input
-                        type="checkbox"
-                        class="h-4 w-4"
-                        [(ngModel)]="row.required"
-                        [attr.aria-label]="'Required ' + row.token"
-                      />
-                      <span class="text-xs font-semibold text-gray-600">{{
-                        isSignature(row) ? 'Required (export blocked until signed)' : 'Required'
-                      }}</span>
-                    </label>
-                  }
-
-                  @if (row.type === 'select') {
-                    <label class="flex flex-col gap-1 sm:col-span-2 lg:col-span-3">
-                      <span class="text-xs font-semibold text-gray-600">Options</span>
-                      <input
-                        type="text"
-                        [(ngModel)]="row.optionsText"
-                        class="field-control"
-                        placeholder="PASS, REWORK, SCRAP"
-                        [attr.aria-label]="'Options for ' + row.token"
-                        [attr.data-testid]="'header-options-' + row.token"
-                      />
-                    </label>
-                  }
-                }
-              </div>
-            }
-          </div>
-        }
-      </div>
-    }
-
-    <!-- STEP 3: SERIAL — one CARD per token (no wide table). The header carries the title,
-         count, guidance, the bulk actions + select-all, and the blocking alert, above the
-         cards; the whole step flows with the page. Each card's controls wrap in a responsive
-         grid — no nested horizontal scroll at any width — and a roled marker reads as
-         system-owned (badge, its value-owning controls hidden). -->
-    @if (activeStep().key === 'serial') {
-      <div class="page-section p-5 sm:p-6 space-y-3">
-        <div class="flex items-baseline justify-between gap-4">
-          <h2 class="text-lg text-neutral-900">Serial Fields</h2>
-          <span class="shrink-0 text-sm text-neutral-500">
-            {{ serialRows().length }} of {{ serialCandidateRows().length }} included
-          </span>
-        </div>
-        <p class="text-sm text-neutral-500">
-          These fields are recorded for every serial you inspect. Everything not
-          used as a report detail is already ticked — untick anything that doesn't
-          belong. Mark one field as the
-          <span class="font-semibold">Serial Number</span> so each serial can be
-          told apart.
-        </p>
-
-        @if (serialCandidateRows().length > 0) {
-          <!-- Bulk actions + select-all — column-less context that stays in reach. -->
-          <div class="flex flex-wrap items-end gap-x-4 gap-y-3 border-t border-neutral-100 pt-3">
-            <label class="flex items-center gap-2">
-              <input
-                type="checkbox"
-                class="h-4 w-4"
-                [checked]="allSerialSelected()"
-                (change)="onSelectAllSerial($any($event.target).checked)"
-                aria-label="Include all serial tokens"
-                data-testid="serial-select-all"
-              />
-              <span class="text-xs font-semibold text-gray-600">Include all</span>
-            </label>
-            <div class="flex items-end gap-2">
-              <label class="flex w-32 flex-col gap-1">
-                <span class="text-xs font-semibold text-gray-600">Type</span>
-                <select
-                  id="bulk-type"
-                  [(ngModel)]="bulkType"
-                  class="field-control"
-                  data-testid="bulk-type"
-                >
-                  @for (t of fieldTypes; track t) {
-                    <option [value]="t">{{ t }}</option>
-                  }
-                </select>
-              </label>
-              <button
-                type="button"
-                (click)="applyBulkType()"
-                class="btn btn-secondary"
-                data-testid="bulk-type-apply"
-              >
-                Apply to all
-              </button>
-            </div>
-            <div class="flex items-end gap-2">
-              <label class="flex w-32 flex-col gap-1">
-                <span class="text-xs font-semibold text-gray-600">Section</span>
-                <input
-                  id="bulk-section"
-                  type="text"
-                  [(ngModel)]="bulkSection"
-                  class="field-control"
-                  placeholder="e.g. Body"
-                  data-testid="bulk-section"
-                />
-              </label>
-              <button
-                type="button"
-                (click)="applyBulkSection()"
-                class="btn btn-secondary"
-                data-testid="bulk-section-apply"
-              >
-                Apply to all
-              </button>
-            </div>
-          </div>
-
-          @if (!serialStepValid()) {
+          @if (!headerStepValid()) {
             <div
               role="alert"
               class="rounded-r-md border-l-4 border-error bg-error-light/20 p-3 text-sm text-error-dark"
             >
-              @if (serialRows().length === 0) {
-                Include at least one serial field to continue.
-              } @else if (serialMarkerRow() === undefined) {
-                Mark exactly one serial field as the Serial Number to continue.
-              } @else {
-                Every included serial field needs a label before you can continue.
-              }
+              Every included metadata field needs a label before you can
+              continue.
             </div>
           }
-        }
-      </div>
-
-      @if (serialCandidateRows().length === 0) {
-        <div
-          role="alert"
-          class="page-section border-l-4 border-error bg-error-light/20 p-4 text-sm text-error-dark"
-        >
-          Every token is claimed by the Metadata step. Uncheck at least one there —
-          a template needs at least one serial field.
+          @if (missingHeaderRoles().length > 0) {
+            <div
+              role="status"
+              class="rounded-r-md border-l-4 border-warning bg-warning-light/20 p-3 text-sm text-warning-dark"
+            >
+              Assign every system role before this form can be saved. Still
+              unassigned:
+              <span class="font-semibold" data-testid="missing-roles">{{
+                missingHeaderRoleLabels()
+              }}</span
+              >. You can keep setting up the other steps first.
+            </div>
+          }
         </div>
-      } @else {
+
         <div class="space-y-3">
-          @for (row of serialCandidateRows(); track row.token) {
+          @for (row of allRows(); track row.token) {
             <div
               class="page-section p-4 sm:p-5"
-              [ngClass]="{ 'opacity-40': !row.serial }"
-              [attr.data-testid]="'serial-card-' + row.token"
+              [attr.data-testid]="'header-card-' + row.token"
             >
               <div class="flex items-center gap-3">
                 <input
                   type="checkbox"
                   class="h-4 w-4 shrink-0"
-                  [(ngModel)]="row.serial"
-                  [attr.aria-label]="'Include ' + row.token + ' as a serial field'"
-                  [attr.data-testid]="'serial-include-' + row.token"
+                  [ngModel]="row.header"
+                  (ngModelChange)="onHeaderToggle(row, $event)"
+                  [attr.aria-label]="
+                    'Include ' + row.token + ' as a metadata field'
+                  "
+                  [attr.data-testid]="'header-include-' + row.token"
                 />
-                <span class="code-text break-all text-sm font-medium text-neutral-900">
+                <span
+                  class="code-text break-all text-sm font-medium text-neutral-900"
+                >
                   {{ row.token }}
                 </span>
-                @if (isRoled(row)) {
+                @if (row.header && isRoled(row)) {
                   <span
                     class="ml-auto shrink-0 rounded bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-500"
                     >System-owned</span
                   >
+                } @else if (!row.header) {
+                  <span class="ml-auto shrink-0 text-xs text-gray-400"
+                    >Recorded per serial</span
+                  >
                 }
               </div>
 
-              <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <label class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
-                  <span class="text-xs font-semibold text-gray-600">Label</span>
-                  <input
-                    type="text"
-                    [(ngModel)]="row.label"
-                    [disabled]="!row.serial"
-                    class="field-control"
-                    [attr.aria-label]="'Label for ' + row.token"
-                    [attr.data-testid]="'serial-label-' + row.token"
-                  />
-                </label>
-
-                <label class="flex flex-col gap-1">
-                  <span class="text-xs font-semibold text-gray-600">Role</span>
-                  <select
-                    [(ngModel)]="row.role"
-                    (ngModelChange)="onRoleChange(row)"
-                    [disabled]="!row.serial"
-                    class="field-control"
-                    [attr.aria-label]="'Role for ' + row.token"
-                    [attr.data-testid]="'serial-role-' + row.token"
+              @if (row.header) {
+                <div
+                  class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                  <label
+                    class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1"
                   >
-                    <option [value]="''">— (none)</option>
-                    <option value="serialNumber">Serial Number</option>
-                  </select>
-                </label>
-
-                @if (isRoled(row)) {
-                  <div class="flex flex-col gap-1">
-                    <span class="text-xs font-semibold text-gray-600">Type</span>
-                    <span
-                      class="flex h-[38px] items-center text-sm text-neutral-500"
-                      [attr.data-testid]="'serial-type-forced-' + row.token"
-                      >{{ row.type }} · system</span
+                    <span class="text-xs font-semibold text-gray-600"
+                      >Label</span
                     >
-                  </div>
-                } @else {
-                  <label class="flex flex-col gap-1">
-                    <span class="text-xs font-semibold text-gray-600">Type</span>
-                    <select
-                      [(ngModel)]="row.type"
-                      [disabled]="!row.serial"
+                    <input
+                      type="text"
+                      [(ngModel)]="row.label"
                       class="field-control"
-                      [attr.aria-label]="'Type for ' + row.token"
-                      [attr.data-testid]="'serial-type-' + row.token"
+                      [attr.aria-label]="'Label for ' + row.token"
+                      [attr.data-testid]="'header-label-' + row.token"
+                    />
+                  </label>
+
+                  <label class="flex flex-col gap-1">
+                    <span class="text-xs font-semibold text-gray-600"
+                      >Role</span
                     >
-                      @for (t of fieldTypes; track t) {
-                        <option [value]="t">{{ t }}</option>
+                    <select
+                      [(ngModel)]="row.role"
+                      (ngModelChange)="onRoleChange(row)"
+                      class="field-control"
+                      [attr.aria-label]="'Role for ' + row.token"
+                      [attr.data-testid]="'header-role-' + row.token"
+                    >
+                      <option [value]="''">— (none)</option>
+                      @for (
+                        opt of availableHeaderRoleOptions(row);
+                        track opt.value
+                      ) {
+                        <option [value]="opt.value">{{ opt.label }}</option>
                       }
                     </select>
                   </label>
 
-                  <label class="flex items-center gap-2 sm:pt-6">
-                    <input
-                      type="checkbox"
-                      class="h-4 w-4"
-                      [(ngModel)]="row.required"
-                      [disabled]="!row.serial"
-                      [attr.aria-label]="'Required ' + row.token"
-                    />
-                    <span class="text-xs font-semibold text-gray-600">Required</span>
-                  </label>
-
-                  <label class="flex flex-col gap-1">
-                    <span class="text-xs font-semibold text-gray-600">Section</span>
-                    <input
-                      type="text"
-                      [(ngModel)]="row.section"
-                      [disabled]="!row.serial"
-                      class="field-control"
-                      placeholder="optional"
-                      [attr.aria-label]="'Section for ' + row.token"
-                      [attr.data-testid]="'serial-section-' + row.token"
-                    />
-                  </label>
-
-                  @if (row.type === 'select') {
-                    <label class="flex flex-col gap-1 sm:col-span-2 lg:col-span-3">
-                      <span class="text-xs font-semibold text-gray-600">Options</span>
-                      <input
-                        type="text"
-                        [(ngModel)]="row.optionsText"
-                        [disabled]="!row.serial"
+                  @if (isRoled(row)) {
+                    <div class="flex flex-col gap-1">
+                      <span class="text-xs font-semibold text-gray-600"
+                        >Type</span
+                      >
+                      <span
+                        class="flex h-[38px] items-center text-sm text-neutral-500"
+                        [attr.data-testid]="'header-type-forced-' + row.token"
+                        >{{ row.type }} · system</span
+                      >
+                    </div>
+                  } @else {
+                    <label class="flex flex-col gap-1">
+                      <span class="text-xs font-semibold text-gray-600"
+                        >Type</span
+                      >
+                      <select
+                        [(ngModel)]="row.type"
+                        (ngModelChange)="onTypeChange(row)"
                         class="field-control"
-                        placeholder="PASS, REWORK, SCRAP"
-                        [attr.aria-label]="'Options for ' + row.token"
-                        [attr.data-testid]="'serial-options-' + row.token"
-                      />
+                        [attr.aria-label]="'Type for ' + row.token"
+                        [attr.data-testid]="'header-type-' + row.token"
+                      >
+                        @for (t of headerFieldTypes; track t) {
+                          <option [value]="t">{{ t }}</option>
+                        }
+                      </select>
                     </label>
+
+                    @if (isSignature(row)) {
+                      <label
+                        class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1"
+                      >
+                        <span class="text-xs font-semibold text-gray-600"
+                          >Signed by</span
+                        >
+                        <select
+                          [(ngModel)]="row.signer"
+                          (ngModelChange)="onSignerChange(row)"
+                          class="field-control"
+                          [attr.aria-label]="'Signer for ' + row.token"
+                          [attr.data-testid]="'header-signer-' + row.token"
+                        >
+                          <option [value]="''">Choose a signer…</option>
+                          @for (s of signerOptions; track s.value) {
+                            <option [value]="s.value">{{ s.label }}</option>
+                          }
+                        </select>
+                      </label>
+                    }
+
+                    @if (isCustomerSignature(row)) {
+                      <p
+                        class="text-xs font-semibold text-gray-600 sm:pt-6"
+                        [attr.data-testid]="
+                          'header-required-forced-' + row.token
+                        "
+                      >
+                        Required — the customer must sign before export
+                      </p>
+                    } @else {
+                      <label class="flex items-center gap-2 sm:pt-6">
+                        <input
+                          type="checkbox"
+                          class="h-4 w-4"
+                          [(ngModel)]="row.required"
+                          [attr.aria-label]="'Required ' + row.token"
+                        />
+                        <span class="text-xs font-semibold text-gray-600">{{
+                          isSignature(row)
+                            ? 'Required (export blocked until signed)'
+                            : 'Required'
+                        }}</span>
+                      </label>
+                    }
+
+                    @if (row.type === 'select') {
+                      <label
+                        class="flex flex-col gap-1 sm:col-span-2 lg:col-span-3"
+                      >
+                        <span class="text-xs font-semibold text-gray-600"
+                          >Options</span
+                        >
+                        <input
+                          type="text"
+                          [(ngModel)]="row.optionsText"
+                          class="field-control"
+                          placeholder="PASS, REWORK, SCRAP"
+                          [attr.aria-label]="'Options for ' + row.token"
+                          [attr.data-testid]="'header-options-' + row.token"
+                        />
+                      </label>
+                    }
                   }
-                }
-              </div>
+                </div>
+              }
             </div>
           }
         </div>
       }
-    }
 
-    <!-- STEP 4: REVIEW & SAVE — name, optional rework rule, summary, one submit -->
-    @if (activeStep().key === 'review') {
-      <div class="page-section p-5 sm:p-6 space-y-4">
-        <div>
-          <label
-            for="define-display-name"
-            class="block text-sm font-semibold text-gray-700 mb-1"
-            >Display Name</label
-          >
-          <input
-            id="define-display-name"
-            type="text"
-            [(ngModel)]="displayName"
-            class="field-control max-w-md"
-            placeholder="e.g. Casing Inspection Report"
-            data-testid="display-name"
-          />
-          <p class="mt-1 text-xs text-neutral-500">
-            Optional — a friendly name for this template. Defaults to the template
-            key.
+      <!-- STEP 3: SERIAL — one CARD per token (no wide table). The header carries the title,
+         count, guidance, the bulk actions + select-all, and the blocking alert, above the
+         cards; the whole step flows with the page. Each card's controls wrap in a responsive
+         grid — no nested horizontal scroll at any width — and a roled marker reads as
+         system-owned (badge, its value-owning controls hidden). -->
+      @if (activeStep().key === 'serial') {
+        <div class="page-section p-5 sm:p-6 space-y-3">
+          <div class="flex items-baseline justify-between gap-4">
+            <h2 class="text-lg text-neutral-900">Serial Fields</h2>
+            <span class="shrink-0 text-sm text-neutral-500">
+              {{ serialRows().length }} of
+              {{ serialCandidateRows().length }} included
+            </span>
+          </div>
+          <p class="text-sm text-neutral-500">
+            These fields are recorded for every serial you inspect. Everything
+            not used as a report detail is already ticked — untick anything that
+            doesn't belong. Mark one field as the
+            <span class="font-semibold">Serial Number</span> so each serial can
+            be told apart.
           </p>
+
+          @if (serialCandidateRows().length > 0) {
+            <!-- Bulk actions + select-all — column-less context that stays in reach. -->
+            <div
+              class="flex flex-wrap items-end gap-x-4 gap-y-3 border-t border-neutral-100 pt-3"
+            >
+              <label class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4"
+                  [checked]="allSerialSelected()"
+                  (change)="onSelectAllSerial($any($event.target).checked)"
+                  aria-label="Include all serial tokens"
+                  data-testid="serial-select-all"
+                />
+                <span class="text-xs font-semibold text-gray-600"
+                  >Include all</span
+                >
+              </label>
+              <div class="flex items-end gap-2">
+                <label class="flex w-32 flex-col gap-1">
+                  <span class="text-xs font-semibold text-gray-600">Type</span>
+                  <select
+                    id="bulk-type"
+                    [(ngModel)]="bulkType"
+                    class="field-control"
+                    data-testid="bulk-type"
+                  >
+                    @for (t of fieldTypes; track t) {
+                      <option [value]="t">{{ t }}</option>
+                    }
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  (click)="applyBulkType()"
+                  class="btn btn-secondary"
+                  data-testid="bulk-type-apply"
+                >
+                  Apply to all
+                </button>
+              </div>
+              <div class="flex items-end gap-2">
+                <label class="flex w-32 flex-col gap-1">
+                  <span class="text-xs font-semibold text-gray-600"
+                    >Section</span
+                  >
+                  <input
+                    id="bulk-section"
+                    type="text"
+                    [(ngModel)]="bulkSection"
+                    class="field-control"
+                    placeholder="e.g. Body"
+                    data-testid="bulk-section"
+                  />
+                </label>
+                <button
+                  type="button"
+                  (click)="applyBulkSection()"
+                  class="btn btn-secondary"
+                  data-testid="bulk-section-apply"
+                >
+                  Apply to all
+                </button>
+              </div>
+            </div>
+
+            @if (!serialStepValid()) {
+              <div
+                role="alert"
+                class="rounded-r-md border-l-4 border-error bg-error-light/20 p-3 text-sm text-error-dark"
+              >
+                @if (serialRows().length === 0) {
+                  Include at least one serial field to continue.
+                } @else if (serialMarkerRow() === undefined) {
+                  Mark exactly one serial field as the Serial Number to
+                  continue.
+                } @else {
+                  Every included serial field needs a label before you can
+                  continue.
+                }
+              </div>
+            }
+          }
         </div>
-      </div>
 
-      <!-- Rework trigger rule — optional, OFF by default -->
-      <div class="page-section p-5 sm:p-6 space-y-4">
-        <label class="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            [(ngModel)]="reworkEnabled"
-            data-testid="rework-enabled"
-            class="h-4 w-4"
-          />
-          <span class="text-sm font-semibold text-gray-700"
-            >Add a rework trigger rule?</span
+        @if (serialCandidateRows().length === 0) {
+          <div
+            role="alert"
+            class="page-section border-l-4 border-error bg-error-light/20 p-4 text-sm text-error-dark"
           >
-        </label>
-        <p class="text-sm text-neutral-500">
-          Automatically raise a follow-up report whenever a serial's chosen field
-          matches a set value. Leave this off if you don't need it.
-        </p>
+            Every token is claimed by the Metadata step. Uncheck at least one
+            there — a template needs at least one serial field.
+          </div>
+        } @else {
+          <div class="space-y-3">
+            @for (row of serialCandidateRows(); track row.token) {
+              <div
+                class="page-section p-4 sm:p-5"
+                [ngClass]="{ 'opacity-40': !row.serial }"
+                [attr.data-testid]="'serial-card-' + row.token"
+              >
+                <div class="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    class="h-4 w-4 shrink-0"
+                    [(ngModel)]="row.serial"
+                    [attr.aria-label]="
+                      'Include ' + row.token + ' as a serial field'
+                    "
+                    [attr.data-testid]="'serial-include-' + row.token"
+                  />
+                  <span
+                    class="code-text break-all text-sm font-medium text-neutral-900"
+                  >
+                    {{ row.token }}
+                  </span>
+                  @if (isRoled(row)) {
+                    <span
+                      class="ml-auto shrink-0 rounded bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-500"
+                      >System-owned</span
+                    >
+                  }
+                </div>
 
-        @if (reworkEnabled) {
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label
-                for="rework-field"
-                class="block text-sm font-semibold text-gray-700 mb-1"
-                >Trigger Field <span class="text-error">*</span></label
-              >
-              <select
-                id="rework-field"
-                [(ngModel)]="reworkField"
-                #reworkFieldCtrl="ngModel"
-                [required]="reworkEnabled"
-                class="field-control"
-                data-testid="rework-field"
-                [attr.aria-describedby]="
-                  reworkFieldCtrl.invalid && reworkFieldCtrl.touched
-                    ? 'rework-field-error'
-                    : null
-                "
-              >
-                <option [value]="''">Select the trigger field…</option>
-                @for (opt of triggerFieldOptions(); track opt.key) {
-                  <option [value]="opt.key">{{ opt.label }}</option>
-                }
-              </select>
-              @if (reworkFieldCtrl.invalid && reworkFieldCtrl.touched) {
-                <p
-                  id="rework-field-error"
-                  role="alert"
-                  class="mt-1 text-xs text-error"
+                <div
+                  class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
                 >
-                  Pick the field whose value triggers the rule.
-                </p>
-              }
-            </div>
-            <div>
-              <label
-                for="rework-equals"
-                class="block text-sm font-semibold text-gray-700 mb-1"
-                >Equals Value <span class="text-error">*</span></label
-              >
-              <input
-                id="rework-equals"
-                type="text"
-                [(ngModel)]="reworkEquals"
-                #reworkEqualsCtrl="ngModel"
-                [required]="reworkEnabled"
-                class="field-control"
-                placeholder="e.g. REWORK"
-                data-testid="rework-equals"
-                [attr.aria-describedby]="
-                  reworkEqualsCtrl.invalid && reworkEqualsCtrl.touched
-                    ? 'rework-equals-error'
-                    : null
-                "
-              />
-              @if (reworkEqualsCtrl.invalid && reworkEqualsCtrl.touched) {
-                <p
-                  id="rework-equals-error"
-                  role="alert"
-                  class="mt-1 text-xs text-error"
-                >
-                  Enter the value that triggers the rule.
-                </p>
-              }
-            </div>
-            <div>
-              <label
-                for="rework-child-type"
-                class="block text-sm font-semibold text-gray-700 mb-1"
-                >Child Report Type <span class="text-error">*</span></label
-              >
-              <select
-                id="rework-child-type"
-                [(ngModel)]="reworkChildType"
-                class="field-control"
-                data-testid="rework-child-type"
-              >
-                @for (t of childReportTypes; track t) {
-                  <option [value]="t">{{ t }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label
-                for="rework-suffix"
-                class="block text-sm font-semibold text-gray-700 mb-1"
-                >Report Number Suffix</label
-              >
-              <input
-                id="rework-suffix"
-                type="text"
-                [(ngModel)]="reworkSuffix"
-                class="field-control"
-                [placeholder]="'defaults to _' + reworkChildType.toLowerCase()"
-                data-testid="rework-suffix"
-              />
-            </div>
+                  <label
+                    class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1"
+                  >
+                    <span class="text-xs font-semibold text-gray-600"
+                      >Label</span
+                    >
+                    <input
+                      type="text"
+                      [(ngModel)]="row.label"
+                      [disabled]="!row.serial"
+                      class="field-control"
+                      [attr.aria-label]="'Label for ' + row.token"
+                      [attr.data-testid]="'serial-label-' + row.token"
+                    />
+                  </label>
+
+                  <label class="flex flex-col gap-1">
+                    <span class="text-xs font-semibold text-gray-600"
+                      >Role</span
+                    >
+                    <select
+                      [(ngModel)]="row.role"
+                      (ngModelChange)="onRoleChange(row)"
+                      [disabled]="!row.serial"
+                      class="field-control"
+                      [attr.aria-label]="'Role for ' + row.token"
+                      [attr.data-testid]="'serial-role-' + row.token"
+                    >
+                      <option [value]="''">— (none)</option>
+                      <option value="serialNumber">Serial Number</option>
+                    </select>
+                  </label>
+
+                  @if (isRoled(row)) {
+                    <div class="flex flex-col gap-1">
+                      <span class="text-xs font-semibold text-gray-600"
+                        >Type</span
+                      >
+                      <span
+                        class="flex h-[38px] items-center text-sm text-neutral-500"
+                        [attr.data-testid]="'serial-type-forced-' + row.token"
+                        >{{ row.type }} · system</span
+                      >
+                    </div>
+                  } @else {
+                    <label class="flex flex-col gap-1">
+                      <span class="text-xs font-semibold text-gray-600"
+                        >Type</span
+                      >
+                      <select
+                        [(ngModel)]="row.type"
+                        [disabled]="!row.serial"
+                        class="field-control"
+                        [attr.aria-label]="'Type for ' + row.token"
+                        [attr.data-testid]="'serial-type-' + row.token"
+                      >
+                        @for (t of fieldTypes; track t) {
+                          <option [value]="t">{{ t }}</option>
+                        }
+                      </select>
+                    </label>
+
+                    <label class="flex items-center gap-2 sm:pt-6">
+                      <input
+                        type="checkbox"
+                        class="h-4 w-4"
+                        [(ngModel)]="row.required"
+                        [disabled]="!row.serial"
+                        [attr.aria-label]="'Required ' + row.token"
+                      />
+                      <span class="text-xs font-semibold text-gray-600"
+                        >Required</span
+                      >
+                    </label>
+
+                    <label class="flex flex-col gap-1">
+                      <span class="text-xs font-semibold text-gray-600"
+                        >Section</span
+                      >
+                      <input
+                        type="text"
+                        [(ngModel)]="row.section"
+                        [disabled]="!row.serial"
+                        class="field-control"
+                        placeholder="optional"
+                        [attr.aria-label]="'Section for ' + row.token"
+                        [attr.data-testid]="'serial-section-' + row.token"
+                      />
+                    </label>
+
+                    @if (row.type === 'select') {
+                      <label
+                        class="flex flex-col gap-1 sm:col-span-2 lg:col-span-3"
+                      >
+                        <span class="text-xs font-semibold text-gray-600"
+                          >Options</span
+                        >
+                        <input
+                          type="text"
+                          [(ngModel)]="row.optionsText"
+                          [disabled]="!row.serial"
+                          class="field-control"
+                          placeholder="PASS, REWORK, SCRAP"
+                          [attr.aria-label]="'Options for ' + row.token"
+                          [attr.data-testid]="'serial-options-' + row.token"
+                        />
+                      </label>
+                    }
+                  }
+                </div>
+              </div>
+            }
           </div>
         }
-      </div>
+      }
 
-      <!-- Compact review summary — shared with the read-only recap via #recapSummary -->
-      <ng-container
-        [ngTemplateOutlet]="recapSummary"
-        [ngTemplateOutletContext]="{ heading: 'Review' }"
-      ></ng-container>
-    }
+      <!-- STEP 4: REVIEW & SAVE — name, optional rework rule, summary, one submit -->
+      @if (activeStep().key === 'review') {
+        <div class="page-section p-5 sm:p-6 space-y-4">
+          <div>
+            <label
+              for="define-display-name"
+              class="block text-sm font-semibold text-gray-700 mb-1"
+              >Display Name</label
+            >
+            <input
+              id="define-display-name"
+              type="text"
+              [(ngModel)]="displayName"
+              class="field-control max-w-md"
+              placeholder="e.g. Casing Inspection Report"
+              data-testid="display-name"
+            />
+            <p class="mt-1 text-xs text-neutral-500">
+              Optional — a friendly name for this template. Defaults to the
+              template key.
+            </p>
+          </div>
+        </div>
+
+        <!-- Rework trigger rule — optional, OFF by default -->
+        <div class="page-section p-5 sm:p-6 space-y-4">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              [(ngModel)]="reworkEnabled"
+              data-testid="rework-enabled"
+              class="h-4 w-4"
+            />
+            <span class="text-sm font-semibold text-gray-700"
+              >Add a rework trigger rule?</span
+            >
+          </label>
+          <p class="text-sm text-neutral-500">
+            Automatically raise a follow-up report whenever a serial's chosen
+            field matches a set value. Leave this off if you don't need it.
+          </p>
+
+          @if (reworkEnabled) {
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label
+                  for="rework-field"
+                  class="block text-sm font-semibold text-gray-700 mb-1"
+                  >Trigger Field <span class="text-error">*</span></label
+                >
+                <select
+                  id="rework-field"
+                  [(ngModel)]="reworkField"
+                  #reworkFieldCtrl="ngModel"
+                  [required]="reworkEnabled"
+                  class="field-control"
+                  data-testid="rework-field"
+                  [attr.aria-describedby]="
+                    reworkFieldCtrl.invalid && reworkFieldCtrl.touched
+                      ? 'rework-field-error'
+                      : null
+                  "
+                >
+                  <option [value]="''">Select the trigger field…</option>
+                  @for (opt of triggerFieldOptions(); track opt.key) {
+                    <option [value]="opt.key">{{ opt.label }}</option>
+                  }
+                </select>
+                @if (reworkFieldCtrl.invalid && reworkFieldCtrl.touched) {
+                  <p
+                    id="rework-field-error"
+                    role="alert"
+                    class="mt-1 text-xs text-error"
+                  >
+                    Pick the field whose value triggers the rule.
+                  </p>
+                }
+              </div>
+              <div>
+                <label
+                  for="rework-equals"
+                  class="block text-sm font-semibold text-gray-700 mb-1"
+                  >Equals Value <span class="text-error">*</span></label
+                >
+                <input
+                  id="rework-equals"
+                  type="text"
+                  [(ngModel)]="reworkEquals"
+                  #reworkEqualsCtrl="ngModel"
+                  [required]="reworkEnabled"
+                  class="field-control"
+                  placeholder="e.g. REWORK"
+                  data-testid="rework-equals"
+                  [attr.aria-describedby]="
+                    reworkEqualsCtrl.invalid && reworkEqualsCtrl.touched
+                      ? 'rework-equals-error'
+                      : null
+                  "
+                />
+                @if (reworkEqualsCtrl.invalid && reworkEqualsCtrl.touched) {
+                  <p
+                    id="rework-equals-error"
+                    role="alert"
+                    class="mt-1 text-xs text-error"
+                  >
+                    Enter the value that triggers the rule.
+                  </p>
+                }
+              </div>
+              <div>
+                <label
+                  for="rework-child-type"
+                  class="block text-sm font-semibold text-gray-700 mb-1"
+                  >Child Report Type <span class="text-error">*</span></label
+                >
+                <select
+                  id="rework-child-type"
+                  [(ngModel)]="reworkChildType"
+                  class="field-control"
+                  data-testid="rework-child-type"
+                >
+                  @for (t of childReportTypes; track t) {
+                    <option [value]="t">{{ t }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label
+                  for="rework-suffix"
+                  class="block text-sm font-semibold text-gray-700 mb-1"
+                  >Report Number Suffix</label
+                >
+                <input
+                  id="rework-suffix"
+                  type="text"
+                  [(ngModel)]="reworkSuffix"
+                  class="field-control"
+                  [placeholder]="
+                    'defaults to _' + reworkChildType.toLowerCase()
+                  "
+                  data-testid="rework-suffix"
+                />
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Compact review summary — shared with the read-only recap via #recapSummary -->
+        <ng-container
+          [ngTemplateOutlet]="recapSummary"
+          [ngTemplateOutletContext]="{ heading: 'Review' }"
+        ></ng-container>
+      }
     </div>
     <!-- /STEP BODY -->
 
@@ -794,76 +870,83 @@
      from the same rows() signal + scalar fields, hydrated from the STORED definition in
      read-only mode. `heading` labels it per caller. -->
 <ng-template #recapSummary let-heading="heading">
-      <div class="page-section p-5 sm:p-6">
-        <h2 class="text-lg text-neutral-900 mb-3">{{ heading }}</h2>
-        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-          <div>
-            <dt class="font-semibold text-gray-500">Display Name</dt>
-            <dd class="text-neutral-900">{{ displayName.trim() || '—' }}</dd>
-          </div>
-          <div>
-            <dt class="font-semibold text-gray-500">Serial Number Token</dt>
-            <dd class="text-neutral-900 code-text">
-              {{ serialMarkerRow()?.token || '—' }}
-            </dd>
-          </div>
-          <div>
-            <dt class="font-semibold text-gray-500">
-              Metadata Fields ({{ headerRows().length }})
-            </dt>
-            <dd class="text-neutral-900">
-              @if (headerRows().length === 0) {
-                <span class="text-gray-400">None</span>
-              } @else {
-                <ul class="mt-1 flex flex-wrap gap-1.5">
-                  @for (r of headerRows(); track r.token) {
-                    <li
-                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-xs"
-                    >
-                      <span class="font-medium">{{ r.label.trim() || r.token }}</span>
-                      <span class="text-gray-400"
-                        >· {{ r.role || r.type }}{{ r.signer ? ' (' + r.signer.toLowerCase() + ')' : '' }}</span
-                      >
-                    </li>
-                  }
-                </ul>
-              }
-            </dd>
-          </div>
-          <div>
-            <dt class="font-semibold text-gray-500">
-              Serial Fields ({{ serialRows().length }})
-            </dt>
-            <dd class="text-neutral-900">
-              @if (serialRows().length === 0) {
-                <span class="text-gray-400">None yet</span>
-              } @else {
-                <ul class="mt-1 flex flex-wrap gap-1.5">
-                  @for (r of serialRows(); track r.token) {
-                    <li
-                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-xs"
-                    >
-                      <span class="font-medium">{{ r.label.trim() || r.token }}</span>
-                      <span class="text-gray-400">· {{ r.role || r.type }}</span>
-                    </li>
-                  }
-                </ul>
-              }
-            </dd>
-          </div>
-          <div class="sm:col-span-2">
-            <dt class="font-semibold text-gray-500">Rework Rule</dt>
-            <dd class="text-neutral-900">
-              @if (reworkEnabled) {
-                {{ reworkField || '(field?)' }} equals
-                “{{ reworkEquals.trim() || '(value?)' }}” →
-                {{ reworkChildType
-                }}{{ reworkSuffix.trim() ? ' (' + reworkSuffix.trim() + ')' : '' }}
-              } @else {
-                <span class="text-gray-400">None</span>
-              }
-            </dd>
-          </div>
-        </dl>
+  <div class="page-section p-5 sm:p-6">
+    <h2 class="text-lg text-neutral-900 mb-3">{{ heading }}</h2>
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+      <div>
+        <dt class="font-semibold text-gray-500">Display Name</dt>
+        <dd class="text-neutral-900">{{ displayName.trim() || '—' }}</dd>
       </div>
+      <div>
+        <dt class="font-semibold text-gray-500">Serial Number Token</dt>
+        <dd class="text-neutral-900 code-text">
+          {{ serialMarkerRow()?.token || '—' }}
+        </dd>
+      </div>
+      <div>
+        <dt class="font-semibold text-gray-500">
+          Metadata Fields ({{ headerRows().length }})
+        </dt>
+        <dd class="text-neutral-900">
+          @if (headerRows().length === 0) {
+            <span class="text-gray-400">None</span>
+          } @else {
+            <ul class="mt-1 flex flex-wrap gap-1.5">
+              @for (r of headerRows(); track r.token) {
+                <li
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-xs"
+                >
+                  <span class="font-medium">{{
+                    r.label.trim() || r.token
+                  }}</span>
+                  <span class="text-gray-400"
+                    >· {{ r.role || r.type
+                    }}{{
+                      r.signer ? ' (' + r.signer.toLowerCase() + ')' : ''
+                    }}</span
+                  >
+                </li>
+              }
+            </ul>
+          }
+        </dd>
+      </div>
+      <div>
+        <dt class="font-semibold text-gray-500">
+          Serial Fields ({{ serialRows().length }})
+        </dt>
+        <dd class="text-neutral-900">
+          @if (serialRows().length === 0) {
+            <span class="text-gray-400">None yet</span>
+          } @else {
+            <ul class="mt-1 flex flex-wrap gap-1.5">
+              @for (r of serialRows(); track r.token) {
+                <li
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-xs"
+                >
+                  <span class="font-medium">{{
+                    r.label.trim() || r.token
+                  }}</span>
+                  <span class="text-gray-400">· {{ r.role || r.type }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </dd>
+      </div>
+      <div class="sm:col-span-2">
+        <dt class="font-semibold text-gray-500">Rework Rule</dt>
+        <dd class="text-neutral-900">
+          @if (reworkEnabled) {
+            {{ reworkField || '(field?)' }} equals “{{
+              reworkEquals.trim() || '(value?)'
+            }}” → {{ reworkChildType
+            }}{{ reworkSuffix.trim() ? ' (' + reworkSuffix.trim() + ')' : '' }}
+          } @else {
+            <span class="text-gray-400">None</span>
+          }
+        </dd>
+      </div>
+    </dl>
+  </div>
 </ng-template>

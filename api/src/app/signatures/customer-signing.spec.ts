@@ -26,8 +26,19 @@ function makePng(): Buffer {
 
 const DEFINITION = {
   fields: [
-    { key: 'custSig', label: 'Customer', type: 'signature', signer: 'CUSTOMER', required: true },
-    { key: 'supSig', label: 'Supervisor', type: 'signature', signer: 'SUPERVISOR' },
+    {
+      key: 'custSig',
+      label: 'Customer',
+      type: 'signature',
+      signer: 'CUSTOMER',
+      required: true,
+    },
+    {
+      key: 'supSig',
+      label: 'Supervisor',
+      type: 'signature',
+      signer: 'SUPERVISOR',
+    },
   ],
 };
 
@@ -38,7 +49,9 @@ const customer = {
   customerId: 'c1',
 };
 
-function report(status: InspectionReportStatus = InspectionReportStatus.APPROVED) {
+function report(
+  status: InspectionReportStatus = InspectionReportStatus.APPROVED,
+) {
   return {
     id: 'r1',
     reportNumber: 'RPT-1',
@@ -50,12 +63,15 @@ function report(status: InspectionReportStatus = InspectionReportStatus.APPROVED
   };
 }
 
-function setup(opts: { status?: InspectionReportStatus; alreadySigned?: number } = {}) {
+function setup(
+  opts: { status?: InspectionReportStatus; alreadySigned?: number } = {},
+) {
   const tx = {
     inspectionReport: {
-      findUnique: jest
-        .fn()
-        .mockResolvedValue({ status: opts.status ?? 'APPROVED', revisionNumber: 1 }),
+      findUnique: jest.fn().mockResolvedValue({
+        status: opts.status ?? 'APPROVED',
+        revisionNumber: 1,
+      }),
     },
     reportSignature: {
       count: jest.fn().mockResolvedValue(opts.alreadySigned ?? 0),
@@ -68,9 +84,11 @@ function setup(opts: { status?: InspectionReportStatus; alreadySigned?: number }
       findMany: jest.fn().mockResolvedValue([report(opts.status)]),
     },
     template: {
-      findMany: jest.fn().mockResolvedValue([
-        { templateKey: 'K', templateVersion: 1, definitionJson: DEFINITION },
-      ]),
+      findMany: jest
+        .fn()
+        .mockResolvedValue([
+          { templateKey: 'K', templateVersion: 1, definitionJson: DEFINITION },
+        ]),
     },
     reportSignature: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -118,7 +136,12 @@ describe('SignaturesService — customer signature fields', () => {
       async (role) => {
         const { service, storage } = setup();
         await expect(
-          service.signCustomerField({ ...customer, role }, 'r1', 'custSig', makePng()),
+          service.signCustomerField(
+            { ...customer, role },
+            'r1',
+            'custSig',
+            makePng(),
+          ),
         ).rejects.toBeInstanceOf(ForbiddenException);
         expect(storage.putSignature).not.toHaveBeenCalled();
       },
@@ -156,7 +179,9 @@ describe('SignaturesService — customer signature fields', () => {
     it('scopes the report lookup to the customer', async () => {
       const { service, prisma } = setup();
       await service.signCustomerField(customer, 'r1', 'custSig', makePng());
-      expect(prisma.inspectionReport.findFirst.mock.calls[0][0].where).toMatchObject({
+      expect(
+        prisma.inspectionReport.findFirst.mock.calls[0][0].where,
+      ).toMatchObject({
         id: 'r1',
         tenantId: 't1',
         customerId: 'c1',
@@ -217,7 +242,10 @@ describe('SignaturesService — customer signature fields', () => {
     it('is empty for non-customers', async () => {
       const { service, prisma } = setup();
       expect(
-        await service.listPendingForCustomer({ ...customer, role: UserRole.ADMIN }),
+        await service.listPendingForCustomer({
+          ...customer,
+          role: UserRole.ADMIN,
+        }),
       ).toEqual([]);
       expect(prisma.inspectionReport.findMany).not.toHaveBeenCalled();
     });
@@ -259,9 +287,13 @@ describe('SignaturesService — customer signature fields', () => {
     it('serves the inspector signature frozen on the report', async () => {
       const { service, prisma, storage } = setup();
       const png = makePng();
-      prisma.reportSignature.findFirst.mockResolvedValue({ storageKey: 'k-insp' });
+      prisma.reportSignature.findFirst.mockResolvedValue({
+        storageKey: 'k-insp',
+      });
       storage.getSignature.mockResolvedValue(png);
-      await expect(service.getSignatureImage(customer, 'r1', 'inspector')).resolves.toBe(png);
+      await expect(
+        service.getSignatureImage(customer, 'r1', 'inspector'),
+      ).resolves.toBe(png);
       expect(storage.getSignature).toHaveBeenCalledWith('k-insp');
     });
 
@@ -278,27 +310,31 @@ describe('SignaturesService — customer signature fields', () => {
         },
       ]);
       storage.getSignature.mockResolvedValue(png);
-      await expect(service.getSignatureImage(customer, 'r1', 'custSig')).resolves.toBe(png);
+      await expect(
+        service.getSignatureImage(customer, 'r1', 'custSig'),
+      ).resolves.toBe(png);
       expect(storage.getSignature).toHaveBeenCalledWith('k-cust');
     });
 
     it('404s when nothing is signed, and for an unknown key', async () => {
       const { service } = setup();
-      await expect(service.getSignatureImage(customer, 'r1', 'custSig')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await expect(service.getSignatureImage(customer, 'r1', 'nope')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.getSignatureImage(customer, 'r1', 'custSig'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        service.getSignatureImage(customer, 'r1', 'nope'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it("never resolves another customer's report", async () => {
       const { service, prisma } = setup();
       prisma.inspectionReport.findFirst.mockResolvedValue(null);
-      await expect(service.getSignatureImage(customer, 'r1', 'inspector')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      expect(prisma.inspectionReport.findFirst.mock.calls[0][0].where).toMatchObject({
+      await expect(
+        service.getSignatureImage(customer, 'r1', 'inspector'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(
+        prisma.inspectionReport.findFirst.mock.calls[0][0].where,
+      ).toMatchObject({
         customerId: 'c1',
       });
     });

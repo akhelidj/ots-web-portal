@@ -12,7 +12,7 @@
 The REWORK child-report trigger was the **fourth and last** of the hardcoded
 drill-pipe behaviors identified in [ADR-0009](0009-single-template-hardcode-seam.md).
 The other three (approval gate, export, portal form) already read `Template.definitionJson`
-live. The fourth did not: the rule is *authored* in the definition's `rules` block
+live. The fourth did not: the rule is _authored_ in the definition's `rules` block
 (`rework-child-on-emi`: `body.emiResult == 'REWORK'` → upsert a `REWORK` child), but at the
 time **no consumer read that block**. `child-reports.service.ts` (`syncReworkChildReport`)
 was the sole authority via its hardcoded `body.emiResult === 'REWORK'` check. Because there
@@ -32,11 +32,11 @@ Two sub-decisions fix the interpreter's contract:
 interpreter, not declared field-by-field.** The action name `upsertChildReport` carries a
 fixed body of behavior — draft-delete vs non-draft-empty, blank-create vs preserve-existing,
 and version-bump timing — as an intrinsic property of the action, reproduced from
-`syncReworkChildReport`. The definition declares only *what varies* per rule (the `when`
+`syncReworkChildReport`. The definition declares only _what varies_ per rule (the `when`
 predicate, `childType`, `membership`, `reportNumberSuffix`, `forbidChildDisposition`), never
 the reconciliation plumbing.
 
-*Why not the alternatives:* pushing reconciliation mechanics into declarative fields bloats
+_Why not the alternatives:_ pushing reconciliation mechanics into declarative fields bloats
 the format and forces every future tool type to re-declare identical plumbing (delete-orphans,
 create-blank, preserve-existing, bump-version). Owning the mechanics behind the action name
 keeps the definition small and the behavior single-sourced.
@@ -45,7 +45,7 @@ keeps the definition small and the behavior single-sourced.
 unknown `when.field`, unknown/invalid `childType`, or otherwise malformed rule causes the
 interpreter to throw and halt. It does **not** fall back to `child-reports.service.ts`.
 
-*Why not the alternatives:* falling back to the legacy `syncReworkChildReport` on an
+_Why not the alternatives:_ falling back to the legacy `syncReworkChildReport` on an
 unrecognized rule masks authoring errors — a typo in the definition would silently resolve
 to hardcoded behavior — and keeps the hardcoded path half-alive indefinitely, defeating the
 cutover. Fail-loud is consistent with the export computed-resolver allow-list, which likewise

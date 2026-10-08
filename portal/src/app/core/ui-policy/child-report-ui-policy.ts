@@ -100,9 +100,13 @@ export function getChildReportUiState(
   if (ctx.syncState !== 'CONFLICT') {
     if (ctx.reportStatus === CHILD_REPORT_STATUSES.IN_INSPECTION) {
       if (
-        ([APP_ROLES.INSPECTOR, APP_ROLES.ADMIN, APP_ROLES.SUPERVISOR] as readonly string[]).includes(
-          ctx.role,
-        )
+        (
+          [
+            APP_ROLES.INSPECTOR,
+            APP_ROLES.ADMIN,
+            APP_ROLES.SUPERVISOR,
+          ] as readonly string[]
+        ).includes(ctx.role)
       ) {
         state.fieldModes['inspectionData'] = 'editable';
         state.fieldModes['disposition'] = 'editable';
@@ -113,9 +117,13 @@ export function getChildReportUiState(
   if (ctx.syncState !== 'CONFLICT') {
     if (ctx.reportStatus === CHILD_REPORT_STATUSES.DRAFT) {
       if (
-        ([APP_ROLES.INSPECTOR, APP_ROLES.ADMIN, APP_ROLES.SUPERVISOR] as readonly string[]).includes(
-          ctx.role,
-        )
+        (
+          [
+            APP_ROLES.INSPECTOR,
+            APP_ROLES.ADMIN,
+            APP_ROLES.SUPERVISOR,
+          ] as readonly string[]
+        ).includes(ctx.role)
       ) {
         state.transitionChoices.push({
           toStatus: CHILD_REPORT_STATUSES.IN_INSPECTION,
@@ -126,9 +134,13 @@ export function getChildReportUiState(
       }
     } else if (ctx.reportStatus === CHILD_REPORT_STATUSES.IN_INSPECTION) {
       if (
-        ([APP_ROLES.INSPECTOR, APP_ROLES.ADMIN, APP_ROLES.SUPERVISOR] as readonly string[]).includes(
-          ctx.role,
-        )
+        (
+          [
+            APP_ROLES.INSPECTOR,
+            APP_ROLES.ADMIN,
+            APP_ROLES.SUPERVISOR,
+          ] as readonly string[]
+        ).includes(ctx.role)
       ) {
         state.transitionChoices.push({
           toStatus: CHILD_REPORT_STATUSES.PENDING_APPROVAL,
@@ -163,7 +175,11 @@ export function getChildReportUiState(
           enabled: true,
         });
       }
-      if (([APP_ROLES.ADMIN, APP_ROLES.SUPERVISOR] as readonly string[]).includes(ctx.role)) {
+      if (
+        ([APP_ROLES.ADMIN, APP_ROLES.SUPERVISOR] as readonly string[]).includes(
+          ctx.role,
+        )
+      ) {
         state.transitionChoices.push({
           toStatus: CHILD_REPORT_STATUSES.IN_INSPECTION,
           label: 'Reopen (Revision)',

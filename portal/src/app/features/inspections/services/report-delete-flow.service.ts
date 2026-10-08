@@ -63,7 +63,8 @@ export class ReportDeleteFlowService {
 
     const plural = (n: number, word: string) =>
       `${n} ${word}${n === 1 ? '' : 's'}`;
-    const label = impact.reportNumber || report.id.substring(0, 8).toUpperCase();
+    const label =
+      impact.reportNumber || report.id.substring(0, 8).toUpperCase();
     const reason = await this.confirmService.confirmWithReason({
       title: `Delete report ${label}?`,
       message:

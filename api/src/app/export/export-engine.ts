@@ -69,7 +69,8 @@ export interface ExportDefinition {
  * export service then finds it in the finished workbook (row expansion may have moved the
  * cell), clears it and anchors the image there. See export/signature-embed.ts.
  */
-export const signatureMarker = (slot: string): string => `[[OTS_SIGNATURE:${slot}]]`;
+export const signatureMarker = (slot: string): string =>
+  `[[OTS_SIGNATURE:${slot}]]`;
 
 /** Engine-side computed resolvers (bespoke; share derivation with legacy). */
 const COMPUTED: Record<string, (snapshot: Snapshot) => unknown> = {
@@ -207,7 +208,13 @@ export function engineGlobalTokens(
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const entry of def.export.global) {
-    out[entry.token] = resolveValue(def, entry, snapshot.header, snapshot, undefined);
+    out[entry.token] = resolveValue(
+      def,
+      entry,
+      snapshot.header,
+      snapshot,
+      undefined,
+    );
   }
   return out;
 }
@@ -228,7 +235,13 @@ export function engineFlatTokens(
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const entry of def.export.global) {
-    out[entry.token] = resolveValue(def, entry, snapshot.header, snapshot, record);
+    out[entry.token] = resolveValue(
+      def,
+      entry,
+      snapshot.header,
+      snapshot,
+      record,
+    );
   }
   return out;
 }

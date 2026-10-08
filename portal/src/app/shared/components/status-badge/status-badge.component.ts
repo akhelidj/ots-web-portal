@@ -2,11 +2,7 @@ import { Component, input, computed } from '@angular/core';
 import { NgClass } from '@angular/common';
 
 export type BadgeSeverity =
-  | 'success'
-  | 'warning'
-  | 'error'
-  | 'info'
-  | 'neutral';
+  'success' | 'warning' | 'error' | 'info' | 'neutral';
 
 @Component({
   selector: 'app-status-badge',

@@ -37,8 +37,7 @@ const VALID_ROLES = new Set([...Object.keys(ROLE_TO_COMPUTED), ...ITEM_ROLES]);
  */
 
 export type ValidationOutcome =
-  | { ok: true }
-  | { ok: false; check: string; reason: string };
+  { ok: true } | { ok: false; check: string; reason: string };
 
 /**
  * Portal-renderable field types (must match the form's input branches).

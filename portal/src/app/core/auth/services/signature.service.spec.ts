@@ -94,7 +94,11 @@ describe('inspector signature gate (portal)', () => {
     });
 
     it('gates a supervisor only once the API demanded a signature, until one is saved', () => {
-      session.setSession('a', 'r', profile({ role: 'SUPERVISOR', hasSignature: false }));
+      session.setSession(
+        'a',
+        'r',
+        profile({ role: 'SUPERVISOR', hasSignature: false }),
+      );
       expect(session.signatureRequired()).toBe(false);
 
       session.demandSignature();
@@ -105,7 +109,11 @@ describe('inspector signature gate (portal)', () => {
     });
 
     it('does not gate a supervisor who already has a signature, even if demanded', () => {
-      session.setSession('a', 'r', profile({ role: 'SUPERVISOR', hasSignature: true }));
+      session.setSession(
+        'a',
+        'r',
+        profile({ role: 'SUPERVISOR', hasSignature: true }),
+      );
       session.demandSignature();
       expect(session.signatureRequired()).toBe(false);
     });
@@ -115,7 +123,9 @@ describe('inspector signature gate (portal)', () => {
       session.setHasSignature(true);
 
       expect(session.signatureRequired()).toBe(false);
-      expect(JSON.parse(localStorage.getItem('session_profile') ?? '{}')).toMatchObject({
+      expect(
+        JSON.parse(localStorage.getItem('session_profile') ?? '{}'),
+      ).toMatchObject({
         hasSignature: true,
       });
     });
@@ -167,7 +177,10 @@ describe('inspector signature gate (portal)', () => {
       const done = signatures.save(new Blob(['png']));
       http
         .expectOne(`${environment.apiUrl}/me/signature`)
-        .flush({ message: 'Not a PNG' }, { status: 400, statusText: 'Bad Request' });
+        .flush(
+          { message: 'Not a PNG' },
+          { status: 400, statusText: 'Bad Request' },
+        );
 
       await expect(done).rejects.toMatchObject({ message: 'Not a PNG' });
       expect(session.signatureRequired()).toBe(true);
@@ -180,11 +193,17 @@ describe('inspector signature gate (portal)', () => {
     it('raises the gate on a 403 SIGNATURE_REQUIRED from the API', () => {
       session.setSession('a', 'r', profile({ hasSignature: true }));
 
-      client().post(`${environment.apiUrl}/inspection-reports`, {}).subscribe({
-        error: () => undefined,
-      });
+      client()
+        .post(`${environment.apiUrl}/inspection-reports`, {})
+        .subscribe({
+          error: () => undefined,
+        });
       http.expectOne(`${environment.apiUrl}/inspection-reports`).flush(
-        { statusCode: 403, code: 'SIGNATURE_REQUIRED', message: 'Sign first' },
+        {
+          statusCode: 403,
+          code: 'SIGNATURE_REQUIRED',
+          message: 'Sign first',
+        },
         { status: 403, statusText: 'Forbidden' },
       );
 
@@ -194,13 +213,17 @@ describe('inspector signature gate (portal)', () => {
     it('leaves the gate alone on an ordinary 403 (RBAC denial)', () => {
       session.setSession('a', 'r', profile({ hasSignature: true }));
 
-      client().post(`${environment.apiUrl}/templates`, {}).subscribe({
-        error: () => undefined,
-      });
-      http.expectOne(`${environment.apiUrl}/templates`).flush(
-        { statusCode: 403, message: 'Forbidden resource' },
-        { status: 403, statusText: 'Forbidden' },
-      );
+      client()
+        .post(`${environment.apiUrl}/templates`, {})
+        .subscribe({
+          error: () => undefined,
+        });
+      http
+        .expectOne(`${environment.apiUrl}/templates`)
+        .flush(
+          { statusCode: 403, message: 'Forbidden resource' },
+          { status: 403, statusText: 'Forbidden' },
+        );
 
       expect(session.signatureRequired()).toBe(false);
     });

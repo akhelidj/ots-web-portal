@@ -52,7 +52,11 @@ describe('TemplateDefineComponent — signature field', () => {
     c.templateId = 't1';
     await c.load();
     const r = row(c, '{{custSig}}');
-    Object.assign(r, { header: true, serial: false, label: 'Customer approval' });
+    Object.assign(r, {
+      header: true,
+      serial: false,
+      label: 'Customer approval',
+    });
     return { c, r };
   }
 
@@ -60,7 +64,10 @@ describe('TemplateDefineComponent — signature field', () => {
     const c = make();
     expect(c.headerFieldTypes).toContain('signature');
     expect(c.fieldTypes).not.toContain('signature');
-    expect(c.signerOptions.map((o) => o.value)).toEqual(['CUSTOMER', 'SUPERVISOR']);
+    expect(c.signerOptions.map((o) => o.value)).toEqual([
+      'CUSTOMER',
+      'SUPERVISOR',
+    ]);
   });
 
   it('requires a signer before the header step is valid', async () => {
@@ -77,7 +84,11 @@ describe('TemplateDefineComponent — signature field', () => {
 
   it('emits the signer (and required) on the header field of the DTO', async () => {
     const { c, r } = await withSignatureRow();
-    Object.assign(r, { type: 'signature', signer: 'SUPERVISOR', required: true });
+    Object.assign(r, {
+      type: 'signature',
+      signer: 'SUPERVISOR',
+      required: true,
+    });
 
     const field = c.buildDto().fields.find((f) => f.token === '{{custSig}}');
     expect(field).toEqual({
@@ -109,7 +120,11 @@ describe('TemplateDefineComponent — signature field', () => {
 
   it('a system role wins over the signature type and clears the signer', async () => {
     const { c, r } = await withSignatureRow();
-    Object.assign(r, { type: 'signature', signer: 'CUSTOMER', role: 'inspectorSignature' });
+    Object.assign(r, {
+      type: 'signature',
+      signer: 'CUSTOMER',
+      role: 'inspectorSignature',
+    });
     c.onRoleChange(r);
     expect(r.type).toBe('text');
     expect(r.signer).toBe('');
@@ -119,7 +134,13 @@ describe('TemplateDefineComponent — signature field', () => {
     const c = make({
       displayName: 'Signed Report',
       fields: [
-        { key: 'sn', label: 'Serial Number', type: 'text', scope: 'item', role: 'serialNumber' },
+        {
+          key: 'sn',
+          label: 'Serial Number',
+          type: 'text',
+          scope: 'item',
+          role: 'serialNumber',
+        },
         {
           key: 'custSig',
           label: 'Customer approval',

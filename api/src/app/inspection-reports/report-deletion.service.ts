@@ -125,7 +125,9 @@ export class ReportDeletionService {
     // delete must not fail after the rows are removed. Signature images are kept: the same
     // objects back users' registered signatures.
     await Promise.all(
-      attachmentRefs.map((ref) => this.storage.delete(ref).catch(() => undefined)),
+      attachmentRefs.map((ref) =>
+        this.storage.delete(ref).catch(() => undefined),
+      ),
     );
 
     return { deleted: true, ...counts };

@@ -67,8 +67,9 @@ describe('InspectionReportDetailComponent — customer app frame', () => {
         { provide: UserPreferencesService, ...loose },
       ],
     });
-    const c = TestBed.createComponent(InspectionReportDetailComponent)
-      .componentInstance;
+    const c = TestBed.createComponent(
+      InspectionReportDetailComponent,
+    ).componentInstance;
     c.report.set({ id: 'ir-1', status: 'APPROVED' } as LocalInspectionReport);
     return c;
   }
@@ -119,7 +120,10 @@ describe('InspectionReportDetailComponent — customer app frame', () => {
     c.childReports.set([child('ch-1', ['A-1'])]);
     expect(c.activeChild()?.id).toBe('ch-1');
 
-    c.childReports.set([child('ch-1', ['A-1']), child('ch-2', ['B-10', 'B-2'])]);
+    c.childReports.set([
+      child('ch-1', ['A-1']),
+      child('ch-2', ['B-10', 'B-2']),
+    ]);
     expect(c.activeChild()).toBeNull(); // list first
 
     c.selectedChildId.set('ch-2');
@@ -134,18 +138,32 @@ describe('InspectionReportDetailComponent — customer app frame', () => {
 
   it('selects the first finding by default and lists the serials it links', () => {
     const c = create('CUSTOMER');
-    c.serials.set([sn('a', 'SN-1'), sn('b', 'SN-2'), sn('c', 'SN-3'), sn('d', 'SN-4')]);
+    c.serials.set([
+      sn('a', 'SN-1'),
+      sn('b', 'SN-2'),
+      sn('c', 'SN-3'),
+      sn('d', 'SN-4'),
+    ]);
     c.report.set({
       id: 'ir-1',
       status: 'APPROVED',
       statistics: [
-        { id: 's1', label: 'Accepted', value: '3', serials: ['SN-3', 'SN-1', 'SN-2'] },
+        {
+          id: 's1',
+          label: 'Accepted',
+          value: '3',
+          serials: ['SN-3', 'SN-1', 'SN-2'],
+        },
         { id: 's2', label: 'Rejected', value: '1', serials: ['SN-4'] },
       ],
     } as LocalInspectionReport);
 
     expect(c.activeFinding()?.id).toBe('s1');
-    expect(c.findingSerials().map((s) => s.value)).toEqual(['SN-1', 'SN-2', 'SN-3']);
+    expect(c.findingSerials().map((s) => s.value)).toEqual([
+      'SN-1',
+      'SN-2',
+      'SN-3',
+    ]);
     expect(c.findingCoverage(c.statistics()[0]!)).toBe(0.75);
 
     c.selectedFindingId.set('s2');
@@ -157,7 +175,9 @@ describe('InspectionReportDetailComponent — customer app frame', () => {
     expect(c.historyEventLabel('RECEIVED')).toBe('Pipe received');
     expect(c.historyEventLabel('PENDING_APPROVAL')).toBe('Under review');
     expect(c.historyEventLabel('SOMETHING_NEW')).toBe('SOMETHING NEW');
-    expect((c as unknown as Record<string, unknown>)['customerHistory']).toBeUndefined();
+    expect(
+      (c as unknown as Record<string, unknown>)['customerHistory'],
+    ).toBeUndefined();
   });
 
   it('walks the inspector through the serials in the order the customer sees them', () => {

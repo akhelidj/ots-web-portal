@@ -38,7 +38,9 @@ export interface HeaderSourceRow {
  * SINGLE SOURCE OF TRUTH: both `revision.service` (persisted snapshot) and
  * `export.service` (rev-0 live rebuild) call this, so the two can never drift.
  */
-export function assembleSnapshotHeader(row: HeaderSourceRow): Snapshot['header'] {
+export function assembleSnapshotHeader(
+  row: HeaderSourceRow,
+): Snapshot['header'] {
   const generic =
     row.headerData && typeof row.headerData === 'object'
       ? (row.headerData as Record<string, unknown>)

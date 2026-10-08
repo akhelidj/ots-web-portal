@@ -88,15 +88,13 @@ interface MemberSnapshot {
 }
 
 interface ReworkStateSnapshot {
-  child:
-    | null
-    | {
-        status: ChildReportStatus;
-        version: number;
-        reportNumber: string | null;
-        /** Sorted by serial for deterministic, order-independent comparison. */
-        members: MemberSnapshot[];
-      };
+  child: null | {
+    status: ChildReportStatus;
+    version: number;
+    reportNumber: string | null;
+    /** Sorted by serial for deterministic, order-independent comparison. */
+    members: MemberSnapshot[];
+  };
 }
 
 /**
@@ -260,7 +258,9 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
     // Two INDEPENDENT identical runs. Both are first-syncs ⇒ both child version 1, so
     // the deterministic version increment cannot introduce a spurious difference here.
     const runOnce = async () => {
-      const { tenantId, reportId } = await seedReworkScenario({ ...RICH } as never);
+      const { tenantId, reportId } = await seedReworkScenario({
+        ...RICH,
+      } as never);
       await imperativeReworkOracle(prisma, tenantId, reportId);
       return snapshotReworkState(prisma, tenantId, reportId);
     };
@@ -289,7 +289,9 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
   });
 
   it('CHECK 1b — same-report re-sync is NOT version-idempotent; diff isolates exactly the version bump', async () => {
-    const { tenantId, reportId } = await seedReworkScenario({ ...RICH } as never);
+    const { tenantId, reportId } = await seedReworkScenario({
+      ...RICH,
+    } as never);
 
     await imperativeReworkOracle(prisma, tenantId, reportId);
     const s1 = await snapshotReworkState(prisma, tenantId, reportId);
@@ -308,7 +310,9 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
 
   it('CHECK 2 — different behavior ⇒ NON-EMPTY diff (child present vs absent)', async () => {
     const present = await (async () => {
-      const { tenantId, reportId } = await seedReworkScenario({ ...RICH } as never);
+      const { tenantId, reportId } = await seedReworkScenario({
+        ...RICH,
+      } as never);
       await imperativeReworkOracle(prisma, tenantId, reportId);
       return snapshotReworkState(prisma, tenantId, reportId);
     })();
@@ -445,13 +449,21 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
     ): Promise<{ methodSnap: ReworkStateSnapshot }> {
       await resetInspectionDomain(prisma);
       const m = await build((t, r) => imperativeReworkOracle(prisma, t, r));
-      const methodSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
+      const methodSnap = await snapshotReworkState(
+        prisma,
+        m.tenantId,
+        m.reportId,
+      );
 
       await resetInspectionDomain(prisma);
       const i = await build((t, r) =>
         interpreter.syncFromRules(t, r, DRILL_PIPE_RULES),
       );
-      const interpSnap = await snapshotReworkState(prisma, i.tenantId, i.reportId);
+      const interpSnap = await snapshotReworkState(
+        prisma,
+        i.tenantId,
+        i.reportId,
+      );
 
       const diff = diffReworkSnapshots(methodSnap, interpSnap);
       // eslint-disable-next-line no-console
@@ -675,13 +687,21 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
     ): Promise<string[]> {
       await resetInspectionDomain(prisma);
       const m = await buildS4((t, r) => imperativeReworkOracle(prisma, t, r));
-      const methodSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
+      const methodSnap = await snapshotReworkState(
+        prisma,
+        m.tenantId,
+        m.reportId,
+      );
 
       await resetInspectionDomain(prisma);
       const i = await buildS4((t, r) =>
         interpreter.syncFromRules(t, r, corruptedRules),
       );
-      const interpSnap = await snapshotReworkState(prisma, i.tenantId, i.reportId);
+      const interpSnap = await snapshotReworkState(
+        prisma,
+        i.tenantId,
+        i.reportId,
+      );
 
       const diff = diffReworkSnapshots(methodSnap, interpSnap);
       // eslint-disable-next-line no-console
@@ -806,7 +826,11 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
       });
       await imperativeReworkOracle(prisma, m.tenantId, m.reportId); // v1
       await imperativeReworkOracle(prisma, m.tenantId, m.reportId); // v2 (bump)
-      const methodSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
+      const methodSnap = await snapshotReworkState(
+        prisma,
+        m.tenantId,
+        m.reportId,
+      );
 
       await resetInspectionDomain(prisma);
       const i = await seedReworkScenario({
@@ -823,7 +847,11 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
         },
         data: { version: { decrement: 1 } },
       });
-      const noBumpSnap = await snapshotReworkState(prisma, i.tenantId, i.reportId);
+      const noBumpSnap = await snapshotReworkState(
+        prisma,
+        i.tenantId,
+        i.reportId,
+      );
 
       const diff = diffReworkSnapshots(methodSnap, noBumpSnap);
       // eslint-disable-next-line no-console
@@ -933,7 +961,10 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
      */
     async function proveGateEquivalent(
       label: string,
-      build: (sync: Sync, afterSeed?: AfterSeed) => Promise<{
+      build: (
+        sync: Sync,
+        afterSeed?: AfterSeed,
+      ) => Promise<{
         tenantId: string;
         reportId: string;
       }>,
@@ -944,13 +975,21 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
         (t, r) => service.syncReworkChildReport(t, r),
         (t) => attachTemplate(t, wiredDefinition),
       );
-      const wiredSnap = await snapshotReworkState(prisma, m.tenantId, m.reportId);
+      const wiredSnap = await snapshotReworkState(
+        prisma,
+        m.tenantId,
+        m.reportId,
+      );
 
       await resetInspectionDomain(prisma);
       const i = await build((t, r) =>
         interpreter.syncFromRules(t, r, DRILL_PIPE_RULES),
       );
-      const oracleSnap = await snapshotReworkState(prisma, i.tenantId, i.reportId);
+      const oracleSnap = await snapshotReworkState(
+        prisma,
+        i.tenantId,
+        i.reportId,
+      );
 
       const diff = diffReworkSnapshots(wiredSnap, oracleSnap);
       // eslint-disable-next-line no-console

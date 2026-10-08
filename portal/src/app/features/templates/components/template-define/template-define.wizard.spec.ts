@@ -41,7 +41,10 @@ describe('TemplateDefineComponent — wizard step gating + derived scope', () =>
           provide: AdminTemplatesService,
           useValue: { getTokens, getDefinition, defineTemplate: jest.fn() },
         },
-        { provide: Router, useValue: { navigate: jest.fn(), url: '/admin/templates/t1/define' } },
+        {
+          provide: Router,
+          useValue: { navigate: jest.fn(), url: '/admin/templates/t1/define' },
+        },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => 't1' } } },
@@ -65,13 +68,18 @@ describe('TemplateDefineComponent — wizard step gating + derived scope', () =>
   const q = (f: ComponentFixture<TemplateDefineComponent>, sel: string) =>
     el(f).querySelector(sel);
   const nextBtn = (f: ComponentFixture<TemplateDefineComponent>) =>
-    el(f).querySelector('[data-testid="wizard-next"]') as HTMLButtonElement | null;
+    el(f).querySelector(
+      '[data-testid="wizard-next"]',
+    ) as HTMLButtonElement | null;
 
   async function clickNext(f: ComponentFixture<TemplateDefineComponent>) {
     nextBtn(f)?.click();
     await f.whenStable();
   }
-  async function click(f: ComponentFixture<TemplateDefineComponent>, sel: string) {
+  async function click(
+    f: ComponentFixture<TemplateDefineComponent>,
+    sel: string,
+  ) {
     (q(f, sel) as HTMLElement).click();
     await f.whenStable();
   }
@@ -105,17 +113,21 @@ describe('TemplateDefineComponent — wizard step gating + derived scope', () =>
     const f = await render();
 
     // Every token starts as a pre-checked serial candidate.
-    expect(f.componentInstance.serialCandidateRows().map((r) => r.token)).toEqual(
-      TOKENS.map((t) => t.token),
-    );
-    expect(f.componentInstance.serialCandidateRows().every((r) => r.serial)).toBe(true);
+    expect(
+      f.componentInstance.serialCandidateRows().map((r) => r.token),
+    ).toEqual(TOKENS.map((t) => t.token));
+    expect(
+      f.componentInstance.serialCandidateRows().every((r) => r.serial),
+    ).toBe(true);
 
     // Claim {{poNumber}} on the Metadata step.
     await clickNext(f); // → Header
     await click(f, '[data-testid="header-include-{{poNumber}}"]');
 
     // It is now a header field and no longer a serial candidate.
-    expect(f.componentInstance.headerRows().map((r) => r.token)).toEqual(['{{poNumber}}']);
+    expect(f.componentInstance.headerRows().map((r) => r.token)).toEqual([
+      '{{poNumber}}',
+    ]);
     expect(
       f.componentInstance.serialCandidateRows().map((r) => r.token),
     ).not.toContain('{{poNumber}}');
@@ -133,7 +145,11 @@ describe('TemplateDefineComponent — wizard step gating + derived scope', () =>
     // Label every included serial field (marker included — a roled row keeps its label).
     await typeInto(f, '[data-testid="serial-label-{{sn}}"]', 'Serial Number');
     await typeInto(f, '[data-testid="serial-label-{{poNumber}}"]', 'PO Number');
-    await typeInto(f, '[data-testid="serial-label-{{casingWeight}}"]', 'Casing Weight');
+    await typeInto(
+      f,
+      '[data-testid="serial-label-{{casingWeight}}"]',
+      'Casing Weight',
+    );
     expect(f.componentInstance.serialStepValid()).toBe(true);
     expect(nextBtn(f)!.disabled).toBe(false);
   });
@@ -145,11 +161,18 @@ describe('TemplateDefineComponent — wizard step gating + derived scope', () =>
     // Label everything so only the marker rule can be at fault.
     await typeInto(f, '[data-testid="serial-label-{{sn}}"]', 'Serial Number');
     await typeInto(f, '[data-testid="serial-label-{{poNumber}}"]', 'PO Number');
-    await typeInto(f, '[data-testid="serial-label-{{casingWeight}}"]', 'Casing Weight');
+    await typeInto(
+      f,
+      '[data-testid="serial-label-{{casingWeight}}"]',
+      'Casing Weight',
+    );
     expect(nextBtn(f)!.disabled).toBe(false);
 
     // Clear the marker via the role select → Serial step invalid again.
-    const roleSelect = q(f, '[data-testid="serial-role-{{sn}}"]') as HTMLSelectElement;
+    const roleSelect = q(
+      f,
+      '[data-testid="serial-role-{{sn}}"]',
+    ) as HTMLSelectElement;
     roleSelect.value = '';
     roleSelect.dispatchEvent(new Event('change'));
     await f.whenStable();
@@ -200,7 +223,11 @@ const HEADER_ROLE_BY_TOKEN: { token: string; label: string; role: string }[] = [
   { token: '{{inspectedBy}}', label: 'Inspector', role: 'inspector' },
   { token: '{{approvedBy}}', label: 'Supervisor', role: 'supervisor' },
   { token: '{{reportDate}}', label: 'Date', role: 'inspectionDate' },
-  { token: '{{inspectorSignature}}', label: 'Inspector Sig', role: 'inspectorSignature' },
+  {
+    token: '{{inspectorSignature}}',
+    label: 'Inspector Sig',
+    role: 'inspectorSignature',
+  },
 ];
 
 describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verify)', () => {
@@ -218,14 +245,21 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
           provide: AdminTemplatesService,
           useValue: { getTokens, getDefinition, defineTemplate },
         },
-        { provide: Router, useValue: { navigate, url: '/admin/templates/t1/define' } },
+        {
+          provide: Router,
+          useValue: { navigate, url: '/admin/templates/t1/define' },
+        },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => 't1' } } },
         },
       ],
     });
-    return { fixture: TestBed.createComponent(TemplateDefineComponent), defineTemplate, navigate };
+    return {
+      fixture: TestBed.createComponent(TemplateDefineComponent),
+      defineTemplate,
+      navigate,
+    };
   }
 
   const el = (f: ComponentFixture<TemplateDefineComponent>) =>
@@ -233,7 +267,9 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
   const q = (f: ComponentFixture<TemplateDefineComponent>, sel: string) =>
     el(f).querySelector(sel);
   const nextBtn = (f: ComponentFixture<TemplateDefineComponent>) =>
-    el(f).querySelector('[data-testid="wizard-next"]') as HTMLButtonElement | null;
+    el(f).querySelector(
+      '[data-testid="wizard-next"]',
+    ) as HTMLButtonElement | null;
   const saveBtn = (f: ComponentFixture<TemplateDefineComponent>) =>
     Array.from(el(f).querySelectorAll('button')).find((b) =>
       /Save Definition|Saving/.test(b.textContent ?? ''),
@@ -243,7 +279,10 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
     nextBtn(f)?.click();
     await f.whenStable();
   }
-  async function click(f: ComponentFixture<TemplateDefineComponent>, sel: string) {
+  async function click(
+    f: ComponentFixture<TemplateDefineComponent>,
+    sel: string,
+  ) {
     (q(f, sel) as HTMLElement).click();
     await f.whenStable();
   }
@@ -309,7 +348,6 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
     saveBtn(f)!.click();
     await f.whenStable();
 
-
     expect(defineTemplate).toHaveBeenCalledTimes(1);
     const [, dto] = defineTemplate.mock.calls[0];
     // Every header role rode through to the DTO, plus the serial marker.
@@ -342,7 +380,9 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
     // Metadata step is NOT blocked (label-only) — the hole shows as an informational status.
     expect(f.componentInstance.headerStepValid()).toBe(true);
     expect(f.componentInstance.missingHeaderRoles()).toEqual(['poNumber']);
-    expect(q(f, '[data-testid="missing-roles"]')?.textContent).toContain('PO number');
+    expect(q(f, '[data-testid="missing-roles"]')?.textContent).toContain(
+      'PO number',
+    );
 
     await clickNext(f); // → Serial
     await typeInto(f, '[data-testid="serial-label-{{sn}}"]', 'Serial Number');
@@ -363,20 +403,44 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
       displayName: 'Legacy Casing Report',
       regions: [{ id: 'serials', chunkSize: null }],
       fields: [
-        { key: 'sn', label: 'Serial', type: 'text', required: true, scope: 'item' },
-        { key: 'wall', label: 'Wall', type: 'number', required: false, scope: 'item' },
+        {
+          key: 'sn',
+          label: 'Serial',
+          type: 'text',
+          required: true,
+          scope: 'item',
+        },
+        {
+          key: 'wall',
+          label: 'Wall',
+          type: 'number',
+          required: false,
+          scope: 'item',
+        },
       ],
-      export: { global: [], regions: { serials: [{ token: '{{sn}}', source: 'rowSerial' }] } },
+      export: {
+        global: [],
+        regions: { serials: [{ token: '{{sn}}', source: 'rowSerial' }] },
+      },
     };
-    const getDefinition = jest.fn().mockResolvedValue({ definitionJson: legacyDef });
+    const getDefinition = jest
+      .fn()
+      .mockResolvedValue({ definitionJson: legacyDef });
     TestBed.configureTestingModule({
       imports: [TemplateDefineComponent],
       providers: [
         {
           provide: AdminTemplatesService,
-          useValue: { getTokens: jest.fn(), getDefinition, defineTemplate: jest.fn() },
+          useValue: {
+            getTokens: jest.fn(),
+            getDefinition,
+            defineTemplate: jest.fn(),
+          },
         },
-        { provide: Router, useValue: { navigate: jest.fn(), url: '/admin/templates/t1/define' } },
+        {
+          provide: Router,
+          useValue: { navigate: jest.fn(), url: '/admin/templates/t1/define' },
+        },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => 't1' } } },
@@ -391,7 +455,9 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
 
     // Opens read-only — the recap, not the authoring wizard, and no save/next controls.
     expect(f.componentInstance.readOnly()).toBe(true);
-    expect(el(f).querySelector('[data-testid="readonly-recap"]')).not.toBeNull();
+    expect(
+      el(f).querySelector('[data-testid="readonly-recap"]'),
+    ).not.toBeNull();
     expect(el(f).textContent).toContain('Legacy Casing Report');
     expect(el(f).querySelector('[data-testid="wizard-next"]')).toBeNull();
     expect(saveBtn(f)).toBeUndefined();

@@ -4,13 +4,13 @@ Endpoints for the workflow engine that governs report statuses. The authoritativ
 
 ## Role matrix (inspection reports)
 
-| Role           | Allowed transitions                                                                                                                                                                                                                                                                                  |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **ADMIN**      | Any forward step; `ON_HOLD` and `CLOSED` from any active status; return `PENDING_APPROVAL → IN_INSPECTION`; reopen `APPROVED → IN_INSPECTION`; from `CLOSED` back to `APPROVED` or `IN_INSPECTION`.                                                                                                  |
-| **SUPERVISOR** | Same matrix as ADMIN (intake, force-close, reopen included). |
-| **RECEIVER**   | `DRAFT → RECEIVED → READY_FOR_CLEANING → READY_FOR_INSPECTION`.                                                                                                                                                                                                                                      |
-| **INSPECTOR**  | `READY_FOR_INSPECTION → IN_INSPECTION`; `IN_INSPECTION → PENDING_APPROVAL / ON_HOLD`.                                                                                                                                                                                                                |
-| **CUSTOMER**   | none (`403`).                                                                                                                                                                                                                                                                                        |
+| Role           | Allowed transitions                                                                                                                                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ADMIN**      | Any forward step; `ON_HOLD` and `CLOSED` from any active status; return `PENDING_APPROVAL → IN_INSPECTION`; reopen `APPROVED → IN_INSPECTION`; from `CLOSED` back to `APPROVED` or `IN_INSPECTION`. |
+| **SUPERVISOR** | Same matrix as ADMIN (intake, force-close, reopen included).                                                                                                                                        |
+| **RECEIVER**   | `DRAFT → RECEIVED → READY_FOR_CLEANING → READY_FOR_INSPECTION`.                                                                                                                                     |
+| **INSPECTOR**  | `READY_FOR_INSPECTION → IN_INSPECTION`; `IN_INSPECTION → PENDING_APPROVAL / ON_HOLD`.                                                                                                               |
+| **CUSTOMER**   | none (`403`).                                                                                                                                                                                       |
 
 `ON_HOLD` stores the status it came from (`previousActiveStatus` on the transition log). Only SUPERVISOR or ADMIN may **release** a hold, and only back to that previous status (or `CLOSED`). A reason is required for `→ ON_HOLD`, `APPROVED → IN_INSPECTION` (reopen), and any transition out of `CLOSED`.
 

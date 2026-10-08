@@ -13,9 +13,7 @@ import {
  *  TemplateApprovalStatus (no shared DTO package — see ADR-0008). A SUPERVISOR upload is
  *  born PENDING_APPROVAL and only an APPROVED version can back a report. */
 export type TemplateApprovalStatus =
-  | 'PENDING_APPROVAL'
-  | 'APPROVED'
-  | 'REJECTED';
+  'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
 
 export interface AdminTemplateItem {
   id: string;
@@ -62,12 +60,7 @@ export interface ExtractedToken {
  *  `signature` marks where a signer's picture is placed at export — a header field that is
  *  never a form input (it names its signer instead). */
 export type OpsFieldType =
-  | 'text'
-  | 'number'
-  | 'boolean'
-  | 'select'
-  | 'date'
-  | 'signature';
+  'text' | 'number' | 'boolean' | 'select' | 'date' | 'signature';
 
 /** Who provides a `signature` field's picture (mirrors the API's SignatureSigner). A CUSTOMER
  *  draws it per report once approved; a SUPERVISOR's account signature is applied at approval. */

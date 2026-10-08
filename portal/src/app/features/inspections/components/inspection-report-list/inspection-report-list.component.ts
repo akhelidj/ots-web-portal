@@ -39,15 +39,18 @@ import {
   APP_ROLES,
   REPORT_STATUSES,
 } from '@portal/core/constants/app.constants';
-import {
-  BadgeSeverity,
-} from '@portal/shared/components/status-badge/status-badge.component';
+import { BadgeSeverity } from '@portal/shared/components/status-badge/status-badge.component';
 
 @Component({
   selector: 'app-inspection-report-list',
   standalone: true,
   imports: [
-    ReportLifecycleRailComponent, RevealDirective, CommonModule, RouterModule, FormsModule],
+    ReportLifecycleRailComponent,
+    RevealDirective,
+    CommonModule,
+    RouterModule,
+    FormsModule,
+  ],
   templateUrl: './inspection-report-list.component.html',
 })
 export class InspectionReportListComponent implements OnInit, OnDestroy {
@@ -349,7 +352,10 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
     return this.deleteFlow.blockedReason(report);
   }
 
-  async deleteReport(report: LocalInspectionReport, event: Event): Promise<void> {
+  async deleteReport(
+    report: LocalInspectionReport,
+    event: Event,
+  ): Promise<void> {
     // The row itself is a link to the report; the button must not open it.
     event.stopPropagation();
     event.preventDefault();
@@ -408,13 +414,9 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
 
     return filtered.sort((a, b) => {
       const valA = a[this.sortBy as keyof LocalInspectionReport] as
-        | string
-        | number
-        | undefined;
+        string | number | undefined;
       const valB = b[this.sortBy as keyof LocalInspectionReport] as
-        | string
-        | number
-        | undefined;
+        string | number | undefined;
 
       if (this.sortBy === 'updatedAt') {
         const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;

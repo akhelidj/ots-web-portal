@@ -32,7 +32,13 @@ function flatHeaderDto(): DefineTemplateDto {
   return {
     displayName: 'Flat Round-trip',
     fields: [
-      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header' },
+      {
+        token: '{{poNumber}}',
+        label: 'PO Number',
+        type: 'text',
+        required: false,
+        scope: 'header',
+      },
     ],
   };
 }
@@ -77,7 +83,10 @@ describe('Flat header-field round-trip (step 3b)', () => {
   });
 
   it('DECISIVE round-trip: a value typed into a flat header field lands in the export', async () => {
-    const def = buildDefinition(META, flatHeaderDto()) as unknown as ExportDefinition;
+    const def = buildDefinition(
+      META,
+      flatHeaderDto(),
+    ) as unknown as ExportDefinition;
     // Inspector typed 'TYPED-BY-INSPECTOR' → the form saved it into the record's
     // inspectionData. snapshot.header.poNumber stays the stale 'PO-FROZEN'.
     const snap = record({ poNumber: 'TYPED-BY-INSPECTOR' } as InspectionData);
@@ -88,11 +97,15 @@ describe('Flat header-field round-trip (step 3b)', () => {
   });
 
   it('the value comes from the RECORD, not snapshot.header (discriminator)', async () => {
-    const def = buildDefinition(META, flatHeaderDto()) as unknown as ExportDefinition;
+    const def = buildDefinition(
+      META,
+      flatHeaderDto(),
+    ) as unknown as ExportDefinition;
     // Same key, DIFFERENT values in the two stores. If the engine wrongly read the
     // header, B2 would show FROM-HEADER; the record store must win for a flat field.
     const snap = record({ poNumber: 'FROM-RECORD' } as InspectionData);
-    (snap.header as unknown as Record<string, unknown>).poNumber = 'FROM-HEADER';
+    (snap.header as unknown as Record<string, unknown>).poNumber =
+      'FROM-HEADER';
     const cells = await exportCells(def, snap);
     expect(cells['B2']).toBe('FROM-RECORD');
     expect(cells['B2']).not.toBe('FROM-HEADER');

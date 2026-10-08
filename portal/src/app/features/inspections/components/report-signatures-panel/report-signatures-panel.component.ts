@@ -1,4 +1,12 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { SignatureDialogComponent } from '@portal/shared/components/signature-dialog/signature-dialog.component';
 import {

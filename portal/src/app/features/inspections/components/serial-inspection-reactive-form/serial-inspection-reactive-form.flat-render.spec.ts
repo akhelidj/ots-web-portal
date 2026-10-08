@@ -33,7 +33,13 @@ const FLAT_DEFINITION: TemplateFormDefinition = {
   sections: [{ key: 'Body', title: 'Body' }],
   regions: [],
   fields: [
-    { key: 'poNumber', label: 'PO Number', type: 'text', required: false, scope: 'header' },
+    {
+      key: 'poNumber',
+      label: 'PO Number',
+      type: 'text',
+      required: false,
+      scope: 'header',
+    },
     {
       key: 'casingWeight',
       label: 'Casing Weight',
@@ -55,7 +61,9 @@ describe('SerialInspectionReactiveForm — flat (region-less) render', () => {
   function render(
     definition: TemplateFormDefinition | null,
   ): ComponentFixture<SerialInspectionReactiveFormComponent> {
-    const fixture = TestBed.createComponent(SerialInspectionReactiveFormComponent);
+    const fixture = TestBed.createComponent(
+      SerialInspectionReactiveFormComponent,
+    );
     fixture.componentInstance.definition = definition;
     fixture.detectChanges();
     return fixture;
@@ -119,7 +127,9 @@ describe('SerialInspectionReactiveForm — flat (region-less) render', () => {
         const el = fixture.nativeElement as HTMLElement;
 
         expect(c.schemaUnavailable).toBe(true);
-        expect(el.querySelector('[data-testid="form-unavailable"]')).not.toBeNull();
+        expect(
+          el.querySelector('[data-testid="form-unavailable"]'),
+        ).not.toBeNull();
         expect(el.querySelectorAll('input, select').length).toBe(0);
       }
     });

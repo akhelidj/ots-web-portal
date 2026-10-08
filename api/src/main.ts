@@ -37,9 +37,7 @@ class QuietLogger extends ConsoleLogger {
 /** `LOG_LEVELS=error,warn` (comma-separated) overrides the default of everything. */
 function logLevels(): LogLevel[] | undefined {
   const raw = process.env.LOG_LEVELS;
-  return raw
-    ? (raw.split(',').map((l) => l.trim()) as LogLevel[])
-    : undefined;
+  return raw ? (raw.split(',').map((l) => l.trim()) as LogLevel[]) : undefined;
 }
 
 @Catch()

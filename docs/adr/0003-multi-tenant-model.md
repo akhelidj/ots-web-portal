@@ -16,7 +16,7 @@ authenticated JWT and scopes queries; the client partitions IndexedDB per tenant
 (`ots_{tenantId}`). Anchors: `api/src/app/prisma/prisma.service.ts:5`; per-tenant
 partitioning from the tenant-isolation work.
 
-*Why not the alternatives:* DB-per-tenant multiplies operational and migration overhead;
+_Why not the alternatives:_ DB-per-tenant multiplies operational and migration overhead;
 schema-per-tenant fights Prisma; shared-schema-with-gateway keeps enforcement in one
 auditable place.
 

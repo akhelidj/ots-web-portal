@@ -1,4 +1,7 @@
-import { ExportSplitButtonComponent, ExportFormat } from '@portal/shared/components/export-split-button/export-split-button.component';
+import {
+  ExportSplitButtonComponent,
+  ExportFormat,
+} from '@portal/shared/components/export-split-button/export-split-button.component';
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';

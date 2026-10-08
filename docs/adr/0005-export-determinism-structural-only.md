@@ -19,7 +19,7 @@ collections. Anchors: `export.service.ts:23,:293`;
 `mappings/drill-pipe-report.v1.mapping.ts`; contract pinned by `export.integration.spec.ts`
 (asserts structure, excludes timestamps).
 
-*Why not the alternatives:* true byte reproducibility would require zeroing ExcelJS/ZIP
+_Why not the alternatives:_ true byte reproducibility would require zeroing ExcelJS/ZIP
 timestamps — brittle and fighting the libraries; dropping the guarantee entirely breaks
 audit diffing.
 

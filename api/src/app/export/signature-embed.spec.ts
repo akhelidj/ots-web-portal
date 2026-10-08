@@ -57,16 +57,24 @@ describe('embedSignatures', () => {
     expect(images[0]?.range.tl.nativeRow).toBe(6); // row 7 (0-based)
 
     const zip = await JSZip.loadAsync(
-      (await out.xlsx.writeBuffer()) as unknown as Parameters<typeof JSZip.loadAsync>[0],
+      (await out.xlsx.writeBuffer()) as unknown as Parameters<
+        typeof JSZip.loadAsync
+      >[0],
     );
-    expect(Object.keys(zip.files).some((n) => n.startsWith('xl/media/'))).toBe(true);
+    expect(Object.keys(zip.files).some((n) => n.startsWith('xl/media/'))).toBe(
+      true,
+    );
   });
 
   it('keeps the picture inside the cell room and preserves the 3:1 aspect', () => {
     const wb = workbookWithMarker();
     embedSignatures(wb, { inspectorSignature: { bytes: makePng() } });
 
-    const ext = (wb.getWorksheet('Report')!.getImages()[0]!.range as unknown as { ext: unknown }).ext as {
+    const ext = (
+      wb.getWorksheet('Report')!.getImages()[0]!.range as unknown as {
+        ext: unknown;
+      }
+    ).ext as {
       width: number;
       height: number;
     };

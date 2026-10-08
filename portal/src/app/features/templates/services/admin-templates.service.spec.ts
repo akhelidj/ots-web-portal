@@ -4,14 +4,18 @@
  * off. Locking it here guarantees the label and the recap can never drift: a template the list
  * calls "View" is exactly one the Define page opens read-only.
  */
-import {
-  isTemplateDefined,
-  StoredDefinition,
-} from './admin-templates.service';
+import { isTemplateDefined, StoredDefinition } from './admin-templates.service';
 
 const defined: StoredDefinition = {
   fields: [
-    { key: 'sn', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
+    {
+      key: 'sn',
+      label: 'Serial Number',
+      type: 'text',
+      required: false,
+      scope: 'item',
+      role: 'serialNumber',
+    },
   ],
 };
 

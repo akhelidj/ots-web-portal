@@ -30,7 +30,8 @@ function readCellText(cell: ExcelJS.Cell): string | null {
         .map((rt) => rt.text)
         .join('');
     }
-    if ('result' in anyV) return anyV.result == null ? null : String(anyV.result);
+    if ('result' in anyV)
+      return anyV.result == null ? null : String(anyV.result);
     if ('text' in anyV) return String(anyV.text);
     return null;
   }
@@ -54,7 +55,7 @@ export async function canon(buffer: Buffer): Promise<SheetCanon[]> {
       });
     });
     const merges = (
-      ((ws as unknown as { model?: { merges?: string[] } }).model?.merges) ?? []
+      (ws as unknown as { model?: { merges?: string[] } }).model?.merges ?? []
     )
       .slice()
       .sort();
@@ -105,7 +106,12 @@ export function frozenSnapshot(
 ): Snapshot {
   return {
     header,
-    template: { key: 'DRILL_PIPE_REPORT', version: 1, hash: 'h', versionId: null },
+    template: {
+      key: 'DRILL_PIPE_REPORT',
+      version: 1,
+      hash: 'h',
+      versionId: null,
+    },
     serialNumbers: [],
     childReports: [],
     transitionLogs: [],

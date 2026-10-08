@@ -157,7 +157,9 @@ export class ReportValidationService {
    * enforcement — never the drill-pipe schema. The caller skips the MISSING_FIELDS walk
    * when this is null, mirroring the form's empty-state for a definition-less report.
    */
-  private resolveRequiredSchema(report: LocalInspectionReport): FormSchema | null {
+  private resolveRequiredSchema(
+    report: LocalInspectionReport,
+  ): FormSchema | null {
     const definition = report.definitionJson;
     if (definition == null) {
       return null;

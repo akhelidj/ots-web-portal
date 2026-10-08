@@ -49,7 +49,8 @@ describe('applyPdfPageSetup', () => {
   it('gives wrapped-text rows a height, and leaves explicit heights alone', () => {
     const ws = sheet();
     ws.getColumn(1).width = 12;
-    ws.getCell('A1').value = 'a long sentence that has to wrap over several lines';
+    ws.getCell('A1').value =
+      'a long sentence that has to wrap over several lines';
     ws.getCell('A1').alignment = { wrapText: true };
     ws.getCell('A2').value = 'also long text that would wrap around';
     ws.getCell('A2').alignment = { wrapText: true };
@@ -69,7 +70,9 @@ describe('applyPdfPageSetup', () => {
   it('drops manual page breaks', () => {
     const ws = sheet();
     ws.getCell('A1').value = 'x';
-    (ws as unknown as { rowBreaks: unknown[] }).rowBreaks = [{ id: 20, max: 16383, man: 1 }];
+    (ws as unknown as { rowBreaks: unknown[] }).rowBreaks = [
+      { id: 20, max: 16383, man: 1 },
+    ];
     applyPdfPageSetup(ws);
     expect((ws as unknown as { rowBreaks: unknown[] }).rowBreaks).toEqual([]);
   });
@@ -85,7 +88,9 @@ describe('prepareWorkbookForPdf', () => {
     );
 
     const back = new ExcelJS.Workbook();
-    await back.xlsx.load(out as unknown as Parameters<typeof back.xlsx.load>[0]);
+    await back.xlsx.load(
+      out as unknown as Parameters<typeof back.xlsx.load>[0],
+    );
     expect(back.getWorksheet('Report')?.pageSetup.fitToPage).toBe(true);
     expect(back.getWorksheet('Report')?.pageSetup.fitToHeight).toBe(0);
     expect(back.getWorksheet('Empty')?.pageSetup.fitToPage).toBeFalsy();

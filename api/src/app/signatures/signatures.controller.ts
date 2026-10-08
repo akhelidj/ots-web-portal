@@ -42,7 +42,9 @@ export class SignaturesController {
   @Header('Content-Type', 'image/png')
   @Header('Cache-Control', 'private, no-store')
   async getImage(@Req() req: AuthenticatedRequest) {
-    return new StreamableFile(await this.signatures.getImageForUser(req.user.id));
+    return new StreamableFile(
+      await this.signatures.getImageForUser(req.user.id),
+    );
   }
 
   @Put()

@@ -42,7 +42,10 @@ describe('ReportDeletionService', () => {
       $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
     };
     const storage = { delete: jest.fn().mockResolvedValue(undefined) };
-    const service = new ReportDeletionService(prisma as never, storage as never);
+    const service = new ReportDeletionService(
+      prisma as never,
+      storage as never,
+    );
     return { service, prisma, tx, storage };
   }
 
@@ -52,7 +55,12 @@ describe('ReportDeletionService', () => {
     const { service, tx, storage } = setup();
     await expect(
       service.deleteReport('t1', 'u1', 'r1', 5, '  duplicate entry '),
-    ).resolves.toEqual({ deleted: true, serials: 3, children: 1, attachments: 2 });
+    ).resolves.toEqual({
+      deleted: true,
+      serials: 3,
+      children: 1,
+      attachments: 2,
+    });
 
     expect(tx.inspectionReport.updateMany).toHaveBeenCalledWith({
       where: { id: 'r1', tenantId: 't1', version: 5 },
@@ -60,7 +68,11 @@ describe('ReportDeletionService', () => {
     });
     expect(deleteReportGraph).toHaveBeenCalledWith(tx, ['r1']);
     const audit = tx.auditLog.create.mock.calls[0][0].data;
-    expect(audit).toMatchObject({ action: 'DELETE_REPORT', entityId: 'r1', userId: 'u1' });
+    expect(audit).toMatchObject({
+      action: 'DELETE_REPORT',
+      entityId: 'r1',
+      userId: 'u1',
+    });
     expect(audit.reason).toContain('Reason: duplicate entry');
     expect(storage.delete).toHaveBeenCalledWith({
       tenantId: 't1',
@@ -73,34 +85,34 @@ describe('ReportDeletionService', () => {
 
   it('requires a reason', async () => {
     const { service, prisma } = setup();
-    await expect(service.deleteReport('t1', 'u1', 'r1', 5, '   ')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.deleteReport('t1', 'u1', 'r1', 5, '   '),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('refuses a stale version before touching anything', async () => {
     const { service, prisma } = setup();
-    await expect(service.deleteReport('t1', 'u1', 'r1', 4, 'x')).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.deleteReport('t1', 'u1', 'r1', 4, 'x'),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('a concurrent write between read and delete conflicts and deletes nothing', async () => {
     const { service, storage } = setup({ count: 0 });
-    await expect(service.deleteReport('t1', 'u1', 'r1', 5, 'x')).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.deleteReport('t1', 'u1', 'r1', 5, 'x'),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(deleteReportGraph).not.toHaveBeenCalled();
     expect(storage.delete).not.toHaveBeenCalled();
   });
 
   it('never reaches a report in another tenant', async () => {
     const { service } = setup();
-    await expect(service.deleteReport('t2', 'u1', 'r1', 5, 'x')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.deleteReport('t2', 'u1', 'r1', 5, 'x'),
+    ).rejects.toBeInstanceOf(NotFoundException);
     await expect(service.getDeleteImpact('t2', 'r1')).rejects.toBeInstanceOf(
       NotFoundException,
     );

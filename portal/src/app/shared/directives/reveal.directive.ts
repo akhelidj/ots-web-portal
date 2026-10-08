@@ -1,4 +1,10 @@
-import { Directive, ElementRef, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  Directive,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  inject,
+} from '@angular/core';
 
 /**
  * Scroll reveal for the customer experience: the element (and any `.cx-stagger` children) fade
@@ -7,11 +13,14 @@ import { Directive, ElementRef, OnDestroy, OnInit, inject } from '@angular/core'
  */
 @Directive({ selector: '[appReveal]', standalone: true })
 export class RevealDirective implements OnInit, OnDestroy {
-  private readonly el = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly el =
+    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private observer: IntersectionObserver | null = null;
 
   public ngOnInit(): void {
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const reduce = window.matchMedia?.(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
     if (reduce || typeof IntersectionObserver === 'undefined') return;
     this.el.classList.add('cx-reveal');
     this.observer = new IntersectionObserver(

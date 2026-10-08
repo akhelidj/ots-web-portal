@@ -26,7 +26,13 @@ const STORED: StoredDefinition = {
   displayName: 'Casing Report',
   regions: [{ id: 'serials', label: 'Serials', chunkSize: null }],
   fields: [
-    { key: 'poNumber', label: 'PO Number', type: 'text', required: false, scope: 'header' },
+    {
+      key: 'poNumber',
+      label: 'PO Number',
+      type: 'text',
+      required: false,
+      scope: 'header',
+    },
     {
       key: 'sn',
       label: 'Serial Number',

@@ -141,12 +141,19 @@ export class CustomerBrandingPanelComponent implements OnInit, OnDestroy {
   public readonly effectiveColor = computed(() =>
     this.useColor() && isBrandColor(this.color()) ? this.color() : null,
   );
-  public readonly lightPreview = computed(() => brandPalette(this.effectiveColor(), 'light'));
-  public readonly darkPreview = computed(() => brandPalette(this.effectiveColor(), 'dark'));
+  public readonly lightPreview = computed(() =>
+    brandPalette(this.effectiveColor(), 'light'),
+  );
+  public readonly darkPreview = computed(() =>
+    brandPalette(this.effectiveColor(), 'dark'),
+  );
 
   public readonly colorDirty = computed(() => {
     const saved = this.current()?.brandColor ?? null;
-    return (saved?.toLowerCase() ?? null) !== (this.effectiveColor()?.toLowerCase() ?? null);
+    return (
+      (saved?.toLowerCase() ?? null) !==
+      (this.effectiveColor()?.toLowerCase() ?? null)
+    );
   });
 
   ngOnInit(): void {
@@ -176,8 +183,12 @@ export class CustomerBrandingPanelComponent implements OnInit, OnDestroy {
       return;
     }
     await this.run(async () => {
-      this.current.set(await this.service.setBrandColor(c, this.effectiveColor()));
-      this.notice.set(this.effectiveColor() ? 'Brand colour saved.' : 'Brand colour removed.');
+      this.current.set(
+        await this.service.setBrandColor(c, this.effectiveColor()),
+      );
+      this.notice.set(
+        this.effectiveColor() ? 'Brand colour saved.' : 'Brand colour removed.',
+      );
     });
   }
 
@@ -236,11 +247,13 @@ export class CustomerBrandingPanelComponent implements OnInit, OnDestroy {
 
   private describe(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
-      if (error.status === 0) return 'Branding needs a connection to the server.';
+      if (error.status === 0)
+        return 'Branding needs a connection to the server.';
       if (error.status === 409) {
         return 'This customer was changed elsewhere. Close this panel and reopen it to get the latest version.';
       }
-      const message = (error.error as { message?: string | string[] } | null)?.message;
+      const message = (error.error as { message?: string | string[] } | null)
+        ?.message;
       if (message) return Array.isArray(message) ? message.join(' ') : message;
     }
     return 'Branding could not be saved.';

@@ -68,14 +68,21 @@ export class AdminMetricsComponent implements OnInit {
   protected readonly stageLabel = stageLabel;
 
   public readonly customers = computed(() =>
-    [...new Set(this.reports().map((r) => r.customerName).filter((n): n is string => !!n))].sort(),
+    [
+      ...new Set(
+        this.reports()
+          .map((r) => r.customerName)
+          .filter((n): n is string => !!n),
+      ),
+    ].sort(),
   );
 
   public readonly filtered = computed<MetricsRow[]>(() => {
     const customer = this.customerFilter();
     const q = this.search().trim().toLowerCase();
     const period = this.period();
-    const since = period === 'all' ? null : Date.now() - Number(period) * 86_400_000;
+    const since =
+      period === 'all' ? null : Date.now() - Number(period) * 86_400_000;
     const rows = this.reports().filter(
       (r) =>
         (!customer || r.customerName === customer) &&
@@ -87,7 +94,8 @@ export class AdminMetricsComponent implements OnInit {
     const by = this.sort();
     return [...rows].sort((a, b) => {
       if (by === 'turnaround') return (b.duration ?? -1) - (a.duration ?? -1);
-      if (by === 'slowest') return (b.slowest?.duration ?? -1) - (a.slowest?.duration ?? -1);
+      if (by === 'slowest')
+        return (b.slowest?.duration ?? -1) - (a.slowest?.duration ?? -1);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   });
@@ -104,7 +112,9 @@ export class AdminMetricsComponent implements OnInit {
     return {
       total: rows.length,
       completed: turnarounds.length,
-      inProgress: rows.filter((r) => r.timeline.turnaround === null && r.timeline.receivedAt).length,
+      inProgress: rows.filter(
+        (r) => r.timeline.turnaround === null && r.timeline.receivedAt,
+      ).length,
       onHold: rows.filter((r) => r.status === 'ON_HOLD').length,
       medianTurnaround: median(turnarounds),
       avgTurnaround: avg,
@@ -148,11 +158,15 @@ export class AdminMetricsComponent implements OnInit {
     this.error.set('');
     try {
       const data = await firstValueFrom(
-        this.http.get<ReportTimelineDto[]>(`${environment.apiUrl}/metrics/reports`),
+        this.http.get<ReportTimelineDto[]>(
+          `${environment.apiUrl}/metrics/reports`,
+        ),
       );
       this.reports.set(data.map((d) => toRow(d)));
     } catch {
-      this.error.set('Metrics could not be loaded. They need a connection to the server.');
+      this.error.set(
+        'Metrics could not be loaded. They need a connection to the server.',
+      );
     } finally {
       this.loading.set(false);
     }
@@ -170,8 +184,14 @@ export function toRow(d: ReportTimelineDto): MetricsRow {
     at: e.at,
   }));
   const timeline = buildTimeline(events);
-  const slowest = timeline.stages.reduce<{ status: string; duration: number } | null>(
-    (best, s) => (!best || s.duration > best.duration ? { status: s.status, duration: s.duration } : best),
+  const slowest = timeline.stages.reduce<{
+    status: string;
+    duration: number;
+  } | null>(
+    (best, s) =>
+      !best || s.duration > best.duration
+        ? { status: s.status, duration: s.duration }
+        : best,
     null,
   );
   return {

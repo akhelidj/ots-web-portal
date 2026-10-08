@@ -5,12 +5,17 @@
     data-testid="signature-pending"
   >
     <div class="flex items-baseline justify-between gap-4">
-      <h2 id="signature-pending-title" class="font-heading text-xl tracking-tight text-foreground">
+      <h2
+        id="signature-pending-title"
+        class="font-heading text-xl tracking-tight text-foreground"
+      >
         Signature pending
       </h2>
-      <span class="font-mono text-xs text-accent-hover" data-testid="signature-pending-count">{{
-        pending().length
-      }}</span>
+      <span
+        class="font-mono text-xs text-accent-hover"
+        data-testid="signature-pending-count"
+        >{{ pending().length }}</span
+      >
     </div>
     <p class="mt-1 text-sm text-muted-foreground">
       These approved reports are waiting for your signature.
@@ -18,7 +23,10 @@
 
     <ul class="mt-4 divide-y divide-border">
       @for (report of pending(); track report.reportId) {
-        <li class="py-3" [attr.data-testid]="'signature-pending-' + report.reportId">
+        <li
+          class="py-3"
+          [attr.data-testid]="'signature-pending-' + report.reportId"
+        >
           <div class="flex flex-wrap items-center justify-between gap-2">
             <a
               [routerLink]="[report.reportId]"
@@ -26,7 +34,9 @@
               >{{ report.reportNumber || report.reportId.substring(0, 8) }}</a
             >
             @if (report.poNumber) {
-              <span class="font-mono text-xs text-accent-hover">PO {{ report.poNumber }}</span>
+              <span class="font-mono text-xs text-accent-hover"
+                >PO {{ report.poNumber }}</span
+              >
             }
           </div>
           <div class="mt-2 flex flex-wrap gap-2">

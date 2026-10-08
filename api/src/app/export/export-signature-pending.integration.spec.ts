@@ -38,7 +38,9 @@ function makePng(): Buffer {
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     ihdr,
-    Buffer.from([0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]),
+    Buffer.from([
+      0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+    ]),
   ]);
 }
 
@@ -49,8 +51,11 @@ function makePng(): Buffer {
 function memoryStorage(): AttachmentStorage {
   const objects = new Map<string, Buffer>();
   return Object.assign(Object.create(new LocalAttachmentStorage()), {
-    buildSignatureKey: (ref: { tenantId: string; userId: string; objectId: string }) =>
-      `${ref.tenantId}/signatures/${ref.userId}/${ref.objectId}`,
+    buildSignatureKey: (ref: {
+      tenantId: string;
+      userId: string;
+      objectId: string;
+    }) => `${ref.tenantId}/signatures/${ref.userId}/${ref.objectId}`,
     putSignature: (key: string, buf: Buffer) => {
       objects.set(key, buf);
       return Promise.resolve();
@@ -110,14 +115,43 @@ describe('export gate for signature fields [integration]', () => {
       poNumber: 'PO-SIGX',
       templateKey: 'DRILL_PIPE_REPORT',
     });
-    const admin = { id: 'user-admin', tenantId: tenant.id, role: UserRole.ADMIN };
+    const admin = {
+      id: 'user-admin',
+      tenantId: tenant.id,
+      role: UserRole.ADMIN,
+    };
 
-    let r = await workflow.transition(admin, created.id, S.RECEIVED, created.version);
-    r = await workflow.transition(admin, created.id, S.READY_FOR_CLEANING, r.version);
-    r = await workflow.transition(admin, created.id, S.READY_FOR_INSPECTION, r.version);
-    r = await workflow.transition(admin, created.id, S.IN_INSPECTION, r.version);
+    let r = await workflow.transition(
+      admin,
+      created.id,
+      S.RECEIVED,
+      created.version,
+    );
+    r = await workflow.transition(
+      admin,
+      created.id,
+      S.READY_FOR_CLEANING,
+      r.version,
+    );
+    r = await workflow.transition(
+      admin,
+      created.id,
+      S.READY_FOR_INSPECTION,
+      r.version,
+    );
+    r = await workflow.transition(
+      admin,
+      created.id,
+      S.IN_INSPECTION,
+      r.version,
+    );
     await seedApprovableSerial(prisma, tenant.id, created.id, 'SN-001');
-    const pending = await workflow.transition(admin, created.id, S.PENDING_APPROVAL, r.version);
+    const pending = await workflow.transition(
+      admin,
+      created.id,
+      S.PENDING_APPROVAL,
+      r.version,
+    );
     await workflow.transition(admin, created.id, S.APPROVED, pending.version);
 
     // Declare the signature field on the (already pinned) template after approval — the
@@ -180,7 +214,9 @@ describe('export gate for signature fields [integration]', () => {
     expect(err).toBeInstanceOf(ConflictException);
     expect((err as ConflictException).getResponse()).toMatchObject({
       code: 'SIGNATURE_PENDING',
-      pending: [{ key: 'custSig', label: 'Customer approval', signer: 'CUSTOMER' }],
+      pending: [
+        { key: 'custSig', label: 'Customer approval', signer: 'CUSTOMER' },
+      ],
     });
 
     await signatures.signCustomerField(
@@ -194,18 +230,28 @@ describe('export gate for signature fields [integration]', () => {
       'custSig',
       makePng(),
     );
-    const res = await exportService.exportInspectionReport(exporter(tenant.id), reportId);
+    const res = await exportService.exportInspectionReport(
+      exporter(tenant.id),
+      reportId,
+    );
     expect(Buffer.isBuffer(res.buffer)).toBe(true);
   });
 
   it('never blocks on a supervisor field that was not marked required', async () => {
-    const { tenant, reportId } = await approvedWithCustomerField(false, 'SUPERVISOR');
-    const res = await exportService.exportInspectionReport(exporter(tenant.id), reportId);
+    const { tenant, reportId } = await approvedWithCustomerField(
+      false,
+      'SUPERVISOR',
+    );
+    const res = await exportService.exportInspectionReport(
+      exporter(tenant.id),
+      reportId,
+    );
     expect(Buffer.isBuffer(res.buffer)).toBe(true);
   });
 
   it('does not block an older revision while the current one is still unsigned', async () => {
-    const { tenant, reportId, admin, user } = await approvedWithCustomerField(true);
+    const { tenant, reportId, admin, user } =
+      await approvedWithCustomerField(true);
     await signatures.signCustomerField(
       {
         id: user.id,
@@ -260,7 +306,11 @@ describe('export gate for signature fields [integration]', () => {
         poNumber: 'PO-SUP',
         templateKey: 'DRILL_PIPE_REPORT',
       });
-      const admin = { id: 'user-admin', tenantId: tenant.id, role: UserRole.ADMIN };
+      const admin = {
+        id: 'user-admin',
+        tenantId: tenant.id,
+        role: UserRole.ADMIN,
+      };
       const supervisor = await prisma.user.create({
         data: {
           tenantId: tenant.id,
@@ -270,12 +320,37 @@ describe('export gate for signature fields [integration]', () => {
         },
       });
 
-      let r = await workflow.transition(admin, created.id, S.RECEIVED, created.version);
-      r = await workflow.transition(admin, created.id, S.READY_FOR_CLEANING, r.version);
-      r = await workflow.transition(admin, created.id, S.READY_FOR_INSPECTION, r.version);
-      r = await workflow.transition(admin, created.id, S.IN_INSPECTION, r.version);
+      let r = await workflow.transition(
+        admin,
+        created.id,
+        S.RECEIVED,
+        created.version,
+      );
+      r = await workflow.transition(
+        admin,
+        created.id,
+        S.READY_FOR_CLEANING,
+        r.version,
+      );
+      r = await workflow.transition(
+        admin,
+        created.id,
+        S.READY_FOR_INSPECTION,
+        r.version,
+      );
+      r = await workflow.transition(
+        admin,
+        created.id,
+        S.IN_INSPECTION,
+        r.version,
+      );
       await seedApprovableSerial(prisma, tenant.id, created.id, 'SN-001');
-      const pending = await workflow.transition(admin, created.id, S.PENDING_APPROVAL, r.version);
+      const pending = await workflow.transition(
+        admin,
+        created.id,
+        S.PENDING_APPROVAL,
+        r.version,
+      );
       await workflow.transition(
         { id: supervisor.id, tenantId: tenant.id, role: UserRole.SUPERVISOR },
         created.id,
@@ -317,7 +392,8 @@ describe('export gate for signature fields [integration]', () => {
     }
 
     it('adopts the approver signature when they registered it after approving, and keeps it', async () => {
-      const { tenant, reportId, supervisor } = await approvedByUnsignedSupervisor();
+      const { tenant, reportId, supervisor } =
+        await approvedByUnsignedSupervisor();
 
       // No signature yet: exports fine, nothing frozen.
       await exportService.exportInspectionReport(exporter(tenant.id), reportId);
@@ -331,9 +407,14 @@ describe('export gate for signature fields [integration]', () => {
         { id: supervisor.id, tenantId: tenant.id },
         makePng(),
       );
-      const res = await exportService.exportInspectionReport(exporter(tenant.id), reportId);
+      const res = await exportService.exportInspectionReport(
+        exporter(tenant.id),
+        reportId,
+      );
       const zip = await JSZip.loadAsync(res.buffer);
-      expect(Object.keys(zip.files).some((n) => n.startsWith('xl/media/'))).toBe(true);
+      expect(
+        Object.keys(zip.files).some((n) => n.startsWith('xl/media/')),
+      ).toBe(true);
 
       const frozen = await prisma.reportSignature.findFirstOrThrow({
         where: { inspectionReportId: reportId, slot: 'field:supSig' },

@@ -34,14 +34,70 @@ import { resetInspectionDomain, seedTenant } from '../../../test/seed-helpers';
  * ordinary item field each template authors.
  */
 const MANDATORY_ROLE_FIELDS: DefineTemplateDto['fields'] = [
-  { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
-  { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
-  { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
-  { token: '{{inspBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
-  { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
-  { token: '{{inspDate}}', label: 'Inspection Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
-  { token: '{{inspSig}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
-  { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
+  {
+    token: '{{customer}}',
+    label: 'Customer',
+    type: 'text',
+    required: false,
+    scope: 'header',
+    role: 'customer',
+  },
+  {
+    token: '{{reportNumber}}',
+    label: 'Report Number',
+    type: 'text',
+    required: false,
+    scope: 'header',
+    role: 'reportNumber',
+  },
+  {
+    token: '{{poNumber}}',
+    label: 'PO Number',
+    type: 'text',
+    required: false,
+    scope: 'header',
+    role: 'poNumber',
+  },
+  {
+    token: '{{inspBy}}',
+    label: 'Inspector',
+    type: 'text',
+    required: false,
+    scope: 'header',
+    role: 'inspector',
+  },
+  {
+    token: '{{apprBy}}',
+    label: 'Supervisor',
+    type: 'text',
+    required: false,
+    scope: 'header',
+    role: 'supervisor',
+  },
+  {
+    token: '{{inspDate}}',
+    label: 'Inspection Date',
+    type: 'date',
+    required: false,
+    scope: 'header',
+    role: 'inspectionDate',
+  },
+  {
+    token: '{{inspSig}}',
+    label: 'Inspector Signature',
+    type: 'text',
+    required: false,
+    scope: 'header',
+    role: 'inspectorSignature',
+  },
+  {
+    token: '{{sn}}',
+    label: 'Serial Number',
+    type: 'text',
+    required: false,
+    scope: 'item',
+    role: 'serialNumber',
+  },
 ];
 
 /** The tokens the mandatory role fields reference — merged into each template's token set. */
@@ -105,7 +161,11 @@ describe('rework authoring — end-to-end, template-agnostic [integration]', () 
     });
   }
 
-  function seedReport(tenantId: string, templateKey: string, reportNumber: string) {
+  function seedReport(
+    tenantId: string,
+    templateKey: string,
+    reportNumber: string,
+  ) {
     return prisma.inspectionReport.create({
       data: {
         tenantId,
@@ -250,6 +310,8 @@ describe('rework authoring — end-to-end, template-agnostic [integration]', () 
       members: ['T-1'],
     });
     // And no REWORK child was fabricated — the authored childType is the only one produced.
-    expect(await childWithMembers(report.id, ChildReportType.REWORK)).toBeNull();
+    expect(
+      await childWithMembers(report.id, ChildReportType.REWORK),
+    ).toBeNull();
   });
 });

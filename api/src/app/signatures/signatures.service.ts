@@ -69,8 +69,10 @@ type ReportRow = Prisma.InspectionReportGetPayload<{
   select: typeof REPORT_SELECT;
 }>;
 
-const templateRef = (t: { templateKey: string; templateVersion: number }): string =>
-  `${t.templateKey}@${t.templateVersion}`;
+const templateRef = (t: {
+  templateKey: string;
+  templateVersion: number;
+}): string => `${t.templateKey}@${t.templateVersion}`;
 
 export interface ReportSignatureStates {
   reportId: string;
@@ -468,9 +470,9 @@ export class SignaturesService {
     const withFields = reports
       .map((r) => ({
         report: r,
-        specs: signatureFieldsOf(
-          definitions.get(templateRef(r)),
-        ).filter((s) => s.signer === 'CUSTOMER'),
+        specs: signatureFieldsOf(definitions.get(templateRef(r))).filter(
+          (s) => s.signer === 'CUSTOMER',
+        ),
       }))
       .filter((x) => x.specs.length > 0);
     if (withFields.length === 0) return [];
@@ -540,7 +542,11 @@ export class SignaturesService {
     );
     const templates = await this.prisma.template.findMany({
       where: { tenantId, OR: [...refs.values()] },
-      select: { templateKey: true, templateVersion: true, definitionJson: true },
+      select: {
+        templateKey: true,
+        templateVersion: true,
+        definitionJson: true,
+      },
     });
     return new Map(
       templates.map((t) => [

@@ -38,7 +38,10 @@ describe('ExportSplitButtonComponent', () => {
 
   it('locks the formats but keeps the menu reachable, and shows the reason', () => {
     fixture.componentRef.setInput('blocked', true);
-    fixture.componentRef.setInput('reason', 'Waiting for signature: QA (supervisor).');
+    fixture.componentRef.setInput(
+      'reason',
+      'Waiting for signature: QA (supervisor).',
+    );
     fixture.detectChanges();
 
     expect(buttons()[0].disabled).toBe(true);
@@ -49,9 +52,9 @@ describe('ExportSplitButtonComponent', () => {
     const [pdf, xlsx] = menuItems();
     expect(pdf.disabled).toBe(true);
     expect(xlsx.disabled).toBe(true);
-    expect(el().querySelector('[data-testid="export-menu-reason"]')?.textContent).toContain(
-      'QA (supervisor)',
-    );
+    expect(
+      el().querySelector('[data-testid="export-menu-reason"]')?.textContent,
+    ).toContain('QA (supervisor)');
   });
 
   it('disables everything that needs the network when offline', () => {

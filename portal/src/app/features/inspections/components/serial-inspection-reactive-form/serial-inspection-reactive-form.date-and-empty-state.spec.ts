@@ -30,7 +30,9 @@ function loadDrillDefinition(): TemplateFormDefinition {
   for (const p of candidates) {
     if (existsSync(p)) return JSON.parse(readFileSync(p, 'utf8'));
   }
-  throw new Error(`Could not locate committed definition at: ${candidates.join(', ')}`);
+  throw new Error(
+    `Could not locate committed definition at: ${candidates.join(', ')}`,
+  );
 }
 
 /** A minimal non-drill-pipe definition carrying a `date` item field. */
@@ -68,7 +70,9 @@ describe('SerialInspectionReactiveForm — date branch + empty-state fallback', 
   function render(
     definition: TemplateFormDefinition | null,
   ): ComponentFixture<SerialInspectionReactiveFormComponent> {
-    const fixture = TestBed.createComponent(SerialInspectionReactiveFormComponent);
+    const fixture = TestBed.createComponent(
+      SerialInspectionReactiveFormComponent,
+    );
     fixture.componentInstance.definition = definition;
     fixture.detectChanges();
     return fixture;
@@ -120,14 +124,21 @@ describe('SerialInspectionReactiveForm — date branch + empty-state fallback', 
     });
 
     it('ARM 2: a report with NO usable definition shows the empty-state and ZERO controls', () => {
-      for (const noDef of [null, { fields: 'nope' }, 'garbage', 42] as unknown[]) {
+      for (const noDef of [
+        null,
+        { fields: 'nope' },
+        'garbage',
+        42,
+      ] as unknown[]) {
         const fixture = render(noDef as TemplateFormDefinition | null);
         const c = fixture.componentInstance;
         const el = fixture.nativeElement as HTMLElement;
 
         // Soft-null: never throws, flags the empty-state.
         expect(c.schemaUnavailable).toBe(true);
-        expect(el.querySelector('[data-testid="form-unavailable"]')).not.toBeNull();
+        expect(
+          el.querySelector('[data-testid="form-unavailable"]'),
+        ).not.toBeNull();
 
         // Decisive + mutation-guarded: NO form controls render. Were the fallback the
         // drill-pipe schema, dozens of inputs/selects would appear here → RED.

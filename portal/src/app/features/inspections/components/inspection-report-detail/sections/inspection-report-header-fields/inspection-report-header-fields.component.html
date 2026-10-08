@@ -7,8 +7,8 @@
       This report’s template has no usable field definition yet.
     </p>
     <p class="mt-1 text-sm">
-      An administrator must define this template before its metadata fields can be
-      shown.
+      An administrator must define this template before its metadata fields can
+      be shown.
     </p>
   </div>
 } @else if (noHeaderFields()) {
@@ -29,7 +29,9 @@
               {{ section.title }}
             </h4>
           }
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6">
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6"
+          >
             @for (field of section.fields; track field.key) {
               @if (field.role === 'inspectorSignature' && isCustomer()) {
                 <!-- Shown with the other signatures on the lifecycle rail instead. -->

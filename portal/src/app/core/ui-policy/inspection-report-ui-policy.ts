@@ -209,7 +209,11 @@ export function getInspectionReportUiState(
   // Transition logic
   if (ctx.syncState !== 'CONFLICT') {
     if (ctx.reportStatus === REPORT_STATUSES.DRAFT) {
-      if ([APP_ROLES.RECEIVER, APP_ROLES.ADMIN, APP_ROLES.SUPERVISOR].some((r) => r === ctx.role)) {
+      if (
+        [APP_ROLES.RECEIVER, APP_ROLES.ADMIN, APP_ROLES.SUPERVISOR].some(
+          (r) => r === ctx.role,
+        )
+      ) {
         state.transitionChoices.push({
           toStatus: REPORT_STATUSES.RECEIVED,
           label: 'Receive',

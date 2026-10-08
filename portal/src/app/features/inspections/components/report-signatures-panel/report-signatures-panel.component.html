@@ -21,7 +21,8 @@
             <p class="text-sm text-primary">
               {{ field.label }}
               <span class="text-xs text-primary/50">
-                · {{ signerLabel(field) }}{{ field.required ? ' · required' : '' }}
+                · {{ signerLabel(field)
+                }}{{ field.required ? ' · required' : '' }}
               </span>
             </p>
             @if (field.signed) {
@@ -35,7 +36,10 @@
                 }
               </p>
             } @else {
-              <p class="text-xs text-primary/60" data-testid="signature-unsigned">
+              <p
+                class="text-xs text-primary/60"
+                data-testid="signature-unsigned"
+              >
                 Not signed yet
               </p>
             }

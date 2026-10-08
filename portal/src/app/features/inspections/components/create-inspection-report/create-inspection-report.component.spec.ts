@@ -24,7 +24,11 @@ import {
 import { CustomerLocalRepo } from '@portal/core/offline/repos/customer-local.repo';
 
 const TEMPLATES: AvailableTemplate[] = [
-  { templateKey: 'CASING_FLAT', templateVersion: 1, displayName: 'Casing Flat' },
+  {
+    templateKey: 'CASING_FLAT',
+    templateVersion: 1,
+    displayName: 'Casing Flat',
+  },
   {
     templateKey: 'DRILL_PIPE_REPORT',
     templateVersion: 3,
@@ -80,8 +84,9 @@ describe('CreateInspectionReportComponent — consumption picker (step 5)', () =
 
   const el = (f: ComponentFixture<CreateInspectionReportComponent>) =>
     f.nativeElement as HTMLElement;
-  const templateSelect = (f: ComponentFixture<CreateInspectionReportComponent>) =>
-    el(f).querySelector('#templateKey') as HTMLSelectElement;
+  const templateSelect = (
+    f: ComponentFixture<CreateInspectionReportComponent>,
+  ) => el(f).querySelector('#templateKey') as HTMLSelectElement;
 
   async function setSelect(
     f: ComponentFixture<CreateInspectionReportComponent>,

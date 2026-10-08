@@ -77,7 +77,9 @@ export class ShellComponent {
     const p = this.profile();
     if (!p) return '';
     if (this.isCustomer()) {
-      return this.theme.branding()?.name || p.customer?.name || p.tenant?.name || '';
+      return (
+        this.theme.branding()?.name || p.customer?.name || p.tenant?.name || ''
+      );
     }
     return p.tenant?.name || p.customer?.name || 'Internal';
   });
@@ -114,16 +116,21 @@ export class ShellComponent {
   public initials = computed(() => {
     const p = this.profile();
     if (!p) return '';
-    const words = (p.name?.trim() || p.email).split(/[\s@._-]+/).filter(Boolean);
+    const words = (p.name?.trim() || p.email)
+      .split(/[\s@._-]+/)
+      .filter(Boolean);
     const [first = '', second = ''] = words;
-    return (second ? `${first.charAt(0)}${second.charAt(0)}` : first.slice(0, 2)).toUpperCase();
+    return (
+      second ? `${first.charAt(0)}${second.charAt(0)}` : first.slice(0, 2)
+    ).toUpperCase();
   });
 
   public isDevMode = !environment.production;
   public mobileMenuOpen = signal(false);
   public accountMenuOpen = signal(false);
   @ViewChild('accountMenu') private accountMenuRef?: ElementRef<HTMLElement>;
-  @ViewChild('accountButton') private accountButtonRef?: ElementRef<HTMLButtonElement>;
+  @ViewChild('accountButton')
+  private accountButtonRef?: ElementRef<HTMLButtonElement>;
   public readonly APP_ROUTES = AppRoutes;
 
   /** The active route asked for the full-height app frame (`data: { appFrame: true }`):
@@ -194,7 +201,9 @@ export class ShellComponent {
 
   private menuItems(): HTMLElement[] {
     const root = this.accountMenuRef?.nativeElement;
-    return root ? Array.from(root.querySelectorAll<HTMLElement>('[role="menuitem"]')) : [];
+    return root
+      ? Array.from(root.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      : [];
   }
 
   /** ↑/↓/Home/End move between items; Esc closes back onto the button; Tab leaves. */

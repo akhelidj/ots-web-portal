@@ -22,9 +22,7 @@
     }
   ],
   "disposition": {
-    "source": [
-      "emi"
-    ],
+    "source": ["emi"],
     "requiredForApproval": true
   },
   "fields": [
@@ -57,12 +55,7 @@
       "required": true,
       "scope": "item",
       "section": "Body",
-      "options": [
-        "PASS",
-        "REWORK",
-        "SCRAP",
-        "HOLD"
-      ]
+      "options": ["PASS", "REWORK", "SCRAP", "HOLD"]
     }
   ],
   "export": {

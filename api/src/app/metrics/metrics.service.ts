@@ -53,7 +53,10 @@ export class MetricsService {
       customerName: r.customer?.name ?? null,
       serialCount: r._count.serialNumbers,
       createdAt: r.createdAt,
-      events: r.transitionLogs.map((l) => ({ status: l.toStatus, at: l.timestamp })),
+      events: r.transitionLogs.map((l) => ({
+        status: l.toStatus,
+        at: l.timestamp,
+      })),
     }));
   }
 }

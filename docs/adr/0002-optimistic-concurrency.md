@@ -18,7 +18,7 @@ write does `version + 1`. Applied uniformly to reports, transitions, serials, an
 approval batches. Anchors: `inspection-reports.service.ts:201,:252-265`;
 `inspection-report-workflow.service.ts:203,:354-365`; `serial-numbers.service.ts:298`.
 
-*Why not the alternatives:* pessimistic locking is unavailable offline; last-write-wins
+_Why not the alternatives:_ pessimistic locking is unavailable offline; last-write-wins
 loses data silently; field-level CRDT merge is complexity the domain doesn't need.
 
 ## Consequences

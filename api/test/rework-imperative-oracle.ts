@@ -139,9 +139,7 @@ export async function imperativeReworkOracle(
     const existingRows = await tx.childReportSerialNumber.findMany({
       where: { childReportId: crId },
     });
-    const existingMap = new Map(
-      existingRows.map((r) => [r.serialNumberId, r]),
-    );
+    const existingMap = new Map(existingRows.map((r) => [r.serialNumberId, r]));
 
     const reworkSnIds = new Set(reworkSerials.map((sn) => sn.id));
 

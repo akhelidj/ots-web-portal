@@ -159,10 +159,7 @@
   </div>
 } @else if (variant === 'customer') {
   @if (statistics.length > 0) {
-    <div
-      class="flex flex-wrap gap-4"
-      data-testid="statistics-grid"
-    >
+    <div class="flex flex-wrap gap-4" data-testid="statistics-grid">
       @for (stat of statistics; track stat.id) {
         @if (stat.serials.length > 0) {
           <button
@@ -183,7 +180,9 @@
             </p>
           </button>
         } @else {
-          <div class="w-full flex-[1_1_14rem] max-w-sm border border-border bg-background px-6 py-7">
+          <div
+            class="w-full flex-[1_1_14rem] max-w-sm border border-border bg-background px-6 py-7"
+          >
             <p
               class="font-mono uppercase tracking-[0.1em] text-[11px] text-primary/65"
             >
@@ -210,7 +209,8 @@
           <div>
             <h3 class="text-sm font-semibold text-neutral-800">Statistics</h3>
             <p class="text-sm text-neutral-600">
-              Summarise the results (e.g. Accepted, Rejected) and link the serials behind each.
+              Summarise the results (e.g. Accepted, Rejected) and link the
+              serials behind each.
             </p>
           </div>
           <button

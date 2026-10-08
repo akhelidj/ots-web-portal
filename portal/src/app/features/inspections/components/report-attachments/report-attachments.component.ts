@@ -227,5 +227,4 @@ export class ReportAttachmentsComponent implements OnDestroy {
   public onThumbError(id: string): void {
     this.thumbFailed.update((m) => ({ ...m, [id]: true }));
   }
-
 }

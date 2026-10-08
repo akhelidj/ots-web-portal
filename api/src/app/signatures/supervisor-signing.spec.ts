@@ -21,7 +21,12 @@ describe('supervisorSignatureFields', () => {
         findUnique: jest.fn().mockResolvedValue({
           definitionJson: {
             fields: [
-              { key: 'a', type: 'signature', signer: 'SUPERVISOR', required: true },
+              {
+                key: 'a',
+                type: 'signature',
+                signer: 'SUPERVISOR',
+                required: true,
+              },
               { key: 'b', type: 'signature', signer: 'CUSTOMER' },
               { key: 'c', type: 'text' },
             ],
@@ -108,7 +113,9 @@ describe('applySupervisorSignatures', () => {
     const rows = t.reportSignature.create.mock.calls.map((c) => c[0].data);
     expect(rows).toHaveLength(2);
     expect(rows.map((r) => r.slot)).toEqual(['field:a', 'field:b']);
-    expect(rows.every((r) => r.revisionNumber === 3 && r.signedById === 'u1')).toBe(true);
+    expect(
+      rows.every((r) => r.revisionNumber === 3 && r.signedById === 'u1'),
+    ).toBe(true);
   });
 
   it('does nothing (not even a read) with no fields', async () => {

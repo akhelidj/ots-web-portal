@@ -162,7 +162,10 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
         where: { id: report.id },
         data: { status: InspectionReportStatus.APPROVED, revisionNumber: 1 },
       });
-      const mk = (serial: string, approvalStatus: 'APPROVED' | 'NOT_INSPECTED') =>
+      const mk = (
+        serial: string,
+        approvalStatus: 'APPROVED' | 'NOT_INSPECTED',
+      ) =>
         prisma.serialNumber.create({
           data: {
             serial,
@@ -214,7 +217,11 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
             timestamp: at(when),
           },
         });
-      const move = (from: InspectionReportStatus, to: InspectionReportStatus, when: string) =>
+      const move = (
+        from: InspectionReportStatus,
+        to: InspectionReportStatus,
+        when: string,
+      ) =>
         prisma.inspectionReportTransitionLog.create({
           data: {
             inspectionReportId: report.id,
@@ -228,7 +235,9 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
 
       // Actions with no IN_INSPECTION phase yet count for nothing.
       await act('before-phase', '09:00', 'SerialNumber', 'UPDATE');
-      expect(await findLastInspectorUserId(prisma, tenant.id, report.id)).toBeNull();
+      expect(
+        await findLastInspectorUserId(prisma, tenant.id, report.id),
+      ).toBeNull();
 
       await move(S.RECEIVED, S.IN_INSPECTION, '10:00');
       await act('serial-worker', '10:30', 'SerialNumber', 'UPDATE');
@@ -255,10 +264,20 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
 
       // A revision exported "as of" its own time sees the inspector as it stood then.
       expect(
-        await findLastInspectorUserId(prisma, tenant.id, report.id, at('10:45')),
+        await findLastInspectorUserId(
+          prisma,
+          tenant.id,
+          report.id,
+          at('10:45'),
+        ),
       ).toBe('serial-worker');
       expect(
-        await findLastInspectorUserId(prisma, tenant.id, report.id, at('14:30')),
+        await findLastInspectorUserId(
+          prisma,
+          tenant.id,
+          report.id,
+          at('14:30'),
+        ),
       ).toBe('attachment-worker');
     });
   });

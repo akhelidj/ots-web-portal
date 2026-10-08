@@ -58,10 +58,7 @@ export interface LocalInspectionReport {
 }
 
 export type SerialApprovalStatus =
-  | 'NOT_INSPECTED'
-  | 'INSPECTED_DRAFT'
-  | 'SUBMITTED_FOR_APPROVAL'
-  | 'APPROVED';
+  'NOT_INSPECTED' | 'INSPECTED_DRAFT' | 'SUBMITTED_FOR_APPROVAL' | 'APPROVED';
 
 export interface LocalSerialNumber {
   id: string;

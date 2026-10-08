@@ -338,9 +338,9 @@ describe('S3AttachmentStorage — template workbooks', () => {
         templatePrefix: 'templates/',
       });
 
-      await expect(
-        storage.getTemplate('tenant-1/KEY/1'),
-      ).rejects.toMatchObject({ name: 'AccessDenied' });
+      await expect(storage.getTemplate('tenant-1/KEY/1')).rejects.toMatchObject(
+        { name: 'AccessDenied' },
+      );
     });
   });
 

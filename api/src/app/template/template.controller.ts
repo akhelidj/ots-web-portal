@@ -199,7 +199,9 @@ export class TemplateController {
     const userId = req.user.userId;
     const parsed = Number(revisionNumber);
     if (!Number.isInteger(parsed) || parsed < 1) {
-      throw new BadRequestException('revisionNumber must be a positive integer');
+      throw new BadRequestException(
+        'revisionNumber must be a positive integer',
+      );
     }
     return this.templateDefinitionService.restoreDefinitionRevision(
       tenantId,

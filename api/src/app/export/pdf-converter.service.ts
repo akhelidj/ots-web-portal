@@ -28,7 +28,8 @@ export class PdfConverterService {
         'PDF export is not configured on this server. Use the Excel export instead.',
       );
     }
-    const timeout = Number(this.config.get('PDF_CONVERTER_TIMEOUT_MS')) || 60_000;
+    const timeout =
+      Number(this.config.get('PDF_CONVERTER_TIMEOUT_MS')) || 60_000;
 
     const form = new FormData();
     form.append(
@@ -56,7 +57,9 @@ export class PdfConverterService {
 
     if (!response.ok) {
       const detail = (await response.text().catch(() => '')).slice(0, 300);
-      this.logger.error(`PDF conversion failed (${response.status}): ${detail}`);
+      this.logger.error(
+        `PDF conversion failed (${response.status}): ${detail}`,
+      );
       throw new ServiceUnavailableException(
         'PDF export failed. Use the Excel export instead.',
       );

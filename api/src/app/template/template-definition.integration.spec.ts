@@ -16,10 +16,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import {
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TemplateDefinitionService } from './template-definition.service';
 import { XlsNormalizerService } from './xls-normalizer.service';
@@ -59,14 +56,70 @@ function baseDto(): DefineTemplateDto {
     region: { id: 'serials', marker: '{{sn}}' },
     disposition: { field: 'emi', requiredForApproval: true },
     fields: [
-      { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
-      { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
-      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
-      { token: '{{inspectedBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
-      { token: '{{approvedBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
-      { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
-      { token: '{{inspectorSignature}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
-      { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
+      {
+        token: '{{customer}}',
+        label: 'Customer',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'customer',
+      },
+      {
+        token: '{{reportNumber}}',
+        label: 'Report Number',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'reportNumber',
+      },
+      {
+        token: '{{poNumber}}',
+        label: 'PO Number',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'poNumber',
+      },
+      {
+        token: '{{inspectedBy}}',
+        label: 'Inspector',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'inspector',
+      },
+      {
+        token: '{{approvedBy}}',
+        label: 'Supervisor',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'supervisor',
+      },
+      {
+        token: '{{reportDate}}',
+        label: 'Report Date',
+        type: 'date',
+        required: false,
+        scope: 'header',
+        role: 'inspectionDate',
+      },
+      {
+        token: '{{inspectorSignature}}',
+        label: 'Inspector Signature',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'inspectorSignature',
+      },
+      {
+        token: '{{sn}}',
+        label: 'Serial Number',
+        type: 'text',
+        required: false,
+        scope: 'item',
+        role: 'serialNumber',
+      },
       {
         token: '{{b_od}}',
         label: 'Box Min OD',
@@ -238,7 +291,10 @@ describe('Template definition write path [integration]', () => {
     let reportsService: InspectionReportsService;
 
     beforeAll(() => {
-      reportsService = new InspectionReportsService(prisma, makeFilesServiceStub());
+      reportsService = new InspectionReportsService(
+        prisma,
+        makeFilesServiceStub(),
+      );
     });
 
     beforeEach(async () => {

@@ -318,7 +318,10 @@ export class AdminCustomersService implements DataHydrationSource {
   // ---- Branding (online-only, like signatures: no outbox) ----
 
   /** Set (`#rrggbb`) or clear (null) the brand colour. */
-  async setBrandColor(customer: LocalCustomer, brandColor: string | null): Promise<LocalCustomer> {
+  async setBrandColor(
+    customer: LocalCustomer,
+    brandColor: string | null,
+  ): Promise<LocalCustomer> {
     const updated = await this.patchOnServer(customer.id, {
       brandColor,
       version: customer.version,
@@ -327,12 +330,18 @@ export class AdminCustomersService implements DataHydrationSource {
     return updated;
   }
 
-  async uploadLogo(customer: LocalCustomer, file: File): Promise<LocalCustomer> {
+  async uploadLogo(
+    customer: LocalCustomer,
+    file: File,
+  ): Promise<LocalCustomer> {
     const body = new FormData();
     body.append('file', file);
     body.append('version', String(customer.version));
     const updated = await firstValueFrom(
-      this.http.put<LocalCustomer>(`${environment.apiUrl}/customers/${customer.id}/logo`, body),
+      this.http.put<LocalCustomer>(
+        `${environment.apiUrl}/customers/${customer.id}/logo`,
+        body,
+      ),
     );
     await this.localRepo.upsert({ ...updated, syncState: 'SYNCED' });
     return updated;
@@ -340,9 +349,12 @@ export class AdminCustomersService implements DataHydrationSource {
 
   async removeLogo(customer: LocalCustomer): Promise<LocalCustomer> {
     const updated = await firstValueFrom(
-      this.http.delete<LocalCustomer>(`${environment.apiUrl}/customers/${customer.id}/logo`, {
-        params: { version: customer.version },
-      }),
+      this.http.delete<LocalCustomer>(
+        `${environment.apiUrl}/customers/${customer.id}/logo`,
+        {
+          params: { version: customer.version },
+        },
+      ),
     );
     await this.localRepo.upsert({ ...updated, syncState: 'SYNCED' });
     return updated;

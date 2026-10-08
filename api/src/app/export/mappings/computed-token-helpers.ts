@@ -49,7 +49,8 @@ export function deriveActors(snapshot: Snapshot): {
       (l) =>
         l.toStatus === 'IN_INSPECTION' || l.toStatus === 'PENDING_APPROVAL',
     );
-    const inspectorResolved = !!h.inspectedByName && h.inspectedByName !== 'N/A';
+    const inspectorResolved =
+      !!h.inspectedByName && h.inspectedByName !== 'N/A';
     if (!inspectorResolved && inspectLog?.userId) {
       const u = (snapshot.users || []).find((u) => u.id === inspectLog.userId);
       if (u) inspectedByName = u.name || u.email;

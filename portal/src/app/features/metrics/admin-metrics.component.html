@@ -4,11 +4,16 @@
       <div>
         <h2 class="text-2xl tracking-tight text-foreground">Metrics</h2>
         <p class="mt-1 text-sm text-muted-foreground">
-          How long reports take, end to end and stage by stage. Derived from every
-          report's workflow history.
+          How long reports take, end to end and stage by stage. Derived from
+          every report's workflow history.
         </p>
       </div>
-      <button type="button" class="btn btn-secondary btn-sm" (click)="load()" [disabled]="loading()">
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        (click)="load()"
+        [disabled]="loading()"
+      >
         {{ loading() ? 'Loading…' : 'Refresh' }}
       </button>
     </div>
@@ -76,18 +81,25 @@
   @if (!loading() && !error()) {
     @let k = kpis();
     <!-- KPIs -->
-    <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6" data-testid="metrics-kpis">
+    <div
+      class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6"
+      data-testid="metrics-kpis"
+    >
       <div class="page-section p-4">
         <span class="stat-label">Reports</span>
         <span class="stat-value text-2xl text-foreground">{{ k.total }}</span>
       </div>
       <div class="page-section p-4">
         <span class="stat-label">Completed</span>
-        <span class="stat-value text-2xl text-foreground">{{ k.completed }}</span>
+        <span class="stat-value text-2xl text-foreground">{{
+          k.completed
+        }}</span>
       </div>
       <div class="page-section p-4">
         <span class="stat-label">In progress</span>
-        <span class="stat-value text-2xl text-foreground">{{ k.inProgress }}</span>
+        <span class="stat-value text-2xl text-foreground">{{
+          k.inProgress
+        }}</span>
       </div>
       <div class="page-section p-4">
         <span class="stat-label">On hold</span>
@@ -95,11 +107,15 @@
       </div>
       <div class="page-section p-4">
         <span class="stat-label">Median turnaround</span>
-        <span class="stat-value text-2xl text-foreground">{{ formatDuration(k.medianTurnaround) }}</span>
+        <span class="stat-value text-2xl text-foreground">{{
+          formatDuration(k.medianTurnaround)
+        }}</span>
       </div>
       <div class="page-section p-4">
         <span class="stat-label">Average turnaround</span>
-        <span class="stat-value text-2xl text-foreground">{{ formatDuration(k.avgTurnaround) }}</span>
+        <span class="stat-value text-2xl text-foreground">{{
+          formatDuration(k.avgTurnaround)
+        }}</span>
       </div>
     </div>
 
@@ -107,46 +123,79 @@
     <div class="page-section p-5 sm:p-6">
       <h3 class="text-lg text-foreground">Average time in each stage</h3>
       <p class="mt-1 text-sm text-muted-foreground">
-        Across the reports above that passed through the stage. Turnaround runs from
-        pipe received to approval or completion.
+        Across the reports above that passed through the stage. Turnaround runs
+        from pipe received to approval or completion.
       </p>
       @if (stageAverages().length > 0) {
-        <ul class="mt-5 space-y-3" role="list" data-testid="metrics-stage-averages">
+        <ul
+          class="mt-5 space-y-3"
+          role="list"
+          data-testid="metrics-stage-averages"
+        >
           @for (s of stageAverages(); track s.status) {
-            <li class="grid grid-cols-[8rem_minmax(0,1fr)_9rem] items-center gap-4 text-sm">
+            <li
+              class="grid grid-cols-[8rem_minmax(0,1fr)_9rem] items-center gap-4 text-sm"
+            >
               <span class="text-foreground">{{ stageLabel(s.status) }}</span>
               <span class="h-2.5 bg-primary/10" aria-hidden="true">
-                <span class="block h-full bg-primary/60" [style.width.%]="s.share * 100"></span>
+                <span
+                  class="block h-full bg-primary/60"
+                  [style.width.%]="s.share * 100"
+                ></span>
               </span>
-              <span class="text-right font-mono text-xs tabular-nums text-foreground">
+              <span
+                class="text-right font-mono text-xs tabular-nums text-foreground"
+              >
                 {{ formatDuration(s.avg) }}
-                <span class="text-muted-foreground">· {{ s.reports }} {{ s.reports === 1 ? 'report' : 'reports' }}</span>
+                <span class="text-muted-foreground"
+                  >· {{ s.reports }}
+                  {{ s.reports === 1 ? 'report' : 'reports' }}</span
+                >
               </span>
             </li>
           }
         </ul>
       } @else {
-        <p class="mt-4 text-sm text-muted-foreground">No completed stages in this selection.</p>
+        <p class="mt-4 text-sm text-muted-foreground">
+          No completed stages in this selection.
+        </p>
       }
     </div>
 
     <!-- Reports + the selected report's timeline -->
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <div
+      class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+    >
       <div class="page-section overflow-hidden">
-        <div class="flex items-center justify-between border-b border-border px-5 py-4">
+        <div
+          class="flex items-center justify-between border-b border-border px-5 py-4"
+        >
           <h3 class="text-lg text-foreground">By report</h3>
-          <span class="text-xs text-muted-foreground">{{ filtered().length }} reports</span>
+          <span class="text-xs text-muted-foreground"
+            >{{ filtered().length }} reports</span
+          >
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm tabular-nums" data-testid="metrics-table">
-            <thead class="bg-muted/60 text-xs uppercase tracking-wider text-muted-foreground">
+          <table
+            class="w-full text-left text-sm tabular-nums"
+            data-testid="metrics-table"
+          >
+            <thead
+              class="bg-muted/60 text-xs uppercase tracking-wider text-muted-foreground"
+            >
               <tr>
                 <th scope="col" class="px-4 py-3 font-semibold">Report</th>
                 <th scope="col" class="px-4 py-3 font-semibold">Customer</th>
                 <th scope="col" class="px-4 py-3 font-semibold">Status</th>
-                <th scope="col" class="px-4 py-3 font-semibold text-right">Turnaround</th>
-                <th scope="col" class="px-4 py-3 font-semibold">Longest stage</th>
-                <th scope="col" class="px-4 py-3 font-semibold text-right">Serials</th>
+                <th scope="col" class="px-4 py-3 font-semibold text-right">
+                  Turnaround
+                </th>
+                <th scope="col" class="px-4 py-3 font-semibold">
+                  Longest stage
+                </th>
+                <th scope="col" class="px-4 py-3 font-semibold text-right">
+                  Serials
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -161,18 +210,28 @@
                   (keydown.space)="$event.preventDefault(); select(r.id)"
                 >
                   <td class="px-4 py-3">
-                    <span class="font-medium text-foreground">{{ r.label }}</span>
-                    <span class="block text-xs text-muted-foreground">PO {{ r.poNumber }}</span>
+                    <span class="font-medium text-foreground">{{
+                      r.label
+                    }}</span>
+                    <span class="block text-xs text-muted-foreground"
+                      >PO {{ r.poNumber }}</span
+                    >
                   </td>
-                  <td class="px-4 py-3 text-foreground">{{ r.customerName || '—' }}</td>
+                  <td class="px-4 py-3 text-foreground">
+                    {{ r.customerName || '—' }}
+                  </td>
                   <td class="px-4 py-3">
-                    <span class="data-chip">{{ r.status.split('_').join(' ') }}</span>
+                    <span class="data-chip">{{
+                      r.status.split('_').join(' ')
+                    }}</span>
                   </td>
                   <td class="px-4 py-3 text-right font-mono text-xs">
                     @if (r.timeline.turnaround !== null) {
                       {{ formatDuration(r.timeline.turnaround) }}
                     } @else if (r.timeline.elapsed !== null) {
-                      <span class="text-muted-foreground">{{ formatDuration(r.timeline.elapsed) }} so far</span>
+                      <span class="text-muted-foreground"
+                        >{{ formatDuration(r.timeline.elapsed) }} so far</span
+                      >
                     } @else {
                       —
                     }
@@ -180,7 +239,9 @@
                   <td class="px-4 py-3 text-xs">
                     @if (r.slowest; as s) {
                       {{ stageLabel(s.status) }}
-                      <span class="font-mono text-muted-foreground">{{ formatDuration(s.duration) }}</span>
+                      <span class="font-mono text-muted-foreground">{{
+                        formatDuration(s.duration)
+                      }}</span>
                     } @else {
                       —
                     }
@@ -189,7 +250,10 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="6" class="px-4 py-10 text-center text-muted-foreground">
+                  <td
+                    colspan="6"
+                    class="px-4 py-10 text-center text-muted-foreground"
+                  >
                     No reports match these filters.
                   </td>
                 </tr>
@@ -199,17 +263,26 @@
         </div>
       </div>
 
-      <div class="page-section p-5 sm:p-6 xl:sticky xl:top-4 xl:self-start" data-testid="metrics-detail">
+      <div
+        class="page-section p-5 sm:p-6 xl:sticky xl:top-4 xl:self-start"
+        data-testid="metrics-detail"
+      >
         @if (selected(); as r) {
           <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p class="text-xs uppercase tracking-wider text-muted-foreground">Report timeline</p>
+              <p class="text-xs uppercase tracking-wider text-muted-foreground">
+                Report timeline
+              </p>
               <h3 class="text-lg text-foreground">{{ r.label }}</h3>
               <p class="text-xs text-muted-foreground">
                 {{ r.customerName || 'No customer' }} · PO {{ r.poNumber }}
               </p>
             </div>
-            <a [routerLink]="['/admin', 'reports', r.id]" class="btn btn-secondary btn-sm">Open report</a>
+            <a
+              [routerLink]="['/admin', 'reports', r.id]"
+              class="btn btn-secondary btn-sm"
+              >Open report</a
+            >
           </div>
           <app-report-timeline [events]="r.events" />
         } @else {

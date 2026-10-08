@@ -40,9 +40,15 @@
     <ul class="cxa-stagelegend" role="list">
       @for (s of h.stages; track s.id; let i = $index) {
         <li>
-          <span class="cxa-stagelegend-swatch" [attr.data-tone]="i % 3" aria-hidden="true"></span>
+          <span
+            class="cxa-stagelegend-swatch"
+            [attr.data-tone]="i % 3"
+            aria-hidden="true"
+          ></span>
           <span class="cxa-stagelegend-label">{{ stageLabel(s.status) }}</span>
-          <span class="cxa-stagelegend-value">{{ formatDuration(s.duration) }}</span>
+          <span class="cxa-stagelegend-value">{{
+            formatDuration(s.duration)
+          }}</span>
         </li>
       }
     </ul>

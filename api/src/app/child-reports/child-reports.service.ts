@@ -55,7 +55,8 @@ export class ChildReportsService {
       select: { definitionJson: true },
     });
     const definition =
-      (template?.definitionJson as unknown as { rules: unknown } | null) ?? null;
+      (template?.definitionJson as unknown as { rules: unknown } | null) ??
+      null;
 
     if (definition) {
       return this.reworkRulesInterpreter.syncFromRules(

@@ -121,7 +121,13 @@ describe('Layer B — export engine structural behaviour + mutation guards [inte
       r.version,
     );
     for (const s of serials) {
-      await seedApprovableSerial(prisma, tenant.id, created.id, s.serial, s.opts);
+      await seedApprovableSerial(
+        prisma,
+        tenant.id,
+        created.id,
+        s.serial,
+        s.opts,
+      );
     }
     const pending = await workflow.transition(
       a,
@@ -160,7 +166,8 @@ describe('Layer B — export engine structural behaviour + mutation guards [inte
           .map((rt) => rt.text)
           .join('');
       }
-      if ('result' in anyV) return anyV.result == null ? null : String(anyV.result);
+      if ('result' in anyV)
+        return anyV.result == null ? null : String(anyV.result);
       if ('text' in anyV) return String(anyV.text);
       return null;
     }
@@ -183,8 +190,7 @@ describe('Layer B — export engine structural behaviour + mutation guards [inte
         });
       });
       const merges = (
-        ((ws as unknown as { model?: { merges?: string[] } }).model?.merges) ??
-        []
+        (ws as unknown as { model?: { merges?: string[] } }).model?.merges ?? []
       )
         .slice()
         .sort();
@@ -291,7 +297,9 @@ describe('Layer B — export engine structural behaviour + mutation guards [inte
   // --- mutation / soundness guards ----------------------------------------------
 
   it('GUARD 1 transform mutation is detected (boolCheckbox X→Y)', async () => {
-    const { tenant, reportId } = await approveWithSerials([{ serial: 'SN-001' }]);
+    const { tenant, reportId } = await approveWithSerials([
+      { serial: 'SN-001' },
+    ]);
     const mutant = JSON.parse(JSON.stringify(DEF));
     mutant.transforms.boolCheckbox.whenTrue = 'Y'; // jc_new 'X' → 'Y'
     const { real, mutated } = await realVsMutant(tenant.id, reportId, mutant);
@@ -322,7 +330,9 @@ describe('Layer B — export engine structural behaviour + mutation guards [inte
   });
 
   it('GUARD 4 normalization soundness: volatile-only byte diff ignored; same definition twice → equal canon', async () => {
-    const { tenant, reportId } = await approveWithSerials([{ serial: 'SN-001' }]);
+    const { tenant, reportId } = await approveWithSerials([
+      { serial: 'SN-001' },
+    ]);
 
     // (a) same (engine) definition twice → identical canon
     const a = await doExport(tenant.id, reportId);

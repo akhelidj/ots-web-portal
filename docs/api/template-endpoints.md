@@ -7,17 +7,17 @@ SUPERVISOR**; the three endpoints that retire or release a version (`approve`, `
 `deprecate`) re-narrow to **ADMIN** with a method-level `@Roles`, which wins because
 `RolesGuard` resolves roles with `getAllAndOverride([handler, class])`.
 
-| Endpoint                                        | ADMIN | SUPERVISOR |
-| ----------------------------------------------- | ----- | ---------- |
-| `POST /templates` (upload)                      | ✅    | ✅         |
-| `GET /templates` (list)                         | ✅    | ✅         |
-| `GET /templates/:id/tokens`                     | ✅    | ✅         |
-| `GET|PUT /templates/:id/definition`             | ✅    | ✅         |
-| `GET /templates/:id/definition/revisions`       | ✅    | ✅         |
-| `POST …/revisions/:n/restore`                   | ✅    | ✅         |
-| `PATCH /templates/:id/approve`                  | ✅    | ❌         |
-| `PATCH /templates/:id/reject`                   | ✅    | ❌         |
-| `PATCH /templates/:id/deprecate`                | ✅    | ❌         |
+| Endpoint                                  | ADMIN                          | SUPERVISOR |
+| ----------------------------------------- | ------------------------------ | ---------- |
+| `POST /templates` (upload)                | ✅                             | ✅         |
+| `GET /templates` (list)                   | ✅                             | ✅         |
+| `GET /templates/:id/tokens`               | ✅                             | ✅         |
+| `GET                                      | PUT /templates/:id/definition` | ✅         | ✅  |
+| `GET /templates/:id/definition/revisions` | ✅                             | ✅         |
+| `POST …/revisions/:n/restore`             | ✅                             | ✅         |
+| `PATCH /templates/:id/approve`            | ✅                             | ❌         |
+| `PATCH /templates/:id/reject`             | ✅                             | ❌         |
+| `PATCH /templates/:id/deprecate`          | ✅                             | ❌         |
 
 ## The admin validation gate
 

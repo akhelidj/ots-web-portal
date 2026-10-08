@@ -33,7 +33,9 @@ describe('TemplateDefineComponent — zoneless DOM rendering (stuck-loading regr
           useValue: {
             getTokens,
             // Undefined template: load() reads the definition first (null) → authoring flow.
-            getDefinition: jest.fn().mockResolvedValue({ definitionJson: null }),
+            getDefinition: jest
+              .fn()
+              .mockResolvedValue({ definitionJson: null }),
             defineTemplate: jest.fn(),
           },
         },
@@ -65,8 +67,12 @@ describe('TemplateDefineComponent — zoneless DOM rendering (stuck-loading regr
     expect(html().textContent).toContain('Step 1 of 4');
     expect(html().textContent).toContain('Detect Tokens');
     // The read-only detect inventory renders every token.
-    expect(html().querySelector('[data-testid="detect-count"]')?.textContent).toContain('2');
-    expect(html().querySelector('[data-testid="detect-token-{{poNumber}}"]')).not.toBeNull();
+    expect(
+      html().querySelector('[data-testid="detect-count"]')?.textContent,
+    ).toContain('2');
+    expect(
+      html().querySelector('[data-testid="detect-token-{{poNumber}}"]'),
+    ).not.toBeNull();
 
     // Walk to the Metadata step the way a user does — a real "Next" click fires the zoneless
     // scheduler again (still NO manual detectChanges). The header grid appears only if that
@@ -83,9 +89,13 @@ describe('TemplateDefineComponent — zoneless DOM rendering (stuck-loading regr
     expect(include).not.toBeNull();
     // Its label control is not built until the token is included — checking it in reveals
     // the inline describe controls purely through scheduler-driven CD.
-    expect(html().querySelector('[data-testid="header-label-{{poNumber}}"]')).toBeNull();
+    expect(
+      html().querySelector('[data-testid="header-label-{{poNumber}}"]'),
+    ).toBeNull();
     include.click();
     await fixture.whenStable();
-    expect(html().querySelector('[data-testid="header-label-{{poNumber}}"]')).not.toBeNull();
+    expect(
+      html().querySelector('[data-testid="header-label-{{poNumber}}"]'),
+    ).not.toBeNull();
   });
 });

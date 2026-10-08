@@ -1,8 +1,6 @@
 <div class="max-w-4xl mx-auto py-8 px-4 sm:px-6">
   <div class="flex items-center justify-between mb-8">
-    <h2 class="text-xl text-gray-900 tracking-tight">
-      Report History
-    </h2>
+    <h2 class="text-xl text-gray-900 tracking-tight">Report History</h2>
     <div
       class="bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-none border border-primary/10"
     >
@@ -45,8 +43,7 @@
                   'bg-primary':
                     log.toStatus === 'IN_INSPECTION' ||
                     log.toStatus === 'PENDING_APPROVAL',
-                  'bg-warning':
-                    log.toStatus === 'ON_HOLD',
+                  'bg-warning': log.toStatus === 'ON_HOLD',
                   'bg-gray-400': ![
                     'APPROVED',
                     'CLOSED',

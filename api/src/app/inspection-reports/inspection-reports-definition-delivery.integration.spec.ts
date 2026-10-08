@@ -116,8 +116,21 @@ describe('getReports embeds template definitionJson [integration]', () => {
       formatVersion: 1,
       templateKey: 'DRILL_PIPE_REPORT',
       fields: [
-        { key: 'grade', label: 'Grade', type: 'text', required: false, scope: 'header' },
-        { key: 'inspBy', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+        {
+          key: 'grade',
+          label: 'Grade',
+          type: 'text',
+          required: false,
+          scope: 'header',
+        },
+        {
+          key: 'inspBy',
+          label: 'Inspector',
+          type: 'text',
+          required: false,
+          scope: 'header',
+          role: 'inspector',
+        },
       ],
     };
     await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT', {

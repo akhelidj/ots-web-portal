@@ -501,11 +501,13 @@ describe('Deterministic xlsx export (foundation baseline) [integration]', () => 
       expect(names).toContain('attachments/photo.jpg');
       expect(names).toContain('attachments/photo (2).jpg');
       // Path separators are neutralised: nothing escapes attachments/.
-      expect(names.filter((n) => !n.startsWith('attachments/'))).toHaveLength(1);
+      expect(names.filter((n) => !n.startsWith('attachments/'))).toHaveLength(
+        1,
+      );
       expect(names).toContain('attachments/.._evil_name.pdf');
-      expect(
-        await zip.file('attachments/photo.jpg')?.async('string'),
-      ).toBe('JPG-BYTES');
+      expect(await zip.file('attachments/photo.jpg')?.async('string')).toBe(
+        'JPG-BYTES',
+      );
     });
   });
 });

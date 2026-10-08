@@ -84,15 +84,22 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
     c.save.subscribe((v) => emitted.push(v));
 
     c.definition = SYNTHETIC;
-    c.data = { certNumber: 'CERT-1', attachments: [{ name: 'Sling', number: 'S-1' }] };
+    c.data = {
+      certNumber: 'CERT-1',
+      attachments: [{ name: 'Sling', number: 'S-1' }],
+    };
 
     fixture.autoDetectChanges();
     await fixture.whenStable();
 
     // Non-drill-pipe scalar field present; item-scope field absent.
-    expect(el().querySelector('[data-testid="header-edit-field-certNumber"]')).not.toBeNull();
+    expect(
+      el().querySelector('[data-testid="header-edit-field-certNumber"]'),
+    ).not.toBeNull();
     expect(el().textContent).toContain('Cert Number');
-    expect(el().querySelector('[data-testid="header-edit-field-result"]')).toBeNull();
+    expect(
+      el().querySelector('[data-testid="header-edit-field-result"]'),
+    ).toBeNull();
     expect(el().textContent).not.toContain('Result');
 
     // The object-list seeded one row through the GENERIC array editor.
@@ -106,14 +113,18 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
     typeInto(el(), '[data-testid="header-edit-input-certNumber"]', 'CERT-2');
 
     el()
-      .querySelector<HTMLButtonElement>('[data-testid="header-edit-attachments-add"]')!
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="header-edit-attachments-add"]',
+      )!
       .click();
     await fixture.whenStable();
     typeInto(el(), '[data-testid="header-edit-attachments-name-1"]', 'Hook');
     typeInto(el(), '[data-testid="header-edit-attachments-number-1"]', 'H-9');
 
     // Save.
-    el().querySelector<HTMLButtonElement>('[data-testid="header-edit-save"]')!.click();
+    el()
+      .querySelector<HTMLButtonElement>('[data-testid="header-edit-save"]')!
+      .click();
     await fixture.whenStable();
 
     expect(emitted.length).toBe(1);
@@ -144,8 +155,12 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
     fixture.autoDetectChanges();
     await fixture.whenStable();
 
-    expect(el().querySelector('[data-testid="header-edit-unavailable"]')).not.toBeNull();
-    expect(el().querySelector('[data-testid="header-edit-field-certNumber"]')).toBeNull();
+    expect(
+      el().querySelector('[data-testid="header-edit-unavailable"]'),
+    ).not.toBeNull();
+    expect(
+      el().querySelector('[data-testid="header-edit-field-certNumber"]'),
+    ).toBeNull();
     expect(el().querySelector('[data-testid="header-edit-save"]')).toBeNull();
   });
 
@@ -156,8 +171,21 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
       sections: [],
       regions: [{ id: 'r1', marker: '{{tag}}' }],
       fields: [
-        { key: 'certNumber', label: 'Cert Number', type: 'text', required: false, scope: 'header' },
-        { key: 'inspBy', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
+        {
+          key: 'certNumber',
+          label: 'Cert Number',
+          type: 'text',
+          required: false,
+          scope: 'header',
+        },
+        {
+          key: 'inspBy',
+          label: 'Inspector',
+          type: 'text',
+          required: false,
+          scope: 'header',
+          role: 'inspector',
+        },
       ],
     };
 
@@ -183,17 +211,29 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
     await fixture.whenStable();
 
     // No input control is built for the roled field; the System row + badge render instead.
-    expect(el().querySelector('[data-testid="header-edit-input-inspBy"]')).toBeNull();
-    expect(el().querySelector('[data-testid="system-field-inspBy"]')).not.toBeNull();
-    expect(el().querySelector('[data-testid="system-badge-inspBy"]')).not.toBeNull();
-    expect(el().querySelector('[data-testid="system-badge-inspBy"]')?.textContent).toContain('System');
+    expect(
+      el().querySelector('[data-testid="header-edit-input-inspBy"]'),
+    ).toBeNull();
+    expect(
+      el().querySelector('[data-testid="system-field-inspBy"]'),
+    ).not.toBeNull();
+    expect(
+      el().querySelector('[data-testid="system-badge-inspBy"]'),
+    ).not.toBeNull();
+    expect(
+      el().querySelector('[data-testid="system-badge-inspBy"]')?.textContent,
+    ).toContain('System');
     // Pending message + source note both show.
-    expect(el().querySelector('[data-testid="system-value-inspBy"]')?.textContent).toContain('Awaiting inspection');
+    expect(
+      el().querySelector('[data-testid="system-value-inspBy"]')?.textContent,
+    ).toContain('Awaiting inspection');
     expect(el().textContent).toContain('Set at inspection');
 
     // A role-less field still edits normally, and Save emits ONLY it — never the roled key.
     typeInto(el(), '[data-testid="header-edit-input-certNumber"]', 'CERT-9');
-    el().querySelector<HTMLButtonElement>('[data-testid="header-edit-save"]')!.click();
+    el()
+      .querySelector<HTMLButtonElement>('[data-testid="header-edit-save"]')!
+      .click();
     await fixture.whenStable();
 
     expect(emitted.length).toBe(1);
@@ -214,7 +254,9 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
     c.data = { refreshed: true };
     fixture.autoDetectChanges();
     await fixture.whenStable();
-    expect(el().querySelector('[data-testid="system-value-inspBy"]')?.textContent).toContain('Ivy Inspector');
+    expect(
+      el().querySelector('[data-testid="system-value-inspBy"]')?.textContent,
+    ).toContain('Ivy Inspector');
   });
 
   it('drill-pipe object-list fields (equipment/methods) render through the SAME generic array editor', async () => {
@@ -227,7 +269,13 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
       sections: [],
       regions: [{ id: 'serials', marker: '{{sn}}' }],
       fields: [
-        { key: 'grade', label: 'Grade', type: 'text', required: false, scope: 'header' },
+        {
+          key: 'grade',
+          label: 'Grade',
+          type: 'text',
+          required: false,
+          scope: 'header',
+        },
         {
           key: 'equipmentUsed',
           label: 'Equipment Used',
@@ -243,12 +291,17 @@ describe('InspectionReportHeaderEditComponent — generic definition-driven head
     const el = () => fixture.nativeElement as HTMLElement;
 
     c.definition = DRILL;
-    c.data = { grade: 'S-135', equipmentUsed: [{ name: 'UT Gauge', number: 'UT-9' }] };
+    c.data = {
+      grade: 'S-135',
+      equipmentUsed: [{ name: 'UT Gauge', number: 'UT-9' }],
+    };
     fixture.autoDetectChanges();
     await fixture.whenStable();
 
     // Scalar grade is a plain input; equipment is the structured array editor.
-    expect(el().querySelector('[data-testid="header-edit-input-grade"]')).not.toBeNull();
+    expect(
+      el().querySelector('[data-testid="header-edit-input-grade"]'),
+    ).not.toBeNull();
     expect(
       el().querySelector<HTMLInputElement>(
         '[data-testid="header-edit-equipmentUsed-name-0"]',

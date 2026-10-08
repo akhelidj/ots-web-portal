@@ -7,7 +7,10 @@ import { PrismaService } from '../prisma/prisma.service';
  * actions — they are workflow moves, so a reopen alone never changes the inspector.
  */
 const INSPECTION_ACTIONS = [
-  { entity: 'SerialNumber', action: { in: ['UPDATE', 'CREATE_BULK', 'DELETE'] } },
+  {
+    entity: 'SerialNumber',
+    action: { in: ['UPDATE', 'CREATE_BULK', 'DELETE'] },
+  },
   { entity: 'InspectionReport', action: 'UPDATE' },
   { entity: 'Attachment', action: 'CREATE' },
 ];
@@ -82,7 +85,8 @@ export async function findLastInspectorUserId(
     const t = a.timestamp.getTime();
     if (
       windows.some(
-        (w) => t >= w.start.getTime() && (w.end === null || t <= w.end.getTime()),
+        (w) =>
+          t >= w.start.getTime() && (w.end === null || t <= w.end.getTime()),
       )
     ) {
       return a.userId;

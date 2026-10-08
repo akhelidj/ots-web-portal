@@ -38,7 +38,10 @@ export class ToastComponent {
       } else if (open) {
         // Wait for the last toast's leave animation before leaving the top layer.
         setTimeout(() => {
-          if (this.toastService.toasts().length === 0 && el.matches(':popover-open')) {
+          if (
+            this.toastService.toasts().length === 0 &&
+            el.matches(':popover-open')
+          ) {
             el.hidePopover();
           }
         }, 200);

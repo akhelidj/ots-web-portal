@@ -27,15 +27,24 @@ describe('ReportSignaturesService', () => {
 
   it('loads the per-report signature states', async () => {
     const p = service.getStates('r1');
-    const req = http.expectOne(`${environment.apiUrl}/inspection-reports/r1/signatures`);
+    const req = http.expectOne(
+      `${environment.apiUrl}/inspection-reports/r1/signatures`,
+    );
     expect(req.request.method).toBe('GET');
-    req.flush({ reportId: 'r1', revisionNumber: 1, signable: true, fields: [] });
+    req.flush({
+      reportId: 'r1',
+      revisionNumber: 1,
+      signable: true,
+      fields: [],
+    });
     expect((await p).signable).toBe(true);
   });
 
   it('lists the reports waiting on the customer', async () => {
     const p = service.listPending();
-    const req = http.expectOne(`${environment.apiUrl}/customer-signatures/pending`);
+    const req = http.expectOne(
+      `${environment.apiUrl}/customer-signatures/pending`,
+    );
     req.flush([]);
     expect(await p).toEqual([]);
   });
@@ -50,7 +59,12 @@ describe('ReportSignaturesService', () => {
     const body = req.request.body as FormData;
     expect(body).toBeInstanceOf(FormData);
     expect(body.get('file')).toBeInstanceOf(Blob);
-    req.flush({ reportId: 'r1', revisionNumber: 1, signable: true, fields: [] });
+    req.flush({
+      reportId: 'r1',
+      revisionNumber: 1,
+      signable: true,
+      fields: [],
+    });
     await p;
   });
 });
@@ -72,7 +86,9 @@ describe('signature-pending util', () => {
   it('reads it from a Blob body (export uses responseType blob)', async () => {
     const err = new HttpErrorResponse({
       status: 409,
-      error: new Blob([JSON.stringify(pendingBody)], { type: 'application/json' }),
+      error: new Blob([JSON.stringify(pendingBody)], {
+        type: 'application/json',
+      }),
     });
     const pending = await readSignaturePending(err);
     expect(pending?.map((p) => p.key)).toEqual(['custSig', 'qa']);
@@ -80,11 +96,16 @@ describe('signature-pending util', () => {
 
   it('returns null for other statuses, other codes, and unparseable bodies', async () => {
     expect(
-      await readSignaturePending(new HttpErrorResponse({ status: 500, error: pendingBody })),
+      await readSignaturePending(
+        new HttpErrorResponse({ status: 500, error: pendingBody }),
+      ),
     ).toBeNull();
     expect(
       await readSignaturePending(
-        new HttpErrorResponse({ status: 409, error: { code: 'VERSION_CONFLICT' } }),
+        new HttpErrorResponse({
+          status: 409,
+          error: { code: 'VERSION_CONFLICT' },
+        }),
       ),
     ).toBeNull();
     expect(

@@ -135,7 +135,11 @@ describe('inspector signature freeze at submission [integration]', () => {
     report: { id: string; version: number },
   ) =>
     workflow.transition(
-      { id: inspector.id, tenantId: inspector.tenantId, role: UserRole.INSPECTOR },
+      {
+        id: inspector.id,
+        tenantId: inspector.tenantId,
+        role: UserRole.INSPECTOR,
+      },
       report.id,
       InspectionReportStatus.PENDING_APPROVAL,
       report.version,

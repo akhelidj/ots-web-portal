@@ -17,7 +17,13 @@
 import * as ExcelJS from 'exceljs';
 import { engineMap, ExportDefinition } from './export-engine';
 import { Snapshot } from '../common/inspection-data.types';
-import { canon, frozenHeader, frozenSnapshot, makeSerial, maxRowOf } from './flat-proof.testutil';
+import {
+  canon,
+  frozenHeader,
+  frozenSnapshot,
+  makeSerial,
+  maxRowOf,
+} from './flat-proof.testutil';
 
 // ---- synthetic fixtures (built in-memory; tokens at known addresses) -------------
 
@@ -80,7 +86,9 @@ async function runEngine(
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buffer as unknown as ArrayBuffer);
   await engineMap(def, wb, snapshot, chunk);
-  const out = Buffer.from((await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer);
+  const out = Buffer.from(
+    (await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer,
+  );
   return canon(out);
 }
 
@@ -89,7 +97,9 @@ describe('Flat (region-less) export — correct by construction', () => {
     const buffer = await flatTemplateBuffer();
     const snapshot = flatSnapshot('PO-42', '23.5');
     // one serial's worth of data — the flat path ignores it for row expansion.
-    const sheets = await runEngine(buffer, FLAT_DEF, snapshot, [makeSerial('REC-1')]);
+    const sheets = await runEngine(buffer, FLAT_DEF, snapshot, [
+      makeSerial('REC-1'),
+    ]);
     const s = sheets[0];
 
     expect(s.cells['B2']).toBe('PO-42'); // {{poNumber}} resolved in place
@@ -138,9 +148,12 @@ describe('Flat (region-less) export — correct by construction', () => {
     const mutant: ExportDefinition = JSON.parse(JSON.stringify(FLAT_DEF));
     mutant.export.global.find((e) => e.token === '{{poNumber}}')!.field =
       'doesNotExist'; // resolves '' instead of PO-42
-    const sheets = await runEngine(buffer, mutant, flatSnapshot('PO-42', '23.5'), [
-      makeSerial('REC-1'),
-    ]);
+    const sheets = await runEngine(
+      buffer,
+      mutant,
+      flatSnapshot('PO-42', '23.5'),
+      [makeSerial('REC-1')],
+    );
     // {{poNumber}} now resolves empty → B2 is blank (dropped from canon), not 'PO-42'.
     expect(sheets[0].cells['B2']).toBeUndefined();
   });
@@ -150,7 +163,9 @@ describe('Flat (region-less) export — correct by construction', () => {
     const before = maxRowOf(await canon(buffer));
     const snapshot = frozenSnapshot(frozenHeader());
     const three = [makeSerial('SN-1'), makeSerial('SN-2'), makeSerial('SN-3')];
-    const after = maxRowOf(await runEngine(buffer, REGION_DEF, snapshot, three));
+    const after = maxRowOf(
+      await runEngine(buffer, REGION_DEF, snapshot, three),
+    );
     // 3 serials clone the marker row → +2 rows; proves maxRow WOULD catch a stray
     // clone on the flat path (where it must stay equal).
     expect(after).toBe(before + 2);

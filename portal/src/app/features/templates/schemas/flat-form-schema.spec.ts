@@ -30,7 +30,13 @@ const FLAT_DEF: TemplateFormDefinition = {
   sections: [{ key: 'Body', title: 'Body' }],
   regions: [],
   fields: [
-    { key: 'poNumber', label: 'PO Number', type: 'text', required: false, scope: 'header' },
+    {
+      key: 'poNumber',
+      label: 'PO Number',
+      type: 'text',
+      required: false,
+      scope: 'header',
+    },
     {
       key: 'casingWeight',
       label: 'Casing Weight',
@@ -52,7 +58,13 @@ const REGION_DEF: TemplateFormDefinition = {
   sections: [{ key: 'Body', title: 'Body' }],
   regions: [{ id: 'serials', marker: '{{sn}}' }],
   fields: [
-    { key: 'poNumber', label: 'PO Number', type: 'text', required: false, scope: 'header' },
+    {
+      key: 'poNumber',
+      label: 'PO Number',
+      type: 'text',
+      required: false,
+      scope: 'header',
+    },
     {
       key: 'casingWeight',
       label: 'Casing Weight',
@@ -65,7 +77,9 @@ const REGION_DEF: TemplateFormDefinition = {
 };
 
 const allFieldKeys = (def: TemplateFormDefinition): string[] =>
-  definitionToFormSchema(def).sections.flatMap((s) => s.fields.map((f) => f.key));
+  definitionToFormSchema(def).sections.flatMap((s) =>
+    s.fields.map((f) => f.key),
+  );
 
 describe('Flat form-schema adaptation — the regions.length mode switch', () => {
   describe('flat template (regions.length === 0) renders EVERY field', () => {
@@ -87,7 +101,9 @@ describe('Flat form-schema adaptation — the regions.length mode switch', () =>
     });
 
     it('preserves field type/required/options onto the rendered controls', () => {
-      const fields = definitionToFormSchema(FLAT_DEF).sections.flatMap((s) => s.fields);
+      const fields = definitionToFormSchema(FLAT_DEF).sections.flatMap(
+        (s) => s.fields,
+      );
       const casing = fields.find((f) => f.key === 'casingWeight')!;
       expect(casing.inputType).toBe('text');
       expect(casing.required).toBe(true);
@@ -105,7 +121,10 @@ describe('Flat form-schema adaptation — the regions.length mode switch', () =>
     it('flat vs region on the SAME fields differ only by regions.length', () => {
       // Identical fields; the only difference is the region count. Flat renders both,
       // region renders one — proving the switch keys off regions.length, not the field set.
-      expect(allFieldKeys(FLAT_DEF).sort()).toEqual(['casingWeight', 'poNumber']);
+      expect(allFieldKeys(FLAT_DEF).sort()).toEqual([
+        'casingWeight',
+        'poNumber',
+      ]);
       expect(allFieldKeys(REGION_DEF)).toEqual(['casingWeight']);
     });
 

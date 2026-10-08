@@ -1,4 +1,11 @@
-import { Component, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ConfirmService } from './confirm.service';
 
@@ -13,8 +20,10 @@ export class ConfirmDialogComponent {
   protected confirmService = inject(ConfirmService);
   protected reasonText = signal('');
 
-  private reasonInput = viewChild<ElementRef<HTMLTextAreaElement>>('reasonInput');
-  private confirmButton = viewChild<ElementRef<HTMLButtonElement>>('confirmButton');
+  private reasonInput =
+    viewChild<ElementRef<HTMLTextAreaElement>>('reasonInput');
+  private confirmButton =
+    viewChild<ElementRef<HTMLButtonElement>>('confirmButton');
 
   constructor() {
     effect(() => {

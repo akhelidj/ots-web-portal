@@ -21,7 +21,9 @@ class StubDialog {
   cancelled = output<void>();
 }
 
-const states = (over: Partial<ReportSignatureStates> = {}): ReportSignatureStates => ({
+const states = (
+  over: Partial<ReportSignatureStates> = {},
+): ReportSignatureStates => ({
   reportId: 'r1',
   revisionNumber: 1,
   signable: true,
@@ -104,7 +106,9 @@ describe('ReportSignaturesPanelComponent', () => {
     const staff = create(false);
     await flush(staff);
     expect(
-      (staff.nativeElement as HTMLElement).querySelector('[data-testid="sign-custSig"]'),
+      (staff.nativeElement as HTMLElement).querySelector(
+        '[data-testid="sign-custSig"]',
+      ),
     ).toBeNull();
     TestBed.resetTestingModule();
 
@@ -123,7 +127,9 @@ describe('ReportSignaturesPanelComponent', () => {
     const f = create(true);
     await flush(f);
     expect(
-      (f.nativeElement as HTMLElement).querySelector('[data-testid="sign-custSig"]'),
+      (f.nativeElement as HTMLElement).querySelector(
+        '[data-testid="sign-custSig"]',
+      ),
     ).toBeNull();
   });
 
@@ -133,7 +139,9 @@ describe('ReportSignaturesPanelComponent', () => {
     const f = create(true);
     await flush(f);
     expect(
-      (f.nativeElement as HTMLElement).querySelector('[data-testid="report-signatures"]'),
+      (f.nativeElement as HTMLElement).querySelector(
+        '[data-testid="report-signatures"]',
+      ),
     ).toBeNull();
   });
 
@@ -172,7 +180,9 @@ describe('CustomerSignaturePendingComponent', () => {
     f.detectChanges();
     await flush(f);
     expect(
-      (f.nativeElement as HTMLElement).querySelector('[data-testid="signature-pending"]'),
+      (f.nativeElement as HTMLElement).querySelector(
+        '[data-testid="signature-pending"]',
+      ),
     ).toBeNull();
   });
 
@@ -183,7 +193,9 @@ describe('CustomerSignaturePendingComponent', () => {
     f.detectChanges();
     await flush(f);
     const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('[data-testid="signature-pending"]')).not.toBeNull();
+    expect(
+      el.querySelector('[data-testid="signature-pending"]'),
+    ).not.toBeNull();
     expect(el.textContent).toContain('IR-001');
     expect(el.querySelector('[data-testid="sign-r1-custSig"]')).not.toBeNull();
   });

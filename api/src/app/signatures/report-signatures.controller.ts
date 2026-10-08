@@ -85,6 +85,11 @@ export class ReportSignaturesController {
     if (!file) {
       throw new BadRequestException('Signature file is required.');
     }
-    return this.signatures.signCustomerField(req.user, id, fieldKey, file.buffer);
+    return this.signatures.signCustomerField(
+      req.user,
+      id,
+      fieldKey,
+      file.buffer,
+    );
   }
 }

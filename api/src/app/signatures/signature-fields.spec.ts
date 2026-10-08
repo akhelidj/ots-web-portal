@@ -33,7 +33,13 @@ describe('signatureFieldsOf', () => {
   it('reads signature fields with a valid signer and skips the rest', () => {
     const specs = signatureFieldsOf({
       fields: [
-        { key: 'a', label: 'Customer', type: 'signature', signer: 'CUSTOMER', required: true },
+        {
+          key: 'a',
+          label: 'Customer',
+          type: 'signature',
+          signer: 'CUSTOMER',
+          required: true,
+        },
         { key: 'b', type: 'signature', signer: 'SUPERVISOR' },
         { key: 'c', type: 'signature', signer: 'NOBODY' },
         { key: 'd', type: 'text', signer: 'CUSTOMER' },
@@ -41,8 +47,20 @@ describe('signatureFieldsOf', () => {
       ],
     });
     expect(specs).toEqual([
-      { key: 'a', label: 'Customer', signer: 'CUSTOMER', required: true, slot: 'field:a' },
-      { key: 'b', label: 'b', signer: 'SUPERVISOR', required: false, slot: 'field:b' },
+      {
+        key: 'a',
+        label: 'Customer',
+        signer: 'CUSTOMER',
+        required: true,
+        slot: 'field:a',
+      },
+      {
+        key: 'b',
+        label: 'b',
+        signer: 'SUPERVISOR',
+        required: false,
+        slot: 'field:b',
+      },
     ]);
   });
 });
@@ -67,12 +85,14 @@ describe('currentFieldSignatures', () => {
     const db = {
       reportSignature: {
         // Already ordered newest-first, as the query asks.
-        findMany: jest.fn().mockResolvedValue([
-          row('new', 'r1', 'field:a', 2, 30),
-          row('old-rev', 'r1', 'field:b', 1, 25),
-          row('dup', 'r1', 'field:a', 2, 20),
-          row('other', 'r2', 'field:a', 0, 10),
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            row('new', 'r1', 'field:a', 2, 30),
+            row('old-rev', 'r1', 'field:b', 1, 25),
+            row('dup', 'r1', 'field:a', 2, 20),
+            row('other', 'r2', 'field:a', 0, 10),
+          ]),
       },
     };
     const out = await currentFieldSignatures(db as never, {

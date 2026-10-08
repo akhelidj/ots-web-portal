@@ -193,7 +193,8 @@ export class ReportLifecycleRailComponent implements AfterViewInit, OnDestroy {
         ...states.fields.filter((f) => f.signed).map((f) => f.key),
       ];
       for (const key of wanted) {
-        const signedAt = states.fields.find((f) => f.key === key)?.signedAt ?? '';
+        const signedAt =
+          states.fields.find((f) => f.key === key)?.signedAt ?? '';
         const token = `${id}:${key}:${states.revisionNumber}:${signedAt}`;
         if (this.requested.has(token)) continue;
         this.requested.add(token);

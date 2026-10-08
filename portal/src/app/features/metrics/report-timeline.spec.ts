@@ -26,7 +26,10 @@ describe('report timeline', () => {
   });
 
   it('reports elapsed time while a report is not completed', () => {
-    const t = buildTimeline([{ status: 'RECEIVED', at: at(1) }], Date.parse(at(5)));
+    const t = buildTimeline(
+      [{ status: 'RECEIVED', at: at(1) }],
+      Date.parse(at(5)),
+    );
     expect(t.turnaround).toBeNull();
     expect(t.elapsed).toBe(4 * 3_600_000);
   });
@@ -58,6 +61,9 @@ describe('report timeline', () => {
     });
     expect(row.label).toBe('ABCDEF12');
     expect(row.duration).toBe(8 * 3_600_000);
-    expect(row.slowest).toEqual({ status: 'IN_INSPECTION', duration: 6 * 3_600_000 });
+    expect(row.slowest).toEqual({
+      status: 'IN_INSPECTION',
+      duration: 6 * 3_600_000,
+    });
   });
 });

@@ -30,9 +30,9 @@ import { AppRole } from '@portal/core/constants/app.constants';
           (or its parent) is Approved or Closed.
         </li>
         <li>
-          <strong>Uploaded files:</strong> If the report has uploaded files
-          (the Documents section), the PDF or Excel export downloads as a zip:
-          the report at the top level and the original files, untouched, in an
+          <strong>Uploaded files:</strong> If the report has uploaded files (the
+          Documents section), the PDF or Excel export downloads as a zip: the
+          report at the top level and the original files, untouched, in an
           "attachments" folder. With no uploaded files you get the single file.
         </li>
         <li>

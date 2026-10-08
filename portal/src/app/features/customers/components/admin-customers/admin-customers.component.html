@@ -211,7 +211,10 @@
   }
 
   @if (brandingCustomer(); as bc) {
-    <app-customer-branding-panel [customer]="bc" (closed)="brandingCustomer.set(null)" />
+    <app-customer-branding-panel
+      [customer]="bc"
+      (closed)="brandingCustomer.set(null)"
+    />
   }
 
   <!-- Deactivation Form -->

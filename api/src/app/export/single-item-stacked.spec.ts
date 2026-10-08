@@ -62,7 +62,9 @@ async function runExport(
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load((await stackedTemplate()) as unknown as ArrayBuffer);
   await engineMap(STACKED_DEF, wb, snapshot, serials);
-  const out = Buffer.from((await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer);
+  const out = Buffer.from(
+    (await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer,
+  );
   const sheets = await canon(out);
   return sheets[0]!.cells;
 }
@@ -87,7 +89,9 @@ describe('single-item stacked-layout export', () => {
   });
 
   it('ONE item: a falsy per-item field falls back to whenEmpty', async () => {
-    const cells = await runExport([makeSerial('S1', { rwk: '', pascrw: 'PASS' })]);
+    const cells = await runExport([
+      makeSerial('S1', { rwk: '', pascrw: 'PASS' }),
+    ]);
     expect(cells['B9']).toBe('S1');
     expect(cells['B10']).toBe('N/A'); // whenEmpty for the empty rwk
     expect(cells['B11']).toBe('PASS');

@@ -1,6 +1,6 @@
 # Architecture Documentation
 
-High-level architecture for the OTS Web Portal. For the *decisions* behind these
+High-level architecture for the OTS Web Portal. For the _decisions_ behind these
 designs and their tradeoffs, see [`../adr/`](../adr/README.md); for verified standing
 defects and constraints, see [`../KNOWN-ISSUES.md`](../KNOWN-ISSUES.md).
 

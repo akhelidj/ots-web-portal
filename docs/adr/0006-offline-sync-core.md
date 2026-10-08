@@ -19,7 +19,7 @@ and rewrites still-pending outbox items to the real id. A 409 marks the entity/i
 CONFLICT and **cascades** to dependents. Anchors: `sync-dispatcher.service.ts`,
 `outbox.service.ts:66,:76`, `sync-orchestrator.service.ts`, `offline/models/types.ts`.
 
-*Why not the alternatives:* online-only is unusable in the field; a generic sync
+_Why not the alternatives:_ online-only is unusable in the field; a generic sync
 framework is heavy and opinionated; last-write-wins loses data.
 
 ## Consequences

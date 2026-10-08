@@ -28,7 +28,10 @@ import { UserPreferencesService } from '@portal/core/services/user-preferences.s
 import { InspectionReportsService } from '@portal/features/inspections/services/inspection-reports.service';
 import { ReportDeleteFlowService } from '@portal/features/inspections/services/report-delete-flow.service';
 import { AppRoutes } from '@portal/core/navigation/constants/routes.constants';
-import { ExportSplitButtonComponent, ExportFormat } from '@portal/shared/components/export-split-button/export-split-button.component';
+import {
+  ExportSplitButtonComponent,
+  ExportFormat,
+} from '@portal/shared/components/export-split-button/export-split-button.component';
 import { ConfirmService } from '@portal/shared/confirm/confirm.service';
 import {
   APP_ROLES,
@@ -98,9 +101,7 @@ import { InspectionReportApprovalBatchesComponent } from './sections/inspection-
 import { InspectionReportTransitionHistoryComponent } from './sections/inspection-report-transition-history/inspection-report-transition-history.component';
 import { InspectionReportSerialsTableComponent } from './sections/inspection-report-serials-table/inspection-report-serials-table.component';
 import { CustomerSerialsTableComponent } from './sections/customer-serials-table/customer-serials-table.component';
-import {
-  BadgeSeverity,
-} from '@portal/shared/components/status-badge/status-badge.component';
+import { BadgeSeverity } from '@portal/shared/components/status-badge/status-badge.component';
 
 /** The customer app frame's views — one per sidebar entry, one shown at a time. */
 export type CustomerView =
@@ -184,7 +185,8 @@ export class InspectionReportDetailComponent
   public prefs = inject(UserPreferencesService);
 
   // Focusable validation error-summary target (moved focus after a failed transition).
-  @ViewChild('validationSummary') validationSummaryRef?: ElementRef<HTMLElement>;
+  @ViewChild('validationSummary')
+  validationSummaryRef?: ElementRef<HTMLElement>;
 
   public reportId = '';
   public report = signal<LocalInspectionReport | null>(null);
@@ -196,7 +198,8 @@ export class InspectionReportDetailComponent
    * the input's type honest. Null (pre-cutover) → the form's legacy hardcoded schema.
    */
   public get reportDefinition(): TemplateFormDefinition | null {
-    return (this.report()?.definitionJson ?? null) as TemplateFormDefinition | null;
+    return (this.report()?.definitionJson ??
+      null) as TemplateFormDefinition | null;
   }
 
   /**
@@ -357,9 +360,7 @@ export class InspectionReportDetailComponent
    */
   public hasReworkRuleConfigured = computed(() => {
     const def = this.report()?.definitionJson as
-      | { rules?: unknown[] }
-      | null
-      | undefined;
+      { rules?: unknown[] } | null | undefined;
     const rules = def?.rules;
     if (!Array.isArray(rules)) return false;
     return rules.some((rule) => {
@@ -638,10 +639,8 @@ export class InspectionReportDetailComponent
   }>(() => {
     const logs = this.enrichedTransitionLogs(); // newest-first
     const received =
-      [...logs]
-        .reverse()
-        .find((l) => l.toStatus === REPORT_STATUSES.RECEIVED)?.timestamp ??
-      null;
+      [...logs].reverse().find((l) => l.toStatus === REPORT_STATUSES.RECEIVED)
+        ?.timestamp ?? null;
     const completed =
       logs.find(
         (l) =>
@@ -682,7 +681,12 @@ export class InspectionReportDetailComponent
     }
     const serialCount = this.filteredSerials().length;
     if (serialCount > 0) {
-      items.push({ view: 'serials', label: 'Serials', count: serialCount, unit: 'serial' });
+      items.push({
+        view: 'serials',
+        label: 'Serials',
+        count: serialCount,
+        unit: 'serial',
+      });
     }
     const childCount = this.customerChildReports().length;
     if (childCount > 0) {
@@ -695,7 +699,12 @@ export class InspectionReportDetailComponent
     }
     const docCount = this.attachmentCount();
     if (docCount > 0) {
-      items.push({ view: 'documents', label: 'Documents', count: docCount, unit: 'file' });
+      items.push({
+        view: 'documents',
+        label: 'Documents',
+        count: docCount,
+        unit: 'file',
+      });
     }
     if (this.enrichedTransitionLogs().length > 0) {
       items.push({ view: 'history', label: 'History' });
@@ -710,7 +719,9 @@ export class InspectionReportDetailComponent
    */
   public activeCustomerView = computed<CustomerView>(() => {
     const wanted = this.customerView();
-    return this.customerNav().some((i) => i.view === wanted) ? wanted : 'overview';
+    return this.customerNav().some((i) => i.view === wanted)
+      ? wanted
+      : 'overview';
   });
 
   public activeCustomerNavItem = computed<CustomerNavItem>(
@@ -725,7 +736,9 @@ export class InspectionReportDetailComponent
   private readonly keepActiveSegmentInView = effect(() => {
     this.activeCustomerView();
     setTimeout(() => {
-      const item = document.querySelector<HTMLElement>('.cxa-nav-item.is-active');
+      const item = document.querySelector<HTMLElement>(
+        '.cxa-nav-item.is-active',
+      );
       const bar = item?.closest<HTMLElement>('.cxa-sidebar');
       if (!item || !bar || bar.scrollWidth <= bar.clientWidth) return;
       bar.scrollTo({
@@ -859,7 +872,8 @@ export class InspectionReportDetailComponent
   private readInspectorWidth(): number {
     try {
       const stored = Number(localStorage.getItem(INSPECTOR_WIDTH_KEY));
-      if (Number.isFinite(stored) && stored >= INSPECTOR_MIN_WIDTH) return stored;
+      if (Number.isFinite(stored) && stored >= INSPECTOR_MIN_WIDTH)
+        return stored;
     } catch {
       /* storage unavailable — default width */
     }
@@ -868,7 +882,9 @@ export class InspectionReportDetailComponent
 
   private setInspectorWidth(px: number): void {
     const max = Math.max(INSPECTOR_MIN_WIDTH, window.innerWidth * 0.5);
-    this.inspectorWidth.set(Math.round(Math.min(max, Math.max(INSPECTOR_MIN_WIDTH, px))));
+    this.inspectorWidth.set(
+      Math.round(Math.min(max, Math.max(INSPECTOR_MIN_WIDTH, px))),
+    );
   }
 
   private persistInspectorWidth(): void {
@@ -890,7 +906,9 @@ export class InspectionReportDetailComponent
     if (this.resizePointerId !== event.pointerId) return;
     const inspector = (event.currentTarget as HTMLElement).parentElement;
     if (!inspector) return;
-    this.setInspectorWidth(inspector.getBoundingClientRect().right - event.clientX);
+    this.setInspectorWidth(
+      inspector.getBoundingClientRect().right - event.clientX,
+    );
   }
 
   public endInspectorResize(event: PointerEvent): void {
@@ -904,7 +922,9 @@ export class InspectionReportDetailComponent
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
     event.stopPropagation();
-    this.setInspectorWidth(this.inspectorWidth() + (event.key === 'ArrowLeft' ? 24 : -24));
+    this.setInspectorWidth(
+      this.inspectorWidth() + (event.key === 'ArrowLeft' ? 24 : -24),
+    );
     this.persistInspectorWidth();
   }
 
@@ -917,11 +937,14 @@ export class InspectionReportDetailComponent
   /** App-style shortcuts for the customer frame. Ignored while typing or under a modal. */
   @HostListener('document:keydown', ['$event'])
   public onCustomerShortcut(event: KeyboardEvent): void {
-    if (!this.isCustomer() || event.defaultPrevented || this.activeStatistic()) return;
+    if (!this.isCustomer() || event.defaultPrevented || this.activeStatistic())
+      return;
     const target = event.target;
     if (
       target instanceof Element &&
-      target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')
+      target.closest(
+        'input, textarea, select, [contenteditable="true"], [role="dialog"]',
+      )
     ) {
       return;
     }
@@ -930,10 +953,16 @@ export class InspectionReportDetailComponent
     if (event.key === 'Escape' && this.inspectingSn()) {
       event.preventDefault();
       this.closeInspectionForm();
-    } else if ((event.key === 'ArrowDown' || event.key === 'j') && this.inspectingSn()) {
+    } else if (
+      (event.key === 'ArrowDown' || event.key === 'j') &&
+      this.inspectingSn()
+    ) {
       event.preventDefault();
       this.goToNextSn();
-    } else if ((event.key === 'ArrowUp' || event.key === 'k') && this.inspectingSn()) {
+    } else if (
+      (event.key === 'ArrowUp' || event.key === 'k') &&
+      this.inspectingSn()
+    ) {
       event.preventDefault();
       this.goToPrevSn();
     } else if (event.key === 'ArrowRight') {
@@ -1077,7 +1106,9 @@ export class InspectionReportDetailComponent
       this.customerView.set(requestedView as CustomerView);
     }
     this.selectedChildId.set(this.route.snapshot.queryParamMap.get('child'));
-    this.selectedFindingId.set(this.route.snapshot.queryParamMap.get('finding'));
+    this.selectedFindingId.set(
+      this.route.snapshot.queryParamMap.get('finding'),
+    );
     if (this.reportId && this.reportId !== 'reports') {
       this.refreshData();
 
@@ -1717,7 +1748,9 @@ export class InspectionReportDetailComponent
       const e = error as Error;
       // Surface inside the drawer where the user is looking (the shared `formError`
       // renders only on the workflow-actions panel, hidden behind the drawer).
-      this.inspectionSaveError.set(e.message || 'Failed to save inspection data.');
+      this.inspectionSaveError.set(
+        e.message || 'Failed to save inspection data.',
+      );
     } finally {
       this.isSavingInspection.set(false);
     }
@@ -1898,7 +1931,9 @@ export class InspectionReportDetailComponent
   public openStatisticModal(stat: ReportStatistic): void {
     const wanted = new Set(stat.serials);
     this.activeStatistic.set(stat);
-    this.modalEquipmentList = this.serials().filter((sn) => wanted.has(sn.value));
+    this.modalEquipmentList = this.serials().filter((sn) =>
+      wanted.has(sn.value),
+    );
   }
 
   public closeStatisticModal(): void {
@@ -2074,7 +2109,6 @@ export class InspectionReportDetailComponent
       this.isPublishingReport.set(false);
     }
   }
-
 
   public onTabClick(
     tab: 'summary' | 'serials' | 'approvals' | 'specs' | 'history',

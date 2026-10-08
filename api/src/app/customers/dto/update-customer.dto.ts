@@ -47,7 +47,9 @@ export class UpdateCustomerDto {
 
   /** `#rrggbb` to brand the customer's portal; `null` restores the default palette. */
   @IsOptional()
-  @Matches(/^#[0-9a-fA-F]{6}$/, { message: 'brandColor must be a #rrggbb hex colour' })
+  @Matches(/^#[0-9a-fA-F]{6}$/, {
+    message: 'brandColor must be a #rrggbb hex colour',
+  })
   brandColor?: string | null;
 
   constructor(version: number) {

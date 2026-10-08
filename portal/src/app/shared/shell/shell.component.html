@@ -74,7 +74,16 @@
               @if (pendingCount() > 0) {
                 <span class="hdr-sync-count">{{ pendingCount() }}</span>
               }
-              <svg class="hdr-sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg
+                class="hdr-sync-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M20 11a8 8 0 0 0-14.3-4.9L4 8" />
                 <path d="M4 4v4h4" />
                 <path d="M4 13a8 8 0 0 0 14.3 4.9L20 16" />
@@ -91,7 +100,15 @@
               aria-label="Help"
               data-testid="hdr-help"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
                 <circle cx="12" cy="12" r="9" />
                 <path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.3-2.5 3.9" />
                 <path d="M12 17.2h.01" />
@@ -113,12 +130,23 @@
                 (keydown.arrowdown)="$event.preventDefault(); openAccountMenu()"
                 data-testid="hdr-account"
               >
-                <span class="hdr-avatar" aria-hidden="true">{{ initials() }}</span>
+                <span class="hdr-avatar" aria-hidden="true">{{
+                  initials()
+                }}</span>
                 <span class="hdr-account-text">
                   <span class="hdr-account-name">{{ getProfileLabel() }}</span>
                   <span class="hdr-account-org">{{ organizationName() }}</span>
                 </span>
-                <svg class="hdr-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg
+                  class="hdr-chevron"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
                   <path d="m6 9 6 6 6-6" />
                 </svg>
               </button>
@@ -148,15 +176,19 @@
                     class="hdr-menu-item"
                     [routerLink]="['/', APP_ROUTES.SETTINGS]"
                     (click)="closeAccountMenu()"
-                  >Settings</a>
+                    >Settings</a
+                  >
                   <a
                     role="menuitem"
                     class="hdr-menu-item"
                     [routerLink]="['/', APP_ROUTES.HELP]"
                     (click)="closeAccountMenu()"
-                  >Help &amp; shortcuts</a>
+                    >Help &amp; shortcuts</a
+                  >
                   @if (!isCustomer() && lastSyncedAt(); as lastSynced) {
-                    <p class="hdr-menu-note">Last synced {{ formatLastSynced(lastSynced) }}</p>
+                    <p class="hdr-menu-note">
+                      Last synced {{ formatLastSynced(lastSynced) }}
+                    </p>
                   }
                   <div class="hdr-menu-sep" role="separator"></div>
                   <button
@@ -165,7 +197,9 @@
                     class="hdr-menu-item hdr-menu-item--signout"
                     (click)="onSignOut()"
                     data-testid="hdr-signout"
-                  >Sign out</button>
+                  >
+                    Sign out
+                  </button>
                 </div>
               }
             </div>
@@ -246,21 +280,21 @@
             {{ organizationName() }}
           </p>
           @if (!isCustomer()) {
-          <p class="mt-2 flex items-center gap-2 text-xs text-neutral-600">
-            <span
-              class="inline-flex h-2.5 w-2.5 rounded-full"
-              [ngClass]="{
-                'bg-success': syncState() === 'online',
-                'bg-warning': syncState() === 'syncing',
-                'bg-error': syncState() === 'sync-error',
-                'bg-neutral-300': syncState() === 'offline',
-              }"
-            ></span>
-            {{ syncStatus() }}
-            @if (pendingCount() > 0) {
-              ({{ pendingCount() }})
-            }
-          </p>
+            <p class="mt-2 flex items-center gap-2 text-xs text-neutral-600">
+              <span
+                class="inline-flex h-2.5 w-2.5 rounded-full"
+                [ngClass]="{
+                  'bg-success': syncState() === 'online',
+                  'bg-warning': syncState() === 'syncing',
+                  'bg-error': syncState() === 'sync-error',
+                  'bg-neutral-300': syncState() === 'offline',
+                }"
+              ></span>
+              {{ syncStatus() }}
+              @if (pendingCount() > 0) {
+                ({{ pendingCount() }})
+              }
+            </p>
           }
         </div>
       }

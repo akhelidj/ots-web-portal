@@ -31,14 +31,31 @@ const REAL_TEMPLATE_BYTES = readFileSync(
  * the edit so a stored revision can be identified; `dropBod` removes the `{{b_od}}` field
  * to change the TOKEN SET (a structural edit) vs a pure relabel (cosmetic).
  */
-function dto(displayName: string, opts: { dropBod?: boolean } = {}): DefineTemplateDto {
+function dto(
+  displayName: string,
+  opts: { dropBod?: boolean } = {},
+): DefineTemplateDto {
   // Fully roled: all six header roles + the item serialNumber, so every edit clears the
   // mandatory-role gate. The `{{poNumber}}` label varies per edit (the cosmetic dimension);
   // dropping `{{b_od}}` changes the TOKEN SET (the structural dimension) while every role
   // stays mapped — so a structural edit is still a valid save.
   const fields: DefineTemplateDto['fields'] = [
-    { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
-    { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
+    {
+      token: '{{customer}}',
+      label: 'Customer',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'customer',
+    },
+    {
+      token: '{{reportNumber}}',
+      label: 'Report Number',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'reportNumber',
+    },
     {
       token: '{{poNumber}}',
       label: `PO ${displayName}`, // label varies per edit (cosmetic dimension)
@@ -47,11 +64,46 @@ function dto(displayName: string, opts: { dropBod?: boolean } = {}): DefineTempl
       scope: 'header',
       role: 'poNumber',
     },
-    { token: '{{inspectedBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
-    { token: '{{approvedBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
-    { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
-    { token: '{{inspectorSignature}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
-    { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
+    {
+      token: '{{inspectedBy}}',
+      label: 'Inspector',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'inspector',
+    },
+    {
+      token: '{{approvedBy}}',
+      label: 'Supervisor',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'supervisor',
+    },
+    {
+      token: '{{reportDate}}',
+      label: 'Report Date',
+      type: 'date',
+      required: false,
+      scope: 'header',
+      role: 'inspectionDate',
+    },
+    {
+      token: '{{inspectorSignature}}',
+      label: 'Inspector Signature',
+      type: 'text',
+      required: false,
+      scope: 'header',
+      role: 'inspectorSignature',
+    },
+    {
+      token: '{{sn}}',
+      label: 'Serial Number',
+      type: 'text',
+      required: false,
+      scope: 'item',
+      role: 'serialNumber',
+    },
     {
       token: '{{emi}}',
       label: 'EMI Result',
@@ -159,15 +211,21 @@ describe('Template definition-edit history [integration]', () => {
 
     const revs = await revisions();
     expect(revs.map((r) => r.revisionNumber)).toEqual([1, 2]);
-    expect((revs[0]!.definitionJson as { displayName: string }).displayName).toBe('A');
-    expect((revs[1]!.definitionJson as { displayName: string }).displayName).toBe('B');
+    expect(
+      (revs[0]!.definitionJson as { displayName: string }).displayName,
+    ).toBe('A');
+    expect(
+      (revs[1]!.definitionJson as { displayName: string }).displayName,
+    ).toBe('B');
     expect(await currentDisplayName()).toBe('C');
 
     // THE CLOBBER SCENARIO: define A then overwrite — A is now recoverable from revision 1.
     expect(
-      (revs.find((r) => r.revisionNumber === 1)!.definitionJson as {
-        displayName: string;
-      }).displayName,
+      (
+        revs.find((r) => r.revisionNumber === 1)!.definitionJson as {
+          displayName: string;
+        }
+      ).displayName,
     ).toBe('A');
   });
 
@@ -183,8 +241,12 @@ describe('Template definition-edit history [integration]', () => {
     // ...and B was captured before the restore, so nothing is lost (restore is reversible).
     const revs = await revisions();
     expect(revs.map((r) => r.revisionNumber)).toEqual([1, 2]);
-    expect((revs[0]!.definitionJson as { displayName: string }).displayName).toBe('A');
-    expect((revs[1]!.definitionJson as { displayName: string }).displayName).toBe('B');
+    expect(
+      (revs[0]!.definitionJson as { displayName: string }).displayName,
+    ).toBe('A');
+    expect(
+      (revs[1]!.definitionJson as { displayName: string }).displayName,
+    ).toBe('B');
     expect(revs[1]!.revisionReason).toBe('restore of revision 1');
   });
 

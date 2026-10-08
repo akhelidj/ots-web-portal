@@ -12,7 +12,9 @@ import { InspectionReportLocalRepo } from '@portal/core/offline/repos/inspection
 
 const DEF = { templateKey: 'T', templateVersion: 1, sections: [], fields: [] };
 
-function report(overrides: Partial<LocalInspectionReport> = {}): LocalInspectionReport {
+function report(
+  overrides: Partial<LocalInspectionReport> = {},
+): LocalInspectionReport {
   return {
     id: 'ir-1',
     version: 1,
@@ -27,7 +29,8 @@ describe('InspectionReportLocalRepo — definitionJson survives definition-less 
 
   beforeEach(async () => {
     const freshFactory = new IDBFactory();
-    (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = freshFactory;
+    (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB =
+      freshFactory;
     (window as unknown as { indexedDB: IDBFactory }).indexedDB = freshFactory;
     TestBed.configureTestingModule({});
     dbService = TestBed.inject(DbService);

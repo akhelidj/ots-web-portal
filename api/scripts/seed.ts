@@ -1,10 +1,6 @@
 import * as dotenv from 'dotenv';
 dotenv.config({ path: 'api/.env' });
-import {
-  PrismaClient,
-  UserRole,
-  Tenant,
-} from '@prisma/client';
+import { PrismaClient, UserRole, Tenant } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();

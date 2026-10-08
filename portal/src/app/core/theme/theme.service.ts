@@ -1,5 +1,12 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  Injectable,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '@app-env/environment';
 import { APP_ROLES } from '@portal/core/constants/app.constants';
@@ -44,7 +51,9 @@ export class ThemeService {
     () => this.session.profile()?.role === APP_ROLES.CUSTOMER,
   );
 
-  public readonly branding = signal<CustomerBranding | null>(this.readCachedBranding());
+  public readonly branding = signal<CustomerBranding | null>(
+    this.readCachedBranding(),
+  );
   /** Object URL of the customer's logo, once loaded; null without a logo (or offline). */
   public readonly logoUrl = signal<string | null>(null);
 
@@ -68,7 +77,9 @@ export class ThemeService {
       }
       const mode = this.mode();
       root.setAttribute('data-theme', mode);
-      for (const [name, value] of Object.entries(brandPalette(this.brandColor(), mode))) {
+      for (const [name, value] of Object.entries(
+        brandPalette(this.brandColor(), mode),
+      )) {
         root.style.setProperty(name, value);
         this.appliedVars.push(name);
       }
@@ -145,7 +156,8 @@ export class ThemeService {
 
   private writeCachedBranding(branding: CustomerBranding | null): void {
     try {
-      if (branding) localStorage.setItem(BRANDING_KEY, JSON.stringify(branding));
+      if (branding)
+        localStorage.setItem(BRANDING_KEY, JSON.stringify(branding));
       else localStorage.removeItem(BRANDING_KEY);
     } catch {
       /* ignore */

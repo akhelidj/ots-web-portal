@@ -52,14 +52,70 @@ function validDto(): DefineTemplateDto {
     region: { id: 'serials', marker: '{{sn}}' },
     disposition: { field: 'emi', requiredForApproval: true },
     fields: [
-      { token: '{{customer}}', label: 'Customer', type: 'text', required: false, scope: 'header', role: 'customer' },
-      { token: '{{reportNumber}}', label: 'Report Number', type: 'text', required: false, scope: 'header', role: 'reportNumber' },
-      { token: '{{poNumber}}', label: 'PO Number', type: 'text', required: false, scope: 'header', role: 'poNumber' },
-      { token: '{{inspBy}}', label: 'Inspector', type: 'text', required: false, scope: 'header', role: 'inspector' },
-      { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
-      { token: '{{inspDate}}', label: 'Inspection Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
-      { token: '{{inspSig}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
-      { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
+      {
+        token: '{{customer}}',
+        label: 'Customer',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'customer',
+      },
+      {
+        token: '{{reportNumber}}',
+        label: 'Report Number',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'reportNumber',
+      },
+      {
+        token: '{{poNumber}}',
+        label: 'PO Number',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'poNumber',
+      },
+      {
+        token: '{{inspBy}}',
+        label: 'Inspector',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'inspector',
+      },
+      {
+        token: '{{apprBy}}',
+        label: 'Supervisor',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'supervisor',
+      },
+      {
+        token: '{{inspDate}}',
+        label: 'Inspection Date',
+        type: 'date',
+        required: false,
+        scope: 'header',
+        role: 'inspectionDate',
+      },
+      {
+        token: '{{inspSig}}',
+        label: 'Inspector Signature',
+        type: 'text',
+        required: false,
+        scope: 'header',
+        role: 'inspectorSignature',
+      },
+      {
+        token: '{{sn}}',
+        label: 'Serial Number',
+        type: 'text',
+        required: false,
+        scope: 'item',
+        role: 'serialNumber',
+      },
       {
         token: '{{grade}}',
         label: 'Grade',
@@ -269,14 +325,17 @@ describe('validateDefinition — rework rule (slice A) [unit]', () => {
     it('omitted suffix → the suffix key is absent (interpreter defaults it to "")', () => {
       const dto = reworkDto();
       delete dto.reworkRule!.reportNumberSuffix;
-      const then = (buildDefinition(META, dto).rules[0] as { then: object }).then;
+      const then = (buildDefinition(META, dto).rules[0] as { then: object })
+        .then;
       expect('reportNumberSuffix' in then).toBe(false);
     });
   });
 
   describe('the gate accepts a valid rule and rejects a malformed one at WRITE time', () => {
     it('accepts a well-formed authored rule', () => {
-      expect(validateDefinition(buildDefinition(META, reworkDto()), TOKENS)).toEqual({
+      expect(
+        validateDefinition(buildDefinition(META, reworkDto()), TOKENS),
+      ).toEqual({
         ok: true,
       });
     });
@@ -284,7 +343,9 @@ describe('validateDefinition — rework rule (slice A) [unit]', () => {
     it('rejects an empty trigger field (author enabled but picked nothing)', () => {
       const dto = reworkDto();
       dto.reworkRule!.field = '';
-      expect(validateDefinition(buildDefinition(META, dto), TOKENS)).toMatchObject({
+      expect(
+        validateDefinition(buildDefinition(META, dto), TOKENS),
+      ).toMatchObject({
         ok: false,
         check: 'rework-rules',
       });
@@ -293,7 +354,9 @@ describe('validateDefinition — rework rule (slice A) [unit]', () => {
     it('rejects an unknown childType', () => {
       const dto = reworkDto();
       dto.reworkRule!.childType = 'NOT_A_TYPE';
-      expect(validateDefinition(buildDefinition(META, dto), TOKENS)).toMatchObject({
+      expect(
+        validateDefinition(buildDefinition(META, dto), TOKENS),
+      ).toMatchObject({
         ok: false,
         check: 'rework-rules',
       });
@@ -310,7 +373,8 @@ describe('validateDefinition — rework rule (slice A) [unit]', () => {
 
     it('rejects an unknown action', () => {
       const c = clone(buildDefinition(META, reworkDto()));
-      (c.rules[0] as { then: { action: string } }).then.action = 'deleteEverything';
+      (c.rules[0] as { then: { action: string } }).then.action =
+        'deleteEverything';
       expect(validateDefinition(c, TOKENS)).toMatchObject({
         ok: false,
         check: 'rework-rules',
@@ -325,7 +389,8 @@ describe('validateDefinition — rework rule (slice A) [unit]', () => {
       // candidate pass. So the rejection can only come from check 8 — proving the
       // interpreter dry-run is load-bearing, not decorative.
       const c = clone(buildDefinition(META, reworkDto()));
-      (c.rules[0] as { then: { childType: string } }).then.childType = 'NOT_A_TYPE';
+      (c.rules[0] as { then: { childType: string } }).then.childType =
+        'NOT_A_TYPE';
 
       expect(validateDefinition(c, TOKENS)).toMatchObject({
         ok: false,
@@ -357,27 +422,52 @@ describe('validateDefinition — field roles [unit]', () => {
 
     it('keeps the role on the built field (for read-only rendering)', () => {
       const built = buildDefinition(META, validDto());
-      expect(built.fields.find((f) => f.key === 'inspBy')?.role).toBe('inspector');
+      expect(built.fields.find((f) => f.key === 'inspBy')?.role).toBe(
+        'inspector',
+      );
     });
 
     it('supervisor→approvedBy, inspectionDate→reportDate, customer→customerName, reportNumber/poNumber map likewise', () => {
       const g = buildDefinition(META, validDto()).export.global;
-      expect(g.find((e) => e.token === '{{apprBy}}')).toEqual({ token: '{{apprBy}}', computed: 'approvedBy' });
-      expect(g.find((e) => e.token === '{{inspDate}}')).toEqual({ token: '{{inspDate}}', computed: 'reportDate' });
-      expect(g.find((e) => e.token === '{{customer}}')).toEqual({ token: '{{customer}}', computed: 'customerName' });
-      expect(g.find((e) => e.token === '{{reportNumber}}')).toEqual({ token: '{{reportNumber}}', computed: 'reportNumber' });
-      expect(g.find((e) => e.token === '{{poNumber}}')).toEqual({ token: '{{poNumber}}', computed: 'poNumber' });
-      expect(g.find((e) => e.token === '{{inspSig}}')).toEqual({ token: '{{inspSig}}', computed: 'inspectorSignature' });
+      expect(g.find((e) => e.token === '{{apprBy}}')).toEqual({
+        token: '{{apprBy}}',
+        computed: 'approvedBy',
+      });
+      expect(g.find((e) => e.token === '{{inspDate}}')).toEqual({
+        token: '{{inspDate}}',
+        computed: 'reportDate',
+      });
+      expect(g.find((e) => e.token === '{{customer}}')).toEqual({
+        token: '{{customer}}',
+        computed: 'customerName',
+      });
+      expect(g.find((e) => e.token === '{{reportNumber}}')).toEqual({
+        token: '{{reportNumber}}',
+        computed: 'reportNumber',
+      });
+      expect(g.find((e) => e.token === '{{poNumber}}')).toEqual({
+        token: '{{poNumber}}',
+        computed: 'poNumber',
+      });
+      expect(g.find((e) => e.token === '{{inspSig}}')).toEqual({
+        token: '{{inspSig}}',
+        computed: 'inspectorSignature',
+      });
     });
   });
 
   describe('validator', () => {
     it('accepts a definition mapping all eight system roles', () => {
-      expect(validateDefinition(buildDefinition(META, validDto()), TOKENS)).toEqual({ ok: true });
+      expect(
+        validateDefinition(buildDefinition(META, validDto()), TOKENS),
+      ).toEqual({ ok: true });
     });
 
     it('a template with NO roles is REJECTED — every system role is mandatory to save', () => {
-      const outcome = validateDefinition(buildDefinition(META, noRolesDto()), TOKENS);
+      const outcome = validateDefinition(
+        buildDefinition(META, noRolesDto()),
+        TOKENS,
+      );
       expect(outcome).toMatchObject({ ok: false, check: 'roles-mandatory' });
       // The message names the unassigned roles so ops knows exactly what to add.
       const reason = (outcome as { reason: string }).reason;
@@ -434,7 +524,8 @@ describe('validateDefinition — field roles [unit]', () => {
 
     it('rejects an unknown role', () => {
       const c = clone(buildDefinition(META, validDto()));
-      (c.fields.find((f) => f.role === 'customer') as { role: string }).role = 'bogus';
+      (c.fields.find((f) => f.role === 'customer') as { role: string }).role =
+        'bogus';
       expect(validateDefinition(c, TOKENS)).toMatchObject({
         ok: false,
         check: 'role-known',

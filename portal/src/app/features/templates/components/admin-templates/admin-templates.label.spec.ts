@@ -34,7 +34,14 @@ const DEFINED: AdminTemplateItem = {
   rejectionReason: null,
   definitionJson: {
     fields: [
-      { key: 'sn', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
+      {
+        key: 'sn',
+        label: 'Serial Number',
+        type: 'text',
+        required: false,
+        scope: 'item',
+        role: 'serialNumber',
+      },
     ],
   },
 };

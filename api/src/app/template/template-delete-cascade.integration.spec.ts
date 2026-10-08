@@ -90,7 +90,11 @@ describe('Template delete with cascade [integration]', () => {
       },
     });
     await prisma.childReportTransitionLog.create({
-      data: { childReportId: child.id, fromStatus: 'DRAFT', toStatus: 'IN_INSPECTION' },
+      data: {
+        childReportId: child.id,
+        fromStatus: 'DRAFT',
+        toStatus: 'IN_INSPECTION',
+      },
     });
     await prisma.inspectionReportRevision.create({
       data: {
@@ -170,7 +174,11 @@ describe('Template delete with cascade [integration]', () => {
       },
     });
     // Defined template (DRILL_PIPE_REPORT carries the committed definition by default).
-    const template = await seedActiveTemplate(prisma, tenant.id, 'DRILL_PIPE_REPORT');
+    const template = await seedActiveTemplate(
+      prisma,
+      tenant.id,
+      'DRILL_PIPE_REPORT',
+    );
     return { tenant, customer, user, template };
   }
 
@@ -190,14 +198,23 @@ describe('Template delete with cascade [integration]', () => {
       },
     });
 
-    const result = await service.deleteTemplate(tenant.id, template.id, 'admin-1', {
-      role: UserRole.ADMIN,
-      reason: 'Obsolete test data',
-    });
+    const result = await service.deleteTemplate(
+      tenant.id,
+      template.id,
+      'admin-1',
+      {
+        role: UserRole.ADMIN,
+        reason: 'Obsolete test data',
+      },
+    );
 
     expect(result).toEqual({ deleted: true, reportsDeleted: 1 });
-    expect(await prisma.template.findUnique({ where: { id: template.id } })).toBeNull();
-    expect(await prisma.inspectionReport.findUnique({ where: { id: a.report.id } })).toBeNull();
+    expect(
+      await prisma.template.findUnique({ where: { id: template.id } }),
+    ).toBeNull();
+    expect(
+      await prisma.inspectionReport.findUnique({ where: { id: a.report.id } }),
+    ).toBeNull();
     for (const model of [
       prisma.serialNumber,
       prisma.childReport,
@@ -215,7 +232,9 @@ describe('Template delete with cascade [integration]', () => {
     }
 
     // The unrelated report is still there.
-    expect(await prisma.inspectionReport.findUnique({ where: { id: other.id } })).not.toBeNull();
+    expect(
+      await prisma.inspectionReport.findUnique({ where: { id: other.id } }),
+    ).not.toBeNull();
 
     // Binaries are gone.
     expect(await storage.get(a.ref)).toBeNull();
@@ -223,7 +242,9 @@ describe('Template delete with cascade [integration]', () => {
 
     // History survives: the report's audit row is kept (unlinked) and the delete itself is
     // recorded with the reason and the deleted report id.
-    const seeded = await prisma.auditLog.findFirst({ where: { action: 'SEEDED' } });
+    const seeded = await prisma.auditLog.findFirst({
+      where: { action: 'SEEDED' },
+    });
     expect(seeded?.inspectionReportId).toBeNull();
     const deleteLog = await prisma.auditLog.findFirst({
       where: { action: 'DELETE_VERSION', entityId: template.id },
@@ -243,8 +264,12 @@ describe('Template delete with cascade [integration]', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    expect(await prisma.template.findUnique({ where: { id: template.id } })).not.toBeNull();
-    expect(await prisma.inspectionReport.findUnique({ where: { id: a.report.id } })).not.toBeNull();
+    expect(
+      await prisma.template.findUnique({ where: { id: template.id } }),
+    ).not.toBeNull();
+    expect(
+      await prisma.inspectionReport.findUnique({ where: { id: a.report.id } }),
+    ).not.toBeNull();
     expect(await storage.get(a.ref)).not.toBeNull();
   });
 
@@ -258,7 +283,9 @@ describe('Template delete with cascade [integration]', () => {
         reason: 'please',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(await prisma.template.findUnique({ where: { id: template.id } })).not.toBeNull();
+    expect(
+      await prisma.template.findUnique({ where: { id: template.id } }),
+    ).not.toBeNull();
   });
 
   it('ADMIN may delete an undefined, unreferenced template without a reason (the old undo path)', async () => {
@@ -267,12 +294,19 @@ describe('Template delete with cascade [integration]', () => {
       definitionJson: null,
     });
 
-    const result = await service.deleteTemplate(tenant.id, template.id, 'admin-1', {
-      role: UserRole.ADMIN,
-    });
+    const result = await service.deleteTemplate(
+      tenant.id,
+      template.id,
+      'admin-1',
+      {
+        role: UserRole.ADMIN,
+      },
+    );
 
     expect(result.deleted).toBe(true);
-    expect(await prisma.template.findUnique({ where: { id: template.id } })).toBeNull();
+    expect(
+      await prisma.template.findUnique({ where: { id: template.id } }),
+    ).toBeNull();
   });
 
   it('getDeleteImpact reports what the delete would remove, without removing it', async () => {
@@ -291,6 +325,8 @@ describe('Template delete with cascade [integration]', () => {
       attachments: 1,
       signatures: 1,
     });
-    expect(await prisma.template.findUnique({ where: { id: template.id } })).not.toBeNull();
+    expect(
+      await prisma.template.findUnique({ where: { id: template.id } }),
+    ).not.toBeNull();
   });
 });
