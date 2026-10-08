@@ -94,8 +94,14 @@ describe('export gate for signature fields [integration]', () => {
 
   beforeEach(clearAll);
 
-  /** An APPROVED report whose template also declares the given CUSTOMER signature field. */
-  async function approvedWithCustomerField(required: boolean) {
+  /**
+   * An APPROVED report whose template also declares a signature field. A CUSTOMER field is
+   * always required (its presence is the opt-in); only a SUPERVISOR field can be optional.
+   */
+  async function approvedWithCustomerField(
+    required: boolean,
+    signer: 'CUSTOMER' | 'SUPERVISOR' = 'CUSTOMER',
+  ) {
     const tenant = await seedTenant(prisma);
     const customer = await seedCustomer(prisma, tenant.id);
     const template = await seedRealDrillPipeTemplate(prisma, tenant.id);
@@ -133,7 +139,7 @@ describe('export gate for signature fields [integration]', () => {
               type: 'signature',
               scope: 'header',
               required,
-              signer: 'CUSTOMER',
+              signer,
             },
           ],
           export: {
@@ -192,8 +198,8 @@ describe('export gate for signature fields [integration]', () => {
     expect(Buffer.isBuffer(res.buffer)).toBe(true);
   });
 
-  it('never blocks on a field that was not marked required', async () => {
-    const { tenant, reportId } = await approvedWithCustomerField(false);
+  it('never blocks on a supervisor field that was not marked required', async () => {
+    const { tenant, reportId } = await approvedWithCustomerField(false, 'SUPERVISOR');
     const res = await exportService.exportInspectionReport(exporter(tenant.id), reportId);
     expect(Buffer.isBuffer(res.buffer)).toBe(true);
   });
