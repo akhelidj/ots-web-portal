@@ -66,7 +66,7 @@ describe('embedSignatures', () => {
     const wb = workbookWithMarker();
     embedSignatures(wb, { inspectorSignature: { bytes: makePng() } });
 
-    const ext = wb.getWorksheet('Report')!.getImages()[0]!.range.ext as {
+    const ext = (wb.getWorksheet('Report')!.getImages()[0]!.range as unknown as { ext: unknown }).ext as {
       width: number;
       height: number;
     };

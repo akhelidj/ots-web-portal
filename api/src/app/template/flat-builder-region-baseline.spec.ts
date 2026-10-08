@@ -74,7 +74,7 @@ describe('Region builder output — frozen structural baseline', () => {
     const dto = regionDto();
     // The region id is now an internal constant (ignored from the DTO), so mutate a
     // field that still flows to the output — the serial token — to prove non-vacuity.
-    dto.region.marker = '{{different_sn}}';
+    dto.region!.marker = '{{different_sn}}';
     expect(buildDefinition(META, dto)).not.toEqual(frozen);
   });
 });

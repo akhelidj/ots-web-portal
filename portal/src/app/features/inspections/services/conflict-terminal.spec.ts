@@ -89,7 +89,7 @@ describe('Inspection reports — terminal CONFLICT state (risk #1)', () => {
     templateVersion: 1,
     templateHash: 'local-hash',
     version: 2,
-    inspectorComment: 'local unsynced edit',
+    reportNumber: 'local unsynced edit',
     syncState: 'CONFLICT',
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
@@ -104,7 +104,7 @@ describe('Inspection reports — terminal CONFLICT state (risk #1)', () => {
     templateVersion: 1,
     templateHash: 'server-hash',
     version: 9,
-    inspectorComment: 'server value',
+    reportNumber: 'server value',
   };
 
   beforeEach(async () => {
@@ -169,7 +169,7 @@ describe('Inspection reports — terminal CONFLICT state (risk #1)', () => {
     expect(after?.poNumber).toBe('LOCAL-PO-KEEP');
     expect(after?.status).toBe('DRAFT');
     expect(after?.version).toBe(2);
-    expect(after?.inspectorComment).toBe('local unsynced edit');
+    expect(after?.reportNumber).toBe('local unsynced edit');
     expect(after?.poNumber).not.toBe(serverTruth.poNumber);
     expect(after?.status).not.toBe(serverTruth.status);
   });

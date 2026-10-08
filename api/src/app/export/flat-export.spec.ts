@@ -57,7 +57,7 @@ const FLAT_DEF: ExportDefinition = {
 
 const REGION_DEF: ExportDefinition = {
   transforms: {},
-  regions: [{ id: 'serials', marker: '{{sn}}', chunkSize: null }],
+  regions: [{ id: 'serials', chunkSize: null }],
   export: {
     global: [{ token: '{{poNumber}}', field: 'poNumber' }],
     regions: { serials: [{ token: '{{sn}}', source: 'rowSerial' }] },

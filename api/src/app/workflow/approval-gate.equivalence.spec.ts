@@ -231,7 +231,7 @@ const cases: Case[] = [
   },
   {
     name: '4b. disposition source empty-string -> missing disposition (truthy coalesce) AND missing field',
-    serials: [sn('SN-1', withData((d) => (d.body!.emiResult = '')))],
+    serials: [sn('SN-1', withData((d) => (d.body!.emiResult = '' as never)))],
     expected: {
       status: 'failed',
       missingDispositionSerials: ['SN-1'],

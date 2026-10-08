@@ -59,7 +59,7 @@ function makeFile(
     mimetype: XLSX_MIME,
     buffer: REAL_TEMPLATE_BYTES,
     ...overrides,
-  };
+  } as Express.Multer.File;
 }
 
 describe('Template upload / validation [integration]', () => {

@@ -39,9 +39,33 @@ import {
 // preserved deliberately.
 // ============================================================================
 
+interface LegacyHeader {
+  updatedAt?: string;
+  createdAt?: string;
+  equipmentUsed?: { name: string; number?: string }[];
+  inspectionMethod?: (string | { name?: string })[];
+  inspectedByName?: string;
+  approvedByName?: string;
+  customerName?: string;
+  reportNumber?: string;
+  poNumber?: string;
+  standardUsed?: string;
+  inspectionAddress?: string;
+  grade?: string;
+  range?: string;
+  weight?: string;
+  nomWT?: string;
+  nomOD?: string;
+  nomID?: string;
+  connection?: string;
+  inspectorComment?: string;
+}
+
 /** Resolve the 18 global (header) tokens for one snapshot. Frozen golden. */
 function goldenGlobalTokens(snapshot: Snapshot): Record<string, string> {
-  const h = snapshot.header;
+  // The legacy header was an untyped bag of client-emitted strings (and `{name, number}`
+  // rows); the golden reads it as such.
+  const h = snapshot.header as unknown as LegacyHeader;
 
   // Inlined copy of deriveReportDate (NOT the shared helper).
   const reportDate = h.updatedAt
@@ -476,7 +500,7 @@ describe('Layer A — per-row token equivalence: engine == frozen golden', () =>
 describe('Layer A — mutation guard (token-map comparison is not vacuous)', () => {
   it('a transform change makes the engine token map diverge', () => {
     const mutant = clone();
-    (mutant.transforms.boolCheckbox as { whenTrue: string }).whenTrue = 'Y';
+    (mutant.transforms.boolCheckbox as unknown as { whenTrue: string }).whenTrue = 'Y';
     const s = makeSerial('SN-1', fullRow());
     expect(engineRowTokens(mutant, SNAP, s)).not.toEqual(goldenRowTokens(s));
   });

@@ -112,14 +112,15 @@ describe('Layer B — engine-built form == legacy-built form (drill pipe)', () =
     const fixture = TestBed.createComponent(
       SerialInspectionReactiveFormComponent,
     );
-    const c = fixture.componentInstance as SerialInspectionReactiveFormComponent & {
+    const c = fixture.componentInstance as unknown as {
+      initialData: Record<string, unknown>;
       schema: FormSchema;
       initForm(): void;
     };
     c.initialData = initialData;
     c.schema = DRILL_PIPE_V1_SCHEMA;
     c.initForm();
-    return c as SerialInspectionReactiveFormComponent;
+    return fixture.componentInstance;
   }
 
   /** Map of control name → invalid-when-empty (i.e. carries Validators.required). */

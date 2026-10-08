@@ -148,7 +148,7 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
         tenant.id,
         child.id,
         serial.id,
-        { inspectionData },
+        { inspectionData } as never,
       );
 
       // Mapped response reflects the write.
@@ -229,7 +229,7 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
       await expect(
         service.updateChildReportSerialNumber(tenant.id, child.id, serial.id, {
           inspectionData: { body: { emiResult: 'NONSENSE' } },
-        }),
+        } as never),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       // The failing update is atomic: neither disposition, inspectionData, nor the
@@ -272,7 +272,7 @@ describe('ChildReportsService.updateChildReportSerialNumber [integration]', () =
         tenant.id,
         child.id,
         serial.id,
-        { inspectionData: { foo: 'bar' } },
+        { inspectionData: { foo: 'bar' } } as never,
       );
 
       const row = await readCrsn(child.id, serial.id);

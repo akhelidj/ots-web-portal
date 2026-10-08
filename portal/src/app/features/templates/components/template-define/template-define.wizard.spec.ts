@@ -235,7 +235,7 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
   const nextBtn = (f: ComponentFixture<TemplateDefineComponent>) =>
     el(f).querySelector('[data-testid="wizard-next"]') as HTMLButtonElement | null;
   const saveBtn = (f: ComponentFixture<TemplateDefineComponent>) =>
-    [...el(f).querySelectorAll('button')].find((b) =>
+    Array.from(el(f).querySelectorAll('button')).find((b) =>
       /Save Definition|Saving/.test(b.textContent ?? ''),
     ) as HTMLButtonElement | undefined;
 

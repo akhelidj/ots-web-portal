@@ -44,6 +44,19 @@
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
       "executor": "nx:noop"
     },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default", "^default", "{workspaceRoot}/tsconfig.base.json"],
+      "options": {
+        "commands": [
+          "tsc -p api/tsconfig.app.json --noEmit",
+          "tsc -p api/tsconfig.spec.json --noEmit"
+        ],
+        "parallel": false,
+        "cwd": "{workspaceRoot}"
+      }
+    },
     "test": {
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/api"],

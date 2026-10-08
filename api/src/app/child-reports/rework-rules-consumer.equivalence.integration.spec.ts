@@ -260,7 +260,7 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
     // Two INDEPENDENT identical runs. Both are first-syncs ⇒ both child version 1, so
     // the deterministic version increment cannot introduce a spurious difference here.
     const runOnce = async () => {
-      const { tenantId, reportId } = await seedReworkScenario({ ...RICH });
+      const { tenantId, reportId } = await seedReworkScenario({ ...RICH } as never);
       await imperativeReworkOracle(prisma, tenantId, reportId);
       return snapshotReworkState(prisma, tenantId, reportId);
     };
@@ -289,7 +289,7 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
   });
 
   it('CHECK 1b — same-report re-sync is NOT version-idempotent; diff isolates exactly the version bump', async () => {
-    const { tenantId, reportId } = await seedReworkScenario({ ...RICH });
+    const { tenantId, reportId } = await seedReworkScenario({ ...RICH } as never);
 
     await imperativeReworkOracle(prisma, tenantId, reportId);
     const s1 = await snapshotReworkState(prisma, tenantId, reportId);
@@ -308,7 +308,7 @@ describe('REWORK rules-consumer equivalence harness [integration]', () => {
 
   it('CHECK 2 — different behavior ⇒ NON-EMPTY diff (child present vs absent)', async () => {
     const present = await (async () => {
-      const { tenantId, reportId } = await seedReworkScenario({ ...RICH });
+      const { tenantId, reportId } = await seedReworkScenario({ ...RICH } as never);
       await imperativeReworkOracle(prisma, tenantId, reportId);
       return snapshotReworkState(prisma, tenantId, reportId);
     })();

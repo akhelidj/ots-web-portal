@@ -259,7 +259,7 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
     const v = cell.value;
     if (v == null) return null;
     if (typeof v === 'object') {
-      const anyV = v as Record<string, unknown>;
+      const anyV = v as unknown as Record<string, unknown>;
       if (Array.isArray(anyV.richText)) {
         return (anyV.richText as Array<{ text: string }>)
           .map((rt) => rt.text)

@@ -115,12 +115,13 @@ export function frozenSnapshot(
 
 export function makeSerial(
   serial: string,
-  inspectionData?: InspectionData,
+  // Flat templates read arbitrary client keys (e.g. `rwk`), beyond the typed shape.
+  inspectionData?: InspectionData | Record<string, unknown>,
 ): Snapshot['serialNumbers'][number] {
   return {
     id: `s-${serial}`,
     serial,
-    inspectionData,
+    inspectionData: inspectionData as InspectionData | undefined,
     disposition: null,
     updatedAt: undefined as unknown as Date,
   } as Snapshot['serialNumbers'][number];

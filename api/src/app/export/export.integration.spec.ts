@@ -207,7 +207,7 @@ describe('Deterministic xlsx export (foundation baseline) [integration]', () => 
     if (v == null) return null;
     if (typeof v === 'object') {
       // richText / formula-result / hyperlink; merge slaves already returned null.
-      const anyV = v as Record<string, unknown>;
+      const anyV = v as unknown as Record<string, unknown>;
       if (Array.isArray(anyV.richText)) {
         return (anyV.richText as Array<{ text: string }>)
           .map((r) => r.text)

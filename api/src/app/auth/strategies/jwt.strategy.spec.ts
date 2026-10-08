@@ -84,13 +84,13 @@ describe('JwtStrategy.validate — token trust boundary', () => {
 
     it('rejects a numeric role', async () => {
       await expect(
-        strategy.validate({ ...basePayload, role: 42 }),
+        strategy.validate({ ...basePayload, role: 42 } as never),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
     it('rejects a missing role claim', async () => {
       await expect(
-        strategy.validate({ ...basePayload }),
+        strategy.validate({ ...basePayload } as never),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });

@@ -9,6 +9,7 @@
     "build:api": "nx build api",
     "build:portal": "npm run sync:portal-version && nx build portal --configuration=production",
     "lint": "nx run-many -t lint",
+    "typecheck": "nx run-many -t typecheck",
     "test": "nx run-many -t test",
     "test:api": "nx test api",
     "test:portal": "nx test portal",

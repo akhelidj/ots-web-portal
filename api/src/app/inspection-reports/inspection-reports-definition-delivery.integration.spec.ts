@@ -53,7 +53,7 @@ describe('getReports embeds template definitionJson [integration]', () => {
 
     expect(reports).toHaveLength(1);
     expect(
-      (reports[0] as { definitionJson: unknown }).definitionJson,
+      (reports[0] as unknown as { definitionJson: unknown }).definitionJson,
     ).toBeNull();
   });
 
@@ -74,7 +74,7 @@ describe('getReports embeds template definitionJson [integration]', () => {
     const reports = await service.getReports(admin(tenant.id));
 
     expect(
-      (reports[0] as { definitionJson: unknown }).definitionJson,
+      (reports[0] as unknown as { definitionJson: unknown }).definitionJson,
     ).toEqual(definition);
   });
 

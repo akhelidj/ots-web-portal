@@ -138,7 +138,7 @@ describe('SerialNumbersService.updateSerialNumber edit-guard [integration]', () 
         tenant.id,
         serial.id,
         'user-1',
-        { inspectionData: { note: 'edited offline' } },
+        { inspectionData: { note: 'edited offline' } } as never,
         serial.version,
       );
 
@@ -304,7 +304,7 @@ describe('SerialNumbersService.updateSerialNumber edit-guard [integration]', () 
           tenant.id,
           serial.id,
           'user-1',
-          { inspectionData: { body: { emiResult: 'NONSENSE' } } },
+          { inspectionData: { body: { emiResult: 'NONSENSE' } } } as never,
           serial.version,
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
