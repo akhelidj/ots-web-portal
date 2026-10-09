@@ -1,3 +1,5 @@
+import { CreateSerialNumbersDto } from './dto/create-serial-numbers.dto';
+import { UpdateSerialNumberDto } from './dto/update-serial-number.dto';
 import {
   Controller,
   Get,
@@ -16,7 +18,6 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { AuthenticatedRequest } from '../auth/authenticated-request';
-import { InspectionData } from '../common/inspection-data.types';
 
 @UseGuards(RolesGuard)
 @Controller()
@@ -43,7 +44,7 @@ export class SerialNumbersController {
   async createSerialNumber(
     @Req() req: AuthenticatedRequest,
     @Param('id') reportId: string,
-    @Body() body: { items: { clientRef: string; serialNumber: string }[] },
+    @Body() body: CreateSerialNumbersDto,
   ) {
     return this.serialNumbersService.createSerialNumber(
       req.user.tenantId,
@@ -63,12 +64,7 @@ export class SerialNumbersController {
   async updateSerialNumber(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
-    @Body()
-    body: {
-      serialNumber?: string;
-      version: number;
-      inspectionData?: InspectionData;
-    },
+    @Body() body: UpdateSerialNumberDto,
   ) {
     if (body.version === undefined || body.version === null) {
       throw new BadRequestException('version is required');

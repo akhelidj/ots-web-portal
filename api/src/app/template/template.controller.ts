@@ -1,3 +1,4 @@
+import { ReasonDto } from '../common/dto/reason.dto';
 import {
   Controller,
   Post,
@@ -90,7 +91,7 @@ export class TemplateController {
   async rejectTemplate(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
   ) {
     if (!body?.reason?.trim()) {
       throw new BadRequestException('reason is required to reject a template');
@@ -230,7 +231,7 @@ export class TemplateController {
   async deleteTemplate(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
-    @Body() body?: { reason?: string },
+    @Body() body?: ReasonDto,
   ) {
     return this.templateService.deleteTemplate(
       req.user.tenantId,

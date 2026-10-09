@@ -1,3 +1,4 @@
+import { DeleteReportDto } from './dto/delete-report.dto';
 import {
   Controller,
   Get,
@@ -135,7 +136,7 @@ export class InspectionReportsController {
   async deleteReport(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
-    @Body() body: { version?: number; reason?: string },
+    @Body() body: DeleteReportDto,
   ) {
     return this.deletion.deleteReport(
       req.user.tenantId,
