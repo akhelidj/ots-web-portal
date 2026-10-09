@@ -6,6 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { hashPassword, needsRehash } from './password';
 import * as crypto from 'crypto';
 import { Prisma, UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
@@ -59,6 +60,13 @@ export class AuthService {
       (await bcrypt.compare(pass, user.passwordHash)) &&
       user.isActive
     ) {
+      // Upgrade older, cheaper hashes transparently while we hold the plaintext.
+      if (needsRehash(user.passwordHash)) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { passwordHash: await hashPassword(pass) },
+        });
+      }
       const { passwordHash, ...result } = user;
       return result;
     }
@@ -261,7 +269,6 @@ export class AuthService {
   }
 
   async hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt();
-    return bcrypt.hash(password, salt);
+    return hashPassword(password);
   }
 }

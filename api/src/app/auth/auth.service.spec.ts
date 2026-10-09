@@ -6,12 +6,13 @@ import * as crypto from 'crypto';
 import { UserRole } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PASSWORD_HASH_ROUNDS } from './password';
 
 const PASSWORD = 'correct-horse';
 
 function makeService(user: Record<string, unknown> | null) {
   const prisma = {
-    user: { findFirst: jest.fn(async () => user) },
+    user: { findFirst: jest.fn(async () => user), update: jest.fn() },
     refreshToken: {
       findFirst: jest.fn(async () =>
         user
@@ -51,6 +52,26 @@ describe('AuthService — deactivated accounts', () => {
     const user = await service.validateUser('a@b.co', PASSWORD);
     expect(user?.id).toBe('u1');
     expect(user).not.toHaveProperty('passwordHash');
+  });
+
+  it('upgrades a weaker stored hash to the current work factor after a successful login', async () => {
+    const { service, prisma } = makeService(await account(true)); // rounds=4 < 12
+    await service.validateUser('a@b.co', PASSWORD);
+    const update = prisma.user.update as jest.Mock;
+    expect(update).toHaveBeenCalledTimes(1);
+    const newHash = update.mock.calls[0][0].data.passwordHash as string;
+    expect(bcrypt.getRounds(newHash)).toBe(PASSWORD_HASH_ROUNDS);
+    expect(await bcrypt.compare(PASSWORD, newHash)).toBe(true);
+  });
+
+  it('does not rehash a hash that is already current', async () => {
+    const current = {
+      ...(await account(true)),
+      passwordHash: await bcrypt.hash(PASSWORD, PASSWORD_HASH_ROUNDS),
+    };
+    const { service, prisma } = makeService(current);
+    await service.validateUser('a@b.co', PASSWORD);
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   it('refuses a deactivated user even with the right password', async () => {

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRole } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import { hashPassword } from '../auth/password';
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
@@ -60,7 +60,7 @@ export class UsersService {
     }
 
     // Use provided password
-    const passwordHash = await bcrypt.hash(data.password, 10);
+    const passwordHash = await hashPassword(data.password);
 
     const user = await this.prisma.user.create({
       data: {
@@ -160,7 +160,7 @@ Please log in to the portal to get started.
     }
 
     if (data.password) {
-      updateData.passwordHash = await bcrypt.hash(data.password, 10);
+      updateData.passwordHash = await hashPassword(data.password);
       updateData.mustChangePassword = true; // force the user to rotate it again for security
     }
 
