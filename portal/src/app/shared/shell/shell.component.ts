@@ -261,7 +261,7 @@ export class ShellComponent {
 
   public onSignOut() {
     this.session.logout();
-    this.router.navigate(['/login']);
+    void this.router.navigate(['/login']);
   }
 
   public async clearSyncErrors() {

@@ -27,8 +27,7 @@ export default [
     },
   },
   {
-    // Type-aware rules: only for files that belong to the app/spec tsconfigs. Warnings for now:
-    // the existing violations are cleared in the front-end pass, then these become errors.
+    // Type-aware rules: only for files that belong to the app/spec tsconfigs.
     files: ['src/**/*.ts'],
     languageOptions: {
       parserOptions: {
@@ -37,10 +36,14 @@ export default [
       },
     },
     rules: {
-      '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-misused-promises': 'warn',
-      '@typescript-eslint/await-thenable': 'warn',
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      '@typescript-eslint/no-floating-promises': 'error',
+      // Angular lifecycle hooks (ngOnInit...) are legitimately `async`.
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        { checksVoidReturn: { inheritedMethods: false } },
+      ],
+      '@typescript-eslint/await-thenable': 'error',
+      'no-console': ['error', { allow: ['warn', 'error'] }],
     },
   },
   {

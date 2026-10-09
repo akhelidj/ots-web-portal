@@ -113,8 +113,8 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
     if (this.initialStatusFilter) {
       this.statusFilter = this.initialStatusFilter;
     }
-    this.irService.refreshLocalCache();
-    this.loadCustomers();
+    void this.irService.refreshLocalCache();
+    void this.loadCustomers();
 
     const p = this.sessionService.profile();
     if (p) {
@@ -127,7 +127,7 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
     }
 
     this.subs.add(
-      this.customerRepo.changes$.subscribe(() => this.loadCustomers()),
+      this.customerRepo.changes$.subscribe(() => void this.loadCustomers()),
     );
 
     this.subs.add(
@@ -140,13 +140,13 @@ export class InspectionReportListComponent implements OnInit, OnDestroy {
           ? reports.filter((r) => r.customerId === this.customerScopeId)
           : reports;
 
-        this.computeStats(scopedReports);
+        void this.computeStats(scopedReports);
         this.computeCustomerKpis(scopedReports);
         if (this.isCustomer) {
           void this.computeChildReports(scopedReports);
         }
         if (!this.isCustomer) {
-          this.computeValidations(scopedReports);
+          void this.computeValidations(scopedReports);
         }
       }),
     );

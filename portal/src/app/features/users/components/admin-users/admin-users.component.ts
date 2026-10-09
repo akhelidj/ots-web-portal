@@ -46,8 +46,8 @@ export class AdminUsersComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.usersService.refreshLocalCache();
-    this.loadCustomers();
+    void this.usersService.refreshLocalCache();
+    void this.loadCustomers();
   }
 
   private async loadCustomers() {

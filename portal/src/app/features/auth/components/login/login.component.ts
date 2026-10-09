@@ -80,9 +80,9 @@ export class LoginComponent {
       );
 
       if (response.user.mustChangePassword) {
-        this.router.navigate(['/change-password']);
+        void this.router.navigate(['/change-password']);
       } else {
-        this.router.navigate(
+        void this.router.navigate(
           this.roleLanding.getLandingRoute(response.user.role),
         );
       }

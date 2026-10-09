@@ -32,9 +32,9 @@ export class CreateInspectionReportComponent {
   public templatesError = signal('');
 
   constructor() {
-    this.loadCustomers();
-    this.customerRepo.changes$.subscribe(() => this.loadCustomers());
-    this.loadTemplates();
+    void this.loadCustomers();
+    this.customerRepo.changes$.subscribe(() => void this.loadCustomers());
+    void this.loadTemplates();
   }
 
   private async loadCustomers() {
@@ -76,7 +76,7 @@ export class CreateInspectionReportComponent {
       });
       const segment = this.router.url.split('/');
       segment.pop();
-      this.router.navigate(segment);
+      void this.router.navigate(segment);
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to create report.';

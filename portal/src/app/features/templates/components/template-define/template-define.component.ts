@@ -896,7 +896,7 @@ export class TemplateDefineComponent implements OnInit {
   }
 
   public backToList(): void {
-    this.navigateToList();
+    void this.navigateToList();
   }
 
   // Relative to the role area this page is mounted under (/admin or /supervisor):

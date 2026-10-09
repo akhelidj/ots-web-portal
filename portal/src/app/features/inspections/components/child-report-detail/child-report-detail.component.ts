@@ -435,7 +435,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
 
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
-      this.refreshData();
+      void this.refreshData();
 
       // Skip reactive refreshes while a server pull is already in progress
       // to avoid the loop: pullSingleFromServer → crRepo.upsert → changes$ → refreshData loop
@@ -497,13 +497,13 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
     }
 
     this.refreshQueued = true;
-    queueMicrotask(async () => {
+    queueMicrotask(() => {
       this.refreshQueued = false;
       if (this.isDestroyed || this.isRefreshing) {
         return;
       }
 
-      await this.refreshData();
+      void this.refreshData();
     });
   }
 
@@ -802,13 +802,13 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
   public goBack() {
     const parentId = this.parentReport()?.id;
     if (parentId) {
-      this.router.navigate(this.getParentReportLink(parentId));
+      void this.router.navigate(this.getParentReportLink(parentId));
     } else {
       const role = this.userRole().toLowerCase();
       if (role === 'admin' || role === 'inspector') {
-        this.router.navigate(['/', role, 'reports']);
+        void this.router.navigate(['/', role, 'reports']);
       } else {
-        this.router.navigate(['/', role, 'reports']);
+        void this.router.navigate(['/', role, 'reports']);
       }
     }
   }

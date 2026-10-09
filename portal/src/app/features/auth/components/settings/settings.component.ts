@@ -171,7 +171,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
       // Force a tiny visual delay for UX
       setTimeout(() => {
-        this.router.navigate(['/']);
+        void this.router.navigate(['/']);
       }, 1000);
     } catch (error) {
       const e = error as Error;

@@ -13,6 +13,6 @@ export class AccessDeniedComponent {
   private router = inject(Router);
 
   goHome() {
-    this.router.navigate(['/', AppRoutes.LOGIN]);
+    void this.router.navigate(['/', AppRoutes.LOGIN]);
   }
 }

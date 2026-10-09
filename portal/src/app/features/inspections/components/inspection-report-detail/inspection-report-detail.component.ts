@@ -1110,16 +1110,16 @@ export class InspectionReportDetailComponent
       this.route.snapshot.queryParamMap.get('finding'),
     );
     if (this.reportId && this.reportId !== 'reports') {
-      this.refreshData();
+      void this.refreshData();
 
       toObservable(this.irService.reports, {
         injector: this.injector,
       }).subscribe(() => {
-        this.refreshData();
+        void this.refreshData();
       });
 
       this.crService.changes$.subscribe(() => {
-        this.refreshData();
+        void this.refreshData();
       });
 
       if (
@@ -1478,7 +1478,7 @@ export class InspectionReportDetailComponent
     try {
       await this.irService.addSerialNumbers(this.reportId, uniqueLines);
       this.formBulkSerials = '';
-      this.refreshData();
+      void this.refreshData();
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to add serials.';
@@ -1506,7 +1506,7 @@ export class InspectionReportDetailComponent
       );
       this.selectedTransition = null;
       this.formReason = '';
-      this.refreshData();
+      void this.refreshData();
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to transition report.';
@@ -1550,7 +1550,7 @@ export class InspectionReportDetailComponent
     try {
       await this.irService.renameSerialNumber(sn.id, newValue);
       this.cancelEditSn();
-      this.refreshData();
+      void this.refreshData();
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to rename serial number.';
@@ -1602,7 +1602,7 @@ export class InspectionReportDetailComponent
 
     try {
       await this.irService.deleteSerialNumber(sn.id);
-      this.refreshData();
+      void this.refreshData();
     } catch (error) {
       const e = error as Error;
       this.formError = e.message || 'Failed to delete serial number.';
@@ -2005,7 +2005,7 @@ export class InspectionReportDetailComponent
       await this.irService.submitApprovalBatch(this.reportId, selectedIds);
 
       this.selectedForApproval.set(new Set());
-      this.refreshData();
+      void this.refreshData();
     } catch (e) {
       const err = e as Error;
       this.formError = err.message || 'Failed to submit batch for approval.';
@@ -2101,7 +2101,7 @@ export class InspectionReportDetailComponent
     this.formError = '';
     try {
       await this.irService.publishReport(this.reportId);
-      this.refreshData();
+      void this.refreshData();
     } catch (e) {
       const err = e as Error;
       this.formError = err.message || 'Failed to publish report.';

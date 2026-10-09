@@ -108,7 +108,7 @@ export class ChangePasswordComponent {
 
       this.formSuccess = 'Password changed successfully. Redirecting...';
       setTimeout(() => {
-        this.router.navigate(['/']);
+        void this.router.navigate(['/']);
       }, 800);
     } catch (error) {
       const e = error as Error;

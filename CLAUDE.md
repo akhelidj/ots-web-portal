@@ -48,7 +48,7 @@ Flow: optimistic local write (IndexedDB) → **outbox** enqueue → **SyncOrches
 - **Tests + CI exist.** Unit (`*.spec.ts`) and integration (`*.integration.spec.ts`) suites run via `npm run test` / `test:api` / `test:portal`; API integration tests need the test Postgres (`npm run test:db:up`, then `test:api:integration`, via `docker-compose.test.yml`). Coverage is partial — concentrated on the audited, high-risk paths (revision snapshots, export, workflow transitions, offline-sync).
 - **Gates.** `.github/workflows/ci.yml` runs format check, lint, typecheck (app **and** specs), unit tests, builds, and the API integration suite on every push/PR. Locally, `simple-git-hooks` runs prettier on staged files (pre-commit), conventional-commit linting (commit-msg) and affected typecheck/lint/tests (pre-push). `npm run typecheck` / `npm run lint` / `npm run format:check` mirror CI. Unit tests (swc) do not typecheck — use `typecheck`.
 - **Still be conservative** around sync, audited workflows and migrations: coverage is partial and CI cannot catch behavioural regressions in untested paths.
-- **Toolchain notes.** TypeScript is `5.9.x` on purpose: Angular 21's builder peers `<6.0`. The tsconfigs are already TS 6-ready (no `baseUrl`, no `node10` resolution). The portal's type-aware lint rules (`no-floating-promises` etc.) are warnings pending the front-end pass; in the API they are errors.
+- **Toolchain notes.** TypeScript is `5.9.x` on purpose: Angular 21's builder peers `<6.0`. The tsconfigs are already TS 6-ready (no `baseUrl`, no `node10` resolution). Type-aware lint rules (`no-floating-promises`, `no-misused-promises`, `await-thenable`) and `no-console` are errors in both apps.
 
 ## Conventions & Tooling
 

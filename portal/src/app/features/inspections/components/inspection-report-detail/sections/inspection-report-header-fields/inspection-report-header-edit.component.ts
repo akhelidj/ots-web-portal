@@ -147,7 +147,7 @@ export class InspectionReportHeaderEditComponent {
 
   /** The control backing a field, handed to the shared input primitive. */
   public controlFor(key: string): AbstractControl {
-    return this.form().get(key)!;
+    return this.form().get(key) as AbstractControl;
   }
 
   public getFieldOptions(field: FieldSchema): string[] {

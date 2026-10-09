@@ -732,6 +732,7 @@ export class SyncDispatcherService {
         }
 
         case 'System:ping':
+          // eslint-disable-next-line no-console -- diagnostic ping handler
           console.log(
             `[SyncDispatcher] Simulated success for ping idempotencyKey: ${item.idempotencyKey}`,
           );

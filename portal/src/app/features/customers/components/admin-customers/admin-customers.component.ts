@@ -65,9 +65,9 @@ export class AdminCustomersComponent implements OnInit, OnDestroy {
   public deactivationError = '';
 
   ngOnInit() {
-    this.reloadStream();
+    void this.reloadStream();
     this.changesSub = this.customerRepo.changes$.subscribe(() => {
-      this.reloadStream();
+      void this.reloadStream();
     });
   }
 

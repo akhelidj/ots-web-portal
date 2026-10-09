@@ -15,12 +15,12 @@ export class LandingComponent implements OnInit {
 
   ngOnInit() {
     if (!this.session.isAuthenticated()) {
-      this.router.navigate(['/login']);
+      void this.router.navigate(['/login']);
       return;
     }
 
     if (this.session.mustChangePassword()) {
-      this.router.navigate(['/change-password']);
+      void this.router.navigate(['/change-password']);
       return;
     }
 
@@ -28,9 +28,9 @@ export class LandingComponent implements OnInit {
     const currentRole = this.session.profile()?.role;
 
     if (currentRole) {
-      this.router.navigate(this.roleLanding.getLandingRoute(currentRole));
+      void this.router.navigate(this.roleLanding.getLandingRoute(currentRole));
     } else {
-      this.router.navigate(['/login']);
+      void this.router.navigate(['/login']);
     }
   }
 }
