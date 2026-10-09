@@ -1,0 +1,181 @@
+<div class="page-section" data-testid="sync-conflicts-page">
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold">Sync conflicts</h1>
+    <p class="mt-1 text-sm opacity-70">
+      These changes were made on this device, but the record was changed by
+      someone else first. Nothing has been lost: choose what should win.
+    </p>
+  </div>
+
+  @if (loadError(); as err) {
+    <p class="mb-4 text-sm text-red-600" role="alert">{{ err }}</p>
+  }
+
+  @if (actionError(); as err) {
+    <p
+      class="mb-4 text-sm text-red-600"
+      role="alert"
+      data-testid="conflict-action-error"
+    >
+      {{ err }}
+    </p>
+  }
+
+  @if (loading()) {
+    <p class="text-sm opacity-70">Loading…</p>
+  } @else if (views().length === 0) {
+    <div class="rounded-lg border p-6 text-center" data-testid="no-conflicts">
+      <p class="font-medium">No conflicts</p>
+      <p class="mt-1 text-sm opacity-70">
+        Everything on this device is in sync.
+      </p>
+    </div>
+  } @else {
+    <ul class="space-y-4">
+      @for (view of views(); track view.group.root.id) {
+        <li class="rounded-lg border p-4" data-testid="conflict-card">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p class="font-medium">{{ view.group.title }}</p>
+              <p class="text-sm opacity-70">{{ view.label }}</p>
+            </div>
+            @if (view.group.dependents.length > 0) {
+              <p class="text-xs opacity-70">
+                {{ view.group.dependents.length }} later
+                {{
+                  view.group.dependents.length === 1
+                    ? 'change is'
+                    : 'changes are'
+                }}
+                waiting behind this one
+              </p>
+            }
+          </div>
+
+          @if (view.group.root.lastError; as reason) {
+            <p class="mt-2 text-xs opacity-70">{{ reason }}</p>
+          }
+
+          @if (reviewing() === view.group.root.id) {
+            <div class="mt-4">
+              @if (comparing()) {
+                <p class="text-sm opacity-70">Loading the server's version…</p>
+              } @else if (comparison(); as cmp) {
+                @if (cmp.differences.length === 0) {
+                  <p class="text-sm">
+                    Your change matches what the server already has.
+                  </p>
+                } @else {
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                      <thead>
+                        <tr class="text-left">
+                          <th class="py-1 pr-3">Field</th>
+                          <th class="py-1 pr-3">Server</th>
+                          <th class="py-1 pr-3">Mine</th>
+                          <th class="py-1">Keep</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (diff of cmp.differences; track diff.id) {
+                          <tr class="border-t" data-testid="conflict-diff-row">
+                            <td class="py-2 pr-3">{{ label(diff) }}</td>
+                            <td class="py-2 pr-3">{{ show(diff.server) }}</td>
+                            <td class="py-2 pr-3">{{ show(diff.mine) }}</td>
+                            <td class="py-2">
+                              <label class="mr-3">
+                                <input
+                                  type="radio"
+                                  [name]="'choice-' + diff.id"
+                                  [checked]="choiceFor(diff) === 'mine'"
+                                  (change)="choose(diff, 'mine')"
+                                />
+                                Mine
+                              </label>
+                              <label>
+                                <input
+                                  type="radio"
+                                  [name]="'choice-' + diff.id"
+                                  [checked]="choiceFor(diff) === 'server'"
+                                  (change)="choose(diff, 'server')"
+                                />
+                                Server
+                              </label>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    data-testid="conflict-apply"
+                    [disabled]="busyId() !== null"
+                    (click)="applyMine(view)"
+                  >
+                    Apply my selection
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    [disabled]="busyId() !== null"
+                    (click)="closeReview()"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              } @else {
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  (click)="review(view)"
+                >
+                  Try again
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="mt-4 flex flex-wrap gap-2">
+              @if (view.group.mergeable) {
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  data-testid="conflict-review"
+                  [disabled]="busyId() !== null"
+                  (click)="review(view)"
+                >
+                  Review changes
+                </button>
+              }
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                data-testid="conflict-retry"
+                [disabled]="busyId() !== null"
+                (click)="retry(view)"
+              >
+                Try again
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                data-testid="conflict-keep-server"
+                [disabled]="busyId() !== null"
+                (click)="keepServer(view)"
+              >
+                {{
+                  view.group.mergeable
+                    ? "Use the server's version"
+                    : 'Discard my change'
+                }}
+              </button>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>

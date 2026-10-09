@@ -33,7 +33,7 @@ export class OutboxService {
     });
   }
 
-  private async rehydrateCount(): Promise<void> {
+  public async rehydrateCount(): Promise<void> {
     if (!this.session.isAuthenticated()) {
       this.pendingCount.set(0);
       this.hasConflict.set(false);

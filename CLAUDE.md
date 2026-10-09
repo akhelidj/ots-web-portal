@@ -36,7 +36,7 @@ Flow: optimistic local write (IndexedDB) → **outbox** enqueue → **SyncOrches
 - **Temporal-ID remap:** offline rows get temp ids (`local-ir-…`); on sync the server UUID replaces them and pending outbox items are rewritten to the real id. **Serials remap by `clientRef`** (server echoes `clientRef`→real id).
 - **Drain is FIFO** by `createdAt`; a 409 marks the entity/outbox item `CONFLICT` and **cascades** to dependents.
 
-**Do NOT modify sync code without a test first.** The remaining standing defects — stuck `CONFLICT` and `clearConflicts` discarding the local edit (the over-delete and the never-transmitted `idempotencyKey` are fixed; mutations are replay-safe via the `Idempotency-Key` header) — are documented with source anchors in [`docs/KNOWN-ISSUES.md`](docs/KNOWN-ISSUES.md) (#1–3). Read them before touching this subsystem.
+**Do NOT modify sync code without a test first.** The three formerly standing defects are all resolved — conflicts are recovered through the field-by-field **Sync conflicts** screen (`core/offline/conflicts/`; a `CONFLICT` row is still never auto-overwritten by hydration, by design), `clearConflicts` no longer over-deletes, and mutations are replay-safe via the `Idempotency-Key` header — and are documented with source anchors in [`docs/KNOWN-ISSUES.md`](docs/KNOWN-ISSUES.md) (#1–3). Read them before touching this subsystem.
 
 ## Intentional Constraints (NOT bugs — do not "fix")
 

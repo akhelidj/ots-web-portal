@@ -3,6 +3,7 @@ export const AppRoutes = {
   CHANGE_PASSWORD: 'change-password',
   SETTINGS: 'settings',
   HELP: 'help',
+  SYNC_CONFLICTS: 'sync-conflicts',
   ADMIN: 'admin',
   RECEIVER: 'receiver',
   INSPECTOR: 'inspector',

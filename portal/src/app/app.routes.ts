@@ -88,6 +88,23 @@ export const appRoutes: Route[] = [
         canActivate: [authGuard, mustChangePasswordGuard],
       },
       {
+        // Staff only: customers hold no local writes, so they can never have a conflict.
+        path: AppRoutes.SYNC_CONFLICTS,
+        canActivate: [roleGuard],
+        data: {
+          roles: [
+            APP_ROLES.ADMIN,
+            APP_ROLES.RECEIVER,
+            APP_ROLES.INSPECTOR,
+            APP_ROLES.SUPERVISOR,
+          ],
+        },
+        loadComponent: () =>
+          import('@portal/features/sync-conflicts/sync-conflicts.component').then(
+            (m) => m.SyncConflictsComponent,
+          ),
+      },
+      {
         path: AppRoutes.ADMIN,
         canActivate: [roleGuard],
         data: { roles: [APP_ROLES.ADMIN] },

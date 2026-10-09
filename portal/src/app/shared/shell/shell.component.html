@@ -59,6 +59,14 @@
         <div class="hidden lg:flex items-center gap-2 text-sm">
           <!-- Customers are online-only and read-only: no sync status in their header. -->
           @if (!isCustomer()) {
+            @if (hasConflict()) {
+              <a
+                [routerLink]="['/', APP_ROUTES.SYNC_CONFLICTS]"
+                class="btn btn-secondary btn-sm"
+                data-testid="hdr-resolve-conflicts"
+                >Resolve conflicts</a
+              >
+            }
             <button
               type="button"
               class="hdr-sync"
@@ -320,8 +328,17 @@
 
       @if (!isCustomer()) {
         <div
-          class="pt-2 border-t border-neutral-200 flex items-center justify-end"
+          class="pt-2 border-t border-neutral-200 flex items-center justify-end gap-2"
         >
+          @if (hasConflict()) {
+            <a
+              [routerLink]="['/', APP_ROUTES.SYNC_CONFLICTS]"
+              (click)="closeMobileMenu()"
+              class="btn btn-secondary btn-sm"
+              data-testid="menu-resolve-conflicts"
+              >Resolve conflicts</a
+            >
+          }
           <button
             (click)="onSyncNow()"
             [disabled]="

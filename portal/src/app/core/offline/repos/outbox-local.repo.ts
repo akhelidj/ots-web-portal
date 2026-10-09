@@ -19,6 +19,16 @@ export class OutboxLocalRepo {
     });
   }
 
+  public async delete(id: string): Promise<void> {
+    const db = await this.dbService.getDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readwrite');
+      const request = tx.objectStore(this.STORE_NAME).delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   public async getPendingItems(): Promise<OutboxItem[]> {
     const db = await this.dbService.getDb();
     return new Promise((resolve, reject) => {

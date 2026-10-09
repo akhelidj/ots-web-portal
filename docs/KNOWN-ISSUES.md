@@ -7,24 +7,15 @@ facts are recorded here — not cleanup sequencing or counts.
 
 ## Offline-sync core (`portal/src/app/core/offline/`)
 
-Three confirmed defects in the sync engine. Full flow: `docs/architecture/report-lifecycle.md`.
+Confirmed defects in the sync engine (all three now resolved). Full flow: `docs/architecture/report-lifecycle.md`.
 
-### 1. A conflicted entity row never returns to SYNCED
+### 1. A conflicted entity row never returns to SYNCED — RESOLVED
 
-When the server 409s a stale offline write, the dispatcher marks the local row
-`syncState: 'CONFLICT'` (`sync-dispatcher.service.ts:751`). No code path ever resets
-it to `'SYNCED'`: `pullAllAndCache` overwrites a row only when it is absent or already
-`'SYNCED'`, explicitly skipping `CONFLICT`/`PENDING`/`ERROR`
-(`inspection-reports.service.ts:299, :325`).
-**Impact:** a conflicted report can stay stuck showing stale local data flagged
-CONFLICT indefinitely.
-**Confidence:** confirmed at code level; the end-to-end "stuck forever" outcome needs
-runtime/device confirmation.
+A 409 still parks the edit and flags the row `CONFLICT`, and hydration still never overwrites a `CONFLICT` row (pinned by `conflict-terminal.spec.ts`) — that is deliberate, so the user's work is never silently replaced. Recovery is now explicit: the **Sync conflicts** screen (`features/sync-conflicts`, route `/sync-conflicts`, linked from the header when a conflict exists) driven by `ConflictResolutionService` (`core/offline/conflicts/`). For plain updates (report, serial inspection data, customer, child report) it fetches the server's current record and shows a field-by-field diff; the user keeps their values, the server's, or a mix. Other operations offer _Try again_ or _Discard my change_. Edits queued behind the conflict are released with their expected versions rebased. Covered by `conflict-merge.spec.ts` and `conflict-resolution.service.spec.ts`.
 
-### 2. `clearConflicts` discards the local edit (over-delete FIXED)
+### 2. `clearConflicts` discards the local edit — RESOLVED
 
-The only resolution primitive — `OutboxService.clearConflicts()` (`outbox.service.ts`; UI trigger `shell.component.ts`) — hard-deletes every outbox item whose status is `CONFLICT` or `FAILED` (`outbox-local.repo.ts`). It no longer touches retryable `PENDING` items that merely recorded a transient error (that over-delete is fixed and pinned by `clear-conflicts.spec.ts`). Entity stores are left untouched.
-**Impact (remaining):** server-wins with no merge or diff UI — the user's queued offline edit is thrown away, while the entity row remains CONFLICT (see #1).
+`OutboxService.clearConflicts()` only deletes `CONFLICT`/`FAILED` items (never retryable `PENDING` ones; pinned by `clear-conflicts.spec.ts`). Users are no longer pushed to it: the merge screen above resolves each conflict individually and preserves the local edit unless the server's version is chosen.
 
 ### 3. `idempotencyKey` is generated but never transmitted — RESOLVED
 
