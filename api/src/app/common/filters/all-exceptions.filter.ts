@@ -28,14 +28,23 @@ export class AllExceptionsFilter implements ExceptionFilter {
       console.error(exception);
     }
 
-    // NOTE: intentionally reads `.message`, NOT `.getResponse()` — the resulting
-    // flattening of structured HttpException bodies is a known gap documented in
-    // docs/KNOWN-ISSUES.md (#5), owned by a separate fix. Preserve it.
+    // `message` stays the exception's message string (what the portal already reads);
+    // the structured fields of an HttpException body (e.g. the approval gate's `code`,
+    // `missingDispositionSerials`, `missingRequiredFields`) ride alongside it.
+    const structured =
+      exception instanceof HttpException ? exception.getResponse() : undefined;
+    const extra: Record<string, unknown> = {};
+    if (structured && typeof structured === 'object') {
+      for (const [key, value] of Object.entries(structured)) {
+        if (key !== 'message' && key !== 'statusCode') extra[key] = value;
+      }
+    }
     // Never leak internals to clients in production: a non-HTTP (5xx) fault gets a
     // generic message, and stack traces are development-only.
     const isProd = process.env.NODE_ENV === 'production';
     const expose = !isProd || exception instanceof HttpException;
     response.status(status).json({
+      ...extra,
       statusCode: status,
       message:
         exception instanceof Error && expose

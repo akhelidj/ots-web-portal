@@ -58,7 +58,7 @@ describe('AllExceptionsFilter (global exception filter) [unit]', () => {
     expect(typeof body.stack).toBe('string');
   });
 
-  it('(b2) BadRequestException(structured) → FLATTENED to the message string; code/missing* are DROPPED (KNOWN latent gap, KNOWN-ISSUES.md #5 — pinned, not fixed here)', () => {
+  it('(b2) BadRequestException(structured) → message string stays, and code/missing* ride alongside it', () => {
     const { host, status, json } = makeHost();
 
     filter.catch(
@@ -74,12 +74,10 @@ describe('AllExceptionsFilter (global exception filter) [unit]', () => {
     expect(status).toHaveBeenCalledWith(400);
     const body = json.mock.calls[0][0];
     expect(body.statusCode).toBe(400);
-    // Only the string message survives — the filter never reads .getResponse().
     expect(body.message).toBe('Cannot request approval: missing disposition');
-    // Pins the current flattening: structured fields do not survive.
-    expect(body.code).toBeUndefined();
-    expect(body.missingDispositionSerials).toBeUndefined();
-    expect(body.missingRequiredFields).toBeUndefined();
+    expect(body.code).toBe('VALIDATION_FAILED');
+    expect(body.missingDispositionSerials).toEqual(['SN-1']);
+    expect(body.missingRequiredFields).toEqual({ 'SN-1': ['body.emiResult'] });
   });
 
   it('(c) plain Error → status 500 + {500, message, stack}', () => {

@@ -64,24 +64,13 @@ diverge on where disposition lives. Existing immutable snapshots recorded
 re-derives disposition at read time — no backfill. See #18 for the disposition /
 required-field coupling this surfaced.
 
-### 5. Global exception filter flattens structured HttpException bodies
+### 5. Global exception filter flattens structured HttpException bodies — RESOLVED
 
-`AllExceptionsFilter` (`api/src/main.ts:18`) is a global catch-all that builds its
-response from `.message`/`.stack`/`.getStatus()` and never reads `.getResponse()`
-(`main.ts:25–31, :38`). NestJS collapses a structured response to its `message` string,
-so a structured `{ code: 'VALIDATION_FAILED', missingDispositionSerials,
-missingRequiredFields }` body from the approval gate is flattened to
-`{ statusCode, message, stack }` in production. The integration suite has no HTTP/e2e
-harness, so it never registers this filter and the structured body survives in tests
-only. Fix: read `.getResponse()` to preserve structured bodies.
+`AllExceptionsFilter` (`api/src/app/common/filters/all-exceptions.filter.ts`) now reads `.getResponse()`: `message` stays the exception's message string (what the portal reads) and the structured fields (`code`, `missingDispositionSerials`, `missingRequiredFields`, …) ride alongside it. In production an unexpected fault returns a generic message and no stack.
 
-### 6. Environment variables are not validated at boot
+### 6. Environment variables are not validated at boot — RESOLVED
 
-`ConfigModule.forRoot({ ... })` (`api/src/app/app.module.ts:26`) is configured without a
-`validationSchema`, so environment variables (e.g. `DATABASE_URL`, JWT secret, CORS
-origins) are not checked at application startup. A missing or malformed value surfaces
-only when first used at runtime, not as a fail-fast error at boot.
-**Note:** observation from code — not tied to any particular validation library.
+`ConfigModule` runs `validateEnv` (`api/src/app/config/env.validation.ts`) at startup: `DATABASE_URL` and `JWT_ACCESS_SECRET` are required, numeric settings must be positive integers, and `STORAGE_DRIVER` must be `local` or `s3` (with its bucket/region). All problems are reported in one error. A production JWT secret under 32 characters only logs a warning.
 
 ### 18. On drill-pipe the disposition source is also a required field — a missing disposition always reports as two failures
 
