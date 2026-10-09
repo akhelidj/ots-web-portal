@@ -4,7 +4,7 @@
  */
 import {
   CallHandler,
-  ConflictException,
+  ServiceUnavailableException,
   ExecutionContext,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -108,7 +108,7 @@ describe('IdempotencyInterceptor [integration]', () => {
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 
-  it('answers 409 while the first request is still in progress', async () => {
+  it('answers a retryable 503 (not a 409 conflict) while the first request is still in progress', async () => {
     await prisma.idempotencyKey.create({
       data: {
         tenantId: 't1',
@@ -120,7 +120,9 @@ describe('IdempotencyInterceptor [integration]', () => {
       },
     });
     const h = handler(() => ({}));
-    await expect(run(post('k4'), h)).rejects.toBeInstanceOf(ConflictException);
+    await expect(run(post('k4'), h)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
     expect(h.calls).toBe(0);
   });
 

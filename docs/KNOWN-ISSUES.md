@@ -28,7 +28,7 @@ The only resolution primitive — `OutboxService.clearConflicts()` (`outbox.serv
 
 ### 3. `idempotencyKey` is generated but never transmitted — RESOLVED
 
-Every queued operation keeps the `idempotencyKey` minted at enqueue, and `SyncDispatcherService` sends it as the `Idempotency-Key` header on every retry (`sync-idempotency.spec.ts`). On the API, a global `IdempotencyInterceptor` (`api/src/app/common/idempotency/`) executes a mutating request once per `(tenant, user, key)` and answers repeats from the stored response (table `IdempotencyKey`, 7-day retention), so a 5xx or lost response that actually committed can no longer create a duplicate or surface as a phantom version conflict. Failed requests store nothing, so a genuine failure retries normally; an in-progress key answers 409 and an abandoned one (>2 min) is taken over. Requests without the header behave exactly as before.
+Every queued operation keeps the `idempotencyKey` minted at enqueue, and `SyncDispatcherService` sends it as the `Idempotency-Key` header on every retry (`sync-idempotency.spec.ts`). On the API, a global `IdempotencyInterceptor` (`api/src/app/common/idempotency/`) executes a mutating request once per `(tenant, user, key)` and answers repeats from the stored response (table `IdempotencyKey`, 7-day retention), so a 5xx or lost response that actually committed can no longer create a duplicate or surface as a phantom version conflict. Failed requests store nothing, so a genuine failure retries normally; an in-progress key answers a retryable 503 and an abandoned one (>2 min) is taken over. Requests without the header behave exactly as before.
 
 ## API-side data / validation
 

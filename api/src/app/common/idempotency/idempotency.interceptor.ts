@@ -1,7 +1,7 @@
 import {
   BadRequestException,
   CallHandler,
-  ConflictException,
+  ServiceUnavailableException,
   ExecutionContext,
   Injectable,
   NestInterceptor,
@@ -112,7 +112,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
         return { kind: 'replay', body: existing.responseBody ?? undefined };
       }
       if (Date.now() - existing.createdAt.getTime() < STALE_IN_PROGRESS_MS) {
-        throw new ConflictException(
+        // 503, not 409: the sync client treats 409 as a data conflict and 4xx as terminal, but
+        // this is neither -- it must simply retry later, which is what it does for 5xx.
+        throw new ServiceUnavailableException(
           'A request with this Idempotency-Key is still being processed',
         );
       }
@@ -120,7 +122,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
         where: { id: existing.id },
       });
     }
-    throw new ConflictException('Could not claim the Idempotency-Key');
+    throw new ServiceUnavailableException(
+      'Could not claim the Idempotency-Key',
+    );
   }
 
   private async complete(id: string, body: unknown): Promise<unknown> {
