@@ -1,6 +1,5 @@
 /**
- * Behavior-pinning tests — `clearConflicts` over-deletion (KNOWN-ISSUES #2).
- * Pins the cursor sweep in outbox-local.repo.ts:74. See docs/KNOWN-ISSUES.md.
+ * Tests — `clearConflicts` only removes terminal outbox items (KNOWN-ISSUES #2).
  *
  * This exercises the REAL IndexedDB code path: the real DbService opens the real
  * schema against `fake-indexeddb`, and the real OutboxLocalRepo runs its actual
@@ -10,13 +9,8 @@
  * portal test-setup.ts) so no other spec runs against a patched IndexedDB global,
  * and so each test here gets a pristine IDBFactory (no cross-test DB bleed).
  *
- * WHICH ASSERTIONS PIN THE KNOWN BUG:
- *   - The "PENDING-with-lastError item is deleted" assertions pin the over-deletion
- *     (KNOWN-ISSUES #2); they will change once the delete condition is narrowed
- *     (drops the `|| item.lastError` clause). They carry the "known bug" comment.
- *   - Deleting CONFLICT/FAILED items, keeping the clean PENDING item, and leaving
- *     the entity stores untouched pin intended/stable behavior and are
- *     NOT expected to change.
+ * Contract: CONFLICT and FAILED items are cleared; a retryable PENDING item survives even if
+ * it recorded a transient error; the entity stores are never touched.
  */
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
@@ -47,7 +41,7 @@ function makeOutboxItem(overrides: Partial<OutboxItem>): OutboxItem {
   };
 }
 
-describe('OutboxLocalRepo.clearConflicts — over-deletion (risk #2)', () => {
+describe('OutboxLocalRepo.clearConflicts', () => {
   let dbService: DbService;
   let outboxRepo: OutboxLocalRepo;
   let customerRepo: CustomerLocalRepo;
@@ -97,7 +91,7 @@ describe('OutboxLocalRepo.clearConflicts — over-deletion (risk #2)', () => {
     dbService.close();
   });
 
-  it('after clearConflicts, only the clean PENDING item survives (CONFLICT, FAILED, and PENDING-with-lastError are all deleted)', async () => {
+  it('after clearConflicts, CONFLICT and FAILED are deleted and both PENDING items survive', async () => {
     await outboxRepo.upsert(conflictItem);
     await outboxRepo.upsert(failedItem);
     await outboxRepo.upsert(pendingWithErrorItem);
@@ -109,21 +103,19 @@ describe('OutboxLocalRepo.clearConflicts — over-deletion (risk #2)', () => {
     expect(await outboxRepo.getById('it-conflict')).toBeNull();
     expect(await outboxRepo.getById('it-failed')).toBeNull();
 
-    // Pins current behavior. KNOWN BUG (KNOWN-ISSUES #2), see docs/KNOWN-ISSUES.md. A fix will change this.
-    // The retryable PENDING item is collateral damage of the `|| item.lastError` clause.
-    expect(await outboxRepo.getById('it-pending-with-error')).toBeNull();
+    // The retryable PENDING item is NOT collateral damage: it keeps its error and stays queued.
+    const retryable = await outboxRepo.getById('it-pending-with-error');
+    expect(retryable?.status).toBe('PENDING');
+    expect(retryable?.lastError).toBe('transient network blip');
 
-    // Stable: the clean PENDING item is (correctly) kept.
     const survivor = await outboxRepo.getById('it-pending-clean');
     expect(survivor).not.toBeNull();
     expect(survivor?.status).toBe('PENDING');
 
-    // Current survivor set is exactly one item. (This total changes once the fix
-    // lands and the PENDING-with-lastError item also survives.)
-    expect(await outboxRepo.countPendingItems()).toBe(1);
+    expect(await outboxRepo.countPendingItems()).toBe(2);
   });
 
-  it('ALSO deletes a still-recoverable PENDING item that merely recorded a transient error (KNOWN BUG: risk #2 over-deletion)', async () => {
+  it('keeps a still-recoverable PENDING item that merely recorded a transient error', async () => {
     await outboxRepo.upsert(pendingWithErrorItem);
     await outboxRepo.upsert(cleanPendingItem);
 
@@ -135,11 +127,7 @@ describe('OutboxLocalRepo.clearConflicts — over-deletion (risk #2)', () => {
 
     await outboxRepo.clearConflicts();
 
-    // Pins current behavior. KNOWN BUG (KNOWN-ISSUES #2), see docs/KNOWN-ISSUES.md. A fix will change this.
-    expect(await outboxRepo.getById('it-pending-with-error')).toBeNull();
-
-    // Sanity (stable): the error-free PENDING item is untouched, proving the
-    // deletion above is driven by `lastError`, not by being PENDING.
+    expect(await outboxRepo.getById('it-pending-with-error')).not.toBeNull();
     expect(await outboxRepo.getById('it-pending-clean')).not.toBeNull();
   });
 

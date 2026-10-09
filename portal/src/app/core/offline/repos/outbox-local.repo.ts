@@ -81,11 +81,9 @@ export class OutboxLocalRepo {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
         if (cursor) {
           const item = cursor.value as OutboxItem;
-          if (
-            item.status === 'CONFLICT' ||
-            item.status === 'FAILED' ||
-            item.lastError
-          ) {
+          // Only terminal items. A PENDING item that merely recorded a transient error is
+          // still retryable and must survive (KNOWN-ISSUES #2).
+          if (item.status === 'CONFLICT' || item.status === 'FAILED') {
             cursor.delete();
           }
           cursor.continue();

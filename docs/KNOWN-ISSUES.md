@@ -21,17 +21,10 @@ CONFLICT indefinitely.
 **Confidence:** confirmed at code level; the end-to-end "stuck forever" outcome needs
 runtime/device confirmation.
 
-### 2. `clearConflicts` over-deletes and discards the local edit
+### 2. `clearConflicts` discards the local edit (over-delete FIXED)
 
-The only resolution primitive — `OutboxService.clearConflicts()` (`outbox.service.ts:59`;
-UI trigger `shell.component.ts:86`) — runs a cursor over the whole outbox store and
-hard-deletes every item where
-`status === 'CONFLICT' || status === 'FAILED' || item.lastError`
-(`outbox-local.repo.ts:84`; the over-delete clause is `|| item.lastError` at `:87`).
-That third clause also purges still-retryable `PENDING` items that merely recorded a
-transient error. Entity stores are left untouched.
-**Impact:** server-wins with no merge or diff UI — the user's queued offline edit is
-thrown away, while the entity row remains CONFLICT (see #1).
+The only resolution primitive — `OutboxService.clearConflicts()` (`outbox.service.ts`; UI trigger `shell.component.ts`) — hard-deletes every outbox item whose status is `CONFLICT` or `FAILED` (`outbox-local.repo.ts`). It no longer touches retryable `PENDING` items that merely recorded a transient error (that over-delete is fixed and pinned by `clear-conflicts.spec.ts`). Entity stores are left untouched.
+**Impact (remaining):** server-wins with no merge or diff UI — the user's queued offline edit is thrown away, while the entity row remains CONFLICT (see #1).
 
 ### 3. `idempotencyKey` is generated but never transmitted
 
