@@ -1,3 +1,4 @@
+import { recordAudit } from '../common/audit';
 import {
   Injectable,
   BadRequestException,
@@ -73,16 +74,14 @@ export class InspectionReportWorkflowService {
           },
         });
 
-        await tx.auditLog.create({
-          data: {
-            action: 'CREATE',
-            entity: 'InspectionReport',
-            entityId: report.id,
-            tenantId,
-            userId,
-            reason: `Created with template ${templateKey} v${template.templateVersion}`,
-            inspectionReportId: report.id,
-          },
+        await recordAudit(tx, {
+          action: 'CREATE',
+          entity: 'InspectionReport',
+          entityId: report.id,
+          tenantId,
+          userId,
+          reason: `Created with template ${templateKey} v${template.templateVersion}`,
+          inspectionReportId: report.id,
         });
 
         return report;
@@ -507,16 +506,14 @@ export class InspectionReportWorkflowService {
       });
 
       // Create Audit Log
-      await tx.auditLog.create({
-        data: {
-          action: 'TRANSITION',
-          entity: 'InspectionReport',
-          entityId: reportId,
-          tenantId: user.tenantId,
-          userId: user.id,
-          reason: reason,
-          inspectionReportId: reportId,
-        },
+      await recordAudit(tx, {
+        action: 'TRANSITION',
+        entity: 'InspectionReport',
+        entityId: reportId,
+        tenantId: user.tenantId,
+        userId: user.id,
+        reason: reason,
+        inspectionReportId: reportId,
       });
 
       return updatedReport;

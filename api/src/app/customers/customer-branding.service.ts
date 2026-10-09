@@ -1,3 +1,4 @@
+import { recordAudit } from '../common/audit';
 import {
   BadRequestException,
   ConflictException,
@@ -216,15 +217,13 @@ export class CustomerBrandingService {
     action: string,
     detail: string,
   ) {
-    await this.prisma.auditLog.create({
-      data: {
-        tenantId,
-        userId,
-        entity: 'CUSTOMER',
-        entityId: customerId,
-        action,
-        reason: detail ? `${action} | ${detail}` : action,
-      },
+    await recordAudit(this.prisma, {
+      tenantId,
+      userId,
+      entity: 'CUSTOMER',
+      entityId: customerId,
+      action,
+      reason: detail ? `${action} | ${detail}` : action,
     });
   }
 }

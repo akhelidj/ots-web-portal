@@ -1,3 +1,4 @@
+import { recordAudit } from '../common/audit';
 import {
   Injectable,
   ConflictException,
@@ -204,15 +205,13 @@ export class CustomersService {
       reasonString = action;
     }
 
-    await this.prisma.auditLog.create({
-      data: {
-        tenantId,
-        userId,
-        entity: 'CUSTOMER',
-        entityId,
-        action,
-        reason: reasonString,
-      },
+    await recordAudit(this.prisma, {
+      tenantId,
+      userId,
+      entity: 'CUSTOMER',
+      entityId,
+      action,
+      reason: reasonString,
     });
   }
 

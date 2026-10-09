@@ -1,3 +1,4 @@
+import { recordAudit } from '../common/audit';
 import {
   Injectable,
   BadRequestException,
@@ -179,16 +180,14 @@ export class ChildReportWorkflowService {
       });
 
       // Create Audit Log
-      await tx.auditLog.create({
-        data: {
-          action: 'TRANSITION',
-          entity: 'ChildReport',
-          entityId: reportId,
-          tenantId: user.tenantId, // 11) AuditLog Consistency
-          userId: user.id,
-          reason: reason,
-          inspectionReportId: report.inspectionReportId,
-        },
+      await recordAudit(tx, {
+        action: 'TRANSITION',
+        entity: 'ChildReport',
+        entityId: reportId,
+        tenantId: user.tenantId, // 11) AuditLog Consistency
+        userId: user.id,
+        reason: reason,
+        inspectionReportId: report.inspectionReportId,
       });
 
       return updatedReport;

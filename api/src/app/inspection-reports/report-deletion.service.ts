@@ -1,3 +1,4 @@
+import { recordAudit } from '../common/audit';
 import {
   BadRequestException,
   ConflictException,
@@ -107,15 +108,13 @@ export class ReportDeletionService {
         await deleteReportGraph(tx, [reportId]);
 
         const label = report.reportNumber || reportId;
-        await tx.auditLog.create({
-          data: {
-            tenantId,
-            userId,
-            action: 'DELETE_REPORT',
-            entity: 'InspectionReport',
-            entityId: reportId,
-            reason: `Report ${label} (PO ${report.poNumber}, status ${report.status}) deleted with ${serials} serial(s), ${children} child report(s), ${attachments.length} attachment(s). Reason: ${why}`,
-          },
+        await recordAudit(tx, {
+          tenantId,
+          userId,
+          action: 'DELETE_REPORT',
+          entity: 'InspectionReport',
+          entityId: reportId,
+          reason: `Report ${label} (PO ${report.poNumber}, status ${report.status}) deleted with ${serials} serial(s), ${children} child report(s), ${attachments.length} attachment(s). Reason: ${why}`,
         });
       },
       { timeout: 60_000, maxWait: 10_000 },

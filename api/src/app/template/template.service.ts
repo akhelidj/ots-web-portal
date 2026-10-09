@@ -1,3 +1,4 @@
+import { recordAudit } from '../common/audit';
 import {
   Injectable,
   Inject,
@@ -130,15 +131,13 @@ export class TemplateService {
 
       // 7. Audit Log for Creation — records the gate the version was born under, so the
       // trail shows whether it went live immediately or waited on an admin.
-      await tx.auditLog.create({
-        data: {
-          tenantId,
-          action: 'CREATE_VERSION',
-          entity: 'Template',
-          entityId: newTemplate.id,
-          reason: `Version ${nextVersion} created (${approvalStatus}): ${changeNote}`,
-          userId,
-        },
+      await recordAudit(tx, {
+        tenantId,
+        action: 'CREATE_VERSION',
+        entity: 'Template',
+        entityId: newTemplate.id,
+        reason: `Version ${nextVersion} created (${approvalStatus}): ${changeNote}`,
+        userId,
       });
 
       // Return metadata (exclude the storage key — the API never surfaces it).
@@ -193,15 +192,13 @@ export class TemplateService {
       data: { status: TemplateStatus.DEPRECATED },
     });
 
-    await tx.auditLog.create({
-      data: {
-        tenantId,
-        action: 'DEPRECATE_VERSION',
-        entity: 'Template',
-        entityId: previousActive.id,
-        reason: `System deprecation due to release of version ${nextVersion}`,
-        userId,
-      },
+    await recordAudit(tx, {
+      tenantId,
+      action: 'DEPRECATE_VERSION',
+      entity: 'Template',
+      entityId: previousActive.id,
+      reason: `System deprecation due to release of version ${nextVersion}`,
+      userId,
     });
   }
 
@@ -248,15 +245,13 @@ export class TemplateService {
         },
       });
 
-      await tx.auditLog.create({
-        data: {
-          tenantId,
-          action: 'APPROVE_TEMPLATE_VERSION',
-          entity: 'Template',
-          entityId: templateId,
-          reason: `Version ${template.templateVersion} approved for use`,
-          userId,
-        },
+      await recordAudit(tx, {
+        tenantId,
+        action: 'APPROVE_TEMPLATE_VERSION',
+        entity: 'Template',
+        entityId: templateId,
+        reason: `Version ${template.templateVersion} approved for use`,
+        userId,
       });
 
       const { fileKey: _fileKey, ...metadata } = updated;
@@ -303,15 +298,13 @@ export class TemplateService {
         },
       });
 
-      await tx.auditLog.create({
-        data: {
-          tenantId,
-          action: 'REJECT_TEMPLATE_VERSION',
-          entity: 'Template',
-          entityId: templateId,
-          reason: `Version ${template.templateVersion} rejected: ${trimmedReason}`,
-          userId,
-        },
+      await recordAudit(tx, {
+        tenantId,
+        action: 'REJECT_TEMPLATE_VERSION',
+        entity: 'Template',
+        entityId: templateId,
+        reason: `Version ${template.templateVersion} rejected: ${trimmedReason}`,
+        userId,
       });
 
       const { fileKey: _fileKey, ...metadata } = updated;
@@ -490,17 +483,15 @@ export class TemplateService {
         }
 
         const label = `version ${template.templateVersion} of ${template.templateKey}`;
-        await tx.auditLog.create({
-          data: {
-            tenantId,
-            action: 'DELETE_VERSION',
-            entity: 'Template',
-            entityId: templateId,
-            reason: cascade
-              ? `${template.definitionJson != null ? 'Defined' : 'Undefined'} ${label} deleted with ${reportIds.length} report(s) [${reportIds.join(', ')}]. Reason: ${reason ?? 'n/a'}`
-              : `Undefined ${label} deleted`,
-            userId,
-          },
+        await recordAudit(tx, {
+          tenantId,
+          action: 'DELETE_VERSION',
+          entity: 'Template',
+          entityId: templateId,
+          reason: cascade
+            ? `${template.definitionJson != null ? 'Defined' : 'Undefined'} ${label} deleted with ${reportIds.length} report(s) [${reportIds.join(', ')}]. Reason: ${reason ?? 'n/a'}`
+            : `Undefined ${label} deleted`,
+          userId,
         });
       },
       // The cascade can touch many rows across a dozen tables.
@@ -609,15 +600,13 @@ export class TemplateService {
         data: { status: TemplateStatus.DEPRECATED },
       });
 
-      await tx.auditLog.create({
-        data: {
-          tenantId,
-          action: 'DEPRECATE_VERSION',
-          entity: 'Template',
-          entityId: template.id,
-          reason: 'Manual deprecation by admin',
-          userId,
-        },
+      await recordAudit(tx, {
+        tenantId,
+        action: 'DEPRECATE_VERSION',
+        entity: 'Template',
+        entityId: template.id,
+        reason: 'Manual deprecation by admin',
+        userId,
       });
 
       const { fileKey: _fileKey, ...metadata } = updated;

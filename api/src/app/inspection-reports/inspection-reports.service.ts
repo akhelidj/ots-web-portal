@@ -1,3 +1,4 @@
+import { recordAudit } from '../common/audit';
 import {
   Injectable,
   NotFoundException,
@@ -267,16 +268,14 @@ export class InspectionReportsService {
       });
 
       // An action on the report (counts toward who the inspector is while IN_INSPECTION).
-      await this.prisma.auditLog.create({
-        data: {
-          action: 'CREATE',
-          entity: 'Attachment',
-          entityId: attachment.id,
-          tenantId,
-          userId: userId ?? null,
-          reason: 'Added attachment',
-          inspectionReportId: id,
-        },
+      await recordAudit(this.prisma, {
+        action: 'CREATE',
+        entity: 'Attachment',
+        entityId: attachment.id,
+        tenantId,
+        userId: userId ?? null,
+        reason: 'Added attachment',
+        inspectionReportId: id,
       });
 
       return updated;
@@ -402,15 +401,13 @@ export class InspectionReportsService {
         data: createData,
       });
 
-      await tx.auditLog.create({
-        data: {
-          action: 'CREATE',
-          entity: 'InspectionReport',
-          entityId: report.id,
-          tenantId,
-          userId,
-          inspectionReportId: report.id,
-        },
+      await recordAudit(tx, {
+        action: 'CREATE',
+        entity: 'InspectionReport',
+        entityId: report.id,
+        tenantId,
+        userId,
+        inspectionReportId: report.id,
       });
 
       return report;
@@ -537,16 +534,14 @@ export class InspectionReportsService {
         });
       }
 
-      await tx.auditLog.create({
-        data: {
-          action: 'UPDATE',
-          entity: 'InspectionReport',
-          entityId: id,
-          tenantId,
-          userId,
-          reason: 'Manual update',
-          inspectionReportId: id,
-        },
+      await recordAudit(tx, {
+        action: 'UPDATE',
+        entity: 'InspectionReport',
+        entityId: id,
+        tenantId,
+        userId,
+        reason: 'Manual update',
+        inspectionReportId: id,
       });
       return updated;
     });
@@ -750,16 +745,14 @@ export class InspectionReportsService {
       });
 
       // 6. Audit log
-      await tx.auditLog.create({
-        data: {
-          action: 'BATCH_SUBMIT',
-          entity: 'InspectionApprovalBatch',
-          entityId: batch.id,
-          reason: `Submitted ${data.serialNumberIds.length} S/N for approval`,
-          tenantId,
-          userId,
-          inspectionReportId: report.id,
-        },
+      await recordAudit(tx, {
+        action: 'BATCH_SUBMIT',
+        entity: 'InspectionApprovalBatch',
+        entityId: batch.id,
+        reason: `Submitted ${data.serialNumberIds.length} S/N for approval`,
+        tenantId,
+        userId,
+        inspectionReportId: report.id,
       });
 
       return { batch, updatedReport };
@@ -1018,20 +1011,16 @@ export class InspectionReportsService {
       }
 
       // Audit Log
-      await tx.auditLog.create({
-        data: {
-          action: 'BATCH_APPROVE',
-          entity: 'InspectionApprovalBatch',
-          entityId: batch.id,
-          reason:
-            (data.reason || 'Approved items') +
-            (data.serialNumberIds
-              ? ` (${data.serialNumberIds.length} S/N)`
-              : ''),
-          tenantId,
-          userId,
-          inspectionReportId: report.id,
-        },
+      await recordAudit(tx, {
+        action: 'BATCH_APPROVE',
+        entity: 'InspectionApprovalBatch',
+        entityId: batch.id,
+        reason:
+          (data.reason || 'Approved items') +
+          (data.serialNumberIds ? ` (${data.serialNumberIds.length} S/N)` : ''),
+        tenantId,
+        userId,
+        inspectionReportId: report.id,
       });
 
       return {
@@ -1201,20 +1190,16 @@ export class InspectionReportsService {
       });
 
       // Audit Log
-      await tx.auditLog.create({
-        data: {
-          action: 'BATCH_RETURN',
-          entity: 'InspectionApprovalBatch',
-          entityId: batch.id,
-          reason:
-            data.reason +
-            (data.serialNumberIds
-              ? ` (${data.serialNumberIds.length} S/N)`
-              : ''),
-          tenantId,
-          userId,
-          inspectionReportId: report.id,
-        },
+      await recordAudit(tx, {
+        action: 'BATCH_RETURN',
+        entity: 'InspectionApprovalBatch',
+        entityId: batch.id,
+        reason:
+          data.reason +
+          (data.serialNumberIds ? ` (${data.serialNumberIds.length} S/N)` : ''),
+        tenantId,
+        userId,
+        inspectionReportId: report.id,
       });
 
       return { batch: updatedBatch, updatedReport };

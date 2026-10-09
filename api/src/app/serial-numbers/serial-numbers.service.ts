@@ -1,3 +1,4 @@
+import { recordAudit } from '../common/audit';
 import {
   Injectable,
   NotFoundException,
@@ -147,16 +148,14 @@ export class SerialNumbersService {
         createdRecords.push({ clientRef: item.clientRef, ...created });
       }
 
-      await tx.auditLog.create({
-        data: {
-          action: 'CREATE_BULK',
-          entity: 'SerialNumber',
-          entityId: reportId,
-          tenantId,
-          userId,
-          inspectionReportId: reportId,
-          reason: `Bulk created ${createdRecords.length} serial numbers`,
-        },
+      await recordAudit(tx, {
+        action: 'CREATE_BULK',
+        entity: 'SerialNumber',
+        entityId: reportId,
+        tenantId,
+        userId,
+        inspectionReportId: reportId,
+        reason: `Bulk created ${createdRecords.length} serial numbers`,
       });
 
       return {
@@ -349,16 +348,14 @@ export class SerialNumbersService {
         throw err;
       }
 
-      await tx.auditLog.create({
-        data: {
-          action: 'UPDATE',
-          entity: 'SerialNumber',
-          entityId: id,
-          tenantId,
-          userId,
-          reason: reason.trim(),
-          inspectionReportId: serialToUpdate.inspectionReportId,
-        },
+      await recordAudit(tx, {
+        action: 'UPDATE',
+        entity: 'SerialNumber',
+        entityId: id,
+        tenantId,
+        userId,
+        reason: reason.trim(),
+        inspectionReportId: serialToUpdate.inspectionReportId,
       });
 
       return {
@@ -401,16 +398,14 @@ export class SerialNumbersService {
         where: { id },
       });
 
-      await tx.auditLog.create({
-        data: {
-          action: 'DELETE',
-          entity: 'SerialNumber',
-          entityId: id,
-          tenantId,
-          userId,
-          inspectionReportId: serialToDelete.inspectionReportId,
-          reason: `Deleted serial number ${serialToDelete.serial}`,
-        },
+      await recordAudit(tx, {
+        action: 'DELETE',
+        entity: 'SerialNumber',
+        entityId: id,
+        tenantId,
+        userId,
+        inspectionReportId: serialToDelete.inspectionReportId,
+        reason: `Deleted serial number ${serialToDelete.serial}`,
       });
 
       return { ok: true };
