@@ -48,6 +48,7 @@ describe('Create / template-binding path (multi-template seam) [integration]', (
     reportsService = new InspectionReportsService(
       prisma,
       makeFilesServiceStub(),
+      new RevisionService(prisma),
     );
     // workflow.create does not use RevisionService, so an inert stub is fine.
     workflowService = new InspectionReportWorkflowService(

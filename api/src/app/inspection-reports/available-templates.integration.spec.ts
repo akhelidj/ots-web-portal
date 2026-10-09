@@ -11,6 +11,7 @@
  * undefined, deprecated, or unvalidated template is never offered. These tests pin each
  * arm of that filter and the shape.
  */
+import { RevisionService } from '../revision/revision.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InspectionReportsService } from './inspection-reports.service';
 import {
@@ -35,7 +36,11 @@ describe('GET available-templates (consumption picker source) [integration]', ()
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
-    service = new InspectionReportsService(prisma, makeFilesServiceStub());
+    service = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+      new RevisionService(prisma),
+    );
   });
 
   afterAll(async () => {

@@ -3,6 +3,7 @@
  * path (optimistic concurrency, replace-not-merge, validation, locked-report guard).
  * Runs under `test-integration` against the dedicated test Postgres.
  */
+import { RevisionService } from '../revision/revision.service';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InspectionReportsService } from './inspection-reports.service';
@@ -21,7 +22,11 @@ describe('Report statistics [integration]', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
-    service = new InspectionReportsService(prisma, makeFilesServiceStub());
+    service = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+      new RevisionService(prisma),
+    );
   });
 
   afterAll(async () => {

@@ -82,7 +82,11 @@ describe('export gate for signature fields [integration]', () => {
     const revisionService = new RevisionService(prisma);
     exportService = new ExportService(prisma, revisionService, storage);
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
-    reports = new InspectionReportsService(prisma, makeFilesServiceStub());
+    reports = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+      new RevisionService(prisma),
+    );
     signatures = new SignaturesService(prisma, storage);
   });
 

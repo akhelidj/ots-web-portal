@@ -7,6 +7,7 @@
  * schema; (2) once a definition is attached to the Template, the same report now
  * carries it. Runs against the dedicated test Postgres.
  */
+import { RevisionService } from '../revision/revision.service';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { InspectionReportsService } from './inspection-reports.service';
@@ -31,7 +32,11 @@ describe('getReports embeds template definitionJson [integration]', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
-    service = new InspectionReportsService(prisma, makeFilesServiceStub());
+    service = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+      new RevisionService(prisma),
+    );
   });
 
   afterAll(async () => {

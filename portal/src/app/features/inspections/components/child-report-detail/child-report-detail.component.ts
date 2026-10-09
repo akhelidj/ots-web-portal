@@ -72,6 +72,8 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
 
   public reportId = '';
   public cr = signal<LocalChildReport | null>(null);
+  /** True once the first load attempt has finished, so "not found" never flashes mid-load. */
+  public loaded = signal(false);
 
   public headerPastThreshold = signal(false);
   public headerCondenseProgress = signal(0);
@@ -641,6 +643,7 @@ export class ChildReportDetailComponent implements OnInit, OnDestroy {
       }
     } finally {
       this.isRefreshing = false;
+      this.loaded.set(true);
     }
   }
 

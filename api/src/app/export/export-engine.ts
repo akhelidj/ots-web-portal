@@ -130,24 +130,24 @@ function applyTransform(
       const arr = (raw as Array<{ name?: unknown; number?: unknown }>) || [];
       const itemFormat = t.itemFormat as string;
       const suffixFormat = t.suffixFormat as string;
-      // Mirrors `${e.name}${e.number ? ' #'+e.number : ''}` — String(undefined)
-      // renders the literal "undefined" for a name-less entry (KNOWN-ISSUES #13).
+      // A name-less entry renders its number alone and an empty one is skipped, so a
+      // malformed entry never leaks the literal "undefined" into the export.
       return arr
         .map((e) => {
-          let s = itemFormat.replace('{name}', String(e.name));
+          let s = e.name ? itemFormat.replace('{name}', String(e.name)) : '';
           if (e.number) s += suffixFormat.replace('{number}', String(e.number));
-          return s;
+          return s.trim();
         })
+        .filter((s) => s !== '')
         .join(t.separator as string);
     }
     case 'stringListJoin': {
       const arr = (raw as Array<string | { name?: unknown }>) || [];
-      // Mirrors `typeof m==='string' ? m : m.name || m` — a name-less object
-      // falls through to itself and joins as "[object Object]" (KNOWN-ISSUES #14).
+      // Strings pass through; objects contribute their name. An object with no name is
+      // skipped rather than joining as "[object Object]".
       return arr
-        .map((m) =>
-          typeof m === 'string' ? m : (m as { name?: unknown }).name || m,
-        )
+        .map((m) => (typeof m === 'string' ? m : String(m?.name ?? '')))
+        .filter((s) => s !== '')
         .join(t.separator as string);
     }
     default:

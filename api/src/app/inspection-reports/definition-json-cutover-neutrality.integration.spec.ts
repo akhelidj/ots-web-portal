@@ -125,6 +125,7 @@ describe('engine-path gate/export/form/rework correctness + mutation guard [inte
     reportsService = new InspectionReportsService(
       prisma,
       makeFilesServiceStub(),
+      new RevisionService(prisma),
     );
     childReports = new ChildReportsService(
       prisma,

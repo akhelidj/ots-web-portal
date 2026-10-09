@@ -26,7 +26,11 @@
  * seed helpers and drive real transitions, crossing the PENDING_APPROVAL gate with
  * a fully-populated serial (seedApprovableSerial).
  */
-import { InspectionReportStatus, UserRole } from '@prisma/client';
+import {
+  InspectionReportStatus,
+  SerialApprovalStatus,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { InspectionReportWorkflowService } from '../workflow/inspection-report-workflow.service';
 import { RevisionService } from './revision.service';
@@ -59,7 +63,11 @@ describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
     // REAL RevisionService this time — its output is exactly what we assert.
     const revisionService = new RevisionService(prisma);
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
-    reports = new InspectionReportsService(prisma, makeFilesServiceStub());
+    reports = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+      new RevisionService(prisma),
+    );
   });
 
   afterAll(async () => {
@@ -256,5 +264,72 @@ describe('Revision-snapshot engine (foundation baseline) [integration]', () => {
     expect((reopenRev.snapshotJson as unknown as Snapshot).header.status).toBe(
       InspectionReportStatus.IN_INSPECTION,
     );
+  });
+
+  it('batch auto-approval takes the same first-approval snapshot as the direct transition (KNOWN-ISSUES #19)', async () => {
+    const { tenant, reportId } = await driveToInInspectionWithSerial();
+    const serials = await prisma.serialNumber.findMany({
+      where: { inspectionReportId: reportId },
+    });
+    await prisma.serialNumber.updateMany({
+      where: { inspectionReportId: reportId },
+      data: { approvalStatus: SerialApprovalStatus.INSPECTED_DRAFT },
+    });
+    const reportVersion = async () =>
+      (
+        await prisma.inspectionReport.findUniqueOrThrow({
+          where: { id: reportId },
+        })
+      ).version;
+
+    // The batch rows reference real users (FK), unlike the bare ids the transitions log.
+    const user = await prisma.user.create({
+      data: {
+        email: 'batch-approver@test.local',
+        role: UserRole.ADMIN,
+        tenantId: tenant.id,
+        passwordHash: 'x',
+      },
+    });
+    const submitted = await reports.submitForApproval(
+      tenant.id,
+      reportId,
+      user.id,
+      {
+        serialNumberIds: serials.map((s) => s.id),
+        reportVersion: await reportVersion(),
+      },
+    );
+    const batchId = (submitted as { batch: { id: string; version: number } })
+      .batch.id;
+    const batch = await prisma.inspectionApprovalBatch.findUniqueOrThrow({
+      where: { id: batchId },
+    });
+
+    await reports.approveBatch(tenant.id, reportId, batchId, user.id, {
+      batchVersion: batch.version,
+      reportVersion: await reportVersion(),
+    });
+
+    const parent = await prisma.inspectionReport.findUniqueOrThrow({
+      where: { id: reportId },
+    });
+    expect(parent.status).toBe(InspectionReportStatus.APPROVED);
+    expect(parent.revisionNumber).toBe(1);
+
+    const revisions = await prisma.inspectionReportRevision.findMany({
+      where: { inspectionReportId: reportId },
+    });
+    expect(revisions).toHaveLength(1);
+    expect(revisions[0].revisionReason).toBe('Initial approval');
+    expect(revisions[0].revisedById).toBe(user.id);
+    const snap = revisions[0].snapshotJson as unknown as Snapshot;
+    expect(snap.header.status).toBe(InspectionReportStatus.APPROVED);
+    expect(snap.serialNumbers).toHaveLength(1);
+    expect(
+      snap.transitionLogs.some(
+        (l) => l.toStatus === InspectionReportStatus.APPROVED,
+      ),
+    ).toBe(true);
   });
 });

@@ -14,6 +14,7 @@
  * the ops DTO — buildDefinition always emits one region and no transforms — so they
  * are proven in definition-validator.spec.ts (unit), as defense-in-depth.
  */
+import { RevisionService } from '../revision/revision.service';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
@@ -294,6 +295,7 @@ describe('Template definition write path [integration]', () => {
       reportsService = new InspectionReportsService(
         prisma,
         makeFilesServiceStub(),
+        new RevisionService(prisma),
       );
     });
 

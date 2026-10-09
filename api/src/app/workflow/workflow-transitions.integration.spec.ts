@@ -63,7 +63,11 @@ describe('InspectionReport workflow state transitions (foundation baseline) [int
     } as unknown as RevisionService;
 
     workflow = new InspectionReportWorkflowService(prisma, revisionStub);
-    reports = new InspectionReportsService(prisma, makeFilesServiceStub());
+    reports = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+      new RevisionService(prisma),
+    );
   });
 
   afterAll(async () => {

@@ -321,16 +321,8 @@ describe('Layer A — global (header) token equivalence: engine == frozen golden
   };
 
   it('G1 all header fields populated', () => {
-    const eqUsed = [
-      { name: 'Rig', number: '7' },
-      { name: 'Cell' },
-      { number: '3' }, // name-less → "undefined" quirk (KNOWN-ISSUES #13)
-    ];
-    const methods = [
-      'MPI',
-      { name: 'UT' },
-      {} as { name?: string }, // name-less object → "[object Object]" (#14)
-    ];
+    const eqUsed = [{ name: 'Rig', number: '7' }, { name: 'Cell' }];
+    const methods = ['MPI', { name: 'UT' }];
     const { engine, golden } = g(
       makeHeader({
         equipmentUsed: eqUsed as Snapshot['header']['equipmentUsed'],
@@ -338,9 +330,28 @@ describe('Layer A — global (header) token equivalence: engine == frozen golden
       }),
     );
     expect(engine).toEqual(golden);
-    // lock the deliberately-preserved quirks explicitly
-    expect(engine['{{equipment}}']).toBe('Rig #7, Cell, undefined #3');
-    expect(engine['{{methods}}']).toBe('MPI, UT, [object Object]');
+    expect(engine['{{equipment}}']).toBe('Rig #7, Cell');
+    expect(engine['{{methods}}']).toBe('MPI, UT');
+  });
+
+  // KNOWN-ISSUES #13/#14 fixed: malformed entries no longer leak \"undefined\"/\"[object Object]\".
+  it('G1b malformed equipment/method entries degrade gracefully', () => {
+    const { engine } = g(
+      makeHeader({
+        equipmentUsed: [
+          { name: 'Rig', number: '7' },
+          { number: '3' },
+          {},
+        ] as Snapshot['header']['equipmentUsed'],
+        inspectionMethod: [
+          'MPI',
+          {},
+          { name: 'UT' },
+        ] as Snapshot['header']['inspectionMethod'],
+      }),
+    );
+    expect(engine['{{equipment}}']).toBe('Rig #7, #3');
+    expect(engine['{{methods}}']).toBe('MPI, UT');
   });
 
   it('G2 empty header → whenEmpty fallbacks (N/A / None specified / comment)', () => {

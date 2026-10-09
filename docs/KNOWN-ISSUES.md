@@ -75,27 +75,15 @@ gate does not rely on drill-pipe's source doubling as a required field. See #4.
 
 ## Export mapping quirks
 
-These two are string-coercion artifacts that originated in the retired legacy drill-pipe
-mapper. They are **deliberately preserved** in the definition-driven engine's
-`objectListJoin` / `stringListJoin` transforms (`api/src/app/export/export-engine.ts`),
-which `export-engine.equivalence.spec.ts` pins. Correcting them changes export output, so
-it must be a separate, deliberate change.
+These two string-coercion artifacts came from the retired legacy drill-pipe mapper and were carried into the engine's `objectListJoin` / `stringListJoin` transforms (`api/src/app/export/export-engine.ts`). Both are fixed.
 
-### 13. `{{equipment}}` renders the literal `"undefined"` for a name-less entry
+### 13. `{{equipment}}` rendered the literal `"undefined"` for a name-less entry — RESOLVED
 
-The `objectListJoin` transform (`export-engine.ts`) joins `${e.name}` plus an optional
-` #number` suffix. When an `equipmentUsed[]` entry has no
-`name`, `${e.name}` coerces `undefined` to the string `"undefined"`, so the cell reads
-e.g. `"undefined #3"` instead of omitting the name.
-**Impact:** cosmetic — a malformed equipment entry surfaces `"undefined"` in the export.
-Fix post-migration by guarding the name (`e.name ?? ''`).
+A name-less `equipmentUsed[]` entry now renders its number alone (`#3`) and an entry with neither name nor number is skipped. Pinned by `export-engine.equivalence.spec.ts` (G1b); well-formed entries are unchanged and still match the frozen golden output.
 
-### 14. `{{methods}}` renders `"[object Object]"` for a name-less object entry
+### 14. `{{methods}}` rendered `"[object Object]"` for a name-less object entry — RESOLVED
 
-The `stringListJoin` transform (`export-engine.ts`) maps `typeof m === 'string' ? m : m.name || m`. An object entry lacking `name` falls
-through `m.name || m` to the object itself, which `join` coerces to `"[object Object]"`.
-**Impact:** cosmetic — a malformed method entry surfaces `"[object Object]"`.
-Fix post-migration by coercing the fallback to a string (`m.name ?? ''`).
+Objects contribute their `name`; one without a name is skipped. Same spec.
 
 ## Type system / upstream friction
 
@@ -117,43 +105,15 @@ property access.
 
 ## Build / test tooling
 
-### 10. Portal spec tsconfig cannot type-check (phantom errors)
+### 10-12. Spec typing and strict-null friction — RESOLVED
 
-`portal/tsconfig.spec.json` uses `moduleResolution: node`, under which Angular's
-package-`exports` entrypoints (`@angular/common/http`, `@angular/core/testing`, …) fail
-to resolve (9× `TS2307`). That cascades into ~110 phantom errors (e.g. 81 in
-`sync-dispatcher.service.ts`, 29 in a portal service — `TS2571`/`TS18046`/`TS2698`). The
-app build (`moduleResolution: bundler`) compiles the same files at **0 errors**. These
-are a spec-tsconfig misconfiguration, not real type violations. Fix: align spec
-resolution with the app so the spec suite becomes type-checkable.
-
-### 11. Two latent type errors invisible to Jest (swc transpile, not tsc)
-
-Jest transpiles with swc, so neither fails tests today:
-(a) `api/src/app/export/export.integration.spec.ts` — `TS2352` `cell.value` cast;
-(b) `portal/src/test-setup.ts` — `TS2307` `node:v8` unresolved under app config
-`types: []`.
-
-### 12. JWT secret and revision number reach strict-null-check sites as possibly-undefined
-
-`jwt.strategy` passes `secretOrKey: string | undefined`; `export.controller` parses a
-possibly-`NaN`/`undefined` `revisionNumber`. Genuine `strictNullChecks` cases — read
-the intended runtime contract before "fixing" either.
+The spec tsconfigs resolve like the app and both apps' specs are type-checked in CI (`npm run typecheck`), which cleared the phantom errors (#10) and the latent spec type errors (#11). The JWT secret is read with `getOrThrow` and the export controller rejects a non-numeric `revisionNumber` (#12).
 
 ## Portal UI
 
-### 16. Child-report route renders a blank page when no child exists
+### 16. Child-report route renders a blank page when no child exists — RESOLVED
 
-The child-report route — `reports/:id/child` (all roles;
-`app.routes.ts:70, :92, :107, :122, :133`) → `ChildReportDetailComponent` — pulls
-the child via `GET /child-reports/:id` (`child-report-detail.component.ts`). When the
-parent has no generated child report, that request 404s; the component logs "Failed to
-pull child report …" and leaves the main content area empty — no not-found or
-empty-state UI. In practice the route is not linked while a serial's child is
-"Not Generated", so it is reached only by a typed/stale URL.
-**Impact:** cosmetic/edge — a customer (or any role) who lands on the route directly
-sees a blank page rather than an explanatory empty state. Fix: render a not-found /
-"no child report" state on the 404.
+When `GET /child-reports/:id` finds nothing, the page now shows a "Child report not found" state with a **Go back** button instead of an empty area.
 
 ### 17. Serials-table column labels/group titles are only as good as the template definition
 
@@ -191,17 +151,6 @@ label derivation above, and likewise not a view/rendering fault.
 
 ## Revisions / export
 
-### 19. Approval-batch auto-approval writes no revision snapshot
+### 19. Approval-batch auto-approval writes no revision snapshot — RESOLVED
 
-`InspectionReportsService.approveBatch` flips the parent to `APPROVED` once every serial and
-batch is approved, but — unlike the direct `APPROVED` transition in
-`InspectionReportWorkflowService.transition` — it never calls
-`RevisionService.createInspectionReportSnapshot`. A report approved this way keeps
-`revisionNumber = 0`, and `ExportService` then builds "revision 0" **live** from current rows
-instead of from an immutable snapshot (`export.service.ts`, the `revisionNumber === 0` branch).
-Re-approval after a reopen (`isFirstApproval` is only true while `revisionNumber === 0`) takes
-no new snapshot on either path.
-**Impact:** for batch-approved reports the export is not frozen at approval time — later edits
-(e.g. after a reopen) show through; the audit guarantee of ADR-0001 only holds for the direct
-transition and reopen snapshots. **Confidence:** confirmed at code level; verify end-to-end
-before changing, since export, signatures and revision numbering all key off `revisionNumber`.
+`InspectionReportsService.approveBatch` now takes the same first-approval snapshot as the direct `APPROVED` transition when the parent flips to `APPROVED` with `revisionNumber === 0` (same transaction, after the transition log, before supervisor signatures are applied). Pinned by `revision-snapshot.integration.spec.ts`. **Not backfilled:** reports batch-approved before this fix still have `revisionNumber = 0` and export live, as before.

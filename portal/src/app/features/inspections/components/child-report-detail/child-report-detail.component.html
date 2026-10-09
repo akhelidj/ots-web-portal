@@ -645,4 +645,17 @@
       </div>
     </div>
   </div>
+} @else if (loaded()) {
+  <div
+    class="p-4 sm:p-6 lg:p-8 max-w-xl mx-auto text-center space-y-3"
+    data-testid="child-report-not-found"
+  >
+    <h1 class="text-xl font-semibold">Child report not found</h1>
+    <p class="text-sm text-muted-foreground">
+      This report doesn't exist yet or is no longer available.
+    </p>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="goBack()">
+      Go back
+    </button>
+  </div>
 }

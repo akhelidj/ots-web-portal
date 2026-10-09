@@ -99,6 +99,7 @@ export async function resetInspectionDomain(prisma: PrismaService) {
   await prisma.templateDefinitionRevision.deleteMany();
   await prisma.template.deleteMany();
   await prisma.customer.deleteMany();
+  await prisma.user.deleteMany();
   await prisma.tenant.deleteMany();
 }
 

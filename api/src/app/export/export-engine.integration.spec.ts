@@ -70,7 +70,11 @@ describe('Layer B — export engine structural behaviour + mutation guards [inte
       new LocalAttachmentStorage(),
     );
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
-    reports = new InspectionReportsService(prisma, makeFilesServiceStub());
+    reports = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+      new RevisionService(prisma),
+    );
   });
 
   afterAll(async () => {

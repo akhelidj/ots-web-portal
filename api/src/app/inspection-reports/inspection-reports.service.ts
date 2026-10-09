@@ -15,6 +15,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilesService } from '../files/files.service';
+import { RevisionService } from '../revision/revision.service';
 import { normalizeStatistics } from './report-statistics';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 import {
@@ -48,6 +49,7 @@ export class InspectionReportsService {
   constructor(
     private prisma: PrismaService,
     private filesService: FilesService,
+    private revisionService: RevisionService,
   ) {}
 
   async getReports(
@@ -944,6 +946,20 @@ export class InspectionReportsService {
             userId,
           },
         });
+
+        // First approval of this report: freeze the immutable revision snapshot exactly as
+        // the direct APPROVED transition does (after the transition log, so the approver is
+        // captured; before the signatures, which are tagged with the revision). Later
+        // approvals follow a reopen, whose own snapshot already advanced the revision.
+        if (report.revisionNumber === 0) {
+          await this.revisionService.createInspectionReportSnapshot(
+            tx,
+            report.id,
+            'Initial approval',
+            userId,
+            tenantId,
+          );
+        }
 
         // The parent just became APPROVED: apply the approver's account signature to any
         // SUPERVISOR signature field, exactly as the direct APPROVED transition does. A

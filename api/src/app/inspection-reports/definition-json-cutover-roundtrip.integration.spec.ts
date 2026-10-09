@@ -24,6 +24,7 @@
  * the real write path, not a hand-built object. Runs against the dedicated test
  * Postgres (:5433); this spec never touches the real dev/prod row.
  */
+import { RevisionService } from '../revision/revision.service';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { UserRole } from '@prisma/client';
@@ -79,7 +80,11 @@ describe('definitionJson cutover round-trip equivalence [integration]', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
-    service = new InspectionReportsService(prisma, makeFilesServiceStub());
+    service = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+      new RevisionService(prisma),
+    );
   });
 
   afterAll(async () => {

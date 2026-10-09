@@ -87,7 +87,11 @@ describe('Deterministic xlsx export (foundation baseline) [integration]', () => 
       new LocalAttachmentStorage(),
     );
     workflow = new InspectionReportWorkflowService(prisma, revisionService);
-    reports = new InspectionReportsService(prisma, makeFilesServiceStub());
+    reports = new InspectionReportsService(
+      prisma,
+      makeFilesServiceStub(),
+      new RevisionService(prisma),
+    );
   });
 
   afterAll(async () => {
