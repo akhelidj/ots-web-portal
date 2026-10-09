@@ -35,14 +35,33 @@ export class SyncDispatcherService {
   private approvalBatchRepo = inject(ApprovalBatchLocalRepo);
   private batchSnRepo = inject(BatchSerialNumberLocalRepo);
 
+  /**
+   * The HTTP verbs the dispatcher uses, each carrying the queued item's `Idempotency-Key`. The
+   * key is minted once at enqueue and survives every retry, so the API can recognise a
+   * repeat of a request that already committed and answer it without executing it twice
+   * (KNOWN-ISSUES #3). Scoped per call: other HTTP traffic never carries a key.
+   */
+  private withIdempotencyKey(key: string | undefined) {
+    const options = key ? { headers: { 'Idempotency-Key': key } } : {};
+    return {
+      get: <T>(url: string) => this.http.get<T>(url),
+      post: <T>(url: string, body: unknown) =>
+        this.http.post<T>(url, body, options),
+      patch: <T>(url: string, body: unknown) =>
+        this.http.patch<T>(url, body, options),
+      delete: (url: string) => this.http.delete(url, options),
+    };
+  }
+
   public async dispatch(item: OutboxItem): Promise<boolean> {
     const operationKey = `${item.entityType}:${item.operation}`;
+    const http = this.withIdempotencyKey(item.idempotencyKey);
 
     try {
       switch (operationKey) {
         case 'USER:CREATE': {
           const createRes = await firstValueFrom(
-            this.http.post<LocalUser & { temporaryPassword?: string }>(
+            http.post<LocalUser & { temporaryPassword?: string }>(
               `${environment.apiUrl}/users`,
               item.payload,
             ),
@@ -72,7 +91,7 @@ export class SyncDispatcherService {
 
         case 'USER:SET_ACTIVE': {
           const updateRes = await firstValueFrom(
-            this.http.patch<LocalUser>(
+            http.patch<LocalUser>(
               `${environment.apiUrl}/users/${item.entityId}/active`,
               {
                 isActive: item.payload['isActive'] as boolean,
@@ -87,7 +106,7 @@ export class SyncDispatcherService {
 
         case 'USER:UPDATE_PROFILE': {
           const updateRes = await firstValueFrom(
-            this.http.patch<LocalUser>(
+            http.patch<LocalUser>(
               `${environment.apiUrl}/users/${item.entityId}`,
               {
                 name: item.payload['name'],
@@ -102,7 +121,7 @@ export class SyncDispatcherService {
 
         case 'USER:DELETE': {
           await firstValueFrom(
-            this.http.delete(`${environment.apiUrl}/users/${item.entityId}`),
+            http.delete(`${environment.apiUrl}/users/${item.entityId}`),
           );
           await this.userRepo.delete(item.entityId);
           return true;
@@ -110,7 +129,7 @@ export class SyncDispatcherService {
 
         case 'CUSTOMER:CREATE': {
           const createRes = await firstValueFrom(
-            this.http.post<LocalCustomer>(
+            http.post<LocalCustomer>(
               `${environment.apiUrl}/customers`,
               item.payload,
             ),
@@ -148,7 +167,7 @@ export class SyncDispatcherService {
 
         case 'CUSTOMER:UPDATE': {
           const updateRes = await firstValueFrom(
-            this.http.patch<LocalCustomer>(
+            http.patch<LocalCustomer>(
               `${environment.apiUrl}/customers/${item.entityId}`,
               item.payload,
             ),
@@ -159,7 +178,7 @@ export class SyncDispatcherService {
 
         case 'CUSTOMER:SET_ACTIVE': {
           const activeRes = await firstValueFrom(
-            this.http.patch<LocalCustomer>(
+            http.patch<LocalCustomer>(
               `${environment.apiUrl}/customers/${item.entityId}/active`,
               {
                 isActive: item.payload['isActive'] as boolean,
@@ -174,9 +193,7 @@ export class SyncDispatcherService {
 
         case 'CUSTOMER:DELETE': {
           await firstValueFrom(
-            this.http.delete(
-              `${environment.apiUrl}/customers/${item.entityId}`,
-            ),
+            http.delete(`${environment.apiUrl}/customers/${item.entityId}`),
           );
           await this.customerRepo.delete(item.entityId);
           return true;
@@ -184,7 +201,7 @@ export class SyncDispatcherService {
 
         case 'INSPECTION_REPORT:CREATE': {
           const createRes = await firstValueFrom(
-            this.http.post<LocalInspectionReport>(
+            http.post<LocalInspectionReport>(
               `${environment.apiUrl}/inspection-reports`,
               item.payload,
             ),
@@ -229,7 +246,7 @@ export class SyncDispatcherService {
 
         case 'INSPECTION_REPORT:UPDATE': {
           const updateRes = await firstValueFrom(
-            this.http.patch<LocalInspectionReport>(
+            http.patch<LocalInspectionReport>(
               `${environment.apiUrl}/inspection-reports/${item.entityId}`,
               item.payload,
             ),
@@ -240,7 +257,7 @@ export class SyncDispatcherService {
 
         case 'INSPECTION_REPORT:UPDATE_STATUS': {
           const updateRes = await firstValueFrom(
-            this.http.patch<LocalInspectionReport>(
+            http.patch<LocalInspectionReport>(
               `${environment.apiUrl}/inspection-reports/${item.entityId}`,
               item.payload,
             ),
@@ -251,7 +268,7 @@ export class SyncDispatcherService {
 
         case 'INSPECTION_REPORT:TRANSITION': {
           const transitionRes = await firstValueFrom(
-            this.http.post<LocalInspectionReport>(
+            http.post<LocalInspectionReport>(
               `${environment.apiUrl}/inspection-reports/${item.entityId}/transitions`,
               item.payload,
             ),
@@ -268,7 +285,7 @@ export class SyncDispatcherService {
 
           try {
             const availableRes = await firstValueFrom(
-              this.http.get<{
+              http.get<{
                 fromStatus: string;
                 transitions: { toStatus: string; requiresReason: boolean }[];
               }>(
@@ -302,7 +319,7 @@ export class SyncDispatcherService {
           if (!itemsPayload || itemsPayload.length === 0) return true;
 
           const createRes = await firstValueFrom(
-            this.http.post<{
+            http.post<{
               items: {
                 clientRef: string;
                 id: string;
@@ -352,7 +369,7 @@ export class SyncDispatcherService {
           };
 
           const updateRes = await firstValueFrom(
-            this.http.patch<{ serialNumber: string; [key: string]: unknown }>(
+            http.patch<{ serialNumber: string; [key: string]: unknown }>(
               `${environment.apiUrl}/serial-numbers/${item.entityId}`,
               backendPayload,
             ),
@@ -385,7 +402,7 @@ export class SyncDispatcherService {
           };
 
           const updateRes = await firstValueFrom(
-            this.http.patch<{ serialNumber: string; [key: string]: unknown }>(
+            http.patch<{ serialNumber: string; [key: string]: unknown }>(
               `${environment.apiUrl}/serial-numbers/${item.entityId}`,
               backendPayload,
             ),
@@ -413,7 +430,7 @@ export class SyncDispatcherService {
 
         case 'SERIAL_NUMBER:SN_DELETE': {
           await firstValueFrom(
-            this.http.delete(
+            http.delete(
               `${environment.apiUrl}/serial-numbers/${item.entityId}`,
             ),
           );
@@ -423,7 +440,7 @@ export class SyncDispatcherService {
 
         case 'CHILD_REPORT:CREATE': {
           const createRes = await firstValueFrom(
-            this.http.post<LocalChildReport>(
+            http.post<LocalChildReport>(
               `${environment.apiUrl}/child-reports`,
               item.payload,
             ),
@@ -451,7 +468,7 @@ export class SyncDispatcherService {
 
         case 'CHILD_REPORT:SYNC_REWORK': {
           const syncRes = await firstValueFrom(
-            this.http.post<LocalChildReport | null>(
+            http.post<LocalChildReport | null>(
               `${environment.apiUrl}/inspection-reports/${item.entityId}/child-reports/sync-rework`,
               {},
             ),
@@ -470,7 +487,7 @@ export class SyncDispatcherService {
 
         case 'CHILD_REPORT:SN_UPDATE_INSPECTION': {
           const updateRes = await firstValueFrom(
-            this.http.patch<LocalChildReport>(
+            http.patch<LocalChildReport>(
               `${environment.apiUrl}/child-reports/${item.entityId}/serial-numbers/${item.payload['serialNumberId']}`,
               {
                 inspectionData: item.payload['inspectionData'],
@@ -484,7 +501,7 @@ export class SyncDispatcherService {
 
         case 'CHILD_REPORT:UPDATE': {
           const updateRes = await firstValueFrom(
-            this.http.patch<LocalChildReport>(
+            http.patch<LocalChildReport>(
               `${environment.apiUrl}/child-reports/${item.entityId}`,
               item.payload,
             ),
@@ -495,7 +512,7 @@ export class SyncDispatcherService {
 
         case 'CHILD_REPORT:TRANSITION': {
           const transitionRes = await firstValueFrom(
-            this.http.post<LocalChildReport>(
+            http.post<LocalChildReport>(
               `${environment.apiUrl}/child-reports/${item.entityId}/transition`,
               item.payload,
             ),
@@ -519,7 +536,7 @@ export class SyncDispatcherService {
             string | undefined;
 
           const createRes = await firstValueFrom(
-            this.http.post<{
+            http.post<{
               batch: LocalInspectionApprovalBatch & {
                 serialNumbers: Array<{
                   id: string;
@@ -593,7 +610,7 @@ export class SyncDispatcherService {
           if (!batch) return true;
 
           const res = await firstValueFrom(
-            this.http.post<{
+            http.post<{
               updatedReport?: LocalInspectionReport;
               batch?: LocalInspectionApprovalBatch;
             }>(
@@ -650,7 +667,7 @@ export class SyncDispatcherService {
 
           if (batch.childReportId) {
             const childReport = await firstValueFrom(
-              this.http.get<LocalChildReport>(
+              http.get<LocalChildReport>(
                 `${environment.apiUrl}/child-reports/${batch.childReportId}`,
               ),
             );
@@ -664,7 +681,7 @@ export class SyncDispatcherService {
           if (!batch) return true;
 
           const res = await firstValueFrom(
-            this.http.post<{
+            http.post<{
               updatedReport?: LocalInspectionReport;
               batch?: LocalInspectionApprovalBatch;
             }>(
@@ -722,7 +739,7 @@ export class SyncDispatcherService {
 
           if (batch.childReportId) {
             const childReport = await firstValueFrom(
-              this.http.get<LocalChildReport>(
+              http.get<LocalChildReport>(
                 `${environment.apiUrl}/child-reports/${batch.childReportId}`,
               ),
             );

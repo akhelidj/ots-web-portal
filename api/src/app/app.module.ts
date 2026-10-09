@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -55,6 +56,8 @@ import { MetricsModule } from './metrics/metrics.module';
   providers: [
     AppService,
     FilesService,
+    // Runs after the guards (needs req.user): replays retried mutations instead of re-running them.
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     // Throttle first, so unauthenticated floods are rejected before any auth work.
     {
       provide: APP_GUARD,

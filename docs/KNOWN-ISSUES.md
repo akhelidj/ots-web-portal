@@ -26,18 +26,9 @@ runtime/device confirmation.
 The only resolution primitive — `OutboxService.clearConflicts()` (`outbox.service.ts`; UI trigger `shell.component.ts`) — hard-deletes every outbox item whose status is `CONFLICT` or `FAILED` (`outbox-local.repo.ts`). It no longer touches retryable `PENDING` items that merely recorded a transient error (that over-delete is fixed and pinned by `clear-conflicts.spec.ts`). Entity stores are left untouched.
 **Impact (remaining):** server-wins with no merge or diff UI — the user's queued offline edit is thrown away, while the entity row remains CONFLICT (see #1).
 
-### 3. `idempotencyKey` is generated but never transmitted
+### 3. `idempotencyKey` is generated but never transmitted — RESOLVED
 
-Every enqueue mints a `crypto.randomUUID()` idempotency key and stores it on the
-`OutboxItem` (`inspection-reports.service.ts:116` and the other enqueue sites), but the
-dispatcher never attaches it to any request — no header, not in the body
-(`sync-dispatcher.service.ts:38`–`748`; the key is only logged at `:739`). A 5xx, or a
-network error carrying no `status`, returns the item to `PENDING`
-(`outbox.service.ts:135`) for a byte-identical retry.
-**Impact:** a 5xx that actually committed server-side, then auto-retries, can create a
-duplicate. No server-side dedup was found on the create paths.
-**Confidence:** client-side facts confirmed; the "duplicate actually created" outcome
-needs an integration/device scenario.
+Every queued operation keeps the `idempotencyKey` minted at enqueue, and `SyncDispatcherService` sends it as the `Idempotency-Key` header on every retry (`sync-idempotency.spec.ts`). On the API, a global `IdempotencyInterceptor` (`api/src/app/common/idempotency/`) executes a mutating request once per `(tenant, user, key)` and answers repeats from the stored response (table `IdempotencyKey`, 7-day retention), so a 5xx or lost response that actually committed can no longer create a duplicate or surface as a phantom version conflict. Failed requests store nothing, so a genuine failure retries normally; an in-progress key answers 409 and an abandoned one (>2 min) is taken over. Requests without the header behave exactly as before.
 
 ## API-side data / validation
 

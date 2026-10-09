@@ -1,6 +1,6 @@
 /**
- * Behavior-pinning tests — idempotency key generated but never sent
- * (KNOWN-ISSUES #3), client-side / unit-testable half. See docs/KNOWN-ISSUES.md.
+ * Tests — the idempotency key is transmitted (KNOWN-ISSUES #3), client-side half. The API
+ * half is common/idempotency/idempotency.interceptor.integration.spec.ts.
  *
  * These drive the REAL production path end-to-end at the client boundary:
  *   OutboxService.enqueue -> OutboxService.processQueue -> SyncDispatcherService.dispatch -> HTTP
@@ -8,14 +8,8 @@
  * single-request CREATE path (CUSTOMER:CREATE) is used — CREATE is where the
  * duplicate risk actually bites.
  *
- * WHICH ASSERTIONS PIN THE KNOWN BUG vs. STABLE BEHAVIOR:
- *   - The "key is absent from the request" assertions (test 1, and the key-absent
- *     check inside the retry test) pin the known bug (KNOWN-ISSUES #3); they will
- *     change once the idempotency key is attached. They carry the "known bug" comment.
- *   - The status-transition assertions (5xx -> PENDING, 4xx -> FAILED) and the
- *     same-URL / same-body assertions pin correct, stable behavior and are not
- *     expected to change. A fix adds a header; it does not change the queue status
- *     logic or the URL/body. Do not read those staying green as "unfixed".
+ * Contract: every dispatched request carries the item's key in the Idempotency-Key header,
+ * the same key on every retry; queue-status logic (5xx -> PENDING, 4xx -> FAILED) is unchanged.
  *
  * Zoneless note: this suite deliberately avoids fakeAsync/tick (which depend on
  * zone.js). It uses real async and a setTimeout(0) macrotask drain to let the
@@ -125,23 +119,16 @@ function makeCustomerCreateItem(): OutboxItem {
  * Assert the generated idempotency key is transmitted nowhere in the request:
  * not in the URL, not in any header (name or value), not in the body.
  */
-function assertKeyAbsentFromRequest(req: TestRequest, key: string): void {
-  // Body: neither as a field nor anywhere in the serialized payload.
+function assertKeySentAsHeaderOnly(req: TestRequest, key: string): void {
+  // Transmitted in the Idempotency-Key header...
+  expect(req.request.headers.get('Idempotency-Key')).toBe(key);
+  // ...and nowhere else: not in the body, not in the URL.
   expect(
     (req.request.body as Record<string, unknown>)?.['idempotencyKey'],
   ).toBe(undefined);
   expect(JSON.stringify(req.request.body ?? {})).not.toContain(key);
-
-  // Headers: no idempotency-style header name, and the value appears in none.
-  for (const name of req.request.headers.keys()) {
-    expect(name.toLowerCase()).not.toContain('idempot');
-    expect(req.request.headers.get(name)).not.toBe(key);
-  }
-
-  // URL / query string.
   expect(req.request.urlWithParams).not.toContain(key);
 }
-
 describe('Offline sync — idempotency key on the wire (risk #3, client-side)', () => {
   let outbox: OutboxService;
   let httpMock: HttpTestingController;
@@ -192,7 +179,7 @@ describe('Offline sync — idempotency key on the wire (risk #3, client-side)', 
     httpMock.verify();
   });
 
-  it('does NOT send the idempotency key on dispatch — not in headers, not in the body (KNOWN BUG: risk #3)', async () => {
+  it('sends the idempotency key as the Idempotency-Key header on dispatch (and only there)', async () => {
     const item = makeCustomerCreateItem();
     await outbox.enqueue(item);
 
@@ -204,8 +191,7 @@ describe('Offline sync — idempotency key on the wire (risk #3, client-side)', 
     // Body is exactly the payload — the key is a sibling field on the outbox item,
     // and it is not folded into the request anywhere.
     expect(req.request.body).toEqual(item.payload);
-    // Pins current behavior. KNOWN BUG (KNOWN-ISSUES #3), see docs/KNOWN-ISSUES.md. A fix will change this.
-    assertKeyAbsentFromRequest(req, IDEMPOTENCY_KEY);
+    assertKeySentAsHeaderOnly(req, IDEMPOTENCY_KEY);
 
     req.flush({ id: 'srv-cust-1', ...item.payload, version: 1 });
     await processing;
@@ -251,7 +237,7 @@ describe('Offline sync — idempotency key on the wire (risk #3, client-side)', 
     expect(stored?.status).toBe('FAILED');
   });
 
-  it('on retry after a 5xx, re-sends a byte-identical request with STILL no idempotency key (KNOWN BUG: risk #3 — duplicate-risk mechanism)', async () => {
+  it('on retry after a 5xx, re-sends the same request with the SAME idempotency key (so the API can replay instead of duplicating)', async () => {
     const item = makeCustomerCreateItem();
     await outbox.enqueue(item);
 
@@ -280,10 +266,10 @@ describe('Offline sync — idempotency key on the wire (risk #3, client-side)', 
     expect(req2.request.urlWithParams).toBe(url1);
     expect(req2.request.body).toEqual(body1);
 
-    // Pins current behavior. KNOWN BUG (KNOWN-ISSUES #3), see docs/KNOWN-ISSUES.md. A fix will change this.
-    // With no idempotency key on either request, a 5xx that actually committed
-    // server-side would be duplicated by this identical retry.
-    assertKeyAbsentFromRequest(req2, IDEMPOTENCY_KEY);
+    // The same key on both attempts: a 5xx that actually committed server-side is
+    // answered from the stored response instead of being executed twice.
+    expect(req1.request.headers.get('Idempotency-Key')).toBe(IDEMPOTENCY_KEY);
+    assertKeySentAsHeaderOnly(req2, IDEMPOTENCY_KEY);
 
     req2.flush('server error', {
       status: 503,

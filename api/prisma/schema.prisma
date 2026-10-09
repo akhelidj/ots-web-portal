@@ -493,3 +493,22 @@ enum InspectionApprovalBatchStatus {
   APPROVED
   RETURNED
 }
+
+/// Replay guard for offline-sync retries: a mutating request carrying an
+/// `Idempotency-Key` header is executed once; a repeat gets the stored response.
+model IdempotencyKey {
+  id           String    @id @default(uuid())
+  tenantId     String
+  userId       String
+  key          String
+  method       String
+  path         String
+  /// IN_PROGRESS while the first request runs, DONE once its response is stored.
+  state        String
+  responseBody Json?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@unique([tenantId, userId, key])
+  @@index([createdAt])
+}
