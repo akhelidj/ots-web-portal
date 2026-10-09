@@ -52,7 +52,13 @@ export class AuthService {
       },
     });
 
-    if (user && (await bcrypt.compare(pass, user.passwordHash))) {
+    // A deactivated account can never sign in (checked after the hash so the response and
+    // timing do not reveal that the account exists).
+    if (
+      user &&
+      (await bcrypt.compare(pass, user.passwordHash)) &&
+      user.isActive
+    ) {
       const { passwordHash, ...result } = user;
       return result;
     }
@@ -105,6 +111,10 @@ export class AuthService {
     }
     if (new Date() > tokenRecord.expiresAt) {
       throw new UnauthorizedException('Token expired');
+    }
+
+    if (!tokenRecord.user.isActive) {
+      throw new UnauthorizedException('Account is no longer active');
     }
 
     // Rotate token

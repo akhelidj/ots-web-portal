@@ -99,12 +99,13 @@ Welcome to the OTS Portal! Your account has been successfully created.
 Here are your access details:
 - Login Email: ${email}
 - Role: ${data.role}
-- Temporary Password: ${data.password}
+- Temporary Password: (shown to the administrator who created the account)
 ${data.role === UserRole.CUSTOMER ? '\\nNote: As a customer user, you will be prompted to update your password at your first connection.\\n' : ''}
 Please log in to the portal to get started.
 =========================================
 `;
-    // Development stand-in for a real mailer (see the API hardening list: it logs the temp password).
+    // Development stand-in for a real mailer. It must never contain the password: logs are
+    // shipped and retained, the admin gets the temporary password in the response instead.
     // eslint-disable-next-line no-console
     console.log(sampleEmail);
 

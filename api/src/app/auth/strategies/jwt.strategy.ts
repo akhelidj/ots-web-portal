@@ -4,6 +4,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UserRole } from '@prisma/client';
 import { AuthenticatedUser } from '../authenticated-request';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * The claims this strategy reads out of a verified access token. `role` is
@@ -20,7 +21,10 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -38,13 +42,33 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!role) {
       throw new UnauthorizedException('Invalid role claim in access token');
     }
+    // The token is only proof of a past login. Re-read the account on every request so a
+    // deactivated user is locked out immediately and a role / customer change takes effect
+    // at once instead of when the token expires (one primary-key lookup).
+    const account = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: {
+        email: true,
+        tenantId: true,
+        role: true,
+        customerId: true,
+        isActive: true,
+      },
+    });
+    if (
+      !account ||
+      !account.isActive ||
+      account.tenantId !== payload.tenantId
+    ) {
+      throw new UnauthorizedException('Account is no longer active');
+    }
     return {
       id: payload.sub,
       userId: payload.sub,
-      email: payload.email,
-      tenantId: payload.tenantId,
-      role,
-      customerId: payload.customerId,
+      email: account.email,
+      tenantId: account.tenantId,
+      role: account.role,
+      customerId: account.customerId,
     };
   }
 }
