@@ -14,7 +14,7 @@ Versioning, storage and the admin validation gate are in [Template Versioning](t
 | Disposition column / snapshots / export sort | `disposition.source` through the one `resolveDisposition`                           |
 | Export                           | `export`, `transforms`, `regions` (`export-engine.ts` + `xlsx-token-engine.ts`)                  |
 | Rework child reports             | `rules` (`ReworkRulesInterpreter`)                                                              |
-| Signatures                       | `signature` fields (who signs), the `inspectorSignature` header role                            |
+| Signatures                       | `signature` fields (who signs), the `inspectorSignature` / `supervisorSignature` header roles                          |
 
 "Usable" for a new report = `status == ACTIVE && definitionJson != null && approvalStatus == APPROVED`.
 
@@ -33,8 +33,8 @@ Versioning, storage and the admin validation gate are in [Template Versioning](t
 
 - **Field types:** `text`, `number`, `boolean`, `select`, `date`, `object-list` (repeated `{ name, number? }`), `signature` (header only; not an input — it marks where a picture lands and who signs: `CUSTOMER` or `SUPERVISOR`; `required` blocks export until signed).
 - **Scope:** `header` = report-level values (stored in `InspectionReport.headerData`); `item` = per-serial values (stored in `SerialNumber.inspectionData`).
-- **System roles:** header roles `inspector`, `supervisor`, `inspectionDate`, `customer`, `reportNumber`, `poNumber`, `inspectorSignature` are system-derived (never user-typed) and map to engine computed tokens; item role `serialNumber` marks the serial's own token. All eight are mandatory to **save** a new definition (grandfathered stored definitions still load and export).
-- **Export entries** bind a token to a `field` path, a `computed` name (`customerName`, `reportNumber`, `poNumber`, `reportDate`, `inspectedBy`, `approvedBy`, `inspectorSignature`), a `const`, a `compose`/`coalesce`, a `transform`, a `whenEmpty` fallback, a `signature` slot, or `source: rowSerial | record`.
+- **System roles:** header roles `inspector`, `supervisor`, `inspectionDate`, `customer`, `reportNumber`, `poNumber`, `inspectorSignature`, `supervisorSignature` are system-derived (never user-typed) and map to engine computed tokens; item role `serialNumber` marks the serial's own token. All nine are mandatory to **save** a new definition (grandfathered stored definitions still load and export).
+- **Export entries** bind a token to a `field` path, a `computed` name (`customerName`, `reportNumber`, `poNumber`, `reportDate`, `inspectedBy`, `approvedBy`, `inspectorSignature`, `supervisorSignature`), a `const`, a `compose`/`coalesce`, a `transform`, a `whenEmpty` fallback, a `signature` slot, or `source: rowSerial | record`.
 - **Region vs flat:** one repeating region → the row containing the region's tokens is cloned per serial and serials are chunked by `chunkSize` (null = never split). **No region = flat template** — one fixed-layout, header-only file, always exactly one output. More than one region is rejected.
 - **Rules:** one optional `upsertChildReport` rule: `when.field == value` over serials creates/updates a child report of `childType` (`REWORK` | `SCRAP` | `HOLD`) with an optional report-number suffix. See [Rework Rules Consumer](rework-rules-consumer.md).
 - **Statistics are not part of a definition.** The old outcome mapping was removed; statistics are typed per report ([ADR-0013](../adr/0013-free-entry-report-statistics.md)).

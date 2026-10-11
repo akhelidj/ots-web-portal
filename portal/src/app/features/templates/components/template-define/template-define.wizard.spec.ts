@@ -171,9 +171,9 @@ describe('TemplateDefineComponent — wizard step gating + derived scope', () =>
 });
 
 /**
- * Mandatory seven-role SAVE gate, DOM-level — the live-verify for Roles #1, driven through
+ * mandatory eight-role SAVE gate, DOM-level — the live-verify for Roles #1, driven through
  * real zoneless DOM events exactly as an author does. A workbook carrying a token for each of
- * the seven header roles plus a serial marker: mapping ALL eight enables Save and, on click,
+ * the eight header roles plus a serial marker: mapping ALL nine enables Save and, on click,
  * calls defineTemplate then routes to the list (saves + redirects); leaving ONE header role
  * unmapped renders the named "still unassigned" status and disables Save on Review.
  *
@@ -190,6 +190,7 @@ const ROLED_TOKENS: ExtractedToken[] = [
   { token: '{{approvedBy}}', cell: 'F1', row: 1 },
   { token: '{{reportDate}}', cell: 'G1', row: 1 },
   { token: '{{inspectorSignature}}', cell: 'H1', row: 1 },
+  { token: '{{supervisorSignature}}', cell: 'I1', row: 1 },
 ];
 
 /** token → the header role it must carry (label is free text). */
@@ -201,9 +202,10 @@ const HEADER_ROLE_BY_TOKEN: { token: string; label: string; role: string }[] = [
   { token: '{{approvedBy}}', label: 'Supervisor', role: 'supervisor' },
   { token: '{{reportDate}}', label: 'Date', role: 'inspectionDate' },
   { token: '{{inspectorSignature}}', label: 'Inspector Sig', role: 'inspectorSignature' },
+  { token: '{{supervisorSignature}}', label: 'Supervisor Sig', role: 'supervisorSignature' },
 ];
 
-describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verify)', () => {
+describe('TemplateDefineComponent — mandatory eight-role SAVE gate (live-verify)', () => {
   afterEach(() => TestBed.resetTestingModule());
 
   function setup() {
@@ -291,7 +293,7 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
     return ctx;
   }
 
-  it('all seven roles mapped → Save enabled → click saves and redirects to the list', async () => {
+  it('all eight roles mapped → Save enabled → click saves and redirects to the list', async () => {
     const { fixture: f, defineTemplate, navigate } = await render();
 
     await clickNext(f); // → Metadata
@@ -323,6 +325,7 @@ describe('TemplateDefineComponent — mandatory seven-role SAVE gate (live-verif
         'inspectionDate',
         'inspector',
         'inspectorSignature',
+        'supervisorSignature',
         'poNumber',
         'reportNumber',
         'serialNumber',

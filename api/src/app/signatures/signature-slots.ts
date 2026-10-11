@@ -6,6 +6,12 @@
 /** The mandatory inspector signature (the `inspectorSignature` template role). */
 export const INSPECTOR_SIGNATURE_SLOT = 'inspectorSignature';
 
+/**
+ * The approving supervisor's signature (the `supervisorSignature` template role): the
+ * approver's account signature, frozen at approval, placed wherever the template binds it.
+ */
+export const SUPERVISOR_SIGNATURE_SLOT = 'supervisorSignature';
+
 /** Who signs a "Signature" field: the customer (drawn per report) or the supervisor (account signature). */
 export type SignatureSigner = 'CUSTOMER' | 'SUPERVISOR';
 

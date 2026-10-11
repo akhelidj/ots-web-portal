@@ -40,6 +40,7 @@ import {
   freezeSignatureForReport,
   INSPECTOR_SIGNATURE_SLOT,
 } from '../signatures/freeze-signature';
+import { SUPERVISOR_SIGNATURE_SLOT } from '../signatures/signature-slots';
 import {
   currentFieldSignatures,
   SignatureDefinitionView,
@@ -125,7 +126,12 @@ export class ExportService {
     // A persisted revision is exported "as of" when it was taken; the live build is now.
     let asOf: Date | undefined;
 
-    if (revisionNumber === 0) {
+    // The default export (no revision asked for) is the report AS THE APP SHOWS IT NOW —
+    // built from live data — so what is exported can never lag behind what the user sees
+    // (inspector, serials, header, signatures). Export is only allowed while the report is
+    // APPROVED/CLOSED, so live data is the approved state. A snapshot is used only when a
+    // specific historical revision is requested.
+    if (requestedRevision === undefined || revisionNumber === 0) {
       // Build an equivalent snapshot on-the-fly from live data so export still works.
       const liveReport = await this.prisma.inspectionReport.findUnique({
         where: { id: reportId },
@@ -752,13 +758,25 @@ export class ExportService {
     opts: { revisionNumber: number; enforceRequired: boolean },
   ): Promise<Record<string, SignatureImage>> {
     const images: Record<string, SignatureImage> = {};
-    const inspector = await this.loadInspectorSignature(
+    const inspector = await this.loadRoleSignature(
+      INSPECTOR_SIGNATURE_SLOT,
       tenantId,
       reportId,
       snapshot,
       definition,
     );
     if (inspector) images[INSPECTOR_SIGNATURE_SLOT] = inspector;
+    // The approver's signature, frozen at approval and tagged with the revision it was
+    // applied on — so an export of that revision shows the supervisor who approved IT.
+    const supervisor = await this.loadRoleSignature(
+      SUPERVISOR_SIGNATURE_SLOT,
+      tenantId,
+      reportId,
+      snapshot,
+      definition,
+      opts.revisionNumber,
+    );
+    if (supervisor) images[SUPERVISOR_SIGNATURE_SLOT] = supervisor;
     Object.assign(
       images,
       await this.loadFieldSignatures(tenantId, reportId, definition, opts),
@@ -873,33 +891,49 @@ export class ExportService {
   }
 
   /**
-   * The inspector's frozen signature picture. Only touches storage when the
-   * definition actually binds the `inspectorSignature` role (legacy/seed templates don't).
+   * A system role's frozen signature picture (`inspectorSignature` / `supervisorSignature`).
+   * Only touches storage when the definition actually binds that role (legacy/seed
+   * templates don't).
+   *
+   * Pointer, in order: the one tagged with `revisionNumber` (when given — the approver of
+   * THAT revision), the one embedded in the revision snapshot, then the latest frozen on
+   * the report.
    */
-  private async loadInspectorSignature(
+  private async loadRoleSignature(
+    slot: string,
     tenantId: string,
     reportId: string,
     snapshot: Snapshot,
     definition: ExportDefinition,
+    revisionNumber?: number,
   ): Promise<SignatureImage | null> {
     const wanted = (definition.export?.global ?? []).some(
-      (e) => e.computed === INSPECTOR_SIGNATURE_SLOT,
+      (e) => e.computed === slot,
     );
     if (!wanted) return null;
 
+    const tagged =
+      revisionNumber === undefined
+        ? null
+        : await this.prisma.reportSignature.findFirst({
+            where: {
+              tenantId,
+              inspectionReportId: reportId,
+              slot,
+              revisionNumber,
+            },
+            orderBy: { signedAt: 'desc' },
+          });
     const pointer =
-      snapshot.signatures?.[INSPECTOR_SIGNATURE_SLOT] ??
+      tagged ??
+      snapshot.signatures?.[slot] ??
       (await this.prisma.reportSignature.findFirst({
-        where: {
-          tenantId,
-          inspectionReportId: reportId,
-          slot: INSPECTOR_SIGNATURE_SLOT,
-        },
+        where: { tenantId, inspectionReportId: reportId, slot },
         orderBy: { signedAt: 'desc' },
       }));
     if (!pointer) {
       this.logger.warn(
-        `Report ${reportId}: no frozen inspector signature; exporting without one.`,
+        `Report ${reportId}: no frozen ${slot}; exporting without one.`,
       );
       return null;
     }

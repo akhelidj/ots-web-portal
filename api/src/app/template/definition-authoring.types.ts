@@ -49,11 +49,12 @@ export type { SignatureSigner } from '../signatures/signature-slots';
  * the report's creation-time metadata. Header scope only (the validator rejects one on an
  * item field); each role may appear at most once per definition.
  *
- * `inspectorSignature` is the odd one out: it derives no TEXT. Its token marks WHERE the
- * inspector's account signature image is placed at export (the signature frozen at
- * submission — see `ReportSignature`); ops chooses the token name in the workbook.
+ * `inspectorSignature` and `supervisorSignature` are the odd ones out: they derive no TEXT.
+ * Their token marks WHERE the inspector's (frozen at submission) / approving supervisor's
+ * (frozen at approval) account signature image is placed at export — see `ReportSignature`;
+ * ops chooses the token name in the workbook.
  *
- * All seven are now MANDATORY to SAVE a definition (the validator's presence check, mirrored
+ * All eight are now MANDATORY to SAVE a definition (the validator's presence check, mirrored
  * client-side) — a NEW/edited template must map every one to a token. They remain
  * structurally optional on the type so pre-mandate ("grandfathered") stored definitions
  * still LOAD and EXPORT: the presence check runs only at save, never on read/export.
@@ -65,14 +66,15 @@ export type HeaderFieldRole =
   | 'customer'
   | 'reportNumber'
   | 'poNumber'
-  | 'inspectorSignature';
+  | 'inspectorSignature'
+  | 'supervisorSignature';
 
 /**
- * A field's SYSTEM role. Roles split by scope: the seven HEADER roles above bind to a
+ * A field's SYSTEM role. Roles split by scope: the eight HEADER roles above bind to a
  * computed token, and the single ITEM role `serialNumber` marks the serial's own token —
  * the one emitted as the region's `rowSerial` export entry (the API's `region.marker`).
  * `serialNumber` is item-scope only (the validator rejects it on a header field) and, like
- * every role, may appear at most once. All eight roles are mandatory to SAVE (see above and
+ * every role, may appear at most once. All nine roles are mandatory to SAVE (see above and
  * the validator's presence check); they stay structurally optional for grandfathering.
  */
 export type FieldRole = HeaderFieldRole | 'serialNumber';
@@ -98,6 +100,8 @@ export const ROLE_TO_COMPUTED: Record<HeaderFieldRole, string> = {
   // Resolves to an image placeholder, not text — the export pass swaps it for the frozen
   // signature picture (see export/signature-embed.ts).
   inspectorSignature: 'inspectorSignature',
+  // Same mechanism: the approver's frozen account signature picture (see signature-embed.ts).
+  supervisorSignature: 'supervisorSignature',
 };
 
 /** One ops-described field, keyed to a workbook token. */

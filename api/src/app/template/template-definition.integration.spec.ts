@@ -66,6 +66,7 @@ function baseDto(): DefineTemplateDto {
       { token: '{{approvedBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
       { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
       { token: '{{inspectorSignature}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
+      { token: '{{supervisorSignature}}', label: 'Supervisor Signature', type: 'text', required: false, scope: 'header', role: 'supervisorSignature' },
       { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
       {
         token: '{{b_od}}',

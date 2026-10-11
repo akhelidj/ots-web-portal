@@ -61,19 +61,22 @@ const FIELD_TYPES: OpsFieldType[] = ['text', 'number', 'boolean', 'select', 'dat
  *  may not — a signature is per report, never per serial (server check `signature-header-scope`). */
 const HEADER_FIELD_TYPES: OpsFieldType[] = [...FIELD_TYPES, 'signature'];
 
-/** Who may be declared as a signature field's signer. */
+/** Who may be declared as a signature field's signer. The supervisor's signature is now the
+ *  `supervisorSignature` SYSTEM role, so SUPERVISOR is not offered for new fields; it is only
+ *  listed (see `signerOptionsFor`) on an already-saved field that still carries it. */
 export const SIGNER_OPTIONS: { value: SignatureSigner; label: string }[] = [
   { value: 'CUSTOMER', label: 'Customer (draws it once approved)' },
-  { value: 'SUPERVISOR', label: 'Supervisor (account signature at approval)' },
+  { value: 'SUPERVISOR', label: 'Supervisor (legacy — use the Supervisor signature role)' },
 ];
 
 /** The child report types a rework rule may upsert (mirrors the API's ChildReportType). */
 const CHILD_REPORT_TYPES: ChildReportTypeChoice[] = ['REWORK', 'SCRAP', 'HOLD'];
 
 /** The system roles a HEADER field may carry, shown in the Header step's Role select. All
- *  seven are MANDATORY: a definition cannot be saved until every one is mapped to a token (the
- *  server enforces the same via check 4c `roles-mandatory`). `inspectorSignature` marks where
- *  the inspector's account signature is placed at export — ops picks the token name. */
+ *  eight are MANDATORY: a definition cannot be saved until every one is mapped to a token (the
+ *  server enforces the same via check 4c `roles-mandatory`). `inspectorSignature` /
+ *  `supervisorSignature` mark where the inspector's / approving supervisor's account signature
+ *  is placed at export — ops picks the token name. */
 export const HEADER_ROLE_OPTIONS: { value: FieldRole; label: string }[] = [
   { value: 'customer', label: 'Customer' },
   { value: 'reportNumber', label: 'Report number' },
@@ -82,6 +85,7 @@ export const HEADER_ROLE_OPTIONS: { value: FieldRole; label: string }[] = [
   { value: 'supervisor', label: 'Supervisor' },
   { value: 'inspectionDate', label: 'Inspection date' },
   { value: 'inspectorSignature', label: 'Inspector signature' },
+  { value: 'supervisorSignature', label: 'Supervisor signature' },
 ];
 
 /** One trigger-field choice for the rework rule (see the region-mode dropdown). */
@@ -497,6 +501,14 @@ export class TemplateDefineComponent implements OnInit {
     this.clearSubmitFeedback();
   }
 
+  /** The signer choices for a row: SUPERVISOR only survives on a field that already has it
+   *  (an older template being edited) — new fields use the supervisorSignature role. */
+  public signerOptionsFor(row: DescribeRow): { value: SignatureSigner; label: string }[] {
+    return SIGNER_OPTIONS.filter(
+      (o) => o.value !== 'SUPERVISOR' || row.signer === 'SUPERVISOR',
+    );
+  }
+
   /** A signature the customer signs — implicitly required, so its Required toggle is hidden. */
   public isCustomerSignature(row: DescribeRow): boolean {
     return row.type === 'signature' && row.signer === 'CUSTOMER';
@@ -535,6 +547,15 @@ export class TemplateDefineComponent implements OnInit {
 
   public isRoled(row: DescribeRow): boolean {
     return row.role !== '';
+  }
+
+  /** The Type shown for a roled field. The two signature roles are stored as `text` (the
+   *  server forbids a `signature`-typed field from carrying a role — check
+   *  `signature-no-role`), but they place a signature picture, so they read as "signature". */
+  public roledTypeLabel(row: DescribeRow): string {
+    return row.role === 'inspectorSignature' || row.role === 'supervisorSignature'
+      ? 'signature'
+      : row.type;
   }
 
   /**

@@ -94,7 +94,12 @@ export class InspectionReportHeaderFieldsComponent {
       s.sections.every(
         (sec) =>
           sec.fields.filter(
-            (f) => !(this.isCustomer() && f.role === 'inspectorSignature'),
+            (f) =>
+              !(
+                this.isCustomer() &&
+                (f.role === 'inspectorSignature' ||
+                  f.role === 'supervisorSignature')
+              ),
           ).length === 0,
       )
     );

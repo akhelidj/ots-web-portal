@@ -189,10 +189,10 @@
           Tick the fields that describe the whole report — report number, PO
           number, customer — and give each a clear name. Anything you leave
           unticked is recorded for each serial in the next step. Every report also
-          needs its seven <span class="font-semibold">system roles</span> assigned
+          needs its eight <span class="font-semibold">system roles</span> assigned
           here (Customer, Report number, PO number, Inspector, Supervisor,
-          Inspection date, Inspector signature); you can't save until all seven
-          are mapped.
+          Inspection date, Inspector signature, Supervisor signature); you can't
+          save until all eight are mapped.
         </p>
 
         @if (!headerStepValid()) {
@@ -283,7 +283,7 @@
                     <span
                       class="flex h-[38px] items-center text-sm text-neutral-500"
                       [attr.data-testid]="'header-type-forced-' + row.token"
-                      >{{ row.type }} · system</span
+                      >{{ roledTypeLabel(row) }} · system</span
                     >
                   </div>
                 } @else {
@@ -313,7 +313,7 @@
                         [attr.data-testid]="'header-signer-' + row.token"
                       >
                         <option [value]="''">Choose a signer…</option>
-                        @for (s of signerOptions; track s.value) {
+                        @for (s of signerOptionsFor(row); track s.value) {
                           <option [value]="s.value">{{ s.label }}</option>
                         }
                       </select>

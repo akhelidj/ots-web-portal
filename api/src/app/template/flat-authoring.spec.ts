@@ -53,6 +53,7 @@ function flatDto(): DefineTemplateDto {
       { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
       { token: '{{inspDate}}', label: 'Inspection Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
       { token: '{{inspSig}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
+      { token: '{{supSig}}', label: 'Supervisor Signature', type: 'text', required: false, scope: 'header', role: 'supervisorSignature' },
       { token: '{{siteName}}', label: 'Site Name', type: 'text', required: false, scope: 'header' },
       { token: '{{casingWeight}}', label: 'Casing Weight', type: 'text', required: true, scope: 'item', section: 'Body' },
       { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
@@ -71,6 +72,7 @@ const FLAT_TOKENS: ReadonlySet<string> = new Set([
   '{{apprBy}}',
   '{{inspDate}}',
   '{{inspSig}}',
+  '{{supSig}}',
   '{{siteName}}',
   '{{casingWeight}}',
 ]);

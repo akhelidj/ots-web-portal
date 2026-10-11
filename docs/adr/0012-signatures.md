@@ -15,7 +15,7 @@ Two distinct mechanisms, both storing PNGs (`signature_pad`, 600×200) through t
    - **Supervisor:** approval (direct transition or batch auto-approval) applies the approver's account signature to every `SUPERVISOR`-signed template field. A `required` one with no signature **refuses the approval**.
 2. **Per-report field signatures** — templates declare header-only `signature` fields with a signer of `CUSTOMER` or `SUPERVISOR` and an optional `required`. A CUSTOMER draws theirs per report, only once the report is `APPROVED`/`CLOSED`, and only for their own customer's reports. Field signatures belong to a **revision**: a reopen starts a new revision with them cleared; older revisions keep theirs. A `required` field that is unsigned **blocks export of the current revision** (`409 SIGNATURE_PENDING`); older revisions and optional fields export with the cell blank.
 
-Every template must map the `inspectorSignature` header role (mandatory to save a definition) so the inspector picture has a home. Signature endpoints are online-only; the offline-sync core is untouched.
+Every template must map the `inspectorSignature` and `supervisorSignature` header roles (mandatory to save a definition) so the inspector and approver pictures have a home. The supervisor signature is a system role like the inspector's: the approver's account signature is frozen at approval and an approver without one is refused with `403 SIGNATURE_REQUIRED` (the portal shows the register-your-signature gate). A `signature` field with signer `SUPERVISOR` still works on already-saved templates but is no longer offered for new ones. Signature endpoints are online-only; the offline-sync core is untouched.
 
 ## Why not the alternatives
 

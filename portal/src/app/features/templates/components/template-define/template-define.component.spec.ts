@@ -21,7 +21,7 @@ import {
 
 /**
  * The fixture's tokens. `{{sn}}` is first so the default serialNumber marker lands on it;
- * the seven header-role tokens follow (so `headerRows()` emits them in that order), then the
+ * the eight header-role tokens follow (so `headerRows()` emits them in that order), then the
  * two plain serial fields, then a stray `{{grade}}` we leave out of the description.
  */
 const FIXTURE_TOKENS: ExtractedToken[] = [
@@ -33,6 +33,7 @@ const FIXTURE_TOKENS: ExtractedToken[] = [
   { token: '{{approvedBy}}', cell: 'F1', row: 1 },
   { token: '{{reportDate}}', cell: 'G1', row: 1 },
   { token: '{{inspectorSignature}}', cell: 'I1', row: 1 },
+  { token: '{{supervisorSignature}}', cell: 'J1', row: 1 },
   { token: '{{b_od}}', cell: 'D2', row: 2 },
   { token: '{{emi}}', cell: 'E2', row: 2 },
   { token: '{{grade}}', cell: 'H1', row: 1 },
@@ -43,7 +44,7 @@ const FIXTURE_TOKENS: ExtractedToken[] = [
  * `definition-ui-contract.spec.ts` `uiDto`). Keep the two in lockstep. Every template is a
  * serial region now: `region` is always present, scope is DERIVED (Header step → `header`,
  * Serial step → `item`), and the serial's own token carries the `serialNumber` role and is
- * echoed as `region.marker`. All SEVEN header roles are mapped (the mandatory gate) plus the
+ * echoed as `region.marker`. All EIGHT header roles are mapped (the mandatory gate) plus the
  * item serialNumber. Field order = header rows first, then serial rows in row order.
  */
 const EXPECTED_DTO: DefineTemplateDto = {
@@ -56,6 +57,7 @@ const EXPECTED_DTO: DefineTemplateDto = {
     { token: '{{approvedBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
     { token: '{{reportDate}}', label: 'Report Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
     { token: '{{inspectorSignature}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
+    { token: '{{supervisorSignature}}', label: 'Supervisor Signature', type: 'text', required: false, scope: 'header', role: 'supervisorSignature' },
     { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
     { token: '{{b_od}}', label: 'Box Min OD', type: 'text', required: true, scope: 'item', section: 'Box' },
     {
@@ -112,8 +114,8 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     await c.load();
     c.displayName = 'Casing Report';
 
-    // Header claims the seven mandatory-role tokens (scope derived from inclusion); every one
-    // of the seven system header roles is mapped, so the mandatory gate is satisfied.
+    // Header claims the eight mandatory-role tokens (scope derived from inclusion); every one
+    // of the eight system header roles is mapped, so the mandatory gate is satisfied.
     set(c, '{{customer}}', { header: true, serial: false, label: 'Customer', type: 'text', role: 'customer' });
     set(c, '{{reportNumber}}', { header: true, serial: false, label: 'Report Number', type: 'text', role: 'reportNumber' });
     set(c, '{{poNumber}}', { header: true, serial: false, label: 'PO Number', type: 'text', role: 'poNumber' });
@@ -121,6 +123,7 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     set(c, '{{approvedBy}}', { header: true, serial: false, label: 'Supervisor', type: 'text', role: 'supervisor' });
     set(c, '{{reportDate}}', { header: true, serial: false, label: 'Report Date', type: 'date', role: 'inspectionDate' });
     set(c, '{{inspectorSignature}}', { header: true, serial: false, label: 'Inspector Signature', type: 'text', role: 'inspectorSignature' });
+    set(c, '{{supervisorSignature}}', { header: true, serial: false, label: 'Supervisor Signature', type: 'text', role: 'supervisorSignature' });
 
     // Serial fields — {{sn}} is the default serialNumber marker (rows[0]); the rest describe.
     set(c, '{{sn}}', { label: 'Serial Number' });
@@ -215,7 +218,7 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     expect(c.submitError()).toContain('Serial Number');
   });
 
-  it('mandatory gate: blocks Save until every one of the seven header roles is mapped (names the gap)', async () => {
+  it('mandatory gate: blocks Save until every one of the eight header roles is mapped (names the gap)', async () => {
     const c = make();
     await describeValid(c);
     // A fully-described definition clears the gate…
@@ -248,6 +251,25 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     const roled = c.rows().filter((r) => r.role === 'inspector');
     expect(roled).toHaveLength(1);
     expect(roled[0]!.token).toBe('{{reportDate}}');
+  });
+
+  it('the signature roles read as type "signature" (stored as text) in the forced-type label', async () => {
+    const c = make();
+    c.templateId = 't1';
+    await c.load();
+    const row = c.rows().find((r) => r.token === '{{poNumber}}')!;
+    Object.assign(row, { header: true, serial: false, role: 'supervisorSignature' });
+    c.onRoleChange(row);
+    expect(row.type).toBe('text'); // what is sent: the server forbids signature + role
+    expect(c.roledTypeLabel(row)).toBe('signature');
+
+    row.role = 'inspectorSignature';
+    c.onRoleChange(row);
+    expect(c.roledTypeLabel(row)).toBe('signature');
+
+    row.role = 'inspectionDate';
+    c.onRoleChange(row);
+    expect(c.roledTypeLabel(row)).toBe('date');
   });
 
   it('a role forces its type (inspectionDate → date) and clears required', async () => {

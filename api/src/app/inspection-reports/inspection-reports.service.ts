@@ -18,15 +18,14 @@ import { normalizeStatistics } from './report-statistics';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
 import {
   applySupervisorSignatures,
+  approvalSigningFor,
   assertApproverCanSign,
-  supervisorSignatureFields,
 } from '../signatures/supervisor-signing';
 import {
   freezeSignatureForReport,
   INSPECTOR_SIGNATURE_SLOT,
 } from '../signatures/freeze-signature';
-import { resolveInspector } from './last-inspector';
-
+import { resolveInspector, resolveInspectorUserId } from './last-inspector';
 /**
  * A human-readable label for a templateKey, derived PURELY from the scalar key —
  * `DRILL_PIPE_REPORT` → `Drill Pipe Report`. The nicer displayName lives inside
@@ -683,7 +682,7 @@ export class InspectionReportsService {
         tenantId,
         inspectionReportId: reportId,
         slot: INSPECTOR_SIGNATURE_SLOT,
-        userId,
+        userId: (await resolveInspectorUserId(tx, tenantId, reportId)) ?? userId,
       });
 
       // 4. Update Serial Statuses
@@ -954,13 +953,13 @@ export class InspectionReportsService {
         // The parent just became APPROVED: apply the approver's account signature to any
         // SUPERVISOR signature field, exactly as the direct APPROVED transition does. A
         // required one with no signature to apply rolls the whole approval back.
-        const supervisorFields = await supervisorSignatureFields(tx, report);
-        await assertApproverCanSign(tx, supervisorFields, userId);
+        const approvalSigning = await approvalSigningFor(tx, report);
+        await assertApproverCanSign(tx, approvalSigning, userId);
         await applySupervisorSignatures(tx, {
           tenantId,
           reportId: report.id,
           userId,
-          fields: supervisorFields,
+          signing: approvalSigning,
         });
       }
 

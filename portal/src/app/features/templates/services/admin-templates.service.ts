@@ -74,11 +74,11 @@ export type OpsFieldType =
 export type SignatureSigner = 'CUSTOMER' | 'SUPERVISOR';
 
 /**
- * A field's SYSTEM role (mirrors the API's FieldRole). Roles split by scope: the seven
+ * A field's SYSTEM role (mirrors the API's FieldRole). Roles split by scope: the eight
  * HEADER roles derive their value from a computed token (inspector→inspectedBy,
  * supervisor→approvedBy, inspectionDate→reportDate, customer→customerName,
- * reportNumber→reportNumber, poNumber→poNumber, inspectorSignature→the signature
- * picture placed at export); the single ITEM role `serialNumber`
+ * reportNumber→reportNumber, poNumber→poNumber, inspectorSignature/supervisorSignature→the
+ * signature picture placed at export); the single ITEM role `serialNumber`
  * marks the serial's own token — the one sent as `region.marker`. At most one field per
  * role in a definition.
  */
@@ -90,6 +90,7 @@ export type FieldRole =
   | 'reportNumber'
   | 'poNumber'
   | 'inspectorSignature'
+  | 'supervisorSignature'
   | 'serialNumber';
 
 /** One ops-described field for `PUT /templates/:id/definition`. Mirrors OpsTokenField. */

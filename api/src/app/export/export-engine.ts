@@ -74,6 +74,7 @@ export const signatureMarker = (slot: string): string => `[[OTS_SIGNATURE:${slot
 /** Engine-side computed resolvers (bespoke; share derivation with legacy). */
 const COMPUTED: Record<string, (snapshot: Snapshot) => unknown> = {
   inspectorSignature: () => signatureMarker('inspectorSignature'),
+  supervisorSignature: () => signatureMarker('supervisorSignature'),
   customerName: (s) => s.header.customerName,
   reportNumber: (s) => s.header.reportNumber,
   poNumber: (s) => s.header.poNumber,

@@ -10,7 +10,7 @@ export type FieldInputType =
   | 'object-list';
 
 /**
- * A field's SYSTEM role (mirrors the API's FieldRole). The seven HEADER roles are
+ * A field's SYSTEM role (mirrors the API's FieldRole). The eight HEADER roles are
  * system-owned: their value is DERIVED (inspector/supervisor from the transition log,
  * inspectionDate automatically; customer/reportNumber/poNumber set at report creation;
  * inspectorSignature from the inspector's account signature at export),
@@ -27,6 +27,7 @@ export type FieldRole =
   | 'reportNumber'
   | 'poNumber'
   | 'inspectorSignature'
+  | 'supervisorSignature'
   | 'serialNumber';
 
 export interface FieldSchema {

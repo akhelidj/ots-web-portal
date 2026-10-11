@@ -16,7 +16,11 @@ import {
   SignatureFieldSpec,
   signatureFieldsOf,
 } from './signature-fields';
-import { INSPECTOR_SIGNATURE_SLOT, SignatureSigner } from './signature-slots';
+import {
+  INSPECTOR_SIGNATURE_SLOT,
+  SUPERVISOR_SIGNATURE_SLOT,
+  SignatureSigner,
+} from './signature-slots';
 import {
   ATTACHMENT_STORAGE,
   AttachmentStorage,
@@ -96,10 +100,21 @@ export interface ReportSignatureStates {
     signedAt: Date | null;
     signedByName: string | null;
   } | null;
+  /**
+   * The approving supervisor's signature frozen at approval (the `supervisorSignature`
+   * system role), or null when none was frozen. Image key {@link SUPERVISOR_IMAGE_KEY}.
+   */
+  supervisor: {
+    signed: boolean;
+    signedAt: Date | null;
+    signedByName: string | null;
+  } | null;
 }
 
 /** Image key of the inspector's frozen signature (template field keys cannot collide: they are `{token}`s). */
 export const INSPECTOR_IMAGE_KEY = 'inspector';
+/** Image key of the approving supervisor's frozen signature. */
+export const SUPERVISOR_IMAGE_KEY = 'supervisor';
 
 export interface PendingSignatureReport {
   reportId: string;
@@ -271,9 +286,15 @@ export class SignaturesService {
       report.id,
       INSPECTOR_SIGNATURE_SLOT,
     );
+    const supervisorRow = await this.getFrozenForReport(
+      user.tenantId,
+      report.id,
+      SUPERVISOR_SIGNATURE_SLOT,
+    );
     const signerIds = [
       ...[...(current?.values() ?? [])].map((r) => r.signedById),
       ...(inspectorRow ? [inspectorRow.signedById] : []),
+      ...(supervisorRow ? [supervisorRow.signedById] : []),
     ];
     const signers = signerIds.length
       ? await this.prisma.user.findMany({
@@ -306,6 +327,13 @@ export class SignaturesService {
             signedByName: nameOf.get(inspectorRow.signedById) ?? null,
           }
         : null,
+      supervisor: supervisorRow
+        ? {
+            signed: true,
+            signedAt: supervisorRow.signedAt,
+            signedByName: nameOf.get(supervisorRow.signedById) ?? null,
+          }
+        : null,
     };
   }
 
@@ -322,13 +350,15 @@ export class SignaturesService {
   ): Promise<Buffer> {
     const report = await this.loadReportFor(user, reportId);
     let storageKey: string | null = null;
-    if (key === INSPECTOR_IMAGE_KEY) {
+    if (key === INSPECTOR_IMAGE_KEY || key === SUPERVISOR_IMAGE_KEY) {
       storageKey =
         (
           await this.getFrozenForReport(
             user.tenantId,
             report.id,
-            INSPECTOR_SIGNATURE_SLOT,
+            key === INSPECTOR_IMAGE_KEY
+              ? INSPECTOR_SIGNATURE_SLOT
+              : SUPERVISOR_SIGNATURE_SLOT,
           )
         )?.storageKey ?? null;
     } else {
