@@ -10,8 +10,9 @@
  *   - an OLDER revision is never blocked, even though the current one is.
  */
 import { ConflictException } from '@nestjs/common';
-import { migrateLegacySupervisorTemplates } from '../signatures/legacy-supervisor-migration';
 import JSZip from 'jszip';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { InspectionReportStatus as S, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExportService } from './export.service';
@@ -64,6 +65,14 @@ function memoryStorage(): AttachmentStorage {
   }) as AttachmentStorage;
 }
 
+/** Runs the shipped data migration (the same SQL `prisma migrate deploy` applies). */
+const SUPERVISOR_ROLE_MIGRATION_SQL = readFileSync(
+  resolve(
+    __dirname,
+    '../../../prisma/migrations/20261014120000_supervisor_signature_role/migration.sql',
+  ),
+  'utf8',
+);
 describe('export gate for signature fields [integration]', () => {
   let prisma: PrismaService;
   let exportService: ExportService;
@@ -94,6 +103,9 @@ describe('export gate for signature fields [integration]', () => {
   });
 
   beforeEach(clearAll);
+
+  const runSupervisorRoleMigration = () =>
+    prisma.$executeRawUnsafe(SUPERVISOR_ROLE_MIGRATION_SQL);
 
   /** An APPROVED report whose template also declares a CUSTOMER signature field. */
   async function approvedWithCustomerField() {
@@ -350,8 +362,7 @@ describe('export gate for signature fields [integration]', () => {
         where: { inspectionReportId: reportId, slot: 'field:supSig' },
       });
 
-      const first = await migrateLegacySupervisorTemplates(prisma, { apply: true });
-      expect(first.migrated).toBe(1);
+      await runSupervisorRoleMigration();
 
       // Definition: the field is now the system role; history captured.
       const tpl = await prisma.template.findFirstOrThrow({
@@ -390,7 +401,108 @@ describe('export gate for signature fields [integration]', () => {
       expect(Object.keys(zip.files).some((n) => n.startsWith('xl/media/'))).toBe(true);
 
       // Idempotent.
-      expect((await migrateLegacySupervisorTemplates(prisma, { apply: true })).migrated).toBe(0);
+      await runSupervisorRoleMigration();
+      const again = await prisma.template.findFirstOrThrow({
+        where: { tenantId: tenant.id },
+        include: { definitionRevisions: true },
+      });
+      expect(again.definitionRevisions).toHaveLength(tpl.definitionRevisions.length);
+      expect(
+        await prisma.reportSignature.count({
+          where: { inspectionReportId: reportId, slot: 'supervisorSignature' },
+        }),
+      ).toBe(1);
+    });
+
+    /** A bare template row (no reports) carrying `definitionJson`, to exercise the shapes. */
+    async function templateWith(definitionJson: unknown) {
+      const tenant = await seedTenant(prisma);
+      const admin = await prisma.user.create({
+        data: {
+          tenantId: tenant.id,
+          email: `mig-${Date.now()}-${Math.random()}@example.test`,
+          role: UserRole.ADMIN,
+          passwordHash: 'x',
+        },
+      });
+      return prisma.template.create({
+        data: {
+          tenantId: tenant.id,
+          templateKey: 'MIG_TEST',
+          templateVersion: 1,
+          status: 'ACTIVE',
+          fileKey: 'k',
+          hash: 'h',
+          changeNote: 'n',
+          createdById: admin.id,
+          definitionJson: definitionJson as never,
+        },
+      });
+    }
+    const roleOf = (def: { fields: { key: string; role?: string }[] }) =>
+      def.fields.filter((f) => f.role === 'supervisorSignature');
+
+    it('migration: extra legacy fields are re-pointed at the role picture and dropped', async () => {
+      const t = await templateWith({
+        fields: [
+          { key: 'a', type: 'signature', signer: 'SUPERVISOR', scope: 'header', label: 'A' },
+          { key: 'b', type: 'signature', signer: 'SUPERVISOR', scope: 'header', label: 'B' },
+          { key: 'c', type: 'signature', signer: 'CUSTOMER', scope: 'header', required: true },
+        ],
+        export: {
+          global: [
+            { token: '{{a}}', signature: 'field:a' },
+            { token: '{{b}}', signature: 'field:b' },
+            { token: '{{c}}', signature: 'field:c' },
+          ],
+          regions: {},
+        },
+      });
+      await runSupervisorRoleMigration();
+      const def = (
+        await prisma.template.findUniqueOrThrow({ where: { id: t.id } })
+      ).definitionJson as unknown as {
+        fields: { key: string; role?: string; signer?: string; type: string }[];
+        export: { global: Record<string, string>[] };
+      };
+      expect(def.fields.map((f) => f.key)).toEqual(['a', 'c']);
+      expect(def.fields[0]).toMatchObject({ type: 'text', role: 'supervisorSignature' });
+      expect(def.fields[0].signer).toBeUndefined();
+      expect(def.fields[1]).toMatchObject({ type: 'signature', signer: 'CUSTOMER' });
+      expect(def.export.global).toEqual([
+        { token: '{{a}}', computed: 'supervisorSignature' },
+        { token: '{{b}}', signature: 'supervisorSignature' },
+        { token: '{{c}}', signature: 'field:c' },
+      ]);
+      expect(roleOf(def)).toHaveLength(1);
+    });
+
+    it('migration: when the role is already bound, only the legacy field is re-pointed', async () => {
+      const t = await templateWith({
+        fields: [
+          { key: 'sup', type: 'text', role: 'supervisorSignature', scope: 'header' },
+          { key: 'a', type: 'signature', signer: 'SUPERVISOR', scope: 'header' },
+        ],
+        export: {
+          global: [
+            { token: '{{sup}}', computed: 'supervisorSignature' },
+            { token: '{{a}}', signature: 'field:a' },
+          ],
+          regions: {},
+        },
+      });
+      await runSupervisorRoleMigration();
+      const def = (
+        await prisma.template.findUniqueOrThrow({ where: { id: t.id } })
+      ).definitionJson as unknown as {
+        fields: { key: string; role?: string }[];
+        export: { global: Record<string, string>[] };
+      };
+      expect(def.fields.map((f) => f.key)).toEqual(['sup']);
+      expect(def.export.global).toEqual([
+        { token: '{{sup}}', computed: 'supervisorSignature' },
+        { token: '{{a}}', signature: 'supervisorSignature' },
+      ]);
     });
   });
 });
