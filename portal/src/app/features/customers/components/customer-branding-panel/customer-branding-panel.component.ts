@@ -64,8 +64,6 @@ const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
       .brand-preview__logo {
         height: 1.6rem;
         max-width: 5rem;
-        padding: 0.15rem;
-        background: rgba(255, 255, 255, 0.96);
         object-fit: contain;
       }
       .brand-preview__name {
