@@ -1,8 +1,8 @@
 /**
- * The Define-Template wizard — the header-only `signature` field type and its signer.
- * A signature field is a per-report signer's picture (CUSTOMER draws it, SUPERVISOR's account
- * signature is applied at approval); ops must declare the signer and may mark it required
- * (which blocks export until signed). It is never a serial field and never a form input.
+ * The Define-Template wizard — the header-only `signature` field type. A signature field is
+ * always the CUSTOMER's per-report signature (its presence in the template is the opt-in, so
+ * it is always required and blocks export until signed); the inspector's and supervisor's are
+ * the system roles. It is never a serial field and never a form input.
  */
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -60,24 +60,23 @@ describe('TemplateDefineComponent — signature field', () => {
     const c = make();
     expect(c.headerFieldTypes).toContain('signature');
     expect(c.fieldTypes).not.toContain('signature');
-    expect(c.signerOptions.map((o) => o.value)).toEqual(['CUSTOMER', 'SUPERVISOR']);
   });
 
-  it('requires a signer before the header step is valid', async () => {
+  it('choosing signature fixes the customer signer and forces required', async () => {
     const { c, r } = await withSignatureRow();
     r.type = 'signature';
     c.onTypeChange(r);
     expect(c.isSignature(r)).toBe(true);
-    expect(r.signer).toBe('');
-    expect(c.headerStepValid()).toBe(false);
-
-    r.signer = 'CUSTOMER';
+    expect(r.signer).toBe('CUSTOMER');
+    expect(r.required).toBe(true);
+    expect(c.isCustomerSignature(r)).toBe(true);
     expect(c.headerStepValid()).toBe(true);
   });
 
-  it('emits the signer (and required) on the header field of the DTO', async () => {
+  it('emits the customer signer and required on the header field of the DTO', async () => {
     const { c, r } = await withSignatureRow();
-    Object.assign(r, { type: 'signature', signer: 'SUPERVISOR', required: true });
+    r.type = 'signature';
+    c.onTypeChange(r);
 
     const field = c.buildDto().fields.find((f) => f.token === '{{custSig}}');
     expect(field).toEqual({
@@ -86,7 +85,7 @@ describe('TemplateDefineComponent — signature field', () => {
       type: 'signature',
       required: true,
       scope: 'header',
-      signer: 'SUPERVISOR',
+      signer: 'CUSTOMER',
     });
   });
 

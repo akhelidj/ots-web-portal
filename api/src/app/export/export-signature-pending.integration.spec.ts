@@ -3,13 +3,14 @@
  *
  * Real ExportService (real template workbook) + workflow + signatures services against the
  * test Postgres. Proves:
- *   - a `required` field that is still unsigned blocks the export of the report's CURRENT
- *     revision with a structured 409 `SIGNATURE_PENDING` naming who has to sign;
+ *   - a customer `signature` field (its presence in the template is the opt-in — a customer
+ *     signature is always required) that is still unsigned blocks the export of the report's
+ *     CURRENT revision with a structured 409 `SIGNATURE_PENDING` naming who has to sign;
  *   - once it is signed the same export succeeds;
- *   - a field NOT marked required never blocks (the cell is left blank);
  *   - an OLDER revision is never blocked, even though the current one is.
  */
 import { ConflictException } from '@nestjs/common';
+import { migrateLegacySupervisorTemplates } from '../signatures/legacy-supervisor-migration';
 import JSZip from 'jszip';
 import { InspectionReportStatus as S, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -94,8 +95,8 @@ describe('export gate for signature fields [integration]', () => {
 
   beforeEach(clearAll);
 
-  /** An APPROVED report whose template also declares the given CUSTOMER signature field. */
-  async function approvedWithCustomerField(required: boolean) {
+  /** An APPROVED report whose template also declares a CUSTOMER signature field. */
+  async function approvedWithCustomerField() {
     const tenant = await seedTenant(prisma);
     const customer = await seedCustomer(prisma, tenant.id);
     const template = await seedRealDrillPipeTemplate(prisma, tenant.id);
@@ -132,7 +133,7 @@ describe('export gate for signature fields [integration]', () => {
               label: 'Customer approval',
               type: 'signature',
               scope: 'header',
-              required,
+              required: true,
               signer: 'CUSTOMER',
             },
           ],
@@ -165,8 +166,8 @@ describe('export gate for signature fields [integration]', () => {
     customerId: null,
   });
 
-  it('blocks the current revision with SIGNATURE_PENDING until a required field is signed', async () => {
-    const { tenant, reportId, user } = await approvedWithCustomerField(true);
+  it('blocks the current revision with SIGNATURE_PENDING until the customer field is signed', async () => {
+    const { tenant, reportId, user } = await approvedWithCustomerField();
 
     const err = await exportService
       .exportInspectionReport(exporter(tenant.id), reportId)
@@ -192,14 +193,8 @@ describe('export gate for signature fields [integration]', () => {
     expect(Buffer.isBuffer(res.buffer)).toBe(true);
   });
 
-  it('never blocks on a field that was not marked required', async () => {
-    const { tenant, reportId } = await approvedWithCustomerField(false);
-    const res = await exportService.exportInspectionReport(exporter(tenant.id), reportId);
-    expect(Buffer.isBuffer(res.buffer)).toBe(true);
-  });
-
   it('does not block an older revision while the current one is still unsigned', async () => {
-    const { tenant, reportId, admin, user } = await approvedWithCustomerField(true);
+    const { tenant, reportId, admin, user } = await approvedWithCustomerField();
     await signatures.signCustomerField(
       {
         id: user.id,
@@ -345,6 +340,57 @@ describe('export gate for signature fields [integration]', () => {
           where: { inspectionReportId: reportId, slot: 'field:supSig' },
         }),
       ).toBe(1);
+    });
+
+    it('migrating the legacy field to the supervisorSignature role keeps past exports intact', async () => {
+      const { tenant, reportId, supervisor } = await approvedByUnsignedSupervisor();
+      await signatures.saveForUser({ id: supervisor.id, tenantId: tenant.id }, makePng());
+      await exportService.exportInspectionReport(exporter(tenant.id), reportId);
+      const legacy = await prisma.reportSignature.findFirstOrThrow({
+        where: { inspectionReportId: reportId, slot: 'field:supSig' },
+      });
+
+      const first = await migrateLegacySupervisorTemplates(prisma, { apply: true });
+      expect(first.migrated).toBe(1);
+
+      // Definition: the field is now the system role; history captured.
+      const tpl = await prisma.template.findFirstOrThrow({
+        where: { tenantId: tenant.id },
+        include: { definitionRevisions: true },
+      });
+      const def = tpl.definitionJson as unknown as {
+        fields: { key: string; role?: string; signer?: string }[];
+        export: { global: { token: string; computed?: string; signature?: string }[] };
+      };
+      expect(def.fields.find((f) => f.key === 'supSig')).toMatchObject({
+        role: 'supervisorSignature',
+      });
+      expect(def.fields.find((f) => f.key === 'supSig')?.signer).toBeUndefined();
+      expect(def.export.global).toContainEqual({
+        token: '{{supSig}}',
+        computed: 'supervisorSignature',
+      });
+      expect(tpl.definitionRevisions.length).toBeGreaterThanOrEqual(1);
+
+      // Signature: copied to the role slot, original kept.
+      const copied = await prisma.reportSignature.findFirstOrThrow({
+        where: { inspectionReportId: reportId, slot: 'supervisorSignature' },
+      });
+      expect(copied.storageKey).toBe(legacy.storageKey);
+      expect(copied.revisionNumber).toBe(legacy.revisionNumber);
+      expect(
+        await prisma.reportSignature.count({
+          where: { inspectionReportId: reportId, slot: 'field:supSig' },
+        }),
+      ).toBe(1);
+
+      // The export still carries the picture.
+      const res = await exportService.exportInspectionReport(exporter(tenant.id), reportId);
+      const zip = await JSZip.loadAsync(res.buffer);
+      expect(Object.keys(zip.files).some((n) => n.startsWith('xl/media/'))).toBe(true);
+
+      // Idempotent.
+      expect((await migrateLegacySupervisorTemplates(prisma, { apply: true })).migrated).toBe(0);
     });
   });
 });

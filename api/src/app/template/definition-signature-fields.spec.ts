@@ -80,10 +80,10 @@ describe('signature fields — validator', () => {
     expect(validateDefinition(buildDefinition(META, dto()), TOKENS)).toEqual({ ok: true });
   });
 
-  it('accepts a SUPERVISOR signer', () => {
+  it('rejects a SUPERVISOR signer (the supervisor signature is a system role, signer-known)', () => {
     const c = clone(buildDefinition(META, dto()));
     c.fields.find((f) => f.key === 'custSig')!.signer = 'SUPERVISOR';
-    expect(validateDefinition(c, TOKENS)).toEqual({ ok: true });
+    expect(validateDefinition(c, TOKENS)).toMatchObject({ ok: false, check: 'signer-known' });
   });
 
   it('rejects a missing signer (signer-known)', () => {

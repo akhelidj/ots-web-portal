@@ -61,14 +61,6 @@ const FIELD_TYPES: OpsFieldType[] = ['text', 'number', 'boolean', 'select', 'dat
  *  may not — a signature is per report, never per serial (server check `signature-header-scope`). */
 const HEADER_FIELD_TYPES: OpsFieldType[] = [...FIELD_TYPES, 'signature'];
 
-/** Who may be declared as a signature field's signer. The supervisor's signature is now the
- *  `supervisorSignature` SYSTEM role, so SUPERVISOR is not offered for new fields; it is only
- *  listed (see `signerOptionsFor`) on an already-saved field that still carries it. */
-export const SIGNER_OPTIONS: { value: SignatureSigner; label: string }[] = [
-  { value: 'CUSTOMER', label: 'Customer (draws it once approved)' },
-  { value: 'SUPERVISOR', label: 'Supervisor (legacy — use the Supervisor signature role)' },
-];
-
 /** The child report types a rework rule may upsert (mirrors the API's ChildReportType). */
 const CHILD_REPORT_TYPES: ChildReportTypeChoice[] = ['REWORK', 'SCRAP', 'HOLD'];
 
@@ -151,7 +143,6 @@ export class TemplateDefineComponent implements OnInit {
 
   public readonly fieldTypes = FIELD_TYPES;
   public readonly headerFieldTypes = HEADER_FIELD_TYPES;
-  public readonly signerOptions = SIGNER_OPTIONS;
   public readonly childReportTypes = CHILD_REPORT_TYPES;
   public readonly headerRoleOptions = HEADER_ROLE_OPTIONS;
   public readonly steps = STEPS;
@@ -488,25 +479,13 @@ export class TemplateDefineComponent implements OnInit {
     this.clearSubmitFeedback();
   }
 
-  /** Type select handler (header step): a signature starts with its signer unset (the author
-   *  must choose), and leaving `signature` drops the signer. */
+  /** Type select handler (header step): a `signature` field is always the customer's
+   *  signature (the supervisor's is the `supervisorSignature` system role), so choosing it
+   *  fixes the signer and forces required; leaving `signature` drops both. */
   public onTypeChange(row: DescribeRow): void {
-    if (row.type !== 'signature') row.signer = '';
+    row.signer = row.type === 'signature' ? 'CUSTOMER' : '';
+    if (row.type === 'signature') row.required = true;
     this.clearSubmitFeedback();
-  }
-
-  /** Signer select handler: a customer signature is always required, so the flag is forced. */
-  public onSignerChange(row: DescribeRow): void {
-    if (row.signer === 'CUSTOMER') row.required = true;
-    this.clearSubmitFeedback();
-  }
-
-  /** The signer choices for a row: SUPERVISOR only survives on a field that already has it
-   *  (an older template being edited) — new fields use the supervisorSignature role. */
-  public signerOptionsFor(row: DescribeRow): { value: SignatureSigner; label: string }[] {
-    return SIGNER_OPTIONS.filter(
-      (o) => o.value !== 'SUPERVISOR' || row.signer === 'SUPERVISOR',
-    );
   }
 
   /** A signature the customer signs — implicitly required, so its Required toggle is hidden. */
@@ -663,9 +642,7 @@ export class TemplateDefineComponent implements OnInit {
    *  per-step gate: an author can move between steps while still assigning roles; only the
    *  final Save (and the server's `roles-mandatory` check) requires all six. */
   public headerStepValid(): boolean {
-    return this.headerRows().every(
-      (r) => !!r.label.trim() && (!this.isSignature(r) || !!r.signer),
-    );
+    return this.headerRows().every((r) => !!r.label.trim());
   }
 
   /** Serial step: at least one included serial field, each with a label, and EXACTLY one

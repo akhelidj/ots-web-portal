@@ -31,7 +31,7 @@ Versioning, storage and the admin validation gate are in [Template Versioning](t
   rules:      [ upsertChildReport rule ... ] }
 ```
 
-- **Field types:** `text`, `number`, `boolean`, `select`, `date`, `object-list` (repeated `{ name, number? }`), `signature` (header only; not an input — it marks where a picture lands and who signs: `CUSTOMER` or `SUPERVISOR`; `required` blocks export until signed).
+- **Field types:** `text`, `number`, `boolean`, `select`, `date`, `object-list` (repeated `{ name, number? }`), `signature` (header only; not an input — it marks where the customer's picture lands; always `CUSTOMER` and always required, blocking export until signed. The supervisor's/inspector's signatures are the `supervisorSignature`/`inspectorSignature` roles, not fields).
 - **Scope:** `header` = report-level values (stored in `InspectionReport.headerData`); `item` = per-serial values (stored in `SerialNumber.inspectionData`).
 - **System roles:** header roles `inspector`, `supervisor`, `inspectionDate`, `customer`, `reportNumber`, `poNumber`, `inspectorSignature`, `supervisorSignature` are system-derived (never user-typed) and map to engine computed tokens; item role `serialNumber` marks the serial's own token. All nine are mandatory to **save** a new definition (grandfathered stored definitions still load and export).
 - **Export entries** bind a token to a `field` path, a `computed` name (`customerName`, `reportNumber`, `poNumber`, `reportDate`, `inspectedBy`, `approvedBy`, `inspectorSignature`, `supervisorSignature`), a `const`, a `compose`/`coalesce`, a `transform`, a `whenEmpty` fallback, a `signature` slot, or `source: rowSerial | record`.

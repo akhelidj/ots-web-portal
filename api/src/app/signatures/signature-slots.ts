@@ -12,10 +12,17 @@ export const INSPECTOR_SIGNATURE_SLOT = 'inspectorSignature';
  */
 export const SUPERVISOR_SIGNATURE_SLOT = 'supervisorSignature';
 
-/** Who signs a "Signature" field: the customer (drawn per report) or the supervisor (account signature). */
+/** Who signs a "Signature" field: the customer (drawn per report); SUPERVISOR is legacy read-only (see `AUTHORABLE_SIGNERS`). */
 export type SignatureSigner = 'CUSTOMER' | 'SUPERVISOR';
 
+/** Every signer a STORED field may carry (reads stay tolerant of pre-role definitions). */
 export const SIGNATURE_SIGNERS: readonly SignatureSigner[] = ['CUSTOMER', 'SUPERVISOR'];
+
+/**
+ * The signers a NEW/edited definition may declare. A template `signature` field is always a
+ * customer signature; the supervisor's is the `supervisorSignature` system role.
+ */
+export const AUTHORABLE_SIGNERS: readonly SignatureSigner[] = ['CUSTOMER'];
 
 const FIELD_SLOT_PREFIX = 'field:';
 

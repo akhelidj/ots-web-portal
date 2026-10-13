@@ -7,7 +7,7 @@ import {
   ExportDefinition,
 } from '../export/export-engine';
 import { engineGate, GateDefinition } from '../workflow/approval-gate';
-import { SIGNATURE_SIGNERS } from '../signatures/signature-slots';
+import { AUTHORABLE_SIGNERS } from '../signatures/signature-slots';
 import { selectUpsertRule } from '../child-reports/rework-rules.interpreter';
 import { Snapshot } from '../common/inspection-data.types';
 import { InspectionReportStatus } from '@prisma/client';
@@ -218,10 +218,11 @@ export function validateDefinition(
     };
   }
 
-  // 4e — signature fields: a `signature` field names its signer (CUSTOMER | SUPERVISOR), sits
+  // 4e — signature fields: a `signature` field is a CUSTOMER signature (the supervisor's is the
+  // `supervisorSignature` system role, never an authored field), sits
   // in header scope (it marks a picture's cell, never a per-serial value) and carries no
   // system role (it is not derived); `signer` is meaningless on any other type.
-  const signers = new Set<string>(SIGNATURE_SIGNERS);
+  const signers = new Set<string>(AUTHORABLE_SIGNERS);
   for (const f of candidate.fields) {
     if (f.type !== 'signature') {
       if (f.signer !== undefined) {
@@ -237,7 +238,7 @@ export function validateDefinition(
       return {
         ok: false,
         check: 'signer-known',
-        reason: `Signature field "${f.key}" must declare its signer. Allowed: ${SIGNATURE_SIGNERS.join(', ')}.`,
+        reason: `Signature field "${f.key}" must be a customer signature (signer CUSTOMER); the supervisor's signature is the supervisorSignature role. Allowed: ${AUTHORABLE_SIGNERS.join(', ')}.`,
       };
     }
     if (f.scope !== 'header') {

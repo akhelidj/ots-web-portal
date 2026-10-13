@@ -302,24 +302,6 @@
                     </select>
                   </label>
 
-                  @if (isSignature(row)) {
-                    <label class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
-                      <span class="text-xs font-semibold text-gray-600">Signed by</span>
-                      <select
-                        [(ngModel)]="row.signer"
-                        (ngModelChange)="onSignerChange(row)"
-                        class="field-control"
-                        [attr.aria-label]="'Signer for ' + row.token"
-                        [attr.data-testid]="'header-signer-' + row.token"
-                      >
-                        <option [value]="''">Choose a signer…</option>
-                        @for (s of signerOptionsFor(row); track s.value) {
-                          <option [value]="s.value">{{ s.label }}</option>
-                        }
-                      </select>
-                    </label>
-                  }
-
                   @if (isCustomerSignature(row)) {
                     <p
                       class="text-xs font-semibold text-gray-600 sm:pt-6"

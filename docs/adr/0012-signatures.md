@@ -12,8 +12,8 @@ Two distinct mechanisms, both storing PNGs (`signature_pad`, 600×200) through t
 
 1. **Account signatures** (INSPECTOR, SUPERVISOR, ADMIN) — drawn once in the portal, replaceable in Settings. Each save writes a **new immutable object**; nothing is overwritten.
    - **Inspector:** a missing signature **gates the account**: a global `SignatureRequiredGuard` refuses every state-changing request from an INSPECTOR without one (`403 SIGNATURE_REQUIRED`); reads stay open and the shell shows a blocking "Register my signature" prompt. On `→ PENDING_APPROVAL` a **pointer** (storage key + hash) to their current signature is frozen onto the report (`ReportSignature`), so later re-registration cannot change what that submission exports.
-   - **Supervisor:** approval (direct transition or batch auto-approval) applies the approver's account signature to every `SUPERVISOR`-signed template field. A `required` one with no signature **refuses the approval**.
-2. **Per-report field signatures** — templates declare header-only `signature` fields with a signer of `CUSTOMER` or `SUPERVISOR` and an optional `required`. A CUSTOMER draws theirs per report, only once the report is `APPROVED`/`CLOSED`, and only for their own customer's reports. Field signatures belong to a **revision**: a reopen starts a new revision with them cleared; older revisions keep theirs. A `required` field that is unsigned **blocks export of the current revision** (`409 SIGNATURE_PENDING`); older revisions and optional fields export with the cell blank.
+   - **Supervisor:** approval (direct transition or batch auto-approval) freezes the approver's account signature into the `supervisorSignature` system role (like the inspector's, mandatory): an approver with no signature **refuses the approval** (`403 SIGNATURE_REQUIRED`). Pre-role templates carried this as a `SUPERVISOR`-signer field; `api/scripts/migrate-supervisor-signature-role.ts` rewrites those onto the role (see below).
+2. **Per-report field signatures** — templates declare header-only `signature` fields, which are customer signatures (the field's presence is the opt-in, so it is always required; the inspector and supervisor signatures are the mandatory system roles, not fields — the validator rejects a `SUPERVISOR` signer on save; a stored legacy `SUPERVISOR` field is still read at runtime until migrated). A CUSTOMER draws theirs per report, only once the report is `APPROVED`/`CLOSED`, and only for their own customer's reports. Field signatures belong to a **revision**: a reopen starts a new revision with them cleared; older revisions keep theirs. An unsigned customer field **blocks export of the current revision** (`409 SIGNATURE_PENDING`); older revisions export with the cell blank.
 
 Every template must map the `inspectorSignature` and `supervisorSignature` header roles (mandatory to save a definition) so the inspector and approver pictures have a home. The supervisor signature is a system role like the inspector's: the approver's account signature is frozen at approval and an approver without one is refused with `403 SIGNATURE_REQUIRED` (the portal shows the register-your-signature gate). A `signature` field with signer `SUPERVISOR` still works on already-saved templates but is no longer offered for new ones. Signature endpoints are online-only; the offline-sync core is untouched.
 
@@ -26,3 +26,14 @@ Every template must map the `inspectorSignature` and `supervisorSignature` heade
 ## Consequences
 
 Past revisions are stable regardless of later signature changes. Costs: an INSPECTOR cannot work (offline queue included — the server gate fires on sync) until a signature exists; admins acting as inspector freeze nothing and their cell is left blank; signatures need a connection. See [`../api/signatures-endpoints.md`](../api/signatures-endpoints.md).
+
+## Migration: legacy SUPERVISOR signature fields → `supervisorSignature` role
+
+Run once per environment, **before** deploying the validator that rejects a `SUPERVISOR` signer:
+
+```
+npx -y tsx api/scripts/migrate-supervisor-signature-role.ts           # dry run (default)
+npx -y tsx api/scripts/migrate-supervisor-signature-role.ts --apply
+```
+
+Per template with a legacy field: the field becomes the role field (same token/cell), the prior definition is appended to `TemplateDefinitionRevision`, and the report signatures already frozen under `field:<key>` are **copied** to the `supervisorSignature` slot (same revision, object and hash) for the reports pinned to that version, so past revisions export unchanged. Originals are never deleted; the script is idempotent. Runtime reads of an unmigrated `SUPERVISOR` field remain tolerant and can be removed once every environment is migrated. Note: a migrated template's approval now always requires the approver's account signature (the legacy field was optional).
