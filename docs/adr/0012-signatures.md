@@ -29,16 +29,11 @@ Past revisions are stable regardless of later signature changes. Costs: an INSPE
 
 ## Migration: legacy SUPERVISOR signature fields → `supervisorSignature` role
 
-Run once per environment, **before** deploying the validator that rejects a `SUPERVISOR` signer. In production the script ships inside `api_dist` and runs in the API container, which already has Prisma and `DATABASE_URL`:
+Run once per environment, **before** deploying the validator that rejects a `SUPERVISOR` signer:
 
 ```
-npm run build:api && npm run db:migrate:supervisor-role:build   # -> dist/api/scripts/migrate-supervisor-signature-role.js (build AFTER nx: it cleans dist/api)
-# on the server: put the file in the running container's app dir (WORKDIR = `docker exec ots_api pwd`)
-docker cp migrate-supervisor-signature-role.js ots_api:<WORKDIR>/
-docker exec ots_api node migrate-supervisor-signature-role.js           # dry run (default)
-docker exec ots_api node migrate-supervisor-signature-role.js --apply
+npx -y tsx api/scripts/migrate-supervisor-signature-role.ts           # dry run (default)
+npx -y tsx api/scripts/migrate-supervisor-signature-role.ts --apply
 ```
-
-Back up the database first (`pg_dump`). Locally: `npx -y tsx api/scripts/migrate-supervisor-signature-role.ts [--apply]`.
 
 Per template with a legacy field: the field becomes the role field (same token/cell), the prior definition is appended to `TemplateDefinitionRevision`, and the report signatures already frozen under `field:<key>` are **copied** to the `supervisorSignature` slot (same revision, object and hash) for the reports pinned to that version, so past revisions export unchanged. Originals are never deleted; the script is idempotent. Runtime reads of an unmigrated `SUPERVISOR` field remain tolerant and can be removed once every environment is migrated. Note: a migrated template's approval now always requires the approver's account signature (the legacy field was optional).

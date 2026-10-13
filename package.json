@@ -25,8 +25,7 @@
     "db:seed": "npx -y tsx api/scripts/seed.ts",
     "db:seed:build": "npx esbuild api/scripts/seed.ts --bundle --platform=node --packages=external --outfile=dist/api/scripts/seed.js",
     "db:seed:run": "node dist/api/scripts/seed.js",
-    "build:deploy": "npm run db:seed:build && nx build api",
-    "db:migrate:supervisor-role:build": "npx esbuild api/scripts/migrate-supervisor-signature-role.ts --bundle --platform=node --packages=external --outfile=dist/api/scripts/migrate-supervisor-signature-role.js"
+    "build:deploy": "npm run db:seed:build && nx build api"
   },
   "private": true,
   "devDependencies": {
