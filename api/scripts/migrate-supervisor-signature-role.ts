@@ -17,12 +17,22 @@
  *
  * DRY-RUN BY DEFAULT. Idempotent. One transaction per template.
  *
- * Run: npx -y tsx api/scripts/migrate-supervisor-signature-role.ts [--apply]
+ * Run (dev):  npx -y tsx api/scripts/migrate-supervisor-signature-role.ts [--apply]
+ * Run (prod): `npm run db:migrate:supervisor-role:build` bundles it to
+ *   dist/api/scripts/migrate-supervisor-signature-role.js, shipped with api_dist; then
+ *   `docker exec ots_api node scripts/migrate-supervisor-signature-role.js [--apply]`.
  */
-import * as dotenv from 'dotenv';
-dotenv.config({ path: 'api/.env' });
 import { PrismaClient } from '@prisma/client';
 import { migrateLegacySupervisorTemplates } from '../src/app/signatures/legacy-supervisor-migration';
+
+// Local runs read api/.env; inside the API container the environment is already set (and
+// `dotenv` is not a runtime dependency there), so this is best-effort.
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('dotenv').config({ path: 'api/.env' });
+} catch {
+  /* env already provided */
+}
 
 const prisma = new PrismaClient();
 const apply = process.argv.includes('--apply');
