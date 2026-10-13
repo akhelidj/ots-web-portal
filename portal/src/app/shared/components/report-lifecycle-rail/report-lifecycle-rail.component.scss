@@ -259,7 +259,7 @@
   padding: 0.55rem 1.1rem;
   border: 0;
   background: var(--accent);
-  color: #0f2741;
+  color: var(--on-accent); /* white or ink, whichever reads on the customer's brand colour */
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 500;
