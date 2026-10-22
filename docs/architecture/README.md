@@ -30,3 +30,4 @@ in the API docs.
 
 Operations: [Production logging](../operations/logging.md) — what the API logs, request ids, server
 log setup, reading logs and the manual deploy flow.
+[CI/CD](../operations/ci-cd.md) — GitHub Actions checks and the deploy pipeline.

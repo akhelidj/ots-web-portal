@@ -45,8 +45,8 @@ Flow: optimistic local write (IndexedDB) → **outbox** enqueue → **SyncOrches
 
 ## Testing / CI Reality
 
-- **Tests exist; CI does not.** Unit (`*.spec.ts`) and integration (`*.integration.spec.ts`) suites run via `npm run test` / `test:api` / `test:portal`; API integration tests need the test Postgres (`npm run test:db:up`, then `test:api:integration`, via `docker-compose.test.yml`). Coverage is partial — concentrated on the audited, high-risk paths (revision snapshots, export, workflow transitions, offline-sync).
-- **No CI.** There are no `.github/workflows`; nothing runs the suites automatically. With real production clients and no automated gate, **every change still needs manual verification** — be conservative, especially around sync, audited workflows, and migrations.
+- **Tests exist; CI is new.** Unit (`*.spec.ts`) and integration (`*.integration.spec.ts`) suites run via `npm run test` / `test:api` / `test:portal`; API integration tests need the test Postgres (`npm run test:db:up`, then `test:api:integration`, via `docker-compose.test.yml`). Coverage is partial — concentrated on the audited, high-risk paths (revision snapshots, export, workflow transitions, offline-sync).
+- **CI/CD:** GitHub Actions (`.github/workflows/`, see [`docs/operations/ci-cd.md`](docs/operations/ci-cd.md)) runs lint, typecheck, unit + integration tests and builds on PRs and `develop`; a push to `master` runs them and then deploys. The pipeline is new and the portal's coverage is partial, so **every change still needs manual verification** — be conservative, especially around sync, audited workflows, and migrations.
 
 ## Conventions & Tooling
 
@@ -61,6 +61,7 @@ Authoritative docs live under `docs/`:
 - [`docs/adr/`](docs/adr/README.md) — standing architecture decisions and their tradeoffs.
 - [`docs/api/`](docs/api/README.md) — HTTP endpoint contracts (can drift from the controllers — no shared DTO package, see ADR-0008; verify against code when it matters).
 - [`docs/KNOWN-ISSUES.md`](docs/KNOWN-ISSUES.md) — verified standing defects and constraints.
+- [`docs/operations/ci-cd.md`](docs/operations/ci-cd.md) — GitHub Actions CI and the deploy-on-push-to-master pipeline.
 - [`docs/operations/logging.md`](docs/operations/logging.md) — production logging, request ids, reading logs on the host, and the manual API deploy flow.
 
 ## graphify

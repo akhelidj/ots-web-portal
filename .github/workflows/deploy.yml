@@ -1,0 +1,74 @@
+name: Deploy
+
+# Every push to master (i.e. a merge from develop) runs the full CI, then deploys to the
+# Lightsail instance. Can also be started by hand from the Actions tab.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time; a newer push waits instead of cancelling a deploy mid-flight.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy to production
+    needs: ci
+    runs-on: ubuntu-latest
+    # Holds the secrets; add "required reviewers" on this environment for a manual gate.
+    environment: production
+    env:
+      RELEASE_ID: ${{ github.sha }}
+      DEPLOY_TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run build:api
+      - run: npm run build:portal
+
+      - name: Assemble release
+        run: |
+          mkdir -p release/api release/portal
+          cp -R dist/api/. release/api/
+          cp -R dist/portal/browser/. release/portal/
+          cp deploy/Dockerfile.api deploy/docker-compose.yml deploy/remote-deploy.sh release/
+          test -f release/api/main.js
+          test -f release/api/package.json
+          test -f release/portal/index.html
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Upload release
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=yes"
+          $SSH "$DEPLOY_TARGET" "mkdir -p /opt/ots/releases/$RELEASE_ID"
+          rsync -az --delete -e "$SSH" release/ "$DEPLOY_TARGET:/opt/ots/releases/$RELEASE_ID/"
+
+      - name: Deploy on the server
+        run: |
+          ssh -i "$HOME/.ssh/deploy_key" -o StrictHostKeyChecking=yes "$DEPLOY_TARGET" \
+            "bash /opt/ots/releases/$RELEASE_ID/remote-deploy.sh $RELEASE_ID"
+
+      - name: Smoke test
+        run: curl --fail --silent --show-error --retry 10 --retry-delay 5 --retry-all-errors "${{ vars.PROD_API_URL }}/health"

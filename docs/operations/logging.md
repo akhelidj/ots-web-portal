@@ -99,6 +99,9 @@ in the error JSON (`requestId`).
 
 ## Deploying the API (manual flow)
 
+> The automated pipeline is described in [ci-cd.md](ci-cd.md). The manual steps below remain
+> valid as a fallback.
+
 1. Build locally: `npx nx build api` → `dist/api/main.js`.
 2. Upload it to `/opt/ots/api_dist/main.js` (MobaXterm SFTP), overwriting.
 3. `cd /opt/ots && docker compose build api && docker compose up -d api`.
