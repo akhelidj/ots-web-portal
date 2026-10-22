@@ -1187,11 +1187,10 @@ html[data-theme] h4 {
     text-transform: uppercase;
   }
   .cx-report__number {
-    margin: 0.5rem 0 0;
-    font-size: clamp(1.5rem, 2.8vw, 2.3rem);
-    font-weight: 500;
-    line-height: 1;
-    letter-spacing: -0.045em;
+    margin: 0.45rem 0 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: inherit;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
