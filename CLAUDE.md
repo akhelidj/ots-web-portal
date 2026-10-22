@@ -61,6 +61,7 @@ Authoritative docs live under `docs/`:
 - [`docs/adr/`](docs/adr/README.md) — standing architecture decisions and their tradeoffs.
 - [`docs/api/`](docs/api/README.md) — HTTP endpoint contracts (can drift from the controllers — no shared DTO package, see ADR-0008; verify against code when it matters).
 - [`docs/KNOWN-ISSUES.md`](docs/KNOWN-ISSUES.md) — verified standing defects and constraints.
+- [`docs/operations/logging.md`](docs/operations/logging.md) — production logging, request ids, reading logs on the host, and the manual API deploy flow.
 
 ## graphify
 

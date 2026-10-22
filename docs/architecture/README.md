@@ -27,3 +27,6 @@ defects and constraints, see [`../KNOWN-ISSUES.md`](../KNOWN-ISSUES.md).
 Signatures ([ADR-0012](../adr/0012-signatures.md)) and free-entry statistics
 ([ADR-0013](../adr/0013-free-entry-report-statistics.md)) are documented in their ADRs and
 in the API docs.
+
+Operations: [Production logging](../operations/logging.md) — what the API logs, request ids, server
+log setup, reading logs and the manual deploy flow.
