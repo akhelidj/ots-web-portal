@@ -23,8 +23,9 @@ jobs:
     name: Deploy to production
     needs: ci
     runs-on: ubuntu-latest
-    # Holds the secrets; add "required reviewers" on this environment for a manual gate.
-    environment: production
+    # Secrets/variables are repository-level (GitHub environments are not available on
+    # private repos on the free plan). With a paid plan, add `environment: production` here
+    # and move the secrets there to get a required-reviewer approval gate.
     env:
       RELEASE_ID: ${{ github.sha }}
       DEPLOY_TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}

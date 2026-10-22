@@ -89,8 +89,10 @@ keeps running), and the history has to be baselined with `prisma migrate resolve
 
 ### In GitHub
 
-Settings → **Environments** → `production`: add required reviewers if you want a manual
-approval before each deploy (otherwise every merge to `master` deploys immediately). Add:
+Settings → **Secrets and variables** → **Actions** (repository level — GitHub environments
+are not available on private repos on the free plan; on a paid plan, add
+`environment: production` to the deploy job and move these there to get a required-reviewer
+approval gate). Every merge to `master` deploys immediately. Add:
 
 | Kind | Name | Value |
 |---|---|---|
@@ -100,7 +102,8 @@ approval before each deploy (otherwise every merge to `master` deploys immediate
 | Secret | `DEPLOY_KNOWN_HOSTS` | output of `ssh-keyscan -t ed25519 <host>` (run it from your machine and verify the fingerprint) |
 | Variable | `PROD_API_URL` | `https://api.oilfield-tubular-services.com` |
 
-Settings → **Branches** → protect `master` (and `develop`): require a pull request and the CI
+Settings → **Branches** (needs a paid plan on private repos; on the free plan, enforce it by
+convention — never push straight to `master`) → protect `master` (and `develop`): require a pull request and the CI
 checks (`Lint, typecheck, unit tests, build` and `API integration tests (Postgres)`) before
 merging. Without this, "deploy on push to master" ships whatever is pushed.
 
