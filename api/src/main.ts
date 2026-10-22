@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
+import { requestLogger } from './app/common/logging/request-logging.middleware';
 
 /**
  * Nest's own bootstrap chatter (one line per module, per route mapping) buries the
@@ -53,15 +54,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     // Expected client errors (401/403/404/409/400…) are one line, not a stack dump;
     // only a genuine server fault (5xx) gets the full exception.
+    const req = ctx.getRequest();
+    const requestId: string | undefined = req?.id;
     if (status < 500) {
-      const req = ctx.getRequest();
       console.warn(
-        `[${status}] ${req?.method} ${req?.url} — ${
+        `[${status}] ${req?.method} ${req?.url}${requestId ? ` [${requestId}]` : ''} — ${
           exception instanceof Error ? exception.message : 'error'
         }`,
       );
     } else {
-      console.error('===== FATAL SERVER ERROR =====');
+      console.error(
+        `===== FATAL SERVER ERROR${requestId ? ` [${requestId}]` : ''} =====`,
+      );
       console.error(exception);
     }
 
@@ -74,7 +78,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exception instanceof Error
           ? exception.message
           : 'Internal server error',
-      stack: exception instanceof Error ? exception.stack : undefined,
+      // The stack stays in the server log; clients only get it outside production.
+      stack:
+        process.env.NODE_ENV !== 'production' && exception instanceof Error
+          ? exception.stack
+          : undefined,
+      // Lets a user quote an id that matches the access-log line.
+      requestId,
     });
   }
 }
@@ -84,6 +94,7 @@ async function bootstrap() {
     logger: new QuietLogger('', { logLevels: logLevels() }),
   });
 
+  app.use(requestLogger);
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
@@ -96,7 +107,7 @@ async function bootstrap() {
     origin: origins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-    exposedHeaders: 'Content-Disposition',
+    exposedHeaders: 'Content-Disposition, X-Request-Id',
   });
 
   await app.listen(port);
