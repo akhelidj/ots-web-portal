@@ -26,6 +26,16 @@ export interface SignatureDefinitionView {
     required?: boolean;
     signer?: string;
   }[];
+  /** Only the computed bindings are read (a system signature role marks its token here). */
+  export?: { global?: { computed?: string }[] };
+}
+
+/** Whether a stored definition binds the system signature role whose slot is `slot`. */
+export function bindsSignatureRole(
+  definition: SignatureDefinitionView | null | undefined,
+  slot: string,
+): boolean {
+  return (definition?.export?.global ?? []).some((e) => e?.computed === slot);
 }
 
 /**

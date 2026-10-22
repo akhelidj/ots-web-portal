@@ -56,7 +56,7 @@ export interface ExportDefinition {
   // `id` keys `export.regions`; `chunkSize` bounds per-page serial count. No `marker`:
   // the repeating row is inferred from the region's row tokens (see xlsx-token-engine
   // step 4). Stored definitions may still carry a `marker` — it is simply ignored.
-  regions: { id: string; chunkSize: number | null }[];
+  regions: { id: string; chunkSize: number | null; singleSerial?: boolean }[];
   export: {
     global: ExportEntry[];
     regions: Record<string, ExportEntry[]>;
@@ -74,6 +74,7 @@ export const signatureMarker = (slot: string): string => `[[OTS_SIGNATURE:${slot
 /** Engine-side computed resolvers (bespoke; share derivation with legacy). */
 const COMPUTED: Record<string, (snapshot: Snapshot) => unknown> = {
   inspectorSignature: () => signatureMarker('inspectorSignature'),
+  supervisorSignature: () => signatureMarker('supervisorSignature'),
   customerName: (s) => s.header.customerName,
   reportNumber: (s) => s.header.reportNumber,
   poNumber: (s) => s.header.poNumber,

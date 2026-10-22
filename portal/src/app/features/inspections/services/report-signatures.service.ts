@@ -28,10 +28,18 @@ export interface ReportSignatureStates {
     signedAt: string | null;
     signedByName: string | null;
   } | null;
+  /** The approving supervisor's signature frozen at approval (image key `supervisor`), or null. */
+  supervisor?: {
+    signed: boolean;
+    signedAt: string | null;
+    signedByName: string | null;
+  } | null;
 }
 
 /** Image key of the inspector's frozen signature (see the API's INSPECTOR_IMAGE_KEY). */
 export const INSPECTOR_IMAGE_KEY = 'inspector';
+/** Image key of the approving supervisor's frozen signature (the API's SUPERVISOR_IMAGE_KEY). */
+export const SUPERVISOR_IMAGE_KEY = 'supervisor';
 
 /** A report waiting on the customer's signature (the "Signature pending" area). */
 export interface PendingSignatureReport {

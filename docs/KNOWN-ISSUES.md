@@ -212,6 +212,10 @@ label derivation above, and likewise not a view/rendering fault.
 ## Revisions / export
 
 ### 19. Approval-batch auto-approval writes no revision snapshot
+> **Update:** the default export (no `revision` asked for) is now built from live data, so it
+> always mirrors what the app shows (inspector, serials, header, signatures) — including after
+> a reopen + re-approval. Snapshots are used only when a specific revision is requested. The
+> missing snapshot below therefore only affects historical-revision exports, not the default.
 `InspectionReportsService.approveBatch` flips the parent to `APPROVED` once every serial and
 batch is approved, but — unlike the direct `APPROVED` transition in
 `InspectionReportWorkflowService.transition` — it never calls

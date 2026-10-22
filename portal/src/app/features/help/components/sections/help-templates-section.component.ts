@@ -45,7 +45,10 @@ import { AppRole } from '@portal/core/constants/app.constants';
             <em>signature</em> fields, signed by the Customer or by the
             Supervisor, optionally required for export. The review step can add
             a display name and a rework trigger rule (field, value, child report
-            type, number suffix). A saved definition is read-only. A version
+            type, number suffix). It also has a <em>single serial</em> option for
+            templates whose sheet holds one serial: a report with several
+            serials then exports one file per serial (see Exports). A saved
+            definition is read-only. A version
             with no definition can never back a report.
           </p>
         </div>

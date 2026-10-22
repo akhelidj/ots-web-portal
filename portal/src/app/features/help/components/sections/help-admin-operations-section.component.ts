@@ -31,8 +31,10 @@ import { AppRole } from '@portal/core/constants/app.constants';
           <p class="font-semibold text-neutral-900">Customers</p>
           <p class="mt-1">
             Register customer companies (name, optional code, email, phone). The
-            code prefixes generated report numbers. Edit details, or deactivate
-            a customer with a mandatory reason.
+            code prefixes generated report numbers. Edit details, set an
+            optional logo and brand colour (the customer's portal then shows
+            their logo and name), or deactivate a customer with a mandatory
+            reason.
           </p>
         </div>
         <div class="rounded-xl border border-neutral-200 bg-neutral-50 p-4">

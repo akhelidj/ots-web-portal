@@ -1,0 +1,40 @@
+# Production API image. Build context is the CI-assembled `dist/api` (on the server:
+# /opt/ots/api_dist) — main.js, package.json(+lock), prisma/, scripts/. The pipeline copies
+# this file into that context as `Dockerfile`.
+#
+# Targets:
+#   app      (used by the `api` service) — the running API.
+#   migrate  — same image plus the Prisma CLI, used only for `prisma migrate deploy`.
+FROM node:20.19.3-alpine AS app
+WORKDIR /app
+ENV NODE_ENV=production
+RUN apk add --no-cache openssl libc6-compat
+
+COPY package.json ./
+COPY package-lock.json* ./
+
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev; \
+    else \
+      npm install --omit=dev; \
+    fi \
+ && npm install tslib@^2 --omit=dev
+
+COPY . .
+
+# Generate Prisma client from the schema shipped with the build
+RUN npm install prisma@5.22.0 --no-save \
+ && npx prisma generate --schema prisma/schema.prisma \
+ && npm uninstall prisma || true
+
+EXPOSE 3000
+
+# /health is public (see HealthController). start-period covers cold start.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/health >/dev/null 2>&1 || exit 1
+
+CMD ["node", "main.js"]
+
+FROM app AS migrate
+RUN npm install prisma@5.22.0 --no-save
+CMD ["npx", "prisma", "migrate", "deploy", "--schema", "prisma/schema.prisma"]

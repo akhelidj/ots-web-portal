@@ -810,6 +810,9 @@ html[data-theme] h4 {
     --cx-gutter: clamp(1.25rem, 4.5vw, 4rem);
     position: relative;
     margin-inline: calc(50% - 50vw);
+    /* Cancel the shell's pb-20 under the page so the last (tinted) section reaches the bottom
+       edge instead of leaving a pale strip. */
+    margin-bottom: -5rem;
     background-color: var(--background);
     color: var(--foreground);
   }
@@ -1180,18 +1183,17 @@ html[data-theme] h4 {
   .cx-report__label,
   .cx-report__meta dt {
     margin: 0;
-    color: rgb(var(--primary-rgb) / 0.62);
+    color: rgb(var(--primary-rgb) / 0.78);
     font-family: var(--font-mono);
-    font-size: 0.66rem;
+    font-size: 0.76rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
   .cx-report__number {
-    margin: 0.5rem 0 0;
-    font-size: clamp(1.5rem, 2.8vw, 2.3rem);
-    font-weight: 500;
-    line-height: 1;
-    letter-spacing: -0.045em;
+    margin: 0.45rem 0 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: inherit;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
@@ -1203,8 +1205,11 @@ html[data-theme] h4 {
   }
   .cx-report__meta dd {
     margin: 0.45rem 0 0;
-    font-size: 0.92rem;
+    font-size: 1.05rem;
     font-variant-numeric: tabular-nums;
+  }
+  .cx-report__meta dd span {
+    font-size: 0.85rem;
   }
   .cx-report__arrow {
     display: grid;
@@ -1522,7 +1527,7 @@ html[data-theme] h4 {
     letter-spacing: 0.1em;
     text-align: left;
     text-transform: uppercase;
-    cursor: default;
+    cursor: pointer;
     transition: color var(--duration-fast) var(--ease-standard);
   }
   .cxa-nav-item::before {
@@ -1683,7 +1688,7 @@ html[data-theme] h4 {
     border: 1px solid var(--border);
     background: var(--card);
     text-align: left;
-    cursor: default;
+    cursor: pointer;
     transition:
       border-color var(--duration-fast) var(--ease-standard),
       background-color var(--duration-fast) var(--ease-standard);
@@ -1888,7 +1893,7 @@ html[data-theme] h4 {
   /* ---- Child report detail (inside the Child reports view) ---- */
   .cxa-child-back {
     margin-bottom: 1.25rem;
-    cursor: default;
+    cursor: pointer;
   }
   .cxa-child-card {
     position: relative;
@@ -2063,7 +2068,7 @@ html[data-theme] h4 {
     height: 2rem;
     border: 1px solid transparent;
     color: rgb(var(--primary-rgb) / 0.7);
-    cursor: default;
+    cursor: pointer;
     transition:
       color var(--duration-fast) var(--ease-standard),
       border-color var(--duration-fast) var(--ease-standard),
@@ -2084,6 +2089,7 @@ html[data-theme] h4 {
   }
   .cxa-icon-btn:disabled {
     opacity: 0.3;
+    cursor: default;
   }
   .cxa-inspector-body {
     flex: 1 1 auto;
@@ -2252,9 +2258,6 @@ html[data-theme] h4 {
     height: 2.5rem;
     width: auto;
     max-width: 9rem;
-    padding: 0.25rem;
-    border-radius: var(--radius);
-    background: rgba(255, 255, 255, 0.96); /* a plate, so dark logos stay visible on the bar */
     object-fit: contain;
   }
   .hdr-brand-name {

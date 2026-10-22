@@ -428,32 +428,6 @@
           }
         }
       </div>
-
-      <!-- ============================ STATUS BAR ============================ -->
-      <footer class="cxa-statusbar" aria-label="Report status">
-        <span><i>Customer</i> {{ customerDisplayName() }}</span>
-        <span class="cxa-hide-md"><i>Status</i> {{ reportData.status.split('_').join(' ') }}</span>
-        <span class="cxa-hide-md">
-          <i>Received</i>
-          {{
-            customerKeyDates().received
-              ? (customerKeyDates().received | date: 'd MMM y')
-              : '—'
-          }}
-        </span>
-        <span class="cxa-hide-md">
-          <i>Completed</i>
-          {{
-            customerKeyDates().completed
-              ? (customerKeyDates().completed | date: 'd MMM y')
-              : 'In progress'
-          }}
-        </span>
-        <span class="cxa-statusbar-end" [class.is-offline]="!isOnline">
-          <span class="cxa-dot" aria-hidden="true"></span>
-          {{ isOnline ? 'Online' : 'Offline' }}
-        </span>
-      </footer>
     </div>
   } @else {
   <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">

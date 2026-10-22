@@ -1,4 +1,4 @@
-import { PrismaService } from '../prisma/prisma.service';
+import type { PrismaClient } from '@prisma/client';
 
 /**
  * Actions that count as "working on the report's inspection", as recorded in the audit
@@ -48,7 +48,7 @@ function inspectionWindows(
  * the inspection).
  */
 export async function findLastInspectorUserId(
-  prisma: Pick<PrismaService, 'auditLog' | 'inspectionReportTransitionLog'>,
+  prisma: Pick<PrismaClient, 'auditLog' | 'inspectionReportTransitionLog'>,
   tenantId: string,
   reportId: string,
   /** Only consider history up to this instant (a revision's "as of" time). */
@@ -92,34 +92,46 @@ export async function findLastInspectorUserId(
 }
 
 /**
- * The inspector for display/export: {@link findLastInspectorUserId}, falling back to
- * whoever first started the inspection (first move into IN_INSPECTION) when no action
- * was ever recorded. Resolved to a name server-side, so every role sees the same value
- * (the portal's local user cache is admin-only).
+ * The inspector's user id for display/export: {@link findLastInspectorUserId}, falling
+ * back to whoever first started the inspection (first move into IN_INSPECTION) when no
+ * action was ever recorded. Accepts a transaction client, so the signature frozen at
+ * submission can follow the same person the report names as its inspector.
+ */
+export async function resolveInspectorUserId(
+  prisma: Pick<PrismaClient, 'auditLog' | 'inspectionReportTransitionLog'>,
+  tenantId: string,
+  reportId: string,
+  until?: Date,
+): Promise<string | null> {
+  const userId = await findLastInspectorUserId(prisma, tenantId, reportId, until);
+  if (userId) return userId;
+  const starter = await prisma.inspectionReportTransitionLog.findFirst({
+    where: {
+      inspectionReportId: reportId,
+      toStatus: 'IN_INSPECTION',
+      userId: { not: null },
+      ...(until ? { timestamp: { lte: until } } : {}),
+    },
+    orderBy: { timestamp: 'asc' },
+    select: { userId: true },
+  });
+  return starter?.userId ?? null;
+}
+
+/**
+ * The inspector for display/export, resolved to a name server-side, so every role sees
+ * the same value (the portal's local user cache is admin-only).
  */
 export async function resolveInspector(
   prisma: Pick<
-    PrismaService,
+    PrismaClient,
     'auditLog' | 'inspectionReportTransitionLog' | 'user'
   >,
   tenantId: string,
   reportId: string,
   until?: Date,
 ): Promise<{ userId: string | null; name: string | null }> {
-  let userId = await findLastInspectorUserId(prisma, tenantId, reportId, until);
-  if (!userId) {
-    const starter = await prisma.inspectionReportTransitionLog.findFirst({
-      where: {
-        inspectionReportId: reportId,
-        toStatus: 'IN_INSPECTION',
-        userId: { not: null },
-        ...(until ? { timestamp: { lte: until } } : {}),
-      },
-      orderBy: { timestamp: 'asc' },
-      select: { userId: true },
-    });
-    userId = starter?.userId ?? null;
-  }
+  const userId = await resolveInspectorUserId(prisma, tenantId, reportId, until);
   if (!userId) return { userId: null, name: null };
   const user = await prisma.user.findFirst({
     where: { id: userId, tenantId },

@@ -32,6 +32,7 @@ const TOKENS: ReadonlySet<string> = new Set([
   '{{apprBy}}',
   '{{inspDate}}',
   '{{inspSig}}',
+  '{{supSig}}',
   '{{grade}}',
   '{{emi}}',
 ]);
@@ -59,6 +60,7 @@ function validDto(): DefineTemplateDto {
       { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
       { token: '{{inspDate}}', label: 'Inspection Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
       { token: '{{inspSig}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
+      { token: '{{supSig}}', label: 'Supervisor Signature', type: 'text', required: false, scope: 'header', role: 'supervisorSignature' },
       { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
       {
         token: '{{grade}}',
@@ -173,6 +175,29 @@ describe('validateDefinition — write-time gate [unit]', () => {
       expect(validateDefinition(c, TOKENS)).toMatchObject({
         ok: false,
         check: 'single-region',
+      });
+    });
+
+    it('singleSerial is emitted by the builder and valid on its own', () => {
+      const dto = validDto();
+      dto.region = { ...dto.region!, singleSerial: true };
+      const c = clone(buildDefinition(META, dto));
+      expect(c.regions[0]).toMatchObject({ singleSerial: true });
+      expect(validateDefinition(c, TOKENS)).toMatchObject({ ok: true });
+    });
+
+    it('singleSerial is omitted when off (existing definitions unchanged)', () => {
+      const c = clone(buildDefinition(META, validDto()));
+      expect(c.regions[0]).not.toHaveProperty('singleSerial');
+    });
+
+    it('singleSerial combined with a chunk size is rejected', () => {
+      const c = clone(buildDefinition(META, validDto()));
+      c.regions[0]!.singleSerial = true;
+      c.regions[0]!.chunkSize = 10;
+      expect(validateDefinition(c, TOKENS)).toMatchObject({
+        ok: false,
+        check: 'single-serial-chunk',
       });
     });
 

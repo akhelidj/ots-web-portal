@@ -7,7 +7,7 @@ import {
   ExportDefinition,
 } from '../export/export-engine';
 import { engineGate, GateDefinition } from '../workflow/approval-gate';
-import { SIGNATURE_SIGNERS } from '../signatures/signature-slots';
+import { AUTHORABLE_SIGNERS } from '../signatures/signature-slots';
 import { selectUpsertRule } from '../child-reports/rework-rules.interpreter';
 import { Snapshot } from '../common/inspection-data.types';
 import { InspectionReportStatus } from '@prisma/client';
@@ -131,6 +131,16 @@ export function validateDefinition(
     };
   }
 
+  // singleSerial (one export file per serial) replaces chunking, so the two are exclusive.
+  const region0 = candidate.regions[0];
+  if (region0?.singleSerial && region0.chunkSize != null) {
+    return {
+      ok: false,
+      check: 'single-serial-chunk',
+      reason: 'A one-file-per-serial region cannot also set a chunk size.',
+    };
+  }
+
   for (const f of candidate.fields) {
     // 2 — type in the portal-renderable set (rejects list types and anything the form can't render).
     if (!RENDERABLE_TYPES.has(f.type)) {
@@ -203,12 +213,12 @@ export function validateDefinition(
   }
 
   // 4c — MANDATORY roles: every known role must be mapped to a token by exactly one field.
-  // The seven header roles bind to a computed token; the item role `serialNumber` marks the
+  // The eight header roles bind to a computed token; the item role `serialNumber` marks the
   // serial's own token. Unlike 4b (which is per-field and tolerant of absence), this is a
   // whole-definition presence gate: a NEW/edited definition that leaves any role unassigned
   // is refused. It runs ONLY here (validateDefinition → applyDefinition, the save path), so
   // pre-mandate stored definitions still load and export untouched — nothing re-validates on
-  // read. VALID_ROLES is the eight-role universe (keys(ROLE_TO_COMPUTED) ∪ ITEM_ROLES).
+  // read. VALID_ROLES is the nine-role universe (keys(ROLE_TO_COMPUTED) ∪ ITEM_ROLES).
   const missingRoles = [...VALID_ROLES].filter((r) => !seenRoles.has(r));
   if (missingRoles.length > 0) {
     return {
@@ -218,10 +228,11 @@ export function validateDefinition(
     };
   }
 
-  // 4e — signature fields: a `signature` field names its signer (CUSTOMER | SUPERVISOR), sits
+  // 4e — signature fields: a `signature` field is a CUSTOMER signature (the supervisor's is the
+  // `supervisorSignature` system role, never an authored field), sits
   // in header scope (it marks a picture's cell, never a per-serial value) and carries no
   // system role (it is not derived); `signer` is meaningless on any other type.
-  const signers = new Set<string>(SIGNATURE_SIGNERS);
+  const signers = new Set<string>(AUTHORABLE_SIGNERS);
   for (const f of candidate.fields) {
     if (f.type !== 'signature') {
       if (f.signer !== undefined) {
@@ -237,7 +248,7 @@ export function validateDefinition(
       return {
         ok: false,
         check: 'signer-known',
-        reason: `Signature field "${f.key}" must declare its signer. Allowed: ${SIGNATURE_SIGNERS.join(', ')}.`,
+        reason: `Signature field "${f.key}" must be a customer signature (signer CUSTOMER); the supervisor's signature is the supervisorSignature role. Allowed: ${AUTHORABLE_SIGNERS.join(', ')}.`,
       };
     }
     if (f.scope !== 'header') {

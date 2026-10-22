@@ -36,6 +36,14 @@ import { AppRole } from '@portal/core/constants/app.constants';
           "attachments" folder. With no uploaded files you get the single file.
         </li>
         <li>
+          <strong>One file per serial:</strong> Some templates are defined for
+          a single serial per sheet. When such a report has several serials,
+          each serial gets its own file, named with the serial number as a
+          suffix (for example <code>OTS_PO_REPORT_SN123.xlsx</code>), and the
+          download is a zip. A report with one serial downloads as a single
+          file with no suffix.
+        </li>
+        <li>
           <strong>Connectivity:</strong> Online connectivity is required to
           generate and download the document.
         </li>

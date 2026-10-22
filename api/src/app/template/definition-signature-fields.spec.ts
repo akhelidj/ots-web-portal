@@ -22,6 +22,7 @@ const TOKENS: ReadonlySet<string> = new Set([
   '{{apprBy}}',
   '{{inspDate}}',
   '{{inspSig}}',
+  '{{supSig}}',
   '{{custSig}}',
   '{{emi}}',
 ]);
@@ -47,6 +48,7 @@ function dto(extra: Partial<OpsTokenField>[] = []): DefineTemplateDto {
       { token: '{{apprBy}}', label: 'Supervisor', type: 'text', required: false, scope: 'header', role: 'supervisor' },
       { token: '{{inspDate}}', label: 'Inspection Date', type: 'date', required: false, scope: 'header', role: 'inspectionDate' },
       { token: '{{inspSig}}', label: 'Inspector Signature', type: 'text', required: false, scope: 'header', role: 'inspectorSignature' },
+      { token: '{{supSig}}', label: 'Supervisor Signature', type: 'text', required: false, scope: 'header', role: 'supervisorSignature' },
       { token: '{{sn}}', label: 'Serial Number', type: 'text', required: false, scope: 'item', role: 'serialNumber' },
       { token: '{{emi}}', label: 'EMI Result', type: 'select', required: true, scope: 'item', section: 'Body', options: ['PASS', 'FAIL'] },
       sig,
@@ -78,10 +80,10 @@ describe('signature fields — validator', () => {
     expect(validateDefinition(buildDefinition(META, dto()), TOKENS)).toEqual({ ok: true });
   });
 
-  it('accepts a SUPERVISOR signer', () => {
+  it('rejects a SUPERVISOR signer (the supervisor signature is a system role, signer-known)', () => {
     const c = clone(buildDefinition(META, dto()));
     c.fields.find((f) => f.key === 'custSig')!.signer = 'SUPERVISOR';
-    expect(validateDefinition(c, TOKENS)).toEqual({ ok: true });
+    expect(validateDefinition(c, TOKENS)).toMatchObject({ ok: false, check: 'signer-known' });
   });
 
   it('rejects a missing signer (signer-known)', () => {

@@ -21,6 +21,7 @@ import {
   isReasonRequiredForInspection,
 } from './workflow.policy';
 import { RevisionService } from '../revision/revision.service';
+import { resolveInspectorUserId } from '../inspection-reports/last-inspector';
 import { engineGate, enforce, GateDefinition } from './approval-gate';
 import {
   freezeSignatureForReport,
@@ -28,8 +29,9 @@ import {
 } from '../signatures/freeze-signature';
 import {
   applySupervisorSignatures,
+  approvalSigningFor,
   assertApproverCanSign,
-  supervisorSignatureFields,
+  NO_APPROVAL_SIGNING,
 } from '../signatures/supervisor-signing';
 
 @Injectable()
@@ -350,12 +352,12 @@ export class InspectionReportWorkflowService {
     // keeps the signature already on the report, so only a real approval freezes one.
     // A `required` field with no signature to apply refuses the approval up front — it
     // would otherwise strand the report APPROVED with an export that can never succeed.
-    const supervisorFields =
+    const approvalSigning =
       toStatus === InspectionReportStatus.APPROVED &&
       currentStatus !== InspectionReportStatus.ON_HOLD
-        ? await supervisorSignatureFields(this.prisma, report)
-        : [];
-    await assertApproverCanSign(this.prisma, supervisorFields, user.id);
+        ? await approvalSigningFor(this.prisma, report)
+        : NO_APPROVAL_SIGNING;
+    await assertApproverCanSign(this.prisma, approvalSigning, user.id);
 
     // 5. Governance / Logic Calculation
 
@@ -445,7 +447,11 @@ export class InspectionReportWorkflowService {
           tenantId: user.tenantId,
           inspectionReportId: reportId,
           slot: INSPECTOR_SIGNATURE_SLOT,
-          userId: user.id,
+          // The report's inspector (last actor, as the app and export name them), which
+          // is not necessarily the user pressing submit.
+          userId:
+            (await resolveInspectorUserId(tx, user.tenantId, reportId)) ??
+            user.id,
         });
       }
 
@@ -496,14 +502,15 @@ export class InspectionReportWorkflowService {
         }
       }
 
-      // Approval: apply the approver's account signature to every SUPERVISOR signature
-      // field, tagged with the report's revision AS IT NOW STANDS (the snapshot above may
-      // just have bumped it). A reopen bumps the revision, so a re-approval signs afresh.
+      // Approval: apply the approver's account signature to the `supervisorSignature` role
+      // and every legacy SUPERVISOR signature field, tagged with the report's revision AS IT
+      // NOW STANDS (the snapshot above may just have bumped it). A reopen bumps the revision,
+      // so a re-approval signs afresh.
       await applySupervisorSignatures(tx, {
         tenantId: user.tenantId,
         reportId,
         userId: user.id,
-        fields: supervisorFields,
+        signing: approvalSigning,
       });
 
       // Create Audit Log

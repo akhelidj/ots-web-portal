@@ -1357,6 +1357,13 @@ export class InspectionReportDetailComponent
         pendingLabel: 'Applied at export',
         source: "From the inspector's account signature",
       },
+      // Same: the approving supervisor's account signature is frozen at approval.
+      supervisorSignature: {
+        value: '',
+        pending: true,
+        pendingLabel: 'Applied at export',
+        source: "From the approver's account signature",
+      },
     };
 
     // --- APPLY ALL STATE SYNCHRONOUSLY AT THE END ---

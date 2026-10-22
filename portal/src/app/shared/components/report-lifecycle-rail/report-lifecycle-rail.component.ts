@@ -13,6 +13,7 @@ import {
 import { DatePipe } from '@angular/common';
 import {
   INSPECTOR_IMAGE_KEY,
+  SUPERVISOR_IMAGE_KEY,
   ReportSignatureField,
   ReportSignatureStates,
   ReportSignaturesService,
@@ -190,6 +191,7 @@ export class ReportLifecycleRailComponent implements AfterViewInit, OnDestroy {
       if (!id || !states || this.compact()) return;
       const wanted = [
         ...(states.inspector?.signed ? [INSPECTOR_IMAGE_KEY] : []),
+        ...(states.supervisor?.signed ? [SUPERVISOR_IMAGE_KEY] : []),
         ...states.fields.filter((f) => f.signed).map((f) => f.key),
       ];
       for (const key of wanted) {
@@ -271,6 +273,18 @@ export class ReportLifecycleRailComponent implements AfterViewInit, OnDestroy {
       });
     }
     if (index >= 6) {
+      const sup = states.supervisor;
+      if (sup?.signed) {
+        out.push({
+          key: SUPERVISOR_IMAGE_KEY,
+          label: 'Supervisor',
+          role: 'Approved',
+          signed: true,
+          signedAt: sup.signedAt,
+          signedByName: sup.signedByName,
+          field: null,
+        });
+      }
       for (const f of states.fields) {
         out.push({
           key: f.key,

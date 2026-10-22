@@ -61,19 +61,14 @@ const FIELD_TYPES: OpsFieldType[] = ['text', 'number', 'boolean', 'select', 'dat
  *  may not — a signature is per report, never per serial (server check `signature-header-scope`). */
 const HEADER_FIELD_TYPES: OpsFieldType[] = [...FIELD_TYPES, 'signature'];
 
-/** Who may be declared as a signature field's signer. */
-export const SIGNER_OPTIONS: { value: SignatureSigner; label: string }[] = [
-  { value: 'CUSTOMER', label: 'Customer (draws it once approved)' },
-  { value: 'SUPERVISOR', label: 'Supervisor (account signature at approval)' },
-];
-
 /** The child report types a rework rule may upsert (mirrors the API's ChildReportType). */
 const CHILD_REPORT_TYPES: ChildReportTypeChoice[] = ['REWORK', 'SCRAP', 'HOLD'];
 
 /** The system roles a HEADER field may carry, shown in the Header step's Role select. All
- *  seven are MANDATORY: a definition cannot be saved until every one is mapped to a token (the
- *  server enforces the same via check 4c `roles-mandatory`). `inspectorSignature` marks where
- *  the inspector's account signature is placed at export — ops picks the token name. */
+ *  eight are MANDATORY: a definition cannot be saved until every one is mapped to a token (the
+ *  server enforces the same via check 4c `roles-mandatory`). `inspectorSignature` /
+ *  `supervisorSignature` mark where the inspector's / approving supervisor's account signature
+ *  is placed at export — ops picks the token name. */
 export const HEADER_ROLE_OPTIONS: { value: FieldRole; label: string }[] = [
   { value: 'customer', label: 'Customer' },
   { value: 'reportNumber', label: 'Report number' },
@@ -82,6 +77,7 @@ export const HEADER_ROLE_OPTIONS: { value: FieldRole; label: string }[] = [
   { value: 'supervisor', label: 'Supervisor' },
   { value: 'inspectionDate', label: 'Inspection date' },
   { value: 'inspectorSignature', label: 'Inspector signature' },
+  { value: 'supervisorSignature', label: 'Supervisor signature' },
 ];
 
 /** One trigger-field choice for the rework rule (see the region-mode dropdown). */
@@ -147,7 +143,6 @@ export class TemplateDefineComponent implements OnInit {
 
   public readonly fieldTypes = FIELD_TYPES;
   public readonly headerFieldTypes = HEADER_FIELD_TYPES;
-  public readonly signerOptions = SIGNER_OPTIONS;
   public readonly childReportTypes = CHILD_REPORT_TYPES;
   public readonly headerRoleOptions = HEADER_ROLE_OPTIONS;
   public readonly steps = STEPS;
@@ -161,6 +156,8 @@ export class TemplateDefineComponent implements OnInit {
   // already notified by the DOM event, and two-way binding needs a plain field).
   public displayName = '';
   public reworkEnabled = false;
+  /** The sheet holds ONE serial: export emits one file per serial (`region.singleSerial`). */
+  public singleSerial = false;
   public reworkField = '';
   public reworkEquals = '';
   public reworkChildType: ChildReportTypeChoice = 'REWORK';
@@ -299,6 +296,7 @@ export class TemplateDefineComponent implements OnInit {
     });
     this.rows.set(rows);
     this.displayName = def.displayName ?? '';
+    this.singleSerial = def.regions?.[0]?.singleSerial === true;
     this.hydrateRework(def);
   }
 
@@ -484,16 +482,12 @@ export class TemplateDefineComponent implements OnInit {
     this.clearSubmitFeedback();
   }
 
-  /** Type select handler (header step): a signature starts with its signer unset (the author
-   *  must choose), and leaving `signature` drops the signer. */
+  /** Type select handler (header step): a `signature` field is always the customer's
+   *  signature (the supervisor's is the `supervisorSignature` system role), so choosing it
+   *  fixes the signer and forces required; leaving `signature` drops both. */
   public onTypeChange(row: DescribeRow): void {
-    if (row.type !== 'signature') row.signer = '';
-    this.clearSubmitFeedback();
-  }
-
-  /** Signer select handler: a customer signature is always required, so the flag is forced. */
-  public onSignerChange(row: DescribeRow): void {
-    if (row.signer === 'CUSTOMER') row.required = true;
+    row.signer = row.type === 'signature' ? 'CUSTOMER' : '';
+    if (row.type === 'signature') row.required = true;
     this.clearSubmitFeedback();
   }
 
@@ -535,6 +529,15 @@ export class TemplateDefineComponent implements OnInit {
 
   public isRoled(row: DescribeRow): boolean {
     return row.role !== '';
+  }
+
+  /** The Type shown for a roled field. The two signature roles are stored as `text` (the
+   *  server forbids a `signature`-typed field from carrying a role — check
+   *  `signature-no-role`), but they place a signature picture, so they read as "signature". */
+  public roledTypeLabel(row: DescribeRow): string {
+    return row.role === 'inspectorSignature' || row.role === 'supervisorSignature'
+      ? 'signature'
+      : row.type;
   }
 
   /**
@@ -642,9 +645,7 @@ export class TemplateDefineComponent implements OnInit {
    *  per-step gate: an author can move between steps while still assigning roles; only the
    *  final Save (and the server's `roles-mandatory` check) requires all six. */
   public headerStepValid(): boolean {
-    return this.headerRows().every(
-      (r) => !!r.label.trim() && (!this.isSignature(r) || !!r.signer),
-    );
+    return this.headerRows().every((r) => !!r.label.trim());
   }
 
   /** Serial step: at least one included serial field, each with a label, and EXACTLY one
@@ -787,6 +788,9 @@ export class TemplateDefineComponent implements OnInit {
         marker: marker ? marker.token : '',
       },
     };
+    if (this.singleSerial && dto.region) {
+      dto.region.singleSerial = true;
+    }
     if (this.displayName.trim()) {
       dto.displayName = this.displayName.trim();
     }

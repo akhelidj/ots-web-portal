@@ -144,6 +144,17 @@ describe('TemplateDefineComponent — read-only recap for a defined template', (
     expect(text(f)).toContain('{{sn}}');
   });
 
+  it('hydrates singleSerial from the stored region and shows it in the recap', async () => {
+    const f = await render({
+      ...STORED,
+      regions: [{ id: 'serials', label: 'Serials', chunkSize: null, singleSerial: true }],
+    });
+    expect(f.componentInstance.singleSerial).toBe(true);
+    expect(q(f, '[data-testid="recap-single-serial"]')?.textContent).toContain(
+      'One file per serial',
+    );
+  });
+
   it('hard-blocks re-definition: no progress rail, no Next, no Save; submit() is inert', async () => {
     const f = await render(STORED);
 

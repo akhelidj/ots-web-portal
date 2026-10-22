@@ -1,0 +1,77 @@
+# Production stack, deployed to /opt/ots/docker-compose.yml by the pipeline
+# (.github/workflows/deploy.yml). Secrets stay in /opt/ots/.env on the server — never here.
+services:
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: ots_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./portal_dist:/srv/portal:ro
+      - ./caddy/data:/data
+      - ./caddy/config:/config
+    networks:
+      - ots_net
+
+  api:
+    # Named + tagged so a failed deploy can re-point `latest` at `previous` and roll back
+    # without rebuilding.
+    image: ots_api:latest
+    build:
+      context: ./api_dist
+      target: app
+    container_name: ots_api
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=production
+      - TZ=America/New_York
+      # Overrides any PDF_CONVERTER_URL in .env: inside the compose network Gotenberg is
+      # reached by service name, not localhost.
+      - PDF_CONVERTER_URL=http://gotenberg:3000
+    expose:
+      - "3000"
+    depends_on:
+      - gotenberg
+    networks:
+      - ots_net
+    logging:
+      driver: journald
+      options:
+        tag: ots_api
+
+  # One-off: `docker compose --profile tools run --rm migrate` applies pending Prisma
+  # migrations (the deploy script runs it before the new API starts). Never a long-running
+  # service.
+  migrate:
+    image: ots_api_migrate:latest
+    build:
+      context: ./api_dist
+      target: migrate
+    profiles: ["tools"]
+    restart: "no"
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=production
+    networks:
+      - ots_net
+
+  # Headless LibreOffice used for PDF export. Internal only: no published ports.
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: ots_gotenberg
+    restart: unless-stopped
+    networks:
+      - ots_net
+
+networks:
+  ots_net:
+    driver: bridge

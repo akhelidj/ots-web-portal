@@ -19,6 +19,7 @@ jest.mock('@nestjs/core', () => ({
   ...jest.requireActual('@nestjs/core'),
   NestFactory: {
     create: jest.fn().mockResolvedValue({
+      use: jest.fn(),
       useGlobalFilters: jest.fn(),
       useGlobalPipes: jest.fn(),
       enableCors: jest.fn(),

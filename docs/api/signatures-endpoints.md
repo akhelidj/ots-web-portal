@@ -19,11 +19,12 @@ Roles: INSPECTOR, SUPERVISOR, ADMIN. These routes are exempt from the signature 
 ### How account signatures are used
 
 - **Inspector** — on `→ PENDING_APPROVAL` a pointer (key + hash) to the submitter's current signature is frozen onto the report; re-submission after a return appends a new pointer, readers take the latest. A submitter without a signature (e.g. an admin) freezes nothing and the cell is left empty. The template's mandatory `inspectorSignature` header role receives it at export.
-- **Supervisor** — approval (direct transition or batch auto-approval) applies the approver's account signature to every `SUPERVISOR`-signed template field; a `required` one with no registered signature **refuses the approval** (`403` `SIGNATURE_REQUIRED`).
+- **Supervisor** — on → APPROVED (direct transition or batch auto-approval) the approver's current account signature is frozen into the supervisorSignature slot, tagged with the report's revision; a re-approval after a reopen appends a new pointer. An approver with no registered signature is refused (403 SIGNATURE_REQUIRED) when the template binds the role. The template's mandatory supervisorSignature header role receives it at export. `GET /reports/:id/signatures` also returns it as `supervisor` (image key `supervisor`).
+- **Supervisor** — approval (direct transition or batch auto-approval) freezes the approver's account signature into the `supervisorSignature` system role; an approver with no registered signature **refuses the approval** (`403` `SIGNATURE_REQUIRED`).
 
 ## Per-report field signatures
 
-Templates can declare header-only `signature` fields whose signer is `CUSTOMER` or `SUPERVISOR`, optionally `required`.
+Templates can declare header-only `signature` fields; each is a `CUSTOMER` signature (always required). A `SUPERVISOR` signer is rejected on save — use the `supervisorSignature` role.
 
 - `GET /inspection-reports/:id/signatures` (all roles; CUSTOMER only for their own customer's reports) →
   `{ reportId, revisionNumber, signable, fields: [{ key, label, signer, required, signed, signedAt, signedByName }] }`. `signable` is true when the report is `APPROVED` or `CLOSED`.

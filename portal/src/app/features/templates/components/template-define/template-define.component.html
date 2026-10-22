@@ -189,10 +189,10 @@
           Tick the fields that describe the whole report — report number, PO
           number, customer — and give each a clear name. Anything you leave
           unticked is recorded for each serial in the next step. Every report also
-          needs its seven <span class="font-semibold">system roles</span> assigned
+          needs its eight <span class="font-semibold">system roles</span> assigned
           here (Customer, Report number, PO number, Inspector, Supervisor,
-          Inspection date, Inspector signature); you can't save until all seven
-          are mapped.
+          Inspection date, Inspector signature, Supervisor signature); you can't
+          save until all eight are mapped.
         </p>
 
         @if (!headerStepValid()) {
@@ -283,7 +283,7 @@
                     <span
                       class="flex h-[38px] items-center text-sm text-neutral-500"
                       [attr.data-testid]="'header-type-forced-' + row.token"
-                      >{{ row.type }} · system</span
+                      >{{ roledTypeLabel(row) }} · system</span
                     >
                   </div>
                 } @else {
@@ -301,24 +301,6 @@
                       }
                     </select>
                   </label>
-
-                  @if (isSignature(row)) {
-                    <label class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
-                      <span class="text-xs font-semibold text-gray-600">Signed by</span>
-                      <select
-                        [(ngModel)]="row.signer"
-                        (ngModelChange)="onSignerChange(row)"
-                        class="field-control"
-                        [attr.aria-label]="'Signer for ' + row.token"
-                        [attr.data-testid]="'header-signer-' + row.token"
-                      >
-                        <option [value]="''">Choose a signer…</option>
-                        @for (s of signerOptions; track s.value) {
-                          <option [value]="s.value">{{ s.label }}</option>
-                        }
-                      </select>
-                    </label>
-                  }
 
                   @if (isCustomerSignature(row)) {
                     <p
@@ -618,6 +600,25 @@
         </div>
       </div>
 
+      <!-- Export layout — one file per serial, OFF by default -->
+      <div class="page-section p-5 sm:p-6 space-y-2">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="singleSerial"
+            data-testid="single-serial"
+            class="h-4 w-4"
+          />
+          <span class="text-sm font-semibold text-gray-700"
+            >This template holds a single serial</span
+          >
+        </label>
+        <p class="text-sm text-neutral-500">
+          When a report has several serials, export one file per serial, each named
+          with the serial number as a suffix (e.g. <span class="code-text">…_SN123</span>).
+        </p>
+      </div>
+
       <!-- Rework trigger rule — optional, OFF by default -->
       <div class="page-section p-5 sm:p-6 space-y-4">
         <label class="flex items-center gap-3 cursor-pointer">
@@ -800,6 +801,12 @@
           <div>
             <dt class="font-semibold text-gray-500">Display Name</dt>
             <dd class="text-neutral-900">{{ displayName.trim() || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-gray-500">Export</dt>
+            <dd class="text-neutral-900" data-testid="recap-single-serial">
+              {{ singleSerial ? 'One file per serial' : 'All serials in one file' }}
+            </dd>
           </div>
           <div>
             <dt class="font-semibold text-gray-500">Serial Number Token</dt>

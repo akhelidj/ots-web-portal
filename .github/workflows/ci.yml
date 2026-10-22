@@ -1,0 +1,67 @@
+name: CI
+
+# PRs and pushes to develop run this directly. `master` gets the same checks through
+# deploy.yml (which calls this workflow), so master is not listed here — it would run twice.
+on:
+  pull_request:
+  push:
+    branches: [develop]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Generate Prisma client
+        run: npm run db:generate
+      - name: Lint
+        run: npx nx run-many -t lint
+      - name: Typecheck API
+        run: npx tsc -p api/tsconfig.app.json --noEmit
+      - name: Typecheck portal
+        run: npx tsc -p portal/tsconfig.app.json --noEmit
+      - name: Unit tests
+        run: npx nx run-many -t test
+      - name: Build API
+        run: npm run build:api
+      - name: Build portal
+        run: npm run build:portal
+
+  api-integration:
+    name: API integration tests (Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ots_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - name: Test database settings
+        run: cp api/.env.test.example api/.env.test
+      - run: npm run test:api:integration
