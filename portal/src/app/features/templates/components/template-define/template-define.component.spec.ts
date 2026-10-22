@@ -162,6 +162,14 @@ describe('TemplateDefineComponent — assembly + submit', () => {
     expect(c.serialMarkerRow()?.token).toBe('{{sn}}');
   });
 
+  it('sends region.singleSerial only when the toggle is on', async () => {
+    const c = make();
+    await describeValid(c);
+    expect(c.buildDto().region).not.toHaveProperty('singleSerial');
+    c.singleSerial = true;
+    expect(c.buildDto().region).toEqual({ ...EXPECTED_DTO.region, singleSerial: true });
+  });
+
   it('assembles the gate-accepted DTO (derived scope, serialNumber → marker) and submits it', async () => {
     const c = make();
     await describeValid(c);

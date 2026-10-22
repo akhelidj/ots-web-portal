@@ -165,6 +165,8 @@ export function buildDefinition(
           id: REGION_ID,
           label: dto.region.label ?? REGION_ID,
           chunkSize: dto.region.chunkSize ?? null,
+          // Emitted only when on, so existing definitions stay byte-identical.
+          ...(dto.region.singleSerial ? { singleSerial: true } : {}),
         },
       ]
     : [];

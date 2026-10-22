@@ -178,6 +178,29 @@ describe('validateDefinition — write-time gate [unit]', () => {
       });
     });
 
+    it('singleSerial is emitted by the builder and valid on its own', () => {
+      const dto = validDto();
+      dto.region = { ...dto.region!, singleSerial: true };
+      const c = clone(buildDefinition(META, dto));
+      expect(c.regions[0]).toMatchObject({ singleSerial: true });
+      expect(validateDefinition(c, TOKENS)).toMatchObject({ ok: true });
+    });
+
+    it('singleSerial is omitted when off (existing definitions unchanged)', () => {
+      const c = clone(buildDefinition(META, validDto()));
+      expect(c.regions[0]).not.toHaveProperty('singleSerial');
+    });
+
+    it('singleSerial combined with a chunk size is rejected', () => {
+      const c = clone(buildDefinition(META, validDto()));
+      c.regions[0]!.singleSerial = true;
+      c.regions[0]!.chunkSize = 10;
+      expect(validateDefinition(c, TOKENS)).toMatchObject({
+        ok: false,
+        check: 'single-serial-chunk',
+      });
+    });
+
     it('1 — a declared token not present in the sheet', () => {
       const c = clone(buildDefinition(META, validDto()));
       c.export.global.push({ token: '{{ghost}}', field: 'ghost' });

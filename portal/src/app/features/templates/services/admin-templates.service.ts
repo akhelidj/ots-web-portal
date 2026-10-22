@@ -137,6 +137,7 @@ export interface DefineTemplateDto {
     id: string;
     label?: string;
     marker: string;
+    singleSerial?: boolean;
   };
   fields: OpsTokenField[];
   /** Optional single rework trigger (slice A). Omitted → no rule. Mirrors the API's
@@ -178,7 +179,12 @@ export interface StoredExportEntry {
  */
 export interface StoredDefinition {
   displayName?: string;
-  regions?: { id: string; label?: string; chunkSize?: number | null }[];
+  regions?: {
+    id: string;
+    label?: string;
+    chunkSize?: number | null;
+    singleSerial?: boolean;
+  }[];
   fields: StoredDefinitionField[];
   export?: {
     global?: StoredExportEntry[];

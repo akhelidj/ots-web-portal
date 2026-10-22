@@ -24,7 +24,7 @@ Versioning, storage and the admin validation gate are in [Template Versioning](t
 { formatVersion, templateKey, templateVersion, displayName,
   sections:   [{ key, title }],
   transforms: { name: { kind, ... } },        // booleanMap | rangeCompose | objectListJoin | stringListJoin
-  regions:    [{ id, label, chunkSize }],      // zero (flat) or one repeating region
+  regions:    [{ id, label, chunkSize, singleSerial? }],      // zero (flat) or one repeating region
   disposition?: { source: [paths], requiredForApproval },
   fields:     [{ key, label, type, required, scope: 'header'|'item', role?, section?, options?, signer? }],
   export:     { global: [entry], regions: { <id>: [entry] } },
@@ -35,7 +35,7 @@ Versioning, storage and the admin validation gate are in [Template Versioning](t
 - **Scope:** `header` = report-level values (stored in `InspectionReport.headerData`); `item` = per-serial values (stored in `SerialNumber.inspectionData`).
 - **System roles:** header roles `inspector`, `supervisor`, `inspectionDate`, `customer`, `reportNumber`, `poNumber`, `inspectorSignature`, `supervisorSignature` are system-derived (never user-typed) and map to engine computed tokens; item role `serialNumber` marks the serial's own token. All nine are mandatory to **save** a new definition (grandfathered stored definitions still load and export).
 - **Export entries** bind a token to a `field` path, a `computed` name (`customerName`, `reportNumber`, `poNumber`, `reportDate`, `inspectedBy`, `approvedBy`, `inspectorSignature`, `supervisorSignature`), a `const`, a `compose`/`coalesce`, a `transform`, a `whenEmpty` fallback, a `signature` slot, or `source: rowSerial | record`.
-- **Region vs flat:** one repeating region → the row containing the region's tokens is cloned per serial and serials are chunked by `chunkSize` (null = never split). **No region = flat template** — one fixed-layout, header-only file, always exactly one output. More than one region is rejected.
+- **Region vs flat:** one repeating region → the row containing the region's tokens is cloned per serial and serials are chunked by `chunkSize` (null = never split). `singleSerial: true` (exclusive with `chunkSize`) exports one file per serial named `…_<SERIAL>`, for single-serial sheets. **No region = flat template** — one fixed-layout, header-only file, always exactly one output. More than one region is rejected.
 - **Rules:** one optional `upsertChildReport` rule: `when.field == value` over serials creates/updates a child report of `childType` (`REWORK` | `SCRAP` | `HOLD`) with an optional report-number suffix. See [Rework Rules Consumer](rework-rules-consumer.md).
 - **Statistics are not part of a definition.** The old outcome mapping was removed; statistics are typed per report ([ADR-0013](../adr/0013-free-entry-report-statistics.md)).
 

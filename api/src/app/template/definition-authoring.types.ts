@@ -163,6 +163,11 @@ export interface DefineTemplateDto {
      */
     marker: string;
     chunkSize?: number | null;
+    /**
+     * The template's sheet holds ONE serial: export emits one file per serial, each named
+     * `<base>_<SERIAL>` (multi-serial reports only). Mutually exclusive with `chunkSize`.
+     */
+    singleSerial?: boolean;
   };
   /** Optional disposition designation — names an item field key used as the gate's source. */
   disposition?: {
@@ -225,7 +230,12 @@ export interface CandidateDefinition {
   transforms: Record<string, { kind: string; [k: string]: unknown }>;
   // No `marker`: the repeating row is inferred from the region's row tokens at export
   // time (xlsx-token-engine step 4). `id` is an internal constant keying `export.regions`.
-  regions: { id: string; label: string; chunkSize: number | null }[];
+  regions: {
+    id: string;
+    label: string;
+    chunkSize: number | null;
+    singleSerial?: boolean;
+  }[];
   disposition?: { source: string[]; requiredForApproval: boolean };
   fields: {
     key: string;

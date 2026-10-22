@@ -156,6 +156,8 @@ export class TemplateDefineComponent implements OnInit {
   // already notified by the DOM event, and two-way binding needs a plain field).
   public displayName = '';
   public reworkEnabled = false;
+  /** The sheet holds ONE serial: export emits one file per serial (`region.singleSerial`). */
+  public singleSerial = false;
   public reworkField = '';
   public reworkEquals = '';
   public reworkChildType: ChildReportTypeChoice = 'REWORK';
@@ -294,6 +296,7 @@ export class TemplateDefineComponent implements OnInit {
     });
     this.rows.set(rows);
     this.displayName = def.displayName ?? '';
+    this.singleSerial = def.regions?.[0]?.singleSerial === true;
     this.hydrateRework(def);
   }
 
@@ -785,6 +788,9 @@ export class TemplateDefineComponent implements OnInit {
         marker: marker ? marker.token : '',
       },
     };
+    if (this.singleSerial && dto.region) {
+      dto.region.singleSerial = true;
+    }
     if (this.displayName.trim()) {
       dto.displayName = this.displayName.trim();
     }

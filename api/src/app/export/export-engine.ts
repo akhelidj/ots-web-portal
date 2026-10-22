@@ -56,7 +56,7 @@ export interface ExportDefinition {
   // `id` keys `export.regions`; `chunkSize` bounds per-page serial count. No `marker`:
   // the repeating row is inferred from the region's row tokens (see xlsx-token-engine
   // step 4). Stored definitions may still carry a `marker` — it is simply ignored.
-  regions: { id: string; chunkSize: number | null }[];
+  regions: { id: string; chunkSize: number | null; singleSerial?: boolean }[];
   export: {
     global: ExportEntry[];
     regions: Record<string, ExportEntry[]>;

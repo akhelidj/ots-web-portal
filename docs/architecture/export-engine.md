@@ -12,14 +12,14 @@ Report content comes from the `snapshotJson` of an `InspectionReportRevision` (s
 2. **Resolve revision.** `?revision=` or the current `revisionNumber`.
 3. **Build token maps** from the definition: `engineGlobalTokens` (header/computed/const entries), `engineRowTokens` (per-serial entries), applying named **transforms** (`booleanMap`, `rangeCompose`, `objectListJoin`, `stringListJoin`) and `whenEmpty` fallbacks.
 4. **Expand and substitute** in the OOXML directly (`expandRegionAndSubstitute`): tokens are whitespace-canonicalised (`{{ x }}` = `{{x}}`); the repeating row is **inferred** from the region's row tokens, cloned per serial, with later rows and merged cells shifted. Tokens spread across more than one worksheet row are a `400` (authoring fault of the workbook).
-5. **Chunk** serials by the region's `chunkSize` (drill pipe: 10); `null` = never split. A **flat** template (no region) always yields exactly one header-only file.
+5. **Chunk** serials by the region's `chunkSize` (drill pipe: 10); `null` = never split. A region with **`singleSerial: true`** (wizard: "This template holds a single serial") instead emits **one file per serial**; it is exclusive with `chunkSize` (validator check `single-serial-chunk`). A **flat** template (no region) always yields exactly one header-only file.
 6. **Signatures:** the inspector's frozen signature, the supervisor's applied account signature and any customer signature are swapped into their placeholder cells; a customer signature field (always required — its presence in the template is the opt-in) that is missing blocks the export of the current revision (`409 SIGNATURE_PENDING`); older revisions clear the cell.
 7. **Package.** One file → `.xlsx`; several (chunks, or parent + child) → `.zip`.
 
 ## Ordering and naming
 
 - Parent serials: non-`REWORK` first, `REWORK` last, then by serial text — deterministic for a given snapshot.
-- Names: `OTS_<PO>_<reportNumber>_<revision>` (PO upper-cased, spaces → `_`, `NOPO` if absent); child files add `_rework_` before the revision; chunked parts are `…_part<k>of<n>.xlsx`; the zip is `<base>.zip`.
+- Names: `OTS_<PO>_<reportNumber>_<revision>` (PO upper-cased, spaces → `_`, `NOPO` if absent); child files add `_rework_` before the revision; chunked parts are `…_part<k>of<n>.xlsx`; `singleSerial` files are `…_<SERIAL>.xlsx` (serial sanitised for filenames, `_2`/`_3` on collisions) — only when the report has more than one serial, a lone serial keeps the plain name; the zip is `<base>.zip`.
 
 ## Quirks deliberately preserved
 

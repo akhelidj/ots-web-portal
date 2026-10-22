@@ -131,6 +131,16 @@ export function validateDefinition(
     };
   }
 
+  // singleSerial (one export file per serial) replaces chunking, so the two are exclusive.
+  const region0 = candidate.regions[0];
+  if (region0?.singleSerial && region0.chunkSize != null) {
+    return {
+      ok: false,
+      check: 'single-serial-chunk',
+      reason: 'A one-file-per-serial region cannot also set a chunk size.',
+    };
+  }
+
   for (const f of candidate.fields) {
     // 2 — type in the portal-renderable set (rejects list types and anything the form can't render).
     if (!RENDERABLE_TYPES.has(f.type)) {

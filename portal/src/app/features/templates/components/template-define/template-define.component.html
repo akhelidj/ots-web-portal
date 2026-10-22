@@ -600,6 +600,25 @@
         </div>
       </div>
 
+      <!-- Export layout — one file per serial, OFF by default -->
+      <div class="page-section p-5 sm:p-6 space-y-2">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="singleSerial"
+            data-testid="single-serial"
+            class="h-4 w-4"
+          />
+          <span class="text-sm font-semibold text-gray-700"
+            >This template holds a single serial</span
+          >
+        </label>
+        <p class="text-sm text-neutral-500">
+          When a report has several serials, export one file per serial, each named
+          with the serial number as a suffix (e.g. <span class="code-text">…_SN123</span>).
+        </p>
+      </div>
+
       <!-- Rework trigger rule — optional, OFF by default -->
       <div class="page-section p-5 sm:p-6 space-y-4">
         <label class="flex items-center gap-3 cursor-pointer">
@@ -782,6 +801,12 @@
           <div>
             <dt class="font-semibold text-gray-500">Display Name</dt>
             <dd class="text-neutral-900">{{ displayName.trim() || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-gray-500">Export</dt>
+            <dd class="text-neutral-900" data-testid="recap-single-serial">
+              {{ singleSerial ? 'One file per serial' : 'All serials in one file' }}
+            </dd>
           </div>
           <div>
             <dt class="font-semibold text-gray-500">Serial Number Token</dt>

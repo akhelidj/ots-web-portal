@@ -668,6 +668,43 @@ export class ExportService {
       return files;
     }
 
+    // One-serial-per-file region: each serial gets its own workbook. A lone serial keeps the
+    // plain base name; with several, each file is suffixed `_<SERIAL>` (sanitised, and
+    // de-duplicated if two serials collapse to the same string).
+    if (definition.regions?.[0]?.singleSerial && N > 0) {
+      const used = new Set<string>();
+      for (const sn of serialNumbers) {
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(
+          templateBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
+        );
+        try {
+          await this.applyMapping(workbook, snapshot, [sn], definition, signatureImages);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : undefined;
+          throw new BadRequestException(
+            `Error for serial ${sn.serial}: ${message || 'Error applying template mapping'}`,
+          );
+        }
+        const outBuffer = await workbook.xlsx.writeBuffer();
+        let name = baseFilename;
+        if (N > 1) {
+          const safe =
+            String(sn.serial ?? '')
+              .replace(/[\\/:*?"<>|\s]+/g, '_')
+              .replace(/^_+|_+$/g, '') || 'SERIAL';
+          let candidate = safe;
+          for (let i = 2; used.has(candidate.toLowerCase()); i++) {
+            candidate = `${safe}_${i}`;
+          }
+          used.add(candidate.toLowerCase());
+          name = `${baseFilename}_${candidate}`;
+        }
+        files.push({ buffer: Buffer.from(outBuffer), filename: `${name}.xlsx` });
+      }
+      return files;
+    }
+
     // Chunk size comes from the definition's (single) region. A null region
     // chunkSize means "never split".
     const chunkSize =
